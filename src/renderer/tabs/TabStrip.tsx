@@ -395,6 +395,12 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   const [scrollWidth, setScrollWidth] = useState(0);
   const [clientWidth, setClientWidth] = useState(0);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  // True while a dnd-kit drag is in flight. We freeze the ResizeObserver
+  // remeasure during a drag: dnd-kit re-renders continuously per pointer tick,
+  // and a synchronous remeasure on each tick creates a RO->setState->re-render
+  // ->RO feedback loop that saturates the main thread (caught by the reorder
+  // e2e). Layout is stable mid-drag, so skipping the remeasure is safe.
+  const draggingRef = useRef(false);
 
   const closeTab = useCallback(
     (editorId: string) => {
@@ -415,27 +421,54 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   }, [tabs.length, stripWidth]);
 
   // Observe the list region for resize so widths + overflow stay correct.
+  // The measure is rAF-coalesced (one read per frame regardless of how many
+  // notifications fire) and only writes state that actually changed, so a
+  // resize never triggers an unbounded re-measure cascade.
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const measure = (): void => {
-      setStripWidth(el.clientWidth);
-      setScrollWidth(el.scrollWidth);
-      setClientWidth(el.clientWidth);
-      setScrollLeft(el.scrollLeft);
+    let rafId = 0;
+    let pending = false;
+
+    const readAndCommit = (): void => {
+      pending = false;
+      if (draggingRef.current) return; // frozen during drag
+      const node = listRef.current;
+      if (!node) return;
+      const cw = node.clientWidth;
+      const sw = node.scrollWidth;
+      const sl = node.scrollLeft;
+      // Functional updaters with equality guards: no churn when unchanged.
+      setStripWidth((prev) => (prev === cw ? prev : cw));
+      setClientWidth((prev) => (prev === cw ? prev : cw));
+      setScrollWidth((prev) => (prev === sw ? prev : sw));
+      setScrollLeft((prev) => (prev === sl ? prev : sl));
     };
-    measure();
-    const ro = new ResizeObserver(measure);
+
+    const schedule = (): void => {
+      if (pending) return;
+      pending = true;
+      rafId = requestAnimationFrame(readAndCommit);
+    };
+
+    schedule();
+    const ro = new ResizeObserver(schedule);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, [tabs.length]);
 
   const onListScroll = (): void => {
     const el = listRef.current;
     if (!el) return;
-    setScrollLeft(el.scrollLeft);
-    setScrollWidth(el.scrollWidth);
-    setClientWidth(el.clientWidth);
+    const sl = el.scrollLeft;
+    const sw = el.scrollWidth;
+    const cw = el.clientWidth;
+    setScrollLeft((prev) => (prev === sl ? prev : sl));
+    setScrollWidth((prev) => (prev === sw ? prev : sw));
+    setClientWidth((prev) => (prev === cw ? prev : cw));
   };
 
   const scrollableWidth = Math.max(0, scrollWidth - clientWidth);
@@ -454,11 +487,20 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // dnd-kit: start dragging only after a small movement so clicks still register.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  const onDragStart = (): void => {
+    draggingRef.current = true;
+  };
+
   const onDragEnd = (e: DragEndEvent): void => {
+    draggingRef.current = false;
     const { active, over } = e;
     if (over && active.id !== over.id) {
       store.reorderById(String(active.id), String(over.id));
     }
+  };
+
+  const onDragCancel = (): void => {
+    draggingRef.current = false;
   };
 
   // Build the context-menu action closures for a given tab.
@@ -552,7 +594,9 @@ export function TabStrip(props: TabStripProps): JSX.Element {
           sensors={sensors}
           collisionDetection={closestCenter}
           modifiers={[restrictToHorizontalAxis]}
+          onDragStart={onDragStart}
           onDragEnd={onDragEnd}
+          onDragCancel={onDragCancel}
         >
           <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
             {tabs.map((tab, index) => (
