@@ -27,10 +27,17 @@ Productionize the 0.E ladder. Read/write/convert across UTF-8 ±BOM, UTF-16 LE/B
 **Main↔renderer authority contract:** MAIN reads bytes, decodes, and sends authoritative `{decodedText, encodingName, eol}`. Renderer normalizes to a `\r` shadow buffer for editing ONLY and NEVER re-derives encoding/EOL (re-deriving off the normalized buffer always reports CR and corrupts round-trips).
 
 ### 3.D — Harness (Lane D)
-Encoding round-trip corpus (~150 files incl. 1,024,000-byte boundary, empty, .LOG, mixed EOL). Regex-parity fixture incl. RTL reverse case. Keyboard table fixture from appendix. Editor-surface golden images.
+Encoding round-trip corpus (~150 files incl. empty, .LOG, mixed EOL, and a LARGE file ABOVE the old 1,024,000-byte boundary to prove it opens/edits/saves — the old cap is dropped). Regex-parity fixture incl. RTL reverse case. Keyboard table fixture from appendix. Editor-surface golden images.
 
-## File size limit
-Exactly **1,024,000 bytes** (`1000*1024`, not 1 MiB), with `ignoreFileSizeLimit` bypass path for session recovery.
+## File size limit — DIVERGENCE (user-approved)
+**The UWP 1,024,000-byte (`1000*1024`) hard cap is DROPPED.** Per user decision, the limit was a UWP architectural/performance artifact (RichEditBox + sandbox), not product intent; the rewrite handling larger files than the original is explicitly acceptable. This is an intentional "more capable than 1:1" divergence (same category as the write-restriction divergence #2).
+
+Behavior in the rewrite:
+- No artificial 1 MB block on open. Large files open normally.
+- Apply a pragmatic safeguard instead of a hard cap: for very large files, lean on CM6 large-document handling (and consider deferring optional decorations like the line highlighter / heavy gutters past a size threshold) so the editor stays responsive — but never refuse the file the way UWP did.
+- Keep the `ignoreFileSizeLimit` concept only as an internal flag for session recovery if any soft guard is added; it must never reproduce the old hard refusal.
+
+Acceptance: opening a file larger than 1,024,000 bytes SUCCEEDS and is editable/savable (byte round-trip still 0% mismatch). Do NOT assert the old cap.
 
 ## Dependencies
 Phase 2 (tabs host editors), 0.D/0.E/0.F spikes.
@@ -40,4 +47,4 @@ Phase 2 (tabs host editors), 0.D/0.E/0.F spikes.
 - [ ] **Encoding round-trip: 0% byte mismatch** on open→save→sha256 across the 150-file corpus; auto-detection ≤2% label miss vs UWP UTF.Unknown (documented).
 - [ ] **Regex-parity fixture** passes, including RTL reverse-search row; flavor divergences documented for sign-off.
 - [ ] **Golden-image:** editor surface ≤0.1% per theme.
-- [ ] File size limit enforced at exactly 1,024,000 bytes, with `ignoreFileSizeLimit` bypass present.
+- [ ] **No file-size cap (divergence):** a file ABOVE the old 1,024,000-byte boundary opens, edits, and saves with 0% byte round-trip mismatch; the old hard refusal is NOT reproduced.
