@@ -8,13 +8,15 @@ import { launchApp, type LaunchedApp } from './helpers/launch';
  * Gate 1 round-trip (docs/plan/02-phase-1-walking-skeleton.md §VERIFICATION GATE 1):
  *   open → assert editor content == expected decoded string → save → assert file bytes.
  *
- * The test drives the app through the SOLE IPC contract, `window.notepads`
- * (00-overview.md §1), exactly as a user-triggered open/save would. Content is
- * asserted against the CodeMirror 6 surface; bytes are re-read from disk by the
- * test process (Node fs in the test runner is fine — the RENDERER must never).
+ * This drives the REAL renderer open/save flow, not the raw bridge: the test calls
+ * `window.__notepadsTest.openFileIntoEditor(path)` (a PA-8-clean pure-renderer hook
+ * exposed by App; lane-b) which performs window.notepads.file.open → load decodedText
+ * into CM6. Saving goes through `window.__notepadsTest.saveEditorToPath(path)` which
+ * reads the CM6 doc and calls window.notepads.file.save({filePath, shadowText, ...}).
+ * That exercises the genuine open→decode→IPC→CM6→save→encode→bytes path end-to-end.
  *
- * Authored BEFORE the renderer/main land (TDD). It is expected to fail until
- * the walking skeleton implements file.open/file.save and mounts CM6.
+ * Authored BEFORE the renderer/CM6 land (TDD). Expected to fail until lane-b mounts
+ * CM6 + exposes the test hook.
  */
 
 const FIXTURE_SRC = join(process.cwd(), 'e2e', 'fixtures', 'roundtrip-utf8.txt');
@@ -45,35 +47,36 @@ test.afterAll(async () => {
 test('UTF-8 file open → content matches → save → bytes match', async () => {
   const { page } = launched;
 
-  // --- OPEN via the typed IPC contract ---
-  const openResult = await page.evaluate(async (path) => {
-    return await window.notepads.file.open(path);
-  }, workFile);
-
-  expect(openResult.ok, `file.open failed: ${JSON.stringify(openResult)}`).toBe(true);
+  // --- OPEN via the REAL renderer flow (not the raw bridge) ---
+  const openResult = await page.evaluate(
+    (path) => window.__notepadsTest.openFileIntoEditor(path),
+    workFile,
+  );
+  expect(openResult.ok, `openFileIntoEditor failed: ${JSON.stringify(openResult)}`).toBe(true);
   if (openResult.ok) {
     expect(openResult.data.encodingId.toLowerCase()).toContain('utf-8');
-    // decodedText crosses IPC normalized; renderer shadow buffer is '\n'-based.
-    expect(openResult.data.decodedText.replace(/\r\n/g, '\n')).toBe(EXPECTED_DECODED);
+    expect(openResult.data.eolId).toBe('lf');
   }
 
-  // --- ASSERT editor content (CM6 surface reflects the shadow buffer) ---
-  const editor = page.locator('.cm-content');
-  await expect(editor).toBeVisible();
-  const editorText = await page.evaluate(() => {
-    const el = document.querySelector('.cm-content');
-    return el ? (el as HTMLElement).innerText.replace(/\r\n/g, '\n') : null;
-  });
-  expect(editorText).toBe(EXPECTED_DECODED);
+  // --- ASSERT editor content via the AUTHORITATIVE CM6 doc (not innerText) ---
+  // innerText collapses trailing whitespace and is viewport-dependent; the doc
+  // string from EditorView.state is exact. The hook returns the '\n'-normalized doc.
+  await expect(page.locator('.cm-content')).toBeVisible();
+  const docText = await page.evaluate(() => window.__notepadsTest.getEditorDocText());
+  expect(docText).toBe(EXPECTED_DECODED);
 
-  // --- SAVE via the typed IPC contract ---
-  const saveResult = await page.evaluate(async (path) => {
-    return await window.notepads.file.save({ filePath: path });
-  }, workFile);
-  expect(saveResult.ok, `file.save failed: ${JSON.stringify(saveResult)}`).toBe(true);
+  // --- SAVE via the REAL renderer flow (reads CM6 doc → file.save) ---
+  const saveResult = await page.evaluate(
+    (path) => window.__notepadsTest.saveEditorToPath(path),
+    workFile,
+  );
+  expect(saveResult.ok, `saveEditorToPath failed: ${JSON.stringify(saveResult)}`).toBe(true);
 
   // --- ASSERT bytes on disk (test runner reads; renderer never touches fs) ---
   const writtenBytes = readFileSync(workFile);
   const originalBytes = readFileSync(FIXTURE_SRC);
-  expect(writtenBytes.equals(originalBytes)).toBe(true);
+  expect(
+    writtenBytes.equals(originalBytes),
+    `byte mismatch: wrote ${writtenBytes.length}B, expected ${originalBytes.length}B`,
+  ).toBe(true);
 });
