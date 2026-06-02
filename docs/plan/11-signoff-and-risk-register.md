@@ -3,7 +3,7 @@
 ## Items Requiring USER SIGN-OFF Before Build
 
 1. **Acrylic substitute** — static blurred-tint + opacity tokens; wallpaper-sampling host-backdrop dropped. (Phase 0 decision, Phase 7 build.)
-2. **Write-restriction divergence** — UWP's block on system32 / `.bat`/`.cmd` associations were sandbox artifacts, not product intent; the rewrite is deliberately *more capable* (Node fs, no re-imposed block). The one intentional 1:1 deviation. **Needs explicit sign-off.** DoD: (a) saving to a path UWP blocked succeeds; (b) opening/associating .bat/.cmd works; (c) session stores absolute paths re-validated on load; (d) one-line release note documents divergence.
+2. **Write-restriction divergence — APPROVED (user, 2026).** UWP's block on system32 / `.bat`/`.cmd` associations were sandbox artifacts, not product intent; the rewrite is deliberately *more capable* (Node fs, no re-imposed block). Approved under the same reasoning as #10 (UWP platform artifacts are not parity requirements). DoD: (a) saving to a path UWP blocked succeeds; (b) opening/associating .bat/.cmd works; (c) session stores absolute paths re-validated on load; (d) one-line release note documents divergence. Genuine OS-permission failures still surface as the normal save-error path.
 3. **Perf targets (SR-8)** — cold start ≤2000ms / RAM ≤250MB / installer ≤150MB / 1MB open ≤300ms are honest Electron ceilings, not UWP parity. Confirm acceptable.
 4. **CM6 visual deltas** — CodeMirror 6 caret/selection/line-rendering will not be pixel-identical to RichEditBox; golden-image threshold ≤0.1% is the agreed tolerance. Confirm.
 5. **Regex flavor deltas** — JS RegExp cannot express .NET RightToLeft (shimmed), balancing groups, `\Z`/`\z`, .NET named-group syntax. Document + accept.
