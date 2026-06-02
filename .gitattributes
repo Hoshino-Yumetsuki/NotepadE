@@ -9,3 +9,10 @@
 *.ico binary
 *.woff binary
 *.woff2 binary
+
+# Golden-image baselines for the visual-diff gate (docs/plan/03 §VERIFICATION GATE 2)
+# are tracked via Git LFS so the repo stays lean and PNG blobs never bloat history.
+# Scoped to the baselines tree only — other PNGs (icons, etc.) stay in regular git.
+# Requires `git lfs install` once per clone. CI must run `git lfs pull` before the
+# visual e2e (wired in .github/workflows/ci.yml).
+e2e/visual/baselines/**/*.png filter=lfs diff=lfs merge=lfs -text
