@@ -90,6 +90,13 @@ export const TabScroll = {
  * that base, matching SetsView.xaml ThemeDictionaries:
  *   Light: selected White@0.25, hover White@0.15, pressed White@0.25
  *   Dark:  selected Black@0.25, hover Black@0.20, pressed Black@0.25
+ *
+ * High Contrast (HC) is a THIRD token set (Phase 2 scope: strip-local only;
+ * app-wide HC theming is deferred to Phase 5). The UWP SetsView HC dictionary
+ * uses SystemColorHighlightColor for selected/hover surfaces and disables the
+ * edge shadows (EdgeShadowOpacity 0). We map those to the CSS forced-colors
+ * system keywords (Canvas/CanvasText/Highlight/HighlightText/ButtonBorder) so a
+ * forced-colors golden capture is deterministic without bundling a palette.
  */
 export interface TabThemeTokens {
   /** Strip + window base background. */
@@ -106,7 +113,12 @@ export interface TabThemeTokens {
   textDefault: string;
   /** Selected tab text (higher contrast). */
   textSelected: string;
+  /** Accent color for the selection bar + modified dot (OS accent / Highlight). */
+  accent: string;
 }
+
+/** Strip theme selector. 'hc' is the Phase-2 strip-local high-contrast set. */
+export type TabTheme = 'light' | 'dark' | 'hc';
 
 /** Light theme — base #F0F0F0, white overlays. */
 export const LIGHT_TOKENS: TabThemeTokens = {
@@ -117,6 +129,7 @@ export const LIGHT_TOKENS: TabThemeTokens = {
   topBorder: 'rgba(0, 0, 0, 0.10)',
   textDefault: 'rgba(0, 0, 0, 0.60)',
   textSelected: 'rgba(0, 0, 0, 0.90)',
+  accent: '#0078D4',
 };
 
 /** Dark theme — base #2E2E2E, black overlays. */
@@ -128,7 +141,40 @@ export const DARK_TOKENS: TabThemeTokens = {
   topBorder: 'rgba(255, 255, 255, 0.10)',
   textDefault: 'rgba(255, 255, 255, 0.60)',
   textSelected: 'rgba(255, 255, 255, 0.90)',
+  accent: '#0078D4',
 };
+
+/**
+ * High Contrast — Windows forced-colors system keywords (1:1 mapping of the UWP
+ * HC brushes: Highlight for the selected/hover surface, Canvas for the strip,
+ * CanvasText for default text, HighlightText for selected text, ButtonBorder for
+ * the hairline). Edge shadows are off in HC (handled in TabStrip). These keywords
+ * resolve against the user's HC palette, so a `forcedColors: 'active'` capture is
+ * deterministic on the Windows golden runner.
+ */
+export const HC_TOKENS: TabThemeTokens = {
+  stripBackground: 'Canvas',
+  headerSelected: 'Highlight',
+  headerHover: 'Highlight',
+  headerPressed: 'Highlight',
+  topBorder: 'CanvasText',
+  textDefault: 'CanvasText',
+  textSelected: 'HighlightText',
+  accent: 'Highlight',
+};
+
+/** Resolve the token set for a strip theme. */
+export function tokensForTheme(theme: TabTheme): TabThemeTokens {
+  switch (theme) {
+    case 'hc':
+      return HC_TOKENS;
+    case 'dark':
+      return DARK_TOKENS;
+    case 'light':
+      return LIGHT_TOKENS;
+  }
+}
+
 
 /** Reorder/settle animation durations (SetsView.xaml drag states). */
 export const TabAnimation = {

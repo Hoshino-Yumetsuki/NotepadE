@@ -273,3 +273,73 @@ describe('TabStrip context-menu actions', () => {
     expect(screen.getByTestId('tab-rename-input')).toBeInTheDocument();
   });
 });
+
+describe('TabStrip theme override', () => {
+  let store: TabsStore;
+  beforeEach(() => {
+    store = new TabsStore();
+    store.newTab();
+  });
+
+  function renderWithTheme(theme: 'light' | 'dark' | 'hc'): void {
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <TabStrip
+          tabs={store.tabs}
+          activeEditorId={store.activeEditorId}
+          store={store}
+          isDark={theme === 'dark'}
+          theme={theme}
+          onNewTab={vi.fn()}
+          onCloseTab={vi.fn()}
+        />
+      </FluentProvider>,
+    );
+  }
+
+  it('sets data-theme="hc" on the strip when theme="hc"', () => {
+    renderWithTheme('hc');
+    expect(screen.getByTestId('tab-strip')).toHaveAttribute('data-theme', 'hc');
+  });
+
+  it('applies the HC accent to the selection bar via --tab-accent', () => {
+    renderWithTheme('hc');
+    const strip = screen.getByTestId('tab-strip');
+    // HC maps the accent to the Highlight system color.
+    expect(strip.style.getPropertyValue('--tab-accent')).toBe('Highlight');
+  });
+
+  it('the explicit theme prop wins over isDark', () => {
+    // isDark=false but theme='dark' → strip must render as dark.
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <TabStrip
+          tabs={store.tabs}
+          activeEditorId={store.activeEditorId}
+          store={store}
+          isDark={false}
+          theme="dark"
+          onNewTab={vi.fn()}
+          onCloseTab={vi.fn()}
+        />
+      </FluentProvider>,
+    );
+    expect(screen.getByTestId('tab-strip')).toHaveAttribute('data-theme', 'dark');
+  });
+
+  it('falls back to isDark when no theme prop is given', () => {
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <TabStrip
+          tabs={store.tabs}
+          activeEditorId={store.activeEditorId}
+          store={store}
+          isDark
+          onNewTab={vi.fn()}
+          onCloseTab={vi.fn()}
+        />
+      </FluentProvider>,
+    );
+    expect(screen.getByTestId('tab-strip')).toHaveAttribute('data-theme', 'dark');
+  });
+});

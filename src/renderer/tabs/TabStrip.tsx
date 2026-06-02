@@ -23,8 +23,8 @@ import {
   TabScroll,
   TabAnimation,
   SEGOE_MDL2_FONT_FAMILY,
-  LIGHT_TOKENS,
-  DARK_TOKENS,
+  tokensForTheme,
+  type TabTheme,
   type TabThemeTokens,
 } from './tokens';
 
@@ -56,6 +56,12 @@ export interface TabStripProps {
   store: TabsStore;
   /** Dark vs light theme — selects the hardcoded token set. */
   isDark: boolean;
+  /**
+   * Explicit strip theme override ('light' | 'dark' | 'hc'). When set it wins
+   * over `isDark` — used by the harness to capture the Phase-2 strip-local
+   * high-contrast golden without touching the global FluentProvider.
+   */
+  theme?: TabTheme;
   /** Add-tab (+) handler. */
   onNewTab(): void;
   /**
@@ -379,8 +385,9 @@ function ScrollButton(props: {
 }
 
 export function TabStrip(props: TabStripProps): JSX.Element {
-  const { tabs, activeEditorId, store, isDark, onNewTab, onCloseTab } = props;
-  const tokens = isDark ? DARK_TOKENS : LIGHT_TOKENS;
+  const { tabs, activeEditorId, store, isDark, theme, onNewTab, onCloseTab } = props;
+  const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
+  const tokens = tokensForTheme(resolvedTheme);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const [stripWidth, setStripWidth] = useState(0);
@@ -501,15 +508,20 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   return (
     <div
       data-testid="tab-strip"
-      data-theme={isDark ? 'dark' : 'light'}
-      style={{
-        display: 'flex',
-        alignItems: 'stretch',
-        height: TabDimensions.height + TabDimensions.topBorderThickness,
-        background: tokens.stripBackground,
-        borderTop: `${TabDimensions.topBorderThickness}px solid ${tokens.topBorder}`,
-        overflow: 'hidden',
-      }}
+      data-theme={resolvedTheme}
+      style={
+        {
+          display: 'flex',
+          alignItems: 'stretch',
+          height: TabDimensions.height + TabDimensions.topBorderThickness,
+          background: tokens.stripBackground,
+          borderTop: `${TabDimensions.topBorderThickness}px solid ${tokens.topBorder}`,
+          overflow: 'hidden',
+          // Expose the accent so the selection bar + modified dot inherit it
+          // (HC maps this to the Highlight system color).
+          ['--tab-accent' as string]: tokens.accent,
+        } as React.CSSProperties
+      }
     >
       {showScrollButtons && (
         <ScrollButton
