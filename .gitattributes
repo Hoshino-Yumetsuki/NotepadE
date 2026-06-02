@@ -1,11 +1,11 @@
-# Keep e2e byte-round-trip fixtures EXACT across platforms — no EOL conversion.
-# The Gate 1 test asserts on-disk bytes; CRLF autoconversion would corrupt them.
-e2e/fixtures/** -text
+# Enforce LF for all text so CI (Ubuntu) + Prettier (endOfLine:lf) stay consistent
+# across Windows/macOS/Linux checkouts.
+* text=auto eol=lf
 
-# PA-8 fixtures are scanned line-by-line; EOL is irrelevant but pin LF for stability.
-test/fixtures/** text eol=lf
-
-# Harness sources: normalize to LF in the repo.
-scripts/** text eol=lf
-e2e/**.ts text eol=lf
-*.yml text eol=lf
+# Binary assets — never normalize.
+*.png binary
+*.gif binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
