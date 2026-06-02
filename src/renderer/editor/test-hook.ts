@@ -17,6 +17,8 @@ export interface NotepadsTestHook {
   getEditorDocText(): string;
   /** Save the current CM6 doc to `path` via window.notepads.file.save. */
   saveEditorToPath(path: string): Promise<Result<SaveResult>>;
+  /** Tabs seam (Phase 2) — installed separately by installTabsTestHook. */
+  tabs?: import('../tabs/tabsTestHook').TabsTestHook;
 }
 
 /** Authoritative labels carried opaquely from MAIN; never re-derived. */
