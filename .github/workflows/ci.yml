@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# PA-8 is a permanent, build-breaking gate (docs/plan/02-phase-1, R6).
+# It runs on every push/PR and must stay green for all completed phases.
+jobs:
+  pa8-security-gate:
+    name: PA-8 Security Gate (static scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: PA-8 scan must FAIL on the deliberately-bad fixture
+        run: npm run pa8:scan:fixture
+      - name: PA-8 scan must PASS on the real renderer/main tree
+        run: npm run pa8:scan
+
+  e2e:
+    name: Playwright Electron round-trip
+    runs-on: ubuntu-latest
+    needs: pa8-security-gate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Build app (emits Electron main for the driver)
+        run: npm run build
+      - name: Run Playwright Electron suite (xvfb for headed Electron)
+        run: xvfb-run --auto-servernum npm run test:e2e
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
