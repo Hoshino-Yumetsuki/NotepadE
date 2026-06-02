@@ -208,3 +208,68 @@ describe('TabStrip context menu', () => {
     expect(screen.getByTestId('tab-menu-open-folder')).toHaveAttribute('aria-disabled', 'true');
   });
 });
+
+describe('TabStrip context-menu actions', () => {
+  let store: TabsStore;
+  let copyPath: ReturnType<typeof vi.fn>;
+  let openContainingFolder: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    store = new TabsStore();
+    copyPath = vi.fn().mockResolvedValue({ ok: true, data: undefined });
+    openContainingFolder = vi.fn().mockResolvedValue({ ok: true, data: undefined });
+    // Minimal window.notepads.shell stub — the only contract the menu touches.
+    (window as unknown as { notepads: { shell: unknown } }).notepads = {
+      shell: { copyPath, openContainingFolder },
+    };
+  });
+
+  it('Copy Full Path routes through window.notepads.shell.copyPath with the abs path', () => {
+    store.newTab({ filePath: 'C:/docs/notes.txt' });
+    store.newTab({ filePath: 'C:/docs/other.txt' });
+    renderStrip(store);
+    fireEvent.contextMenu(screen.getAllByTestId('tab')[0]);
+    fireEvent.click(screen.getByTestId('tab-menu-copy-path'));
+    expect(copyPath).toHaveBeenCalledWith('C:/docs/notes.txt');
+  });
+
+  it('Open Containing Folder routes through window.notepads.shell.openContainingFolder', () => {
+    store.newTab({ filePath: 'C:/docs/notes.txt' });
+    store.newTab({ filePath: 'C:/docs/other.txt' });
+    renderStrip(store);
+    fireEvent.contextMenu(screen.getAllByTestId('tab')[0]);
+    fireEvent.click(screen.getByTestId('tab-menu-open-folder'));
+    expect(openContainingFolder).toHaveBeenCalledWith('C:/docs/notes.txt');
+  });
+
+  it('Close Others keeps only the target tab', () => {
+    const a = store.newTab({ filePath: 'C:/x/a.txt' });
+    store.newTab({ filePath: 'C:/x/b.txt' });
+    store.newTab({ filePath: 'C:/x/c.txt' });
+    renderStrip(store);
+    const aEl = screen.getAllByTestId('tab').find((t) => t.getAttribute('data-editor-id') === a)!;
+    fireEvent.contextMenu(aEl);
+    fireEvent.click(screen.getByTestId('tab-menu-close-others'));
+    expect(store.tabs.map((t) => t.editorId)).toEqual([a]);
+  });
+
+  it('Close to the Right removes tabs after the target', () => {
+    const a = store.newTab({ filePath: 'C:/x/a.txt' });
+    const b = store.newTab({ filePath: 'C:/x/b.txt' });
+    store.newTab({ filePath: 'C:/x/c.txt' });
+    renderStrip(store);
+    const aEl = screen.getAllByTestId('tab').find((t) => t.getAttribute('data-editor-id') === a)!;
+    fireEvent.contextMenu(aEl);
+    fireEvent.click(screen.getByTestId('tab-menu-close-right'));
+    expect(store.tabs.map((t) => t.editorId)).toEqual([a]);
+    expect(b).toBeTruthy();
+  });
+
+  it('Rename opens the inline rename input on the tab', () => {
+    store.newTab({ untitledName: 'Untitled 1' });
+    renderStrip(store);
+    fireEvent.contextMenu(screen.getByTestId('tab'));
+    fireEvent.click(screen.getByTestId('tab-menu-rename'));
+    expect(screen.getByTestId('tab-rename-input')).toBeInTheDocument();
+  });
+});
