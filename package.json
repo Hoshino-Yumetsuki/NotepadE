@@ -1,0 +1,66 @@
+{
+  "name": "notepads-next",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Electron + Fluent UI v9 + React + TypeScript 1:1 rewrite of the UWP Notepads app",
+  "type": "module",
+  "main": "out/main/index.js",
+  "author": "Notepads-next team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+    "pa8:scan": "tsx scripts/pa8-scan.ts",
+    "pa8:scan:fixture": "tsx scripts/pa8-scan.ts --root test/fixtures/pa8-bad --renderer test/fixtures/pa8-bad/renderer --expect-fail",
+    "pa8:scan:fixture-good": "tsx scripts/pa8-scan.ts --root test/fixtures/pa8-good --renderer test/fixtures/pa8-good/renderer",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.6.2",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.34.1",
+    "@fluentui/react-components": "^9.54.17",
+    "codemirror": "^6.0.1",
+    "iconv-lite": "^0.6.3",
+    "jschardet": "^3.1.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^20.16.13",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "@typescript-eslint/parser": "^8.11.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "electron": "^33.0.2",
+    "electron-vite": "^2.3.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "esbuild@0.21.5": true,
+    "esbuild@0.28.0": true
+  }
+}
