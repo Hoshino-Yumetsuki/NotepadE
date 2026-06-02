@@ -22,3 +22,7 @@ C (component+menu) ∥ B (state+lifecycle) ∥ D (golden images).
 - [ ] Keyboard conformance: all tab shortcuts (see appendix) 100% pass via Playwright key-injection.
 - [ ] Golden-image diff: tab strip ≤0.1% pixel delta per theme.
 - [ ] Matrix: reorder, close-others, close-to-right, close-saved, rename, copy-path each assert correct DOM/file state.
+
+## Phase-2 decisions (lead-approved)
+- **Glyph fidelity / golden-image runner:** tab glyphs render as REAL "Segoe MDL2 Assets" codepoints (E710 add, E711 close, E76B/E76C/F127 etc.) for exact UWP icon metrics. The pixel-diff golden-image job runs on a **Windows CI runner** (the font is Windows-licensed and not redistributable, so we do NOT bundle it). PA-8 + unit + Playwright behavioral/keyboard tests stay cross-platform; only the golden-image job is Windows-pinned.
+- **High-Contrast (HC) golden:** Phase 2 uses **strip-local HC tokens** (data-theme attr + HC token set in tabs/tokens.ts) so the harness can capture an HC golden of the tab strip now, WITHOUT rewiring the global FluentProvider. Phase-5 follow-up: promote strip-local HC tokens to the app-wide `webHighContrastTheme` when live theming lands.
