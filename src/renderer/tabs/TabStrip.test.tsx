@@ -7,6 +7,23 @@ import { TabStrip } from './TabStrip';
 import { TabsStore } from './useTabsStore';
 
 /**
+ * Dispatch a real PointerEvent with an explicit mouse button. jsdom's
+ * fireEvent.pointerDown({button}) does not reliably carry the `button` field
+ * through its event-init path, which made the middle-click / left-click cases
+ * intermittently flaky. Constructing the event ourselves (the setup polyfill
+ * honors `button`) makes them deterministic.
+ */
+function pointerDown(el: Element, button: number, opts: PointerEventInit = {}): void {
+  const ev = new PointerEvent('pointerdown', {
+    bubbles: true,
+    cancelable: true,
+    button,
+    ...opts,
+  });
+  fireEvent(el, ev);
+}
+
+/**
  * TabStrip component tests (Phase 2, stream C). Mounts the real strip over a
  * fresh TabsStore and asserts the DOM contract the harness selectors rely on:
  * tab rendering, active styling hook, close button, add button, middle-click,
@@ -122,7 +139,7 @@ describe('TabStrip interactions', () => {
   it('middle-click on a tab closes it', () => {
     const a = store.newTab();
     const { onCloseTab } = renderStrip(store);
-    fireEvent.pointerDown(screen.getByTestId('tab'), { button: 1 });
+    pointerDown(screen.getByTestId('tab'), 1);
     expect(onCloseTab).toHaveBeenCalledWith(a);
   });
 
@@ -134,7 +151,7 @@ describe('TabStrip interactions', () => {
     const bEl = screen
       .getAllByTestId('tab')
       .find((t) => t.getAttribute('data-editor-id') === b)!;
-    fireEvent.pointerDown(bEl, { button: 0 });
+    pointerDown(bEl, 0);
     expect(store.activeEditorId).toBe(b);
   });
 
@@ -146,7 +163,7 @@ describe('TabStrip interactions', () => {
     const bEl = screen
       .getAllByTestId('tab')
       .find((t) => t.getAttribute('data-editor-id') === b)!;
-    fireEvent.pointerDown(bEl, { button: 0, ctrlKey: true });
+    pointerDown(bEl, 0, { ctrlKey: true });
     expect(store.activeEditorId).toBe(a);
   });
 
