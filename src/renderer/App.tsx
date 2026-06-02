@@ -27,6 +27,12 @@ export function App(): JSX.Element {
   const [isDark, setIsDark] = useState<boolean>(
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches,
   );
+  // Forced-colors (Windows High Contrast). Drives the strip-local HC token set
+  // for the Phase-2 strip (app-wide HC theming is deferred to Phase 5). The
+  // golden harness toggles this via emulateMedia({ forcedColors: 'active' }).
+  const [forcedColors, setForcedColors] = useState<boolean>(
+    typeof window !== 'undefined' && (window.matchMedia?.('(forced-colors: active)').matches ?? false),
+  );
 
   const { tabs, activeEditorId, store } = useTabsStore(tabsStore);
 
@@ -45,6 +51,14 @@ export function App(): JSX.Element {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
     if (!mq) return;
     const onChange = (e: MediaQueryListEvent): void => setIsDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(forced-colors: active)');
+    if (!mq) return;
+    const onChange = (e: MediaQueryListEvent): void => setForcedColors(e.matches);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
@@ -117,6 +131,7 @@ export function App(): JSX.Element {
         activeEditorId={activeEditorId}
         store={store}
         isDark={isDark}
+        theme={forcedColors ? 'hc' : isDark ? 'dark' : 'light'}
         onNewTab={() => store.newTab()}
         onCloseTab={(id) => store.close(id)}
       />
