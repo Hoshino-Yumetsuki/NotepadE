@@ -78,7 +78,7 @@ async function arrangeDeterministicStrip(): Promise<void> {
 }
 
 for (const tc of THEME_CASES) {
-  test(`tab strip golden image — ${tc.name} theme <=0.1% delta`, async () => {
+  test(`tab strip golden image — ${tc.name} theme <=0.1% delta @visual`, async () => {
     const { page } = launched;
 
     await page.emulateMedia({ colorScheme: tc.colorScheme, forcedColors: tc.forcedColors });

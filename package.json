@@ -26,6 +26,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:functional": "playwright test --grep-invert @visual",
     "visual:capture": "cross-env NOTEPADS_VISUAL_UPDATE=1 playwright test tabs-visual"
   },
   "dependencies": {
