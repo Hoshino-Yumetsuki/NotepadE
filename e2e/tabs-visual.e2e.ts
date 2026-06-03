@@ -86,6 +86,40 @@ for (const tc of THEME_CASES) {
 
     const strip = page.locator(TAB_SELECTORS.strip);
     await expect(strip).toBeVisible();
+
+    // R9 GUARD (docs/plan/11 risk R9): the visual e2e drives themes via
+    // emulateMedia WITHOUT a page.reload(); a regression to mount-only theme
+    // reading would silently re-introduce the all-light "false green" the
+    // baselines can't catch. Before the pixel diff, assert the strip's ACTUAL
+    // rendered surface matches the emulated theme so a theme-read regression
+    // fails LOUDLY here instead of diffing against the wrong baseline.
+    //   - light/dark: assert the computed background luminance band (light
+    //     #F0F0F0 ≈ 240, dark #2E2E2E ≈ 46).
+    //   - hc: forced-colors keywords resolve to the user palette (no fixed RGB),
+    //     so assert the strip actually entered its HC variant via emulateMedia
+    //     reactivity (forced-colors media query is active in the page).
+    const bgLuma = await strip.evaluate((el) => {
+      const m = getComputedStyle(el).backgroundColor.match(/\d+/g);
+      if (!m) return -1;
+      const [r, g, b] = m.map(Number);
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    });
+    if (tc.name === 'light') {
+      expect(bgLuma, `light strip surface luminance (got ${bgLuma})`).toBeGreaterThan(180);
+    } else if (tc.name === 'dark') {
+      expect(
+        bgLuma,
+        `dark strip surface luminance (got ${bgLuma}) — a value >180 means the theme read regressed to light`,
+      ).toBeLessThan(120);
+    } else {
+      // HC: confirm forced-colors is genuinely active in the page (the reactivity
+      // R9 protects). If this query is false the HC capture is meaningless.
+      const forcedActive = await page.evaluate(
+        () => window.matchMedia('(forced-colors: active)').matches,
+      );
+      expect(forcedActive, 'HC capture requires forced-colors: active to be live').toBe(true);
+    }
+
     // Wait for fonts so glyph metrics are stable, then let dnd/resize settle.
     await page.evaluate(async () => {
       if (document.fonts?.ready) await document.fonts.ready;
