@@ -60,6 +60,45 @@ export interface NotepadsTabsTestHook {
   rename(editorId: string, name: string): void;
 }
 
+/**
+ * Editor-surface test seam (Phase-3 gap harness). PA-8-clean: composes only the
+ * live CM6 EditorView of the ACTIVE tab plus the public CM6 history helpers
+ * (undoDepth/redoDepth). Read/arrange accessors the keyboard-conformance and
+ * undo-granularity e2e suites assert on. Installed by App (lane-b) only under
+ * NOTEPADS_E2E, so it is absent in production.
+ *
+ * MUST stay in sync with the editor seam in src/renderer/editor/test-hook.ts.
+ */
+export interface NotepadsEditorTestHook {
+  /** Active view doc as the '\n'-normalized shadow buffer (exact). */
+  getDocText(): string;
+  /** Main selection [from, to) as document offsets. */
+  getSelection(): { from: number; to: number };
+  /** Set the main selection (arrange a precondition for a command). */
+  setSelection(from: number, to: number): void;
+  /** Focus the active editor surface. */
+  focus(): void;
+  /** Current zoom percent (zoomField), clamped 10..500, default 100. */
+  getZoomPercent(): number;
+  /** Whether word-wrap is on (wordWrapField). */
+  isWordWrap(): boolean;
+  /** Editor content direction ('ltr' | 'rtl'). */
+  getDirection(): 'ltr' | 'rtl';
+  /** CM6 history undo depth (number of undoable steps). */
+  undoDepth(): number;
+  /** CM6 history redo depth (number of redoable steps). */
+  redoDepth(): number;
+  /** Whether the .LOG once-per-open guard has fired (logEntryGuard). */
+  isLogEntryGuardSet(): boolean;
+  /**
+   * Insert `text` at the current selection in ONE transaction tagged as a paste
+   * (userEvent 'input.paste'), so the undo-granularity suite can assert a paste
+   * collapses to exactly one history step. Models a clipboard paste without the
+   * OS clipboard.
+   */
+  insertAsPaste(text: string): void;
+}
+
 export interface NotepadsTestHook {
   /** Calls window.notepads.file.open(path) then loads decodedText into CM6. */
   openFileIntoEditor(path: string): Promise<Result<OpenedFile>>;
@@ -69,6 +108,8 @@ export interface NotepadsTestHook {
   saveEditorToPath(path: string): Promise<Result<SaveResult>>;
   /** Phase-2 tab-strip seam. Present once the tab store mounts (Lane C). */
   tabs?: NotepadsTabsTestHook;
+  /** Phase-3 editor-surface seam. Present once the editor seam installs (lane-b). */
+  editor?: NotepadsEditorTestHook;
 }
 
 declare global {
