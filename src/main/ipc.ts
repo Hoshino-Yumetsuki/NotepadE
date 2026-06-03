@@ -9,10 +9,11 @@
 
 import { ipcMain } from 'electron';
 import { IpcChannels } from '../shared/ipc-channels.js';
-import type { Result, SaveArgs, EncodingId, EolId } from '../shared/ipc-contract.js';
+import type { Result, SaveArgs, SaveAsArgs, EncodingId, EolId } from '../shared/ipc-contract.js';
 import {
   openFile,
   saveFile,
+  saveFileAs,
   reloadFromDisk,
   revalidatePath,
   decodeWithEncoding,

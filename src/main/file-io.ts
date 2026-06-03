@@ -6,10 +6,13 @@
  */
 
 import { readFile, writeFile, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+import { BrowserWindow, dialog } from 'electron';
 import type {
   OpenedFile,
   Result,
   SaveArgs,
+  SaveAsArgs,
   SaveResult,
   EncodingId,
   EolId,
@@ -85,34 +88,76 @@ export async function decodeWithEncoding(
 
 export async function saveFile(args: SaveArgs): Promise<Result<SaveResult>> {
   try {
-    const { filePath } = args;
-    const known = fileMeta.get(filePath);
-    const encodingId = args.encodingId ?? known?.encodingId ?? 'UTF-8';
-    const eolId = args.eolId ?? known?.eolId ?? 'crlf';
-
-    // shadowText is '\n'-normalized from the renderer. If absent, re-read disk
-    // content as the baseline (no-op save guard).
-    let lfText: string;
-    if (args.shadowText != null) {
-      lfText = args.shadowText;
-    } else {
-      const existing = await readFile(filePath);
-      lfText = decodeBytes(existing).decodedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    }
-
-    const withEol = applyEol(lfText, eolId);
-    const bytes = encodeText(withEol, encodingId);
-    await writeFile(filePath, bytes);
-
-    const stats = await stat(filePath);
-    fileMeta.set(filePath, { encodingId, eolId });
-    return {
-      ok: true,
-      data: { filePath, dateModifiedMs: stats.mtimeMs, encodingId, eolId },
-    };
+    return { ok: true, data: await writeShadowToPath(args.filePath, args) };
   } catch (e) {
     return { ok: false, error: errMsg(e) };
   }
+}
+
+/**
+ * Prompt for a destination via the native Save dialog, then write the shadow
+ * text there. Cancellation surfaces as a normal error (renderer treats it as a
+ * no-op). UWP parity: SaveFileAs prompts, then runs the same encode/write path.
+ */
+export async function saveFileAs(args: SaveAsArgs): Promise<Result<SaveResult>> {
+  try {
+    const focused = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+    const options: Electron.SaveDialogOptions = {
+      title: 'Save As',
+      defaultPath: dialogDefaultPath(args),
+    };
+    const picked = focused
+      ? await dialog.showSaveDialog(focused, options)
+      : await dialog.showSaveDialog(options);
+
+    if (picked.canceled || !picked.filePath) {
+      return { ok: false, error: 'Save canceled' };
+    }
+
+    return { ok: true, data: await writeShadowToPath(picked.filePath, args) };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+/** Compose the Save dialog's defaultPath from suggestedName + defaultDir. */
+function dialogDefaultPath(args: SaveAsArgs): string | undefined {
+  if (args.suggestedName && args.defaultDir) {
+    return join(args.defaultDir, args.suggestedName);
+  }
+  return args.defaultDir ?? args.suggestedName ?? undefined;
+}
+
+/**
+ * Shared encode-and-write core for save / saveAs. Re-applies EOL to the
+ * '\n'-normalized shadow text and encodes with the resolved label, reusing the
+ * Phase-3 engine. The renderer NEVER re-derives encoding/EOL.
+ */
+async function writeShadowToPath(
+  filePath: string,
+  args: { shadowText?: string; encodingId?: EncodingId; eolId?: EolId },
+): Promise<SaveResult> {
+  const known = fileMeta.get(filePath);
+  const encodingId = args.encodingId ?? known?.encodingId ?? 'UTF-8';
+  const eolId = args.eolId ?? known?.eolId ?? 'crlf';
+
+  // shadowText is '\n'-normalized from the renderer. If absent, re-read disk
+  // content as the baseline (no-op save guard).
+  let lfText: string;
+  if (args.shadowText != null) {
+    lfText = args.shadowText;
+  } else {
+    const existing = await readFile(filePath);
+    lfText = decodeBytes(existing).decodedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  }
+
+  const withEol = applyEol(lfText, eolId);
+  const bytes = encodeText(withEol, encodingId);
+  await writeFile(filePath, bytes);
+
+  const stats = await stat(filePath);
+  fileMeta.set(filePath, { encodingId, eolId });
+  return { filePath, dateModifiedMs: stats.mtimeMs, encodingId, eolId };
 }
 
 export async function revalidatePath(
