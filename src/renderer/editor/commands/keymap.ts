@@ -24,6 +24,7 @@
 
 import { keymap, type KeyBinding } from '@codemirror/view';
 import { Prec, type Extension } from '@codemirror/state';
+import { undo, redo } from '@codemirror/commands';
 
 import { editorSettings, DEFAULT_EDITOR_SETTINGS, type EditorSettings } from '../editorSettings';
 import { insertDateTime, logEntryGuard } from './datetime';
@@ -89,6 +90,24 @@ export const editorCommandKeymap: readonly KeyBinding[] = [
   { key: 'Shift-Enter', run: enterWithAutoIndent, preventDefault: true },
 ];
 
+/**
+ * Cross-platform undo / redo bindings, mounted at the HIGHEST precedence.
+ *
+ * CM6's stock `historyKeymap` binds redo as `Mod-y` everywhere, `Mod-Shift-z`
+ * ONLY on mac, and `Ctrl-Shift-z` ONLY when the platform string is 'linux'.
+ * Electron-on-Windows matches NONE of those, so the near-universal Ctrl+Shift+Z
+ * redo chord had no binding and fell through to a second undo (emptying the doc).
+ * We add an explicit, platform-UNCONDITIONAL `Mod-Shift-z` (plus `Mod-y` for the
+ * Windows Ctrl+Y redo / UWP parity) at top precedence so it can never fall
+ * through to a destructive handler. `Mod-z` undo is repeated here too so the
+ * pair sits together above every other keymap.
+ */
+export const undoRedoKeymap: readonly KeyBinding[] = [
+  { key: 'Mod-z', run: undo, preventDefault: true },
+  { key: 'Mod-Shift-z', run: redo, preventDefault: true },
+  { key: 'Mod-y', run: redo, preventDefault: true },
+];
+
 export interface EditorCommandOptions {
   /** Initial editor settings (host-provided; falls back to UWP defaults). */
   settings?: Partial<EditorSettings>;
@@ -120,6 +139,9 @@ export function editorCommandExtensions(options: EditorCommandOptions = {}): Ext
     zoomStyle,
     smartCopyHandler,
     ctrlWheelZoom,
+    // Cross-platform undo/redo ABOVE everything else so Ctrl+Shift+Z / Ctrl+Y
+    // can never fall through to a destructive default (see undoRedoKeymap).
+    Prec.highest(keymap.of([...undoRedoKeymap])),
     // High precedence so our Tab / Enter / Mod-* bindings beat CM6 defaults.
     Prec.high(keymap.of([...editorCommandKeymap, ...swallowKeymap])),
   ];
