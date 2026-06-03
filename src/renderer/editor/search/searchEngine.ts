@@ -98,11 +98,6 @@ function buildRegex(query: string, options: SearchOptions): RegExp {
   return new RegExp(query, regexFlags(options.matchCase));
 }
 
-/** Escape regex metacharacters so a literal query matches verbatim. */
-function escapeLiteral(query: string): string {
-  return query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
  * Collect every forward match of a regex query over `text`. This is the
  * primitive the RightToLeft shim is built on (and is also used for replace-all
