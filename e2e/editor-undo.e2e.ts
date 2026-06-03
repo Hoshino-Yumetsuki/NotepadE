@@ -44,12 +44,16 @@ test.beforeEach(async () => {
 test('paste = exactly 1 undo step', async () => {
   const { page } = launched;
   await setEditorDoc(page, '');
+  // Settle: ensure the doc is genuinely empty before sampling the baseline so
+  // the measured delta isn't perturbed by setup transactions still in flight.
+  await expect.poll(() => getDocText(page)).toBe('');
   const before = await undoDepth(page);
   await pasteText(page, 'multi\nline\npaste');
   expect(await getDocText(page)).toBe('multi\nline\npaste');
   const after = await undoDepth(page);
   expect(after - before).toBe(1);
-  // And one undo restores the pre-paste document.
+  // And one undo restores the pre-paste document (the whole paste = one step).
+  await focusEditor(page);
   await page.keyboard.press('Control+z');
   expect(await getDocText(page)).toBe('');
 });
@@ -64,7 +68,7 @@ test('replace-all = exactly 1 undo step', async () => {
   await expectFindBarVisible(page);
   await page.locator(EDITOR_SELECTORS.findInput).fill('x');
   await page.locator(EDITOR_SELECTORS.replaceInput).fill('y');
-  await page.locator('[data-testid="replace-all"]').click();
+  await page.locator('[data-testid="replace-all"]').click({ force: true });
 
   expect(await getDocText(page)).toBe('y y y y y');
   const after = await undoDepth(page);
@@ -88,9 +92,9 @@ test('iterative replace-one = N undo steps (one per replacement)', async () => {
 
   // Replace each of the 3 occurrences individually.
   const replaceOne = page.locator('[data-testid="replace-one"]');
-  await replaceOne.click();
-  await replaceOne.click();
-  await replaceOne.click();
+  await replaceOne.click({ force: true });
+  await replaceOne.click({ force: true });
+  await replaceOne.click({ force: true });
 
   expect(await getDocText(page)).toBe('y y y');
   const after = await undoDepth(page);

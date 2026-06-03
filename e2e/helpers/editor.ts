@@ -17,8 +17,6 @@ import { expect, type Page } from '@playwright/test';
 export const EDITOR_SELECTORS = {
   /** The active tab's CM6 content surface (the one that is display:block). */
   content: '[data-testid="editor-host"]:not([style*="display: none"]) .cm-content',
-  /** Any CM6 content surface (single-editor cases). */
-  anyContent: '.cm-content',
   /** The find bar (mounted by useFindBar; visible only when open). */
   findBar: '[data-testid="find-bar"]',
   findInput: '[data-testid="find-input"]',
@@ -39,40 +37,47 @@ async function requireEditorSeam(page: Page): Promise<void> {
 /** Focus the active CM6 surface so subsequent key events route to the editor. */
 export async function focusEditor(page: Page): Promise<void> {
   await requireEditorSeam(page);
+  // The seam calls view.focus() on the ACTIVE tab's CM6 view — real DOM focus on
+  // the contenteditable, which is what routes page.keyboard events to the editor.
+  // We deliberately do NOT click the surface: App mounts every tab's editor
+  // (inactive ones display:none) and CM6's contenteditable micro-reflows
+  // continuously, so a Playwright click would stall on the stability wait. The
+  // seam focus is sufficient and reliable.
   await page.evaluate(() => window.__notepadsTest?.editor?.focus());
-  // A real DOM focus too, so page.keyboard targets the contenteditable.
-  await page.locator(EDITOR_SELECTORS.anyContent).first().click();
+  // Confirm the surface actually holds focus before driving keys.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const ae = document.activeElement;
+        return !!ae && ae.classList.contains('cm-content');
+      }),
+    )
+    .toBe(true);
 }
 
 /**
  * Arrange a deterministic document + caret in the active editor as a TEST
- * PRECONDITION. Goes through the REAL surface: focus, select-all, delete, then
- * type the text (so the editor's own input path builds the doc), then place the
- * caret. Typing keeps this free of any extra seam method — it uses only focus +
- * setSelection from the editor seam and genuine key events.
- *
- * Note: this types literal characters; newlines in `text` are entered as Enter
- * presses. Because Enter is auto-indent-bound, callers that need verbatim
- * multi-line text with leading whitespace should arrange line content that does
- * not depend on auto-indent, or assert relative to what auto-indent produces.
+ * PRECONDITION. Driven entirely through the seam (select-all via setSelection +
+ * a single insert) so it is fast and never depends on keyboard focus timing or
+ * CM6 actionability. The insert path is tagged as a paste; callers that assert
+ * undo DELTAS capture their baseline AFTER this setup, so the setup's history is
+ * absorbed into the baseline and does not skew the measured delta.
  */
 export async function setEditorDoc(page: Page, text: string, caret?: number): Promise<void> {
+  await requireEditorSeam(page);
+  await page.evaluate(
+    ({ text: t, caret: c }) => {
+      const hook = window.__notepadsTest?.editor;
+      if (!hook) throw new Error('editor seam missing');
+      const len = hook.getDocText().length;
+      hook.setSelection(0, len); // select all
+      hook.insertAsPaste(t); // replace selection with the new doc
+      const at = c ?? hook.getDocText().length;
+      hook.setSelection(at, at);
+    },
+    { text, caret },
+  );
   await focusEditor(page);
-  // Select-all + delete to clear, via real keys.
-  await page.keyboard.press('Control+a');
-  await page.keyboard.press('Delete');
-  if (text.length > 0) {
-    // Insert atomically through the seam-free clipboard-less path: type lines,
-    // pressing Enter between them. We avoid auto-indent surprises by typing each
-    // line's content as-is (callers control content).
-    const lines = text.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (i > 0) await page.keyboard.press('Enter');
-      if (lines[i].length > 0) await page.keyboard.type(lines[i]);
-    }
-  }
-  const at = caret ?? (await getDocText(page)).length;
-  await setSelection(page, at, at);
 }
 
 /**
@@ -134,34 +139,23 @@ export async function isLogEntryGuardSet(page: Page): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
-//  Web-search spy (Ctrl+E). Owned entirely by the e2e: we override the public
-//  bridge method on the test page BEFORE the keypress and read the captured
-//  query back. main's shell.webSearch is a Phase-1 stub, so this never reaches
-//  the OS — we only assert the renderer command produced the right query.
+//  Web-search spy (Ctrl+E). window.notepads.shell is a FROZEN contract object
+//  (Object.isFrozen === true), so it cannot be patched from the test page. The
+//  capture is therefore done by the renderer's editor seam under NOTEPADS_E2E
+//  (editor.lastWebSearchQuery), which records the query webSearchSelection
+//  hands to the bridge. main's shell.webSearch is a stub, so nothing reaches the
+//  OS — we only assert the renderer command produced the right query.
 // ---------------------------------------------------------------------------
 
-/** Install a spy over window.notepads.shell.webSearch; resets the recorded query. */
-export async function installWebSearchSpy(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const w = window as unknown as { __webSearchSpy?: string | null };
-    w.__webSearchSpy = null;
-    const original = window.notepads.shell.webSearch.bind(window.notepads.shell);
-    window.notepads.shell.webSearch = async (query: string) => {
-      w.__webSearchSpy = query;
-      // Don't actually invoke main (it's a notImplemented stub); resolve ok so
-      // the fire-and-forget caller never logs an error.
-      void original;
-      return { ok: true as const, data: undefined as unknown as void };
-    };
-  });
+/** Reset the seam's recorded web-search query before exercising Ctrl+E. */
+export async function resetWebSearchSpy(page: Page): Promise<void> {
+  await requireEditorSeam(page);
+  await page.evaluate(() => window.__notepadsTest?.editor?.resetWebSearch?.());
 }
 
-/** Read the last query captured by the web-search spy (null if none). */
+/** Read the last query the editor seam recorded for shell.webSearch (null if none). */
 export async function lastWebSearchQuery(page: Page): Promise<string | null> {
-  return page.evaluate(() => {
-    const w = window as unknown as { __webSearchSpy?: string | null };
-    return w.__webSearchSpy ?? null;
-  });
+  return page.evaluate(() => window.__notepadsTest?.editor?.lastWebSearchQuery?.() ?? null);
 }
 
 /** Wait until the find bar is visible (Ctrl+F / Ctrl+H opened it). */

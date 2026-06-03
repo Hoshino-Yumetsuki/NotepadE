@@ -13,12 +13,11 @@ import {
   getDirection,
   undoDepth,
   redoDepth,
-  installWebSearchSpy,
+  resetWebSearchSpy,
   lastWebSearchQuery,
   expectFindBarVisible,
   expectFindBarHidden,
 } from './helpers/editor';
-
 /**
  * VERIFICATION GATE 3 — Keyboard conformance (docs/plan/04 §GATE 3, appendix §10).
  *
@@ -141,7 +140,7 @@ test('F5 inserts a datetime string at the caret', async () => {
 
 test('Ctrl+E web-searches the trimmed selection via shell.webSearch', async () => {
   const { page } = launched;
-  await installWebSearchSpy(page);
+  await resetWebSearchSpy(page);
   await setEditorDoc(page, '  needle  '); // surrounding whitespace
   await setSelection(page, 0, (await getDocText(page)).length); // select all
   await page.keyboard.press('Control+e');
@@ -208,8 +207,13 @@ test('Ctrl+H opens the find bar with the replace row', async () => {
 test('Ctrl+G opens the go-to-line prompt', async () => {
   const { page } = launched;
   await setEditorDoc(page, 'l1\nl2\nl3');
-  // useFindBar's openGoToLine uses window.prompt; accept it and go to line 2.
-  page.once('dialog', (d) => void d.accept('2'));
+  // useFindBar's openGoToLine reads the target line via window.prompt. Electron
+  // returns null from the native prompt (no UI), so override it to a fixed line.
+  // window.prompt is a plain window global (NOT the frozen contract), so this
+  // override is allowed.
+  await page.evaluate(() => {
+    window.prompt = () => '2';
+  });
   await page.keyboard.press('Control+g');
   // Caret landed on line 2 start (offset 3 = after "l1\n").
   await expect.poll(async () => (await getSelection(page)).from).toBe(3);
