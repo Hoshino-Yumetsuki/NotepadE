@@ -138,6 +138,15 @@ export interface SessionTab {
   selectionEnd: number;
   scrollTop: number;
   viewMode: { preview: boolean; diff: boolean };
+  /**
+   * PA-4 FAL substitute (Phase 4): true when this tab's `filePath` was set but
+   * the file was missing/renamed at loadLast re-validation (fs.stat failed).
+   * The path is PRESERVED (not nulled) so the UI can show "X is unavailable" and
+   * offer relocate/save-as, mirroring UWP's GetItemAsync silent-skip — distinct
+   * from a genuine untitled buffer (filePath:null, unavailable falsy). Optional
+   * and defaults falsy, so it is purely additive to the contract.
+   */
+  unavailable?: boolean;
 }
 
 export interface SessionSnapshot {
