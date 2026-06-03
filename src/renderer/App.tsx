@@ -1,8 +1,10 @@
 import { FluentProvider, webDarkTheme, webLightTheme } from '@fluentui/react-components';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { keymap } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
 import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
 import { installTestHook, type OpenLabels } from './editor/test-hook';
+import { useFindBar } from './editor/search/useFindBar';
 import { TabStrip } from './tabs/TabStrip';
 import { useTabsStore, tabsStore } from './tabs/useTabsStore';
 import { useTabKeyboard } from './tabs/useTabKeyboard';
@@ -40,6 +42,23 @@ export function App(): JSX.Element {
   const editorHandles = useRef<Map<string, CodeMirrorHandle | null>>(new Map());
   // Opaque labels for the ACTIVE editor (carried back to MAIN on save).
   const labelsRef = useRef<OpenLabels>({ encodingId: null, eolId: null });
+
+  // Find/replace host (Lane B). Reads the ACTIVE editor's live EditorView so
+  // Ctrl+F/H/G + F3/Shift+F3 drive the same CM6 instance the host owns, and the
+  // returned editorExtensions install the match-highlight field per editor.
+  const find = useFindBar({
+    getActiveView: () =>
+      store.activeEditorId
+        ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
+        : null,
+  });
+  // Compose the find seam once: the find keymap (Ctrl+F/H/G, F3/Shift+F3, Esc)
+  // plus the match-highlight StateField, mounted via CodeMirrorEditor's
+  // `editorExtensions` prop (after the command keymap, before the CM6 base).
+  const findEditorExtensions = useMemo(
+    () => [keymap.of(find.keymap), find.editorExtensions],
+    [find.keymap, find.editorExtensions],
+  );
 
   // Seed an initial untitled tab once.
   useEffect(() => {
@@ -152,10 +171,12 @@ export function App(): JSX.Element {
                 if (h) editorHandles.current.set(tab.editorId, h);
                 else editorHandles.current.delete(tab.editorId);
               }}
+              editorExtensions={findEditorExtensions}
             />
           </div>
         ))}
       </div>
+      {find.findBar}
     </FluentProvider>
   );
 }
