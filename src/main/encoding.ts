@@ -201,6 +201,52 @@ export interface DecodeResult {
   hasBom: boolean;
 }
 
+/** Labels whose canonical form carries a BOM (used by decodeBytesWith). */
+function labelImpliesBom(label: EncodingId): boolean {
+  return (
+    label.endsWith('-BOM') ||
+    label === 'UTF-16 LE BOM' ||
+    label === 'UTF-16 BE BOM' ||
+    label === 'UTF-32 LE BOM' ||
+    label === 'UTF-32 BE BOM' ||
+    label === 'UTF-7'
+  );
+}
+
+/**
+ * Re-decode raw bytes under an EXPLICIT encoding label (status-bar "reopen with
+ * encoding"). Detection is bypassed entirely; the caller-chosen label wins. If a
+ * matching BOM is physically present it is stripped before decoding so the BOM
+ * bytes never leak into the decoded text, and `hasBom` reflects what was found.
+ *
+ * UWP parity: ReopenWithEncoding re-reads the original bytes and applies the
+ * user's Encoding without re-running AnalyzeAndGuessEncoding.
+ */
+export function decodeBytesWith(bytes: Buffer, encodingId: EncodingId): DecodeResult {
+  const detectedBom = detectBom(bytes);
+  // Strip a physically-present BOM only when it matches the chosen Unicode family
+  // (e.g. choosing "UTF-8-BOM" or "UTF-16 LE BOM" on bytes that carry that BOM).
+  let body = bytes;
+  let hasBom = false;
+  if (detectedBom && detectedBom.encodingId === encodingId) {
+    body = bytes.subarray(detectedBom.bomLength);
+    hasBom = true;
+  } else if (labelImpliesBom(encodingId)) {
+    // Chosen a BOM label but the bytes lack that exact BOM: still report the
+    // canonical hasBom for the label so a subsequent save re-emits it.
+    hasBom = encodingId !== 'UTF-7';
+  }
+
+  const codec = codecForLabel(encodingId);
+  let decodedText: string;
+  try {
+    decodedText = iconv.decode(Buffer.from(body), codec);
+  } catch {
+    decodedText = iconv.decode(Buffer.from(body), 'utf8');
+  }
+  return { decodedText, encodingId, hasBom };
+}
+
 /**
  * Decode raw file bytes, detecting encoding via the UWP confidence ladder.
  */

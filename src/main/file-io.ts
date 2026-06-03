@@ -14,7 +14,7 @@ import type {
   EncodingId,
   EolId,
 } from '../shared/ipc-contract.js';
-import { decodeBytes, encodeText } from './encoding.js';
+import { decodeBytes, decodeBytesWith, encodeText } from './encoding.js';
 import { detectEol, applyEol } from './eol.js';
 
 /** Cache of last-known encoding/EOL per path so save can reuse them. */
@@ -49,6 +49,38 @@ export async function openFile(path: string): Promise<Result<OpenedFile>> {
 
 export async function reloadFromDisk(path: string): Promise<Result<OpenedFile>> {
   return openFile(path);
+}
+
+/**
+ * Re-read the file at `path` and decode it under an EXPLICIT encoding label
+ * (status-bar "reopen with encoding"). Bypasses auto-detection. EOL is
+ * re-detected from the freshly decoded text, and the per-path meta cache is
+ * updated so the next save reuses the chosen encoding.
+ */
+export async function decodeWithEncoding(
+  path: string,
+  encodingId: EncodingId,
+): Promise<Result<OpenedFile>> {
+  try {
+    const bytes = await readFile(path);
+    const { decodedText, encodingId: resolvedId, hasBom } = decodeBytesWith(bytes, encodingId);
+    const eolId = detectEol(decodedText);
+    const stats = await stat(path);
+    fileMeta.set(path, { encodingId: resolvedId, eolId });
+    return {
+      ok: true,
+      data: {
+        decodedText,
+        encodingId: resolvedId,
+        eolId,
+        dateModifiedMs: stats.mtimeMs,
+        filePath: path,
+        hasBom,
+      },
+    };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
 }
 
 export async function saveFile(args: SaveArgs): Promise<Result<SaveResult>> {

@@ -1,15 +1,24 @@
 /**
  * IPC handler registration — MAIN. Each renderer-callable method maps 1:1 to an
- * ipcMain.handle channel. Phase 1 implements file.open / file.save / file.* and
- * encoding.listAnsi; remaining channels are registered as typed stubs returning
- * a not-implemented error so the contract surface is complete and callable.
+ * ipcMain.handle channel. Implemented: file.open / file.save / file.* and the
+ * full encoding namespace (listAnsi / decodeWith / convertEol). Remaining
+ * channels (session / window / dragOut / shell / theme) are registered as typed
+ * stubs returning a not-implemented error so the contract surface stays complete
+ * and callable.
  */
 
 import { ipcMain } from 'electron';
 import { IpcChannels } from '../shared/ipc-channels.js';
-import type { Result, SaveArgs } from '../shared/ipc-contract.js';
-import { openFile, saveFile, reloadFromDisk, revalidatePath } from './file-io.js';
+import type { Result, SaveArgs, EncodingId, EolId } from '../shared/ipc-contract.js';
+import {
+  openFile,
+  saveFile,
+  reloadFromDisk,
+  revalidatePath,
+  decodeWithEncoding,
+} from './file-io.js';
 import { listAnsiEncodings } from './encoding.js';
+import { applyEol } from './eol.js';
 
 function notImplemented(channel: string): Result<never> {
   return { ok: false, error: `Not implemented in Phase 1: ${channel}` };
@@ -25,11 +34,15 @@ export function registerIpcHandlers(): void {
 
   // --- encoding ---
   ipcMain.handle(IpcChannels.EncodingListAnsi, () => ({ ok: true, data: listAnsiEncodings() }));
-  ipcMain.handle(IpcChannels.EncodingDecodeWith, () =>
-    notImplemented(IpcChannels.EncodingDecodeWith),
+  ipcMain.handle(IpcChannels.EncodingDecodeWith, (_e, path: string, encodingId: EncodingId) =>
+    decodeWithEncoding(path, encodingId),
   );
-  ipcMain.handle(IpcChannels.EncodingConvertEol, () =>
-    notImplemented(IpcChannels.EncodingConvertEol),
+  ipcMain.handle(
+    IpcChannels.EncodingConvertEol,
+    (_e, text: string, eolId: EolId): Result<string> => ({
+      ok: true,
+      data: applyEol(text, eolId),
+    }),
   );
 
   // --- session (Phase 4) ---
