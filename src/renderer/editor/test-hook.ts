@@ -6,6 +6,7 @@ import type { CodeMirrorHandle } from './CodeMirrorEditor';
 import { zoomField, DEFAULT_ZOOM } from './commands/zoom';
 import { wordWrapField } from './commands/wordWrap';
 import { logEntryGuard } from './commands/datetime';
+import { setWebSearchObserver } from './commands/webSearch';
 
 /**
  * Renderer test hook (RENDERER, Lane B) — exposes the REAL open/save flow to the
@@ -58,6 +59,13 @@ export interface EditorTestHook {
   redoDepth(): number;
   /** Whether the .LOG once-per-open guard has fired (logEntryGuard). */
   isLogEntryGuardSet(): boolean;
+  /**
+   * The last query the Ctrl+E web-search command resolved (trimmed + capped),
+   * or null if none ran since install. Lets the e2e assert the query WITHOUT
+   * monkey-patching the contextBridge-frozen window.notepads.shell.webSearch.
+   * The real IPC call is unaffected — this only records what was sent.
+   */
+  lastWebSearchQuery(): string | null;
   /**
    * Insert `text` at the current selection in ONE transaction tagged as a paste
    * (userEvent 'input.paste'), so the undo-granularity suite can assert a paste
@@ -122,6 +130,13 @@ export function installTestHook(
 export function installEditorTestHook(getView: () => EditorView | null): () => void {
   if (typeof window === 'undefined') return () => {};
 
+  // Records the last Ctrl+E query the web-search command resolved (renderer-only;
+  // observes, never alters the real IPC call).
+  let lastWebSearch: string | null = null;
+  setWebSearchObserver((query) => {
+    lastWebSearch = query;
+  });
+
   const editor: EditorTestHook = {
     getDocText(): string {
       return getView()?.state.doc.toString() ?? '';
@@ -167,6 +182,9 @@ export function installEditorTestHook(getView: () => EditorView | null): () => v
       const view = getView();
       return view ? (view.state.field(logEntryGuard, false) ?? false) : false;
     },
+    lastWebSearchQuery(): string | null {
+      return lastWebSearch;
+    },
     insertAsPaste(text: string): void {
       const view = getView();
       if (!view) return;
@@ -180,6 +198,7 @@ export function installEditorTestHook(getView: () => EditorView | null): () => v
   if (existing) existing.editor = editor;
 
   return () => {
+    setWebSearchObserver(undefined);
     if (window.__notepadsTest) window.__notepadsTest.editor = undefined;
   };
 }

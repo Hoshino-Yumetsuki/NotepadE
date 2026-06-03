@@ -91,12 +91,27 @@ export interface NotepadsEditorTestHook {
   /** Whether the .LOG once-per-open guard has fired (logEntryGuard). */
   isLogEntryGuardSet(): boolean;
   /**
+   * The last query the Ctrl+E web-search command resolved (trimmed + capped), or
+   * null if none ran since install. Lets the keyboard-conformance suite assert
+   * the query WITHOUT monkey-patching the contextBridge-frozen
+   * window.notepads.shell.webSearch. The real IPC call is unaffected.
+   */
+  lastWebSearchQuery(): string | null;
+  /**
    * Insert `text` at the current selection in ONE transaction tagged as a paste
    * (userEvent 'input.paste'), so the undo-granularity suite can assert a paste
    * collapses to exactly one history step. Models a clipboard paste without the
    * OS clipboard.
    */
   insertAsPaste(text: string): void;
+  /**
+   * The query last passed to window.notepads.shell.webSearch by the Ctrl+E
+   * command, or null. The frozen contract can't be spied from the test page, so
+   * the renderer records it here under NOTEPADS_E2E.
+   */
+  lastWebSearchQuery(): string | null;
+  /** Clear the recorded web-search query before exercising Ctrl+E. */
+  resetWebSearch(): void;
 }
 
 export interface NotepadsTestHook {
