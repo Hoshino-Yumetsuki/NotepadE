@@ -66,7 +66,8 @@ test('Ctrl+D duplicates the current line', async () => {
 test('Ctrl+J joins lines with a single space', async () => {
   const { page } = launched;
   await setEditorDoc(page, 'one\ntwo');
-  await setSelection(page, 0, 0);
+  // Selection must SPAN both lines (joining a single line is a UWP no-op).
+  await setSelection(page, 0, (await getDocText(page)).length);
   await page.keyboard.press('Control+j');
   expect(await getDocText(page)).toBe('one two');
 });
