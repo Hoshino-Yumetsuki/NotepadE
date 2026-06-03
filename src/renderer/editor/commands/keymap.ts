@@ -22,7 +22,7 @@
  *   Ctrl+B/I/U + variants  swallowed (no-op)
  */
 
-import { keymap, type KeyBinding } from '@codemirror/view';
+import { keymap, type KeyBinding, type EditorView } from '@codemirror/view';
 import { Prec, type Extension } from '@codemirror/state';
 import { undo, redo } from '@codemirror/commands';
 
@@ -91,22 +91,43 @@ export const editorCommandKeymap: readonly KeyBinding[] = [
 ];
 
 /**
- * Cross-platform undo / redo bindings, mounted at the HIGHEST precedence.
+ * Cross-platform undo / redo, mounted at the HIGHEST precedence as a single
+ * `any` handler.
  *
- * CM6's stock `historyKeymap` binds redo as `Mod-y` everywhere, `Mod-Shift-z`
- * ONLY on mac, and `Ctrl-Shift-z` ONLY when the platform string is 'linux'.
- * Electron-on-Windows matches NONE of those, so the near-universal Ctrl+Shift+Z
- * redo chord had no binding and fell through to a second undo (emptying the doc).
- * We add an explicit, platform-UNCONDITIONAL `Mod-Shift-z` (plus `Mod-y` for the
- * Windows Ctrl+Y redo / UWP parity) at top precedence so it can never fall
- * through to a destructive handler. `Mod-z` undo is repeated here too so the
- * pair sits together above every other keymap.
+ * Why an `any` handler and not key bindings: for a Ctrl+CHAR event CM6's
+ * runHandlers does its FIRST lookup as modifiers(name, event, !isChar). Since
+ * 'z' is a char, that strips Shift and looks up plain 'Ctrl-z' → finds undo →
+ * returns true → the dispatch ENDS before any 'Shift-Ctrl-z' slot is consulted.
+ * Electron/Playwright deliver event.key='z' (lowercase) + shiftKey:true, which
+ * guarantees this strip path, so a `Mod-Shift-z` BINDING can never win at any
+ * precedence. The trailing `any` handler is the only entry that sees the raw
+ * event and runs after the keyed lookups, so it can route on event.shiftKey.
+ *
+ * CM6 historyKeymap / defaultKeymap MUST NOT also bind Mod-z / Mod-y (see
+ * CodeMirrorEditor.tsx) or Branch-1 'Ctrl-z'→undo claims the event before this
+ * handler's slot. `history()` (the StateField) is still mounted; only its keymap
+ * is dropped — this handler owns undo / redo / Ctrl+Y.
  */
-export const undoRedoKeymap: readonly KeyBinding[] = [
-  { key: 'Mod-z', run: undo, preventDefault: true },
-  { key: 'Mod-Shift-z', run: redo, preventDefault: true },
-  { key: 'Mod-y', run: redo, preventDefault: true },
-];
+export const undoRedoExtension = Prec.highest(
+  keymap.of([
+    {
+      any(view: EditorView, event: KeyboardEvent): boolean {
+        if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+          const k = event.key.toLowerCase();
+          if (k === 'z') {
+            event.preventDefault();
+            return event.shiftKey ? redo(view) : undo(view);
+          }
+          if (k === 'y') {
+            event.preventDefault();
+            return redo(view);
+          }
+        }
+        return false;
+      },
+    },
+  ]),
+);
 
 export interface EditorCommandOptions {
   /** Initial editor settings (host-provided; falls back to UWP defaults). */
@@ -139,9 +160,9 @@ export function editorCommandExtensions(options: EditorCommandOptions = {}): Ext
     zoomStyle,
     smartCopyHandler,
     ctrlWheelZoom,
-    // Cross-platform undo/redo ABOVE everything else so Ctrl+Shift+Z / Ctrl+Y
-    // can never fall through to a destructive default (see undoRedoKeymap).
-    Prec.highest(keymap.of([...undoRedoKeymap])),
+    // Cross-platform undo/redo ABOVE everything else, as an `any` handler so it
+    // beats CM6's Ctrl+CHAR shift-strip (see undoRedoExtension).
+    undoRedoExtension,
     // High precedence so our Tab / Enter / Mod-* bindings beat CM6 defaults.
     Prec.high(keymap.of([...editorCommandKeymap, ...swallowKeymap])),
   ];

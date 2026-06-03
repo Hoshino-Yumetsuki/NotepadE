@@ -1,7 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
-import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL, normalizeToShadow } from './eol';
 import type { EditorSettings } from './editorSettings';
 import { editorCommandExtensions } from './commands/keymap';
@@ -128,8 +128,15 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // bindings compose in, before the CM6 base keymap below.
         ...(editorExtensions ?? []),
         // CM6 base bindings AFTER our command keymap (which is Prec.high) so our
-        // Tab/Enter/Mod-* overrides win; defaults still cover the rest.
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        // Tab/Enter/Mod-* overrides win; defaults still cover the rest. We DROP
+        // historyKeymap and strip Mod-z/Mod-y from defaultKeymap so CM6's
+        // Ctrl-z→undo never claims the slot before our undoRedoExtension `any`
+        // handler (which owns undo/redo/Ctrl+Y). history() the StateField stays.
+        keymap.of(
+          defaultKeymap.filter(
+            (b) => b.key !== 'Mod-z' && b.key !== 'Mod-y' && b.mac !== 'Mod-z',
+          ),
+        ),
         highlightActiveLine(),
         // Pin the document line separator to the shadow-buffer '\n' so doc
         // serialization never re-introduces CR. EOL is re-applied by MAIN.

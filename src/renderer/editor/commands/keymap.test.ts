@@ -1,63 +1,85 @@
 import { describe, it, expect } from 'vitest';
 import { EditorSelection } from '@codemirror/state';
-import { history, redoDepth } from '@codemirror/commands';
-import { undoRedoKeymap } from './keymap';
+import { history, redoDepth, undoDepth } from '@codemirror/commands';
+import { undoRedoExtension } from './keymap';
 import { mountView } from './testUtils';
 
 /**
- * Cross-platform undo/redo binding (Gate-3 bug). CM6's stock historyKeymap only
- * binds Ctrl+Shift+Z redo on linux/mac — never on Electron-Windows — so the
- * chord fell through to a second undo. We bind Mod-Shift-z (+Mod-y) redo and
- * Mod-z undo at the HIGHEST precedence, platform-unconditionally.
+ * Cross-platform undo/redo (Gate-3 bug). For a Ctrl+CHAR event CM6 strips Shift
+ * on its first lookup, so plain 'Ctrl-z'→undo fires before any 'Shift-Ctrl-z'
+ * slot — a Mod-Shift-z BINDING can never win. We route undo/redo through a
+ * single `any` handler (undoRedoExtension) that reads the raw event.shiftKey.
+ *
+ * These tests dispatch real KeyboardEvents at the view's contentDOM so the CM6
+ * keymap pipeline (and the shift-strip) is exercised end-to-end.
  */
 
-describe('undoRedoKeymap', () => {
-  it('binds Mod-z (undo), Mod-Shift-z (redo) and Mod-y (redo) with no platform qualifier', () => {
-    const keys = undoRedoKeymap.map((b) => b.key);
-    expect(keys).toEqual(['Mod-z', 'Mod-Shift-z', 'Mod-y']);
-    for (const b of undoRedoKeymap) {
-      // No mac:/linux:/win: qualifier — the binding fires on every platform.
-      expect(b.mac).toBeUndefined();
-      expect(b.linux).toBeUndefined();
-      expect(b.win).toBeUndefined();
-      expect(b.preventDefault).toBe(true);
-    }
+/** Press Ctrl+<key> (optionally with Shift) at the editor's content DOM. */
+function press(view: { contentDOM: HTMLElement }, key: string, shift = false): void {
+  const event = new KeyboardEvent('keydown', {
+    key,
+    code: key.length === 1 ? `Key${key.toUpperCase()}` : key,
+    ctrlKey: true,
+    shiftKey: shift,
+    bubbles: true,
+    cancelable: true,
   });
+  view.contentDOM.dispatchEvent(event);
+}
 
-  it('Mod-Shift-z redo restores an undone edit (with Mod-z undo)', () => {
-    const view = mountView('', EditorSelection.cursor(0), [history()]);
+describe('undoRedoExtension', () => {
+  it('Ctrl+Z undoes and Ctrl+Shift+Z redoes (shift not stripped)', () => {
+    const view = mountView('', EditorSelection.cursor(0), [history(), undoRedoExtension]);
     try {
       view.dispatch(
         view.state.update({ changes: { from: 0, insert: 'abc' }, userEvent: 'input.type' }),
       );
       expect(view.state.doc.toString()).toBe('abc');
 
-      const undoBinding = undoRedoKeymap.find((b) => b.key === 'Mod-z');
-      const redoBinding = undoRedoKeymap.find((b) => b.key === 'Mod-Shift-z');
-      expect(undoBinding?.run).toBeTypeOf('function');
-      expect(redoBinding?.run).toBeTypeOf('function');
-
-      undoBinding!.run!(view);
+      press(view, 'z'); // Ctrl+Z
       expect(view.state.doc.toString()).toBe('');
-      expect(redoDepth(view.state)).toBeGreaterThan(0);
+      expect(redoDepth(view.state)).toBe(1);
 
-      redoBinding!.run!(view);
+      press(view, 'z', true); // Ctrl+Shift+Z — must REDO, not a second undo
       expect(view.state.doc.toString()).toBe('abc');
+      expect(undoDepth(view.state)).toBe(1);
+      expect(redoDepth(view.state)).toBe(0);
     } finally {
       view.destroy();
     }
   });
 
-  it('Mod-y also redoes (Windows Ctrl+Y / UWP parity)', () => {
-    const view = mountView('', EditorSelection.cursor(0), [history()]);
+  it('Ctrl+Y also redoes (Windows / UWP parity)', () => {
+    const view = mountView('', EditorSelection.cursor(0), [history(), undoRedoExtension]);
     try {
       view.dispatch(
         view.state.update({ changes: { from: 0, insert: 'xy' }, userEvent: 'input.type' }),
       );
-      undoRedoKeymap.find((b) => b.key === 'Mod-z')!.run!(view);
+      press(view, 'z'); // undo
       expect(view.state.doc.toString()).toBe('');
-      undoRedoKeymap.find((b) => b.key === 'Mod-y')!.run!(view);
+      press(view, 'y'); // Ctrl+Y redo
       expect(view.state.doc.toString()).toBe('xy');
+    } finally {
+      view.destroy();
+    }
+  });
+
+  it('ignores Ctrl+Alt+Z (no undo/redo when Alt is held)', () => {
+    const view = mountView('', EditorSelection.cursor(0), [history(), undoRedoExtension]);
+    try {
+      view.dispatch(
+        view.state.update({ changes: { from: 0, insert: 'q' }, userEvent: 'input.type' }),
+      );
+      const event = new KeyboardEvent('keydown', {
+        key: 'z',
+        ctrlKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      view.contentDOM.dispatchEvent(event);
+      // Alt held → handler returns false, doc unchanged by the redo/undo path.
+      expect(view.state.doc.toString()).toBe('q');
     } finally {
       view.destroy();
     }
