@@ -57,11 +57,11 @@ export async function focusEditor(page: Page): Promise<void> {
 
 /**
  * Arrange a deterministic document + caret in the active editor as a TEST
- * PRECONDITION. Driven entirely through the seam (select-all via setSelection +
- * a single insert) so it is fast and never depends on keyboard focus timing or
- * CM6 actionability. The insert path is tagged as a paste; callers that assert
- * undo DELTAS capture their baseline AFTER this setup, so the setup's history is
- * absorbed into the baseline and does not skew the measured delta.
+ * PRECONDITION. Prefers the seam's `seedDoc` (which replaces the doc with an
+ * isolateHistory annotation so the seed is NON-undoable — undo/redo deltas then
+ * reflect only the operations under test). Falls back to setSelection + a single
+ * insert when seedDoc is unavailable. Either way it never depends on keyboard
+ * focus timing or CM6 actionability.
  */
 export async function setEditorDoc(page: Page, text: string, caret?: number): Promise<void> {
   await requireEditorSeam(page);
@@ -69,9 +69,15 @@ export async function setEditorDoc(page: Page, text: string, caret?: number): Pr
     ({ text: t, caret: c }) => {
       const hook = window.__notepadsTest?.editor;
       if (!hook) throw new Error('editor seam missing');
+      if (hook.seedDoc) {
+        hook.seedDoc(t, c);
+        return;
+      }
+      // Fallback: select-all + single insert (creates one history step that
+      // callers measuring undo DELTAS absorb into their baseline).
       const len = hook.getDocText().length;
-      hook.setSelection(0, len); // select all
-      hook.insertAsPaste(t); // replace selection with the new doc
+      hook.setSelection(0, len);
+      hook.insertAsPaste(t);
       const at = c ?? hook.getDocText().length;
       hook.setSelection(at, at);
     },

@@ -110,8 +110,15 @@ export interface NotepadsEditorTestHook {
    * the renderer records it here under NOTEPADS_E2E.
    */
   lastWebSearchQuery(): string | null;
-  /** Clear the recorded web-search query before exercising Ctrl+E. */
-  resetWebSearch(): void;
+  /** Clear the recorded web-search query before exercising Ctrl+E. Optional. */
+  resetWebSearch?(): void;
+  /**
+   * Replace the whole document and place the caret, annotating the change with
+   * isolateHistory so the SEED is non-undoable. Lets the undo-granularity suite
+   * measure undo/redo deltas of the operations under test without the setup
+   * polluting the history stack. Optional: present once the seam adds it.
+   */
+  seedDoc?(text: string, caret?: number): void;
 }
 
 export interface NotepadsTestHook {
