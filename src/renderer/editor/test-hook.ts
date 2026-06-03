@@ -1,5 +1,11 @@
 import type { OpenedFile, Result, SaveResult } from '@shared/ipc-contract';
+import type { EditorView } from '@codemirror/view';
+import { undoDepth as cmUndoDepth, redoDepth as cmRedoDepth } from '@codemirror/commands';
+import { EditorSelection } from '@codemirror/state';
 import type { CodeMirrorHandle } from './CodeMirrorEditor';
+import { zoomField, DEFAULT_ZOOM } from './commands/zoom';
+import { wordWrapField } from './commands/wordWrap';
+import { logEntryGuard } from './commands/datetime';
 
 /**
  * Renderer test hook (RENDERER, Lane B) — exposes the REAL open/save flow to the
@@ -19,6 +25,45 @@ export interface NotepadsTestHook {
   saveEditorToPath(path: string): Promise<Result<SaveResult>>;
   /** Tabs seam (Phase 2) — installed separately by installTabsTestHook. */
   tabs?: import('../tabs/tabsTestHook').TabsTestHook;
+  /** Editor-surface seam (Phase 3) — installed separately by installEditorTestHook. */
+  editor?: EditorTestHook;
+}
+
+/**
+ * Editor-surface test seam (Phase-3 gap harness). PA-8-clean: composes only the
+ * live CM6 EditorView of the ACTIVE tab plus the public CM6 history helpers
+ * (undoDepth/redoDepth). Read/arrange accessors the keyboard-conformance and
+ * undo-granularity e2e suites assert on.
+ *
+ * MUST stay in sync with NotepadsEditorTestHook in e2e/types/notepads-global.d.ts.
+ */
+export interface EditorTestHook {
+  /** Active view doc as the '\n'-normalized shadow buffer (exact). */
+  getDocText(): string;
+  /** Main selection [from, to) as document offsets. */
+  getSelection(): { from: number; to: number };
+  /** Set the main selection (arrange a precondition for a command). */
+  setSelection(from: number, to: number): void;
+  /** Focus the active editor surface. */
+  focus(): void;
+  /** Current zoom percent (zoomField), clamped 10..500, default 100. */
+  getZoomPercent(): number;
+  /** Whether word-wrap is on (wordWrapField). */
+  isWordWrap(): boolean;
+  /** Editor content direction ('ltr' | 'rtl'). */
+  getDirection(): 'ltr' | 'rtl';
+  /** CM6 history undo depth (number of undoable steps). */
+  undoDepth(): number;
+  /** CM6 history redo depth (number of redoable steps). */
+  redoDepth(): number;
+  /** Whether the .LOG once-per-open guard has fired (logEntryGuard). */
+  isLogEntryGuardSet(): boolean;
+  /**
+   * Insert `text` at the current selection in ONE transaction tagged as a paste
+   * (userEvent 'input.paste'), so the undo-granularity suite can assert a paste
+   * collapses to exactly one history step.
+   */
+  insertAsPaste(text: string): void;
 }
 
 /** Authoritative labels carried opaquely from MAIN; never re-derived. */
@@ -63,6 +108,79 @@ export function installTestHook(
   window.__notepadsTest = hook;
   return () => {
     window.__notepadsTest = undefined;
+  };
+}
+
+/**
+ * Install the editor-surface seam onto `window.__notepadsTest.editor`. `getView`
+ * is a getter so the seam always reads the ACTIVE tab's live CM6 view. Returns
+ * an uninstall function. Requires installTestHook to have run first (it attaches
+ * to the same `window.__notepadsTest` object).
+ *
+ * PA-8: composes only the EditorView + public CM6 history helpers; no IPC, no fs.
+ */
+export function installEditorTestHook(getView: () => EditorView | null): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  const editor: EditorTestHook = {
+    getDocText(): string {
+      return getView()?.state.doc.toString() ?? '';
+    },
+    getSelection(): { from: number; to: number } {
+      const view = getView();
+      if (!view) return { from: 0, to: 0 };
+      const { from, to } = view.state.selection.main;
+      return { from, to };
+    },
+    setSelection(from: number, to: number): void {
+      const view = getView();
+      if (!view) return;
+      view.dispatch({ selection: EditorSelection.range(from, to) });
+    },
+    focus(): void {
+      getView()?.focus();
+    },
+    getZoomPercent(): number {
+      const view = getView();
+      return view ? (view.state.field(zoomField, false) ?? DEFAULT_ZOOM) : DEFAULT_ZOOM;
+    },
+    isWordWrap(): boolean {
+      const view = getView();
+      return view ? (view.state.field(wordWrapField, false) ?? false) : false;
+    },
+    getDirection(): 'ltr' | 'rtl' {
+      const view = getView();
+      if (!view) return 'ltr';
+      // CM6 derives textDirection from the content `dir` attribute the direction
+      // command sets via contentAttributes; read it back directly.
+      return view.contentDOM.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
+    },
+    undoDepth(): number {
+      const view = getView();
+      return view ? cmUndoDepth(view.state) : 0;
+    },
+    redoDepth(): number {
+      const view = getView();
+      return view ? cmRedoDepth(view.state) : 0;
+    },
+    isLogEntryGuardSet(): boolean {
+      const view = getView();
+      return view ? (view.state.field(logEntryGuard, false) ?? false) : false;
+    },
+    insertAsPaste(text: string): void {
+      const view = getView();
+      if (!view) return;
+      view.dispatch(
+        view.state.update(view.state.replaceSelection(text), { userEvent: 'input.paste' }),
+      );
+    },
+  };
+
+  const existing = window.__notepadsTest;
+  if (existing) existing.editor = editor;
+
+  return () => {
+    if (window.__notepadsTest) window.__notepadsTest.editor = undefined;
   };
 }
 

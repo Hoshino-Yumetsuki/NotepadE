@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keymap } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
 import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
-import { installTestHook, type OpenLabels } from './editor/test-hook';
+import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
 import { TabStrip } from './tabs/TabStrip';
 import { useTabsStore, tabsStore } from './tabs/useTabsStore';
@@ -115,6 +115,19 @@ export function App(): JSX.Element {
     );
     return uninstall;
   }, [onFileOpened, store]);
+
+  // Editor-surface seam (Phase 3 Gate-3 harness): exposes the ACTIVE tab's live
+  // CM6 view to the keyboard-conformance + undo-granularity e2e. PA-8-clean — it
+  // reads the EditorView + public CM6 history helpers, no IPC/fs. Installed after
+  // installTestHook so it attaches to the same window.__notepadsTest object.
+  useEffect(() => {
+    const uninstall = installEditorTestHook(() =>
+      store.activeEditorId
+        ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
+        : null,
+    );
+    return uninstall;
+  }, [store]);
 
   // Tabs test seam (Phase 2 matrix harness).
   useEffect(() => installTabsTestHook(store), [store]);
