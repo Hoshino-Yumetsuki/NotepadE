@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState, Transaction, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL, normalizeToShadow } from './eol';
@@ -86,24 +86,30 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
   ) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
-    // Doc queued via setDoc BEFORE the view exists (a tab created then seeded in
-    // the same tick: the imperative handle is live before the mount effect runs).
-    // Flushed once the view initializes below, so new-tab open/adopt never drops.
-    const pendingDocRef = useRef<string | null>(null);
+    // The host-authoritative document. setDoc updates this and the view is rebuilt
+    // FROM it on every mount, so seeded text survives a remount. This matters
+    // because React 18 StrictMode double-invokes the mount effect (create → destroy
+    // → recreate): a one-shot "flush on first mount" queue would seed the first,
+    // soon-destroyed view, and the recreated view would start from the empty
+    // initialDoc — the cold-start argv-open empty-doc bug. null = use initialDoc.
+    const docRef = useRef<string | null>(null);
 
     useImperativeHandle(
       ref,
       (): CodeMirrorHandle => ({
         setDoc(text: string): void {
-          const view = viewRef.current;
-          if (!view) {
-            // View not yet mounted — queue; the mount effect flushes it.
-            pendingDocRef.current = text;
-            return;
-          }
           const normalized = normalizeToShadow(text);
+          // A host setDoc is always an AUTHORITATIVE load (open / activation /
+          // cross-window adopt / reload). Remember it so a remount restores it,
+          // and apply it WITHOUT a history entry: a freshly loaded or adopted
+          // document must have undoDepth 0 so Ctrl+Z is a no-op and never blanks
+          // the just-loaded content (the source's undo stack does not transfer).
+          docRef.current = normalized;
+          const view = viewRef.current;
+          if (!view) return; // applied on mount from docRef
           view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: normalized },
+            annotations: Transaction.addToHistory.of(false),
           });
         },
         getShadowText(): string {
@@ -158,7 +164,10 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
 
       const view = new EditorView({
         state: EditorState.create({
-          doc: normalizeToShadow(initialDoc),
+          // Restore the host-authoritative doc (set via setDoc) if present, so a
+          // remount — incl. the StrictMode double-mount — never loses seeded text.
+          // The doc enters as the INITIAL state, carrying no history (undoDepth 0).
+          doc: docRef.current ?? normalizeToShadow(initialDoc),
           extensions,
         }),
         parent: hostRef.current,
@@ -166,18 +175,6 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       viewRef.current = view;
       // Seed the zoom CSS variable so the initial font-size reflects 100%.
       initZoomVar(view);
-      // Flush any doc queued via setDoc before the view existed (new-tab open /
-      // cross-window adopt seeded in the same tick as tab creation).
-      if (pendingDocRef.current !== null) {
-        view.dispatch({
-          changes: {
-            from: 0,
-            to: view.state.doc.length,
-            insert: normalizeToShadow(pendingDocRef.current),
-          },
-        });
-        pendingDocRef.current = null;
-      }
 
       return () => {
         view.destroy();
