@@ -48,4 +48,15 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   'TabStrip_ScrollRightButton.AutomationProperties.Name': { 'en-US': 'Scroll tabs right' },
   // Find match counter (gap #3) — awaiting-translation. {0}=current, {1}=total.
   'FindAndReplace_MatchCountText': { 'en-US': '{0} of {1}' },
+  // Status-bar a11y aria-labels — awaiting-translation. The UWP status bar exposed
+  // these affordances via AutomationProperties on its native controls; the web port
+  // re-declares them as overlay keys (no .resw origin) for screen-reader parity.
+  'StatusBar_FilePath': { 'en-US': 'File path' },
+  'StatusBar_Zoom': { 'en-US': 'Zoom' },
+  'StatusBar_ZoomLevel': { 'en-US': 'Zoom level' },
+  'StatusBar_Encoding': { 'en-US': 'Encoding' },
+  'StatusBar_LineEnding': { 'en-US': 'Line ending' },
+  'StatusBar_LineColumnGoTo': { 'en-US': 'Line and column, go to line' },
+  // Shadow-window (secondary instance) hint title — awaiting-translation.
+  'StatusBar_ShadowWindowHint': { 'en-US': 'This is a shadow window' },
 };
