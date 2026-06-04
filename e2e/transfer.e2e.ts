@@ -111,17 +111,36 @@ test.describe('Gate 6 — cross-window tab transfer', () => {
 
       await transfer(w1, w2, editorId, 0);
 
-      // TARGET adopted the FULL state incl. the pending dirty buffer.
-      await expect.poll(() => hasTab(w2, editorId), { timeout: 10_000 }).toBe(true);
+      // TARGET adopted the FULL state incl. the pending dirty buffer. applyAdopt
+      // MINTS A FRESH local editorId on the target (R3 / #20) — it deliberately does
+      // NOT reuse the source id (which would collide with w2's pre-existing blank
+      // tab, also editor-1, and drop the adopted doc). So the adopted tab is NOT
+      // keyed by `editorId`; adopt activates the new tab, so resolve it via the
+      // active tab id and assert against THAT. (Asserting `editorId` here would read
+      // w2's leftover blank editor-1 and wrongly see mod=false.)
+      await expect
+        .poll(() => w2.evaluate((fp) => window.__notepadsTest.tabs?.list().some((t) => t.filePath === fp), file), {
+          timeout: 10_000,
+        })
+        .toBe(true);
+      const adoptedId = await w2.evaluate(() => window.__notepadsTest.tabs?.activeId() ?? null);
+      expect(adoptedId, 'adopt activates the freshly-minted local tab').not.toBe(null);
       const adoptedText = await w2.evaluate(() => window.__notepadsTest.getEditorDocText());
       expect(adoptedText).toContain('DIRTY EDIT');
       const adoptedDirty = await w2.evaluate(
         (id) => !!window.__notepadsTest.tabs?.list().find((t) => t.editorId === id)?.isModified,
-        editorId,
+        adoptedId,
       );
       expect(adoptedDirty, 'adopted tab keeps its dirty flag').toBe(true);
+      // The adopted tab carries the source file path (full-state adopt).
+      const adoptedPath = await w2.evaluate(
+        (id) => window.__notepadsTest.tabs?.list().find((t) => t.editorId === id)?.filePath ?? null,
+        adoptedId,
+      );
+      expect(adoptedPath, 'adopted tab carries the source file path').toBe(file);
 
-      // SOURCE released the tab.
+      // SOURCE released the tab. In w1 the source tab keeps its own id (`editorId`),
+      // so the release check is valid against the source id here.
       await expect.poll(() => hasTab(w1, editorId), { timeout: 10_000 }).toBe(false);
 
       // Undo history reset to baseline in the adopted tab (no cross-window undo bleed):
