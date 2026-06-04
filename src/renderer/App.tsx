@@ -561,6 +561,7 @@ export function App(): JSX.Element {
         settings={settings}
         update={updateSettings}
         theme={appTheme.theme}
+        resolvedTheme={resolvedTheme}
       />
     </FluentProvider>
   );

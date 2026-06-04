@@ -1,0 +1,57 @@
+/*
+ * ============================================================================
+ *  Acrylic approximation surface (Phase 7, Task #26)
+ * ============================================================================
+ *
+ * A static, in-page acrylic substitute for the UWP AcrylicBrush, applied to the
+ * settings pane + in-app notification (toast) surfaces. It approximates the
+ * Fluent acrylic recipe with a blurred backdrop + a tint + a faint luminosity
+ * overlay. The per-theme values arrive as CSS custom properties set by the host
+ * element from theme/tokens.ts (acrylicVars(theme)); this stylesheet only wires
+ * them into the actual `backdrop-filter` / background layers so the values stay
+ * in one source of truth.
+ *
+ * SCOPE: host-backdrop (wallpaper-sampling) acrylic is OUT — Chromium's
+ * backdrop-filter only blurs in-page content behind the element, never the
+ * desktop. This is the signed-off substitute.
+ *
+ * HC: the host sets --acrylic-blur to 0 and --acrylic-tint to an opaque Canvas
+ * system color, so the surface becomes a flat opaque panel with no material —
+ * matching UWP's no-acrylic high-contrast behaviour. A forced-colors guard also
+ * hard-disables the blur in case the host vars are missing.
+ */
+
+.np-acrylic {
+  position: relative;
+  /* The tint is the primary surface color; luminosity is layered on top for the
+     frosted depth. Both come from the host's CSS vars (theme-resolved). */
+  background-color: var(--acrylic-tint, rgba(46, 46, 46, 0.75));
+  background-image: linear-gradient(
+    var(--acrylic-luminosity, transparent),
+    var(--acrylic-luminosity, transparent)
+  );
+  /* Blur whatever in-page content sits behind the surface. The webkit-prefixed
+     property is required for Chromium/Electron. */
+  -webkit-backdrop-filter: blur(var(--acrylic-blur, 30px)) saturate(125%);
+  backdrop-filter: blur(var(--acrylic-blur, 30px)) saturate(125%);
+}
+
+/* High-contrast hard-guard: never blur, always opaque (defense in depth on top
+   of the host setting --acrylic-blur:0 / opaque Canvas tint). */
+@media (forced-colors: active) {
+  .np-acrylic {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: Canvas;
+    background-image: none;
+  }
+}
+
+/* Honor reduced-transparency: drop the blur and present a near-opaque tint so
+   the surface stays legible for users who disable transparency effects. */
+@media (prefers-reduced-transparency: reduce) {
+  .np-acrylic {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

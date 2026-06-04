@@ -87,6 +87,91 @@ export function tokensForAppTheme(theme: AppTheme): AppThemeTokens {
 /** UWP default background tint opacity (InitializeAppBackgroundPanelTintOpacity). */
 export const DEFAULT_TINT_OPACITY = 0.75;
 
+// ---------------------------------------------------------------------------
+//  Acrylic approximation tokens (Phase 7, Task #26)
+// ---------------------------------------------------------------------------
+//
+// A signed-off STATIC substitute for the UWP AcrylicBrush used on the settings
+// page + in-app notification surfaces. True wallpaper-sampling host-backdrop is
+// OUT OF SCOPE (Chromium `backdrop-filter` only blurs in-page content behind the
+// element, never the desktop wallpaper). We approximate the Fluent acrylic
+// recipe — a tint color over a blur — with:
+//   - a per-theme TINT color (the chrome base, white-ish on light / near-black
+//     on dark) at the UWP AppBackgroundPanelTintOpacity (0.75 default),
+//   - a fixed blur radius (Fluent in-app acrylic ≈ 30px) + a faint luminosity
+//     overlay so layered surfaces read as frosted, not flat.
+// HC collapses to an OPAQUE flat system surface (no blur/material in HC).
+
+/** Per-theme acrylic surface recipe (tint + blur), consumed by theme/acrylic.css. */
+export interface AcrylicTokens {
+  /** Tint color painted over the blurred backdrop (already includes alpha). */
+  tint: string;
+  /** Gaussian blur radius in CSS px for the backdrop-filter. */
+  blurRadius: number;
+  /** Faint luminosity overlay layered above the tint (Fluent acrylic recipe). */
+  luminosity: string;
+}
+
+/**
+ * Light acrylic — base #F0F0F0 tinted at 0.75, a soft white luminosity layer.
+ * (240,240,240)@0.75 keeps the surface readable while letting motion behind it
+ * blur through, matching the UWP light in-app acrylic.
+ */
+export const LIGHT_ACRYLIC_TOKENS: AcrylicTokens = {
+  tint: 'rgba(240, 240, 240, 0.75)',
+  blurRadius: 30,
+  luminosity: 'rgba(255, 255, 255, 0.30)',
+};
+
+/** Dark acrylic — base #2E2E2E tinted at 0.75, a faint dark luminosity layer. */
+export const DARK_ACRYLIC_TOKENS: AcrylicTokens = {
+  tint: 'rgba(46, 46, 46, 0.75)',
+  blurRadius: 30,
+  luminosity: 'rgba(0, 0, 0, 0.30)',
+};
+
+/**
+ * High Contrast — no acrylic material. The surface is an OPAQUE flat system
+ * Canvas with no blur (HC disables transparency/material), so the tint is fully
+ * opaque Canvas and the blur radius is 0.
+ */
+export const HC_ACRYLIC_TOKENS: AcrylicTokens = {
+  tint: 'Canvas',
+  blurRadius: 0,
+  luminosity: 'transparent',
+};
+
+/** Resolve the acrylic recipe for a theme bucket. */
+export function tokensForAcrylic(theme: AppTheme): AcrylicTokens {
+  switch (theme) {
+    case 'hc':
+      return HC_ACRYLIC_TOKENS;
+    case 'dark':
+      return DARK_ACRYLIC_TOKENS;
+    case 'light':
+      return LIGHT_ACRYLIC_TOKENS;
+  }
+}
+
+/**
+ * CSS custom-property names an acrylic host element sets (from tokensForAcrylic)
+ * so theme/acrylic.css can paint the frosted surface without inline styles
+ * baking the per-theme values into every call site.
+ */
+export const ACRYLIC_VAR_TINT = '--acrylic-tint';
+export const ACRYLIC_VAR_BLUR = '--acrylic-blur';
+export const ACRYLIC_VAR_LUMINOSITY = '--acrylic-luminosity';
+
+/** Build the inline CSS-var style object for an acrylic host from its tokens. */
+export function acrylicVars(theme: AppTheme): Record<string, string> {
+  const t = tokensForAcrylic(theme);
+  return {
+    [ACRYLIC_VAR_TINT]: t.tint,
+    [ACRYLIC_VAR_BLUR]: `${t.blurRadius}px`,
+    [ACRYLIC_VAR_LUMINOSITY]: t.luminosity,
+  };
+}
+
 /**
  * The default Windows accent the app falls back to when neither a custom accent
  * nor a system accent is available (UWP SystemAccentColor default — Windows

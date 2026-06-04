@@ -31,6 +31,7 @@ import { TextEditorPane } from './TextEditorPane';
 import { PersonalizationPane } from './PersonalizationPane';
 import { AdvancedPane } from './AdvancedPane';
 import { AboutPane } from './AboutPane';
+import { acrylicVars, type AppTheme } from '../theme/tokens';
 
 /** The four settings sections (UWP SettingsPage NavigationViewItem tags). */
 type SectionId = 'textEditor' | 'personalization' | 'advanced' | 'about';
@@ -53,6 +54,12 @@ export interface SettingsSurfaceProps {
   update(patch: Partial<Settings>): void;
   /** The Fluent theme to render the surface with (kept in sync with the app). */
   theme: Theme;
+  /**
+   * Resolved app theme bucket ('light'|'dark'|'hc') — selects the acrylic
+   * approximation tint/blur (Phase 7, Task #26). Optional + defaults to 'dark'
+   * so existing call sites/tests are unaffected.
+   */
+  resolvedTheme?: AppTheme;
 }
 
 /** Segoe MDL2 glyph used as a Nav item icon. */
@@ -67,12 +74,14 @@ function NavGlyph({ glyph }: { glyph: string }): JSX.Element {
 export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element {
   const [section, setSection] = useState<SectionId>('textEditor');
   const { settings, update } = props;
+  const resolvedTheme: AppTheme = props.resolvedTheme ?? 'dark';
 
   return (
     <Dialog open={props.open} onOpenChange={(_e, d) => props.onOpenChange(d.open)}>
       <DialogSurface
         data-testid="settings-surface"
-        style={{ maxWidth: 880, width: '90vw', padding: 0 }}
+        className="np-acrylic"
+        style={{ maxWidth: 880, width: '90vw', padding: 0, ...acrylicVars(resolvedTheme) }}
       >
         <FluentProvider theme={props.theme} style={{ background: 'transparent' }}>
           <DialogBody style={{ display: 'block' }}>
