@@ -16,6 +16,7 @@ import type {
   EncodingId,
   EolId,
   SessionSnapshot,
+  Settings,
 } from '../shared/ipc-contract.js';
 import {
   openFile,
@@ -28,6 +29,8 @@ import {
 import { listAnsiEncodings } from './encoding.js';
 import { applyEol } from './eol.js';
 import { snapshot, loadLast, clearRecovered } from './session.js';
+import { getSettings, setSettings } from './settings.js';
+import { getThemeState } from './theme.js';
 
 function notImplemented(channel: string): Result<never> {
   return { ok: false, error: `Not implemented in Phase 1: ${channel}` };
@@ -60,8 +63,8 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.SessionClearRecovered, () => clearRecovered());
 
   // --- settings (Phase 5) ---
-  ipcMain.handle(IpcChannels.SettingsGet, () => notImplemented(IpcChannels.SettingsGet));
-  ipcMain.handle(IpcChannels.SettingsSet, () => notImplemented(IpcChannels.SettingsSet));
+  ipcMain.handle(IpcChannels.SettingsGet, () => getSettings());
+  ipcMain.handle(IpcChannels.SettingsSet, (_e, patch: Partial<Settings>) => setSettings(patch));
 
   // --- window (Phase 6) ---
   ipcMain.handle(IpcChannels.WindowBrokerRequest, () =>
@@ -88,5 +91,5 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.ShellShare, () => notImplemented(IpcChannels.ShellShare));
 
   // --- theme (Phase 5) ---
-  ipcMain.handle(IpcChannels.ThemeGet, () => notImplemented(IpcChannels.ThemeGet));
+  ipcMain.handle(IpcChannels.ThemeGet, () => getThemeState());
 }
