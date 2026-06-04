@@ -1,6 +1,6 @@
 import { FluentProvider, Button } from '@fluentui/react-components';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { keymap } from '@codemirror/view';
+import { keymap, EditorView } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
 import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
@@ -25,6 +25,14 @@ import {
   installTransferTestHook,
   type TransferTextSource,
 } from './tabs/transferWiring';
+import type { TabState } from './tabs/types';
+import { normalizeToShadow } from './editor/eol';
+import { MarkdownPreview } from './markdown/MarkdownPreview';
+import { isMarkdownPath } from './markdown/renderMarkdown';
+import { DiffViewer } from './diff/DiffViewer';
+import { usePrint } from './integrations/usePrint';
+import { useShare } from './integrations/useShare';
+import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -41,6 +49,12 @@ import {
  * eolId}; the renderer normalizes decodedText into a '\n' shadow buffer and
  * keeps encodingId/eolId as OPAQUE per-tab labels — never re-derived.
  */
+/** Tab display title: file basename (PA-8-safe split, no path import) or untitled name. */
+function tabTitle(tab: TabState): string {
+  if (tab.filePath) return tab.filePath.split(/[\\/]/).pop() || tab.filePath;
+  return tab.untitledName || 'Untitled';
+}
+
 export function App(): JSX.Element {
   // Live app theme (Phase 5, Lane C): resolves themeMode + OS theme + accent into
   // a FluentProvider theme and the active 'light'|'dark'|'hc' bucket, recomputed
@@ -63,6 +77,16 @@ export function App(): JSX.Element {
   // Opaque labels for the ACTIVE editor (carried back to MAIN on save).
   const labelsRef = useRef<OpenLabels>({ encodingId: null, eolId: null });
 
+  // Last-saved baseline TEXT per editor (Phase 6, diff viewer). The store/tracker
+  // keep only mtime, so the diff pane's "original" column needs the text captured
+  // at each authoritative load point (open / activation-open / adopt). Untitled
+  // buffers have no entry → '' (everything shows as an insert). Pure renderer.
+  const lastSavedTextRef = useRef<Map<string, string>>(new Map());
+  // A no-value re-render pulse: while a content pane (preview/diff) is open we bump
+  // this on every doc change so the pane re-reads the live shadow text (CM6 owns
+  // the doc, so App otherwise doesn't re-render on keystrokes).
+  const [, bumpDocVersion] = useState(0);
+
   // Find/replace host (Lane B). Reads the ACTIVE editor's live EditorView so
   // Ctrl+F/H/G + F3/Shift+F3 drive the same CM6 instance the host owns, and the
   // returned editorExtensions install the match-highlight field per editor.
@@ -79,6 +103,44 @@ export function App(): JSX.Element {
     () => [keymap.of(find.keymap), find.editorExtensions],
     [find.keymap, find.editorExtensions],
   );
+
+  // Compose the editor extensions actually mounted: the find seam PLUS a doc-change
+  // pulse that re-renders App while a content pane is open, so MarkdownPreview /
+  // DiffViewer reflect live typing. The listener is a no-op when no pane is open.
+  const paneEditorExtensions = useMemo(
+    () => [
+      ...findEditorExtensions,
+      EditorView.updateListener.of((u) => {
+        if (!u.docChanged) return;
+        const id = tabsStore.activeEditorId;
+        const vm = id ? tabsStore.get(id)?.viewMode : undefined;
+        if (vm && (vm.preview || vm.diff)) bumpDocVersion((v) => v + 1);
+      }),
+    ],
+    [findEditorExtensions],
+  );
+
+  // Content integrations (Phase 6, Lane B): print (Ctrl+P / Ctrl+Shift+P), share,
+  // and the Alt+P (markdown preview) / Alt+D (diff) view-mode accelerators. The
+  // toggles are mutually exclusive (turning one on clears the other).
+  const print = usePrint();
+  const { share } = useShare();
+  useViewModeKeyboard({
+    isPreviewEligible: () => {
+      const id = store.activeEditorId;
+      return isMarkdownPath((id ? store.get(id) : undefined)?.filePath ?? null);
+    },
+    togglePreview: () => {
+      const id = store.activeEditorId;
+      const t = id ? store.get(id) : undefined;
+      if (id && t) store.setViewMode(id, { preview: !t.viewMode.preview, diff: false });
+    },
+    toggleDiff: () => {
+      const id = store.activeEditorId;
+      const t = id ? store.get(id) : undefined;
+      if (id && t) store.setViewMode(id, { diff: !t.viewMode.diff, preview: false });
+    },
+  });
 
   // Seed an initial untitled tab once.
   useEffect(() => {
@@ -109,6 +171,8 @@ export function App(): JSX.Element {
       // Seed the external-modification baseline (column 0) from the authoritative
       // OpenedFile mtime so a later disk change is detectable (Lane C, Gate-4).
       if (file.filePath) recordLastSaved(id, file.filePath, file.dateModifiedMs);
+      // Seed the diff baseline TEXT (Phase 6) from the authoritative decoded text.
+      lastSavedTextRef.current.set(id, file.decodedText);
     },
     [store],
   );
@@ -162,9 +226,11 @@ export function App(): JSX.Element {
   // Subscribe to MAIN's adopt/release pushes (this window is a transfer target
   // and/or source). MAIN is the sole router; these only mutate the local store.
   useEffect(() => {
-    const offAdopt = window.notepads.editor.onAdopt((payload) =>
-      applyAdopt(store, transferSource.current, payload),
-    );
+    const offAdopt = window.notepads.editor.onAdopt((payload) => {
+      applyAdopt(store, transferSource.current, payload);
+      // Carry the adopted tab's last-saved baseline for the diff pane.
+      lastSavedTextRef.current.set(payload.editorId, payload.file.decodedText);
+    });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
       applyRelease(store, editorId),
     );
@@ -197,6 +263,7 @@ export function App(): JSX.Element {
           });
           editorHandles.current.get(id)?.setDoc(res.data.decodedText);
           if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
+          lastSavedTextRef.current.set(id, res.data.decodedText);
         });
       }
     });
@@ -208,6 +275,7 @@ export function App(): JSX.Element {
   const closeTab = useCallback(
     (id: string): void => {
       forgetEditor(id);
+      lastSavedTextRef.current.delete(id);
       store.close(id);
     },
     [store],
@@ -293,6 +361,40 @@ export function App(): JSX.Element {
     };
   }, []);
 
+  // Print + Share (Workstream 6.B/C). Ctrl+P prints the current document and
+  // Ctrl+Shift+P prints every open document (one per page); both route through the
+  // print host + MAIN webContents.print(). A dispatched 'notepads:share' event
+  // hands the active document to MAIN's share/clipboard path. PA-8 (typed bridge).
+  useEffect(() => {
+    const readText = (id: string): string =>
+      editorHandles.current.get(id)?.getShadowText() ?? '';
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          void print.printAll(
+            store.tabs.map((t) => ({ title: tabTitle(t), text: readText(t.editorId) })),
+          );
+        } else {
+          const id = store.activeEditorId;
+          const t = id ? store.get(id) : undefined;
+          if (id && t) void print.printCurrent({ title: tabTitle(t), text: readText(id) });
+        }
+      }
+    };
+    const onShare = (): void => {
+      const id = store.activeEditorId;
+      const t = id ? store.get(id) : undefined;
+      if (id && t) void share({ title: tabTitle(t), text: readText(id) });
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('notepads:share', onShare);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('notepads:share', onShare);
+    };
+  }, [print, share, store]);
+
   return (
     <FluentProvider
       theme={appTheme.theme}
@@ -328,26 +430,83 @@ export function App(): JSX.Element {
           }
           style={{ position: 'absolute', top: 6, right: 8, zIndex: 5, minWidth: 0 }}
         />
-        {tabs.map((tab) => (
-          <div
-            key={tab.editorId}
-            data-testid="editor-host"
-            data-editor-id={tab.editorId}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: tab.editorId === activeEditorId ? 'block' : 'none',
-            }}
-          >
-            <CodeMirrorEditor
-              ref={(h) => {
-                if (h) editorHandles.current.set(tab.editorId, h);
-                else editorHandles.current.delete(tab.editorId);
+        {tabs.map((tab) => {
+          const isActive = tab.editorId === activeEditorId;
+          const paneOn = isActive && (tab.viewMode.preview || tab.viewMode.diff);
+          // Live shadow text for the pane, re-read each render. bumpDocVersion
+          // pulses a re-render while a pane is open so typing reflects live.
+          const shadow = paneOn
+            ? (editorHandles.current.get(tab.editorId)?.getShadowText() ?? '')
+            : '';
+          return (
+            <div
+              key={tab.editorId}
+              data-testid="editor-host"
+              data-editor-id={tab.editorId}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: isActive ? 'block' : 'none',
               }}
-              editorExtensions={findEditorExtensions}
-            />
-          </div>
-        ))}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: paneOn ? '50%' : 0,
+                }}
+              >
+                <CodeMirrorEditor
+                  ref={(h) => {
+                    if (h) editorHandles.current.set(tab.editorId, h);
+                    else editorHandles.current.delete(tab.editorId);
+                  }}
+                  editorExtensions={paneEditorExtensions}
+                />
+              </div>
+              {paneOn && tab.viewMode.preview && (
+                <div
+                  data-testid="preview-pane"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    right: 0,
+                    left: '50%',
+                    overflow: 'hidden',
+                    borderLeft: '1px solid rgba(128,128,128,0.4)',
+                  }}
+                >
+                  <MarkdownPreview
+                    text={shadow}
+                    isDark={resolvedTheme === 'dark'}
+                    fontSize={settings.editorFontSize}
+                  />
+                </div>
+              )}
+              {paneOn && tab.viewMode.diff && (
+                <div
+                  data-testid="diff-pane"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    right: 0,
+                    left: '50%',
+                    borderLeft: '1px solid rgba(128,128,128,0.4)',
+                  }}
+                >
+                  <DiffViewer
+                    original={normalizeToShadow(lastSavedTextRef.current.get(tab.editorId) ?? '')}
+                    modified={shadow}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       {find.findBar}
       {settings.showStatusBar ? <StatusBar {...statusModel} /> : null}
