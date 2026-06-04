@@ -69,6 +69,15 @@ export interface TabStripProps {
    * store.close.
    */
   onCloseTab?(editorId: string): void;
+  /**
+   * Cross-window transfer (Workstream 6.A). When provided, each tab becomes a
+   * native drag source: `onBeginTransfer` mints the MAIN transfer token (the
+   * HTML5 drag carries ONLY that token), and `onVoidDrop` applies the UWP
+   * SetDraggedOutside rule when a drag ends outside any window. Optional so the
+   * Phase-2 tab tests (no transfer) are unaffected.
+   */
+  onBeginTransfer?(editorId: string): Promise<string | null>;
+  onVoidDrop?(editorId: string): void;
 }
 
 /** The label a tab shows: basename of filePath, else its untitled name. */
@@ -101,6 +110,9 @@ interface SortableTabProps {
   onBeginRename(editorId: string): void;
   onCommitRename(editorId: string, value: string): void;
   onCancelRename(): void;
+  /** Cross-window transfer hooks (optional; see TabStripProps). */
+  onBeginTransfer?(editorId: string): Promise<string | null>;
+  onVoidDrop?(editorId: string): void;
 }
 
 function SortableTab(props: SortableTabProps): JSX.Element {
@@ -118,6 +130,8 @@ function SortableTab(props: SortableTabProps): JSX.Element {
     onBeginRename,
     onCommitRename,
     onCancelRename,
+    onBeginTransfer,
+    onVoidDrop,
   } = props;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -185,6 +199,22 @@ function SortableTab(props: SortableTabProps): JSX.Element {
 
   const actions = onContextActions(tab);
 
+  // Native HTML5 drag = the cross-window transfer channel (separate from
+  // dnd-kit's pointer-driven intra-strip reorder). On dragstart we mint the
+  // MAIN token and carry ONLY it; on a void drop (dropEffect 'none') we apply
+  // the UWP SetDraggedOutside rule. No-op unless transfer hooks are provided.
+  const transferEnabled = onBeginTransfer != null;
+  const onNativeDragStart = (e: React.DragEvent): void => {
+    if (!onBeginTransfer) return;
+    e.dataTransfer.effectAllowed = 'move';
+    void onBeginTransfer(tab.editorId).then((token) => {
+      if (token) e.dataTransfer.setData('application/x-notepads-token', token);
+    });
+  };
+  const onNativeDragEnd = (e: React.DragEvent): void => {
+    if (e.dataTransfer.dropEffect === 'none') onVoidDrop?.(tab.editorId);
+  };
+
   return (
     <TabContextMenu
       tabCount={tabCount}
@@ -208,6 +238,9 @@ function SortableTab(props: SortableTabProps): JSX.Element {
         data-modified={tab.isModified ? 'true' : 'false'}
         data-tab-index={index}
         style={style}
+        draggable={transferEnabled || undefined}
+        onDragStart={transferEnabled ? onNativeDragStart : undefined}
+        onDragEnd={transferEnabled ? onNativeDragEnd : undefined}
         onPointerDown={onPointerDown}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -385,7 +418,8 @@ function ScrollButton(props: {
 }
 
 export function TabStrip(props: TabStripProps): JSX.Element {
-  const { tabs, activeEditorId, store, isDark, theme, onNewTab, onCloseTab } = props;
+  const { tabs, activeEditorId, store, isDark, theme, onNewTab, onCloseTab, onBeginTransfer, onVoidDrop } =
+    props;
   const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
   const tokens = tokensForTheme(resolvedTheme);
 
@@ -615,6 +649,8 @@ export function TabStrip(props: TabStripProps): JSX.Element {
                 onBeginRename={(id) => setRenamingId(id)}
                 onCommitRename={commitRename}
                 onCancelRename={() => setRenamingId(null)}
+                onBeginTransfer={onBeginTransfer}
+                onVoidDrop={onVoidDrop}
               />
             ))}
           </SortableContext>

@@ -17,6 +17,14 @@ import { useAppTheme } from './theme/useAppTheme';
 import { SettingsSurface } from './settings/SettingsSurface';
 import { installSettingsTestHook } from './settings/settingsTestHook';
 import { tokensForAppTheme } from './theme/tokens';
+import {
+  applyAdopt,
+  applyRelease,
+  beginTransfer,
+  handleVoidDrop,
+  installTransferTestHook,
+  type TransferTextSource,
+} from './tabs/transferWiring';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -131,6 +139,70 @@ export function App(): JSX.Element {
   // Tabs test seam (Phase 2 matrix harness).
   useEffect(() => installTabsTestHook(store), [store]);
 
+  // Cross-window transfer (Workstream 6.A). The text source reads the live CM6
+  // doc for an editor (last-saved baseline == pending doc in the renderer; MAIN
+  // re-validates the path) and seeds a freshly-adopted editor's document. Stable
+  // ref so the subscriptions + seam below don't re-bind every render.
+  const transferSource = useRef<TransferTextSource>({
+    getLastSavedText: (id) =>
+      editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
+    getPendingText: (id) =>
+      editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
+    seedAdoptedDoc: (id, text) => {
+      // The adopted tab's editor mounts on the next render; seed once it exists.
+      const seed = (): void => {
+        const handle = editorHandles.current.get(id);
+        if (handle) handle.setDoc(text);
+        else requestAnimationFrame(seed);
+      };
+      requestAnimationFrame(seed);
+    },
+  });
+
+  // Subscribe to MAIN's adopt/release pushes (this window is a transfer target
+  // and/or source). MAIN is the sole router; these only mutate the local store.
+  useEffect(() => {
+    const offAdopt = window.notepads.editor.onAdopt((payload) =>
+      applyAdopt(store, transferSource.current, payload),
+    );
+    const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
+      applyRelease(store, editorId),
+    );
+    return () => {
+      offAdopt();
+      offRelease();
+    };
+  }, [store]);
+
+  // Transfer test seam (Gate-6 harness, lane-h): drives the genuine begin/
+  // complete/void-drop path since Playwright can't synthesize a real HTML5
+  // cross-process drag. PA-8-clean (only window.notepads + store).
+  useEffect(
+    () => installTransferTestHook(store, transferSource.current),
+    [store],
+  );
+
+  // App-window activation (Workstream 6.A): a broker redirect/spawn delivers the
+  // file paths to open into THIS window. Open each via file.open into a new tab.
+  useEffect(() => {
+    const off = window.notepads.app.onActivation((event) => {
+      for (const path of event.paths) {
+        void window.notepads.file.open(path).then((res) => {
+          if (!res.ok) return;
+          const id = store.newTab({
+            filePath: res.data.filePath,
+            encodingId: res.data.encodingId,
+            eolId: res.data.eolId,
+            activate: true,
+          });
+          editorHandles.current.get(id)?.setDoc(res.data.decodedText);
+          if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
+        });
+      }
+    });
+    return off;
+  }, [store]);
+
   // Close a tab and drop its external-modification baseline (Lane C, Gate-4):
   // the per-editor mtime ledger must not leak across a closed editorId.
   const closeTab = useCallback(
@@ -192,6 +264,35 @@ export function App(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Window-mode wiring (Workstream 6.A): F11 toggles native fullscreen; a
+  // dispatched 'notepads:toggle-compact' event toggles the compact-overlay
+  // substitute (frameless always-on-top, per 0.A sign-off #8). Both route
+  // through window.notepads.window (MAIN owns the BrowserWindow — PA-8). Local
+  // refs track the resolved state so each toggle flips it.
+  const fullScreenRef = useRef(false);
+  const compactRef = useRef(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        void window.notepads.window.setFullScreen(!fullScreenRef.current).then((res) => {
+          if (res.ok) fullScreenRef.current = res.data.isFullScreen;
+        });
+      }
+    };
+    const onCompact = (): void => {
+      void window.notepads.window.setCompactOverlay(!compactRef.current).then((res) => {
+        if (res.ok) compactRef.current = res.data.isCompactOverlay;
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('notepads:toggle-compact', onCompact);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('notepads:toggle-compact', onCompact);
+    };
+  }, []);
+
   return (
     <FluentProvider
       theme={appTheme.theme}
@@ -210,6 +311,8 @@ export function App(): JSX.Element {
         theme={resolvedTheme}
         onNewTab={() => store.newTab()}
         onCloseTab={(id) => closeTab(id)}
+        onBeginTransfer={(id) => beginTransfer(store, transferSource.current, id)}
+        onVoidDrop={(id) => handleVoidDrop(store, id)}
       />
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
         <Button
