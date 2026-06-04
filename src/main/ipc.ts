@@ -17,6 +17,7 @@ import type {
   EolId,
   SessionSnapshot,
   Settings,
+  DragEnvelope,
 } from '../shared/ipc-contract.js';
 import {
   openFile,
@@ -31,10 +32,13 @@ import { applyEol } from './eol.js';
 import { snapshot, loadLast, clearRecovered } from './session.js';
 import { getSettings, setSettings } from './settings.js';
 import { getThemeState } from './theme.js';
-
-function notImplemented(channel: string): Result<never> {
-  return { ok: false, error: `Not implemented in Phase 1: ${channel}` };
-}
+import {
+  windowBrokerRequest,
+  windowSetFullScreen,
+  windowSetCompactOverlay,
+} from './window.js';
+import { dragOutBegin, dragOutComplete } from './dragout.js';
+import { openContainingFolder, copyPath, webSearch, print, share } from './shell.js';
 
 export function registerIpcHandlers(): void {
   // --- file ---
@@ -67,28 +71,35 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.SettingsSet, (_e, patch: Partial<Settings>) => setSettings(patch));
 
   // --- window (Phase 6) ---
-  ipcMain.handle(IpcChannels.WindowBrokerRequest, () =>
-    notImplemented(IpcChannels.WindowBrokerRequest),
+  ipcMain.handle(
+    IpcChannels.WindowBrokerRequest,
+    (_e, args: { paths: string[]; forceNewWindow?: boolean }) => windowBrokerRequest(args),
   );
-  ipcMain.handle(IpcChannels.WindowSetFullScreen, () =>
-    notImplemented(IpcChannels.WindowSetFullScreen),
+  ipcMain.handle(IpcChannels.WindowSetFullScreen, (e, enabled: boolean) =>
+    windowSetFullScreen(e, enabled),
   );
-  ipcMain.handle(IpcChannels.WindowSetCompactOverlay, () =>
-    notImplemented(IpcChannels.WindowSetCompactOverlay),
+  ipcMain.handle(IpcChannels.WindowSetCompactOverlay, (e, enabled: boolean) =>
+    windowSetCompactOverlay(e, enabled),
   );
 
   // --- dragOut (Phase 6) ---
-  ipcMain.handle(IpcChannels.DragOutBegin, () => notImplemented(IpcChannels.DragOutBegin));
-  ipcMain.handle(IpcChannels.DragOutComplete, () => notImplemented(IpcChannels.DragOutComplete));
+  ipcMain.handle(IpcChannels.DragOutBegin, (e, envelope: DragEnvelope) =>
+    dragOutBegin(e, envelope),
+  );
+  ipcMain.handle(IpcChannels.DragOutComplete, (e, token: string, dropIndex: number) =>
+    dragOutComplete(e, token, dropIndex),
+  );
 
   // --- shell (Phase 6) ---
-  ipcMain.handle(IpcChannels.ShellOpenContainingFolder, () =>
-    notImplemented(IpcChannels.ShellOpenContainingFolder),
+  ipcMain.handle(IpcChannels.ShellOpenContainingFolder, (_e, path: string) =>
+    openContainingFolder(path),
   );
-  ipcMain.handle(IpcChannels.ShellCopyPath, () => notImplemented(IpcChannels.ShellCopyPath));
-  ipcMain.handle(IpcChannels.ShellWebSearch, () => notImplemented(IpcChannels.ShellWebSearch));
-  ipcMain.handle(IpcChannels.ShellPrint, () => notImplemented(IpcChannels.ShellPrint));
-  ipcMain.handle(IpcChannels.ShellShare, () => notImplemented(IpcChannels.ShellShare));
+  ipcMain.handle(IpcChannels.ShellCopyPath, (_e, path: string) => copyPath(path));
+  ipcMain.handle(IpcChannels.ShellWebSearch, (_e, query: string) => webSearch(query));
+  ipcMain.handle(IpcChannels.ShellPrint, () => print());
+  ipcMain.handle(IpcChannels.ShellShare, (_e, args: { title: string; text: string }) =>
+    share(args),
+  );
 
   // --- theme (Phase 5) ---
   ipcMain.handle(IpcChannels.ThemeGet, () => getThemeState());
