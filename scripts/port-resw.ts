@@ -40,6 +40,38 @@ import { join, resolve, basename } from 'node:path';
 /** The .resw files that exist per locale; flattened in this order (later wins on collision — none expected). */
 const RESW_FILES = ['Resources.resw', 'Settings.resw', 'Manifest.resw'] as const;
 
+/**
+ * Web-port supplement keys — strings the Electron/web renderer needs that have NO
+ * UWP .resw origin (the original UWP app hardcodes them in C# code-behind, or they
+ * are web-only chrome with no UWP equivalent). We inject them into EVERY locale
+ * table so `lookup()` resolves them like any ported key, instead of hand-editing
+ * the generated tables (which would break --check) or polluting the upstream UWP
+ * resources (a different repo) with non-UWP strings.
+ *
+ * Values are the en-US source text for ALL locales for now: the runtime fallback
+ * is locale→en-US→key, and seeding every table with the English string keeps the
+ * UI legible until real translations are contributed. When a translation exists,
+ * move that key into the matching UWP .resw (if it gains a UWP home) or extend this
+ * map to a per-locale shape; the merge point below is the single seam.
+ *
+ *   - StatusBar_LineEnding_*  : the EOL indicator labels (UWP LineEndingUtility,
+ *     hardcoded in C#: GetLineEndingDisplayText → "Windows (CRLF)" etc.).
+ *   - TabStrip_*Button        : web-port tab-strip affordances (new/close/scroll).
+ *     UWP used a single inline "+" and no scroll buttons; these are web-only aria.
+ *   - FindAndReplace_MatchCountText : the find "N of M" match counter (the web find
+ *     bar shows a live count UWP did not surface as a localized string).
+ */
+const PORT_SUPPLEMENT: Record<string, string> = {
+  'StatusBar_LineEnding_Crlf': 'Windows (CRLF)',
+  'StatusBar_LineEnding_Cr': 'Macintosh (CR)',
+  'StatusBar_LineEnding_Lf': 'Unix (LF)',
+  'TabStrip_NewTabButton.AutomationProperties.Name': 'New tab',
+  'TabStrip_CloseTabButton.AutomationProperties.Name': 'Close tab',
+  'TabStrip_ScrollLeftButton.AutomationProperties.Name': 'Scroll tabs left',
+  'TabStrip_ScrollRightButton.AutomationProperties.Name': 'Scroll tabs right',
+  'FindAndReplace_MatchCountText': '{0} of {1}',
+};
+
 interface Args {
   src: string;
   out: string;
@@ -121,6 +153,11 @@ function portLocale(srcDir: string, locale: string): Record<string, string> {
     if (!existsSync(p)) continue;
     const part = parseResw(readFileSync(p, 'utf8'));
     Object.assign(merged, part);
+  }
+  // Inject the web-port supplement LAST so any future UWP .resw key of the same
+  // name wins (the supplement is the fallback home for keys with no .resw origin).
+  for (const [k, v] of Object.entries(PORT_SUPPLEMENT)) {
+    if (!(k in merged)) merged[k] = v;
   }
   return merged;
 }
