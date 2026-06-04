@@ -25,7 +25,6 @@ import {
   FluentProvider,
   type Theme,
 } from '@fluentui/react-components';
-import { NavDrawer, NavDrawerBody, NavItem } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
 import { TextEditorPane } from './TextEditorPane';
 import { PersonalizationPane } from './PersonalizationPane';
@@ -104,27 +103,27 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element {
             </div>
             <DialogContent>
               <div style={{ display: 'flex', gap: 8, height: '70vh', minHeight: 420 }}>
-                <NavDrawer
-                  open
-                  type="inline"
-                  selectedValue={section}
-                  onNavItemSelect={(_e, d) => setSection(d.value as SectionId)}
+                <div
+                  role="tablist"
+                  aria-orientation="vertical"
                   data-testid="settings-nav"
-                  style={{ minWidth: 200, height: '100%' }}
+                  style={{ minWidth: 200, height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}
                 >
-                  <NavDrawerBody>
-                    {SECTIONS.map((s) => (
-                      <NavItem
-                        key={s.id}
-                        value={s.id}
-                        icon={<NavGlyph glyph={s.glyph} />}
-                        data-testid={`settings-nav-${s.id}`}
-                      >
-                        {s.label}
-                      </NavItem>
-                    ))}
-                  </NavDrawerBody>
-                </NavDrawer>
+                  {SECTIONS.map((s) => (
+                    <Button
+                      key={s.id}
+                      role="tab"
+                      aria-selected={section === s.id}
+                      appearance={section === s.id ? 'secondary' : 'subtle'}
+                      icon={<NavGlyph glyph={s.glyph} />}
+                      data-testid={`settings-nav-${s.id}`}
+                      onClick={() => setSection(s.id)}
+                      style={{ justifyContent: 'flex-start', width: '100%' }}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
                 <div style={{ flex: '1 1 auto', minWidth: 0, height: '100%' }}>
                   {section === 'textEditor' ? (
                     <TextEditorPane settings={settings} update={update} />

@@ -98,12 +98,25 @@ export function App(): JSX.Element {
   // Find/replace host (Lane B). Reads the ACTIVE editor's live EditorView so
   // Ctrl+F/H/G + F3/Shift+F3 drive the same CM6 instance the host owns, and the
   // returned editorExtensions install the match-highlight field per editor.
-  const find = useFindBar({
-    getActiveView: () =>
+  // Stable accessors for the ACTIVE editor's view/handle. These MUST be
+  // referentially stable: useStatusBarModel feeds getActiveHandle into a
+  // useCallback→useEffect that runs a 250ms caret poll; an inline arrow here
+  // would change identity every render, re-run that effect every render, and
+  // setLineColumn(new object) → re-render → infinite update loop.
+  const getActiveView = useCallback(
+    () =>
       store.activeEditorId
         ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
         : null,
-  });
+    [store],
+  );
+  const getActiveHandle = useCallback(
+    () =>
+      store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
+    [store],
+  );
+
+  const find = useFindBar({ getActiveView });
   // Compose the find seam once: the find keymap (Ctrl+F/H/G, F3/Shift+F3, Esc)
   // plus the match-highlight StateField, mounted via CodeMirrorEditor's
   // `editorExtensions` prop (after the command keymap, before the CM6 base).
@@ -336,8 +349,7 @@ export function App(): JSX.Element {
   const statusModel = useStatusBarModel({
     theme: resolvedTheme,
     store,
-    getActiveHandle: () =>
-      store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
+    getActiveHandle,
     activeEditorId,
   });
 

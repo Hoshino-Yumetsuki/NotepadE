@@ -70,6 +70,12 @@ export default defineConfig(({ command }) => ({
     electron({
       main: {
         entry: resolve(dirname, 'src/main/index.ts'),
+        // The dev launcher otherwise runs `electron .` with cwd = vite root
+        // (src/renderer), so Electron looks for the app there and fails with
+        // "Cannot find module .../src/renderer". Launch the built main by its
+        // absolute path instead (cwd-independent), mirroring the e2e launcher.
+        onstart: (args: { startup: (argv?: string[]) => Promise<void> }) =>
+          args.startup([resolve(dirname, 'out/main/index.js'), '--no-sandbox']),
         vite: {
           build: {
             outDir: resolve(dirname, 'out/main'),

@@ -51,7 +51,16 @@ export function useStatusBarModel(args: {
     if (!view) return;
     const doc = view.state.doc.toString();
     const { from, to } = view.state.selection.main;
-    setLineColumn(computeLineColumn(doc, { from, to }));
+    const next = computeLineColumn(doc, { from, to });
+    // Bail when unchanged so the 250ms poll doesn't re-render every tick (and so
+    // an unstable getActiveHandle can never drive a setState→render→setState loop).
+    setLineColumn((prev) =>
+      prev.line === next.line &&
+      prev.column === next.column &&
+      prev.selectedCount === next.selectedCount
+        ? prev
+        : next,
+    );
   }, [getActiveHandle]);
 
   useEffect(() => {
