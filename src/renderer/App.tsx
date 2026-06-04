@@ -164,7 +164,16 @@ export function App(): JSX.Element {
     (file: OpenedFile): void => {
       const id = store.activeEditorId;
       if (!id) return;
-      editorHandles.current.get(id)?.setDoc(file.decodedText);
+      // Cold-start argv open: the tab is created+activated this tick but its CM6
+      // handle isn't registered until the editor mounts, so a single get()?.setDoc
+      // short-circuits and the doc never lands. Retry per-frame until the handle
+      // exists (setDoc itself then queues until the view inits — see #18).
+      const seedOpened = (): void => {
+        const handle = editorHandles.current.get(id);
+        if (handle) handle.setDoc(file.decodedText);
+        else requestAnimationFrame(seedOpened);
+      };
+      requestAnimationFrame(seedOpened);
       store.setLabels(id, file.encodingId, file.eolId);
       store.setFilePath(id, file.filePath);
       labelsRef.current = { encodingId: file.encodingId, eolId: file.eolId };
