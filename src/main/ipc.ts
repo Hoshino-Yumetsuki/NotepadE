@@ -9,7 +9,14 @@
 
 import { ipcMain } from 'electron';
 import { IpcChannels } from '../shared/ipc-channels.js';
-import type { Result, SaveArgs, SaveAsArgs, EncodingId, EolId } from '../shared/ipc-contract.js';
+import type {
+  Result,
+  SaveArgs,
+  SaveAsArgs,
+  EncodingId,
+  EolId,
+  SessionSnapshot,
+} from '../shared/ipc-contract.js';
 import {
   openFile,
   saveFile,
@@ -20,6 +27,7 @@ import {
 } from './file-io.js';
 import { listAnsiEncodings } from './encoding.js';
 import { applyEol } from './eol.js';
+import { snapshot, loadLast, clearRecovered } from './session.js';
 
 function notImplemented(channel: string): Result<never> {
   return { ok: false, error: `Not implemented in Phase 1: ${channel}` };
@@ -47,11 +55,9 @@ export function registerIpcHandlers(): void {
   );
 
   // --- session (Phase 4) ---
-  ipcMain.handle(IpcChannels.SessionSnapshot, () => notImplemented(IpcChannels.SessionSnapshot));
-  ipcMain.handle(IpcChannels.SessionLoadLast, () => notImplemented(IpcChannels.SessionLoadLast));
-  ipcMain.handle(IpcChannels.SessionClearRecovered, () =>
-    notImplemented(IpcChannels.SessionClearRecovered),
-  );
+  ipcMain.handle(IpcChannels.SessionSnapshot, (_e, data: SessionSnapshot) => snapshot(data));
+  ipcMain.handle(IpcChannels.SessionLoadLast, () => loadLast());
+  ipcMain.handle(IpcChannels.SessionClearRecovered, () => clearRecovered());
 
   // --- window (Phase 6) ---
   ipcMain.handle(IpcChannels.WindowBrokerRequest, () =>
