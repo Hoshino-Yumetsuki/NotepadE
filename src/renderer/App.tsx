@@ -9,6 +9,8 @@ import { TabStrip } from './tabs/TabStrip';
 import { useTabsStore, tabsStore } from './tabs/useTabsStore';
 import { useTabKeyboard } from './tabs/useTabKeyboard';
 import { installTabsTestHook } from './tabs/tabsTestHook';
+import { StatusBar } from './statusbar/StatusBar';
+import { useStatusBarModel } from './statusbar/useStatusBarModel';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -148,6 +150,16 @@ export function App(): JSX.Element {
     onCloseActive: (id) => store.close(id),
   });
 
+  // Status-bar view model (Lane C): derives the 8-column props from the active
+  // tab + its live CM6 view and binds every action to window.notepads (PA-8).
+  const statusModel = useStatusBarModel({
+    theme: forcedColors ? 'hc' : isDark ? 'dark' : 'light',
+    store,
+    getActiveHandle: () =>
+      store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
+    activeEditorId,
+  });
+
   return (
     <FluentProvider
       theme={isDark ? webDarkTheme : webLightTheme}
@@ -190,6 +202,7 @@ export function App(): JSX.Element {
         ))}
       </div>
       {find.findBar}
+      <StatusBar {...statusModel} />
     </FluentProvider>
   );
 }
