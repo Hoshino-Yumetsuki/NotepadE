@@ -31,7 +31,7 @@
  * no IPC bridge access.
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { AppTheme } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -140,28 +140,62 @@ export function useReveal(): {
   handlers: RevealHandlers;
 } {
   const hostRef = useRef<HTMLElement>(null);
+  // Rect sampled ONCE on enter and reused for every move (the surface doesn't
+  // resize mid-hover) so the pointer-rate path never calls getBoundingClientRect
+  // — that read forced a synchronous layout reflow on every pixel of movement,
+  // the dominant reveal jank source. Var writes are coalesced into one rAF so
+  // many moves per frame collapse to a single style mutation.
+  const rectRef = useRef<{ left: number; top: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const nextRef = useRef<{ x: number; y: number; opacity: number } | null>(null);
 
-  const write = useCallback((x: number, y: number, opacity: number): void => {
+  const flush = useCallback((): void => {
+    rafRef.current = null;
     const el = hostRef.current;
-    if (!el) return;
-    el.style.setProperty(REVEAL_VAR_X, `${x}px`);
-    el.style.setProperty(REVEAL_VAR_Y, `${y}px`);
-    el.style.setProperty(REVEAL_VAR_OPACITY, `${opacity}`);
+    const n = nextRef.current;
+    if (!el || !n) return;
+    el.style.setProperty(REVEAL_VAR_X, `${n.x}px`);
+    el.style.setProperty(REVEAL_VAR_Y, `${n.y}px`);
+    el.style.setProperty(REVEAL_VAR_OPACITY, `${n.opacity}`);
   }, []);
+
+  const write = useCallback(
+    (x: number, y: number, opacity: number): void => {
+      nextRef.current = { x, y, opacity };
+      if (rafRef.current == null) rafRef.current = requestAnimationFrame(flush);
+    },
+    [flush],
+  );
 
   const fromEvent = useCallback(
     (e: React.PointerEvent<HTMLElement>): void => {
-      const el = hostRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
+      const rect = rectRef.current;
+      if (!rect) return;
       write(e.clientX - rect.left, e.clientY - rect.top, 1);
     },
     [write],
   );
 
+  const onPointerEnter = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      const el = hostRef.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        rectRef.current = { left: r.left, top: r.top };
+      }
+      fromEvent(e);
+    },
+    [fromEvent],
+  );
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => fromEvent(e), [fromEvent]);
-  const onPointerEnter = useCallback((e: React.PointerEvent<HTMLElement>) => fromEvent(e), [fromEvent]);
   const onPointerLeave = useCallback(() => write(0, 0, 0), [write]);
+
+  useEffect(
+    () => () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    },
+    [],
+  );
 
   return { hostRef, handlers: { onPointerMove, onPointerEnter, onPointerLeave } };
 }
