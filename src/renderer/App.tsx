@@ -171,16 +171,19 @@ export function App(): JSX.Element {
     (file: OpenedFile): void => {
       const id = store.activeEditorId;
       if (!id) return;
-      // Cold-start argv open: the tab is created+activated this tick but its CM6
-      // handle isn't registered until the editor mounts, so a single get()?.setDoc
-      // short-circuits and the doc never lands. Retry per-frame until the handle
-      // exists (setDoc itself then queues until the view inits — see #18).
+      // Seed the doc as soon as the editor handle is registered. Call once
+      // synchronously (the handle is usually already present — the common open
+      // path; setDoc itself tolerates an unmounted view via docRef), and retry
+      // via setTimeout(0) ONLY while the handle is still null. NOT rAF: the
+      // Playwright primary window never composites, so rAF callbacks never fire
+      // and the seed would starve (it also starves a minimized/occluded window
+      // in production); setTimeout fires regardless of compositing.
       const seedOpened = (): void => {
         const handle = editorHandles.current.get(id);
         if (handle) handle.setDoc(file.decodedText);
-        else requestAnimationFrame(seedOpened);
+        else setTimeout(seedOpened, 0);
       };
-      requestAnimationFrame(seedOpened);
+      seedOpened();
       store.setLabels(id, file.encodingId, file.eolId);
       store.setFilePath(id, file.filePath);
       labelsRef.current = { encodingId: file.encodingId, eolId: file.eolId };
@@ -229,13 +232,15 @@ export function App(): JSX.Element {
     getPendingText: (id) =>
       editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
     seedAdoptedDoc: (id, text) => {
-      // The adopted tab's editor mounts on the next render; seed once it exists.
+      // Seed once the adopted tab's editor handle exists. setTimeout(0), not rAF:
+      // rAF never fires in a non-compositing window (Playwright primary / occluded
+      // window), which would starve the seed. setDoc tolerates an unmounted view.
       const seed = (): void => {
         const handle = editorHandles.current.get(id);
         if (handle) handle.setDoc(text);
-        else requestAnimationFrame(seed);
+        else setTimeout(seed, 0);
       };
-      requestAnimationFrame(seed);
+      seed();
     },
   });
 
@@ -280,14 +285,16 @@ export function App(): JSX.Element {
             activate: true,
           });
           // The new tab's editor mounts on a later render; seed once its handle
-          // exists (setDoc itself queues until the CM6 view is initialized). The
-          // handle is null synchronously right after newTab, so retry via rAF.
+          // exists. Call synchronously first, then setTimeout(0)-retry while the
+          // handle is null — NOT rAF, which never fires in a non-compositing
+          // window (the Playwright primary window, or a minimized/occluded one)
+          // and would leave the doc empty. setDoc tolerates an unmounted view.
           const seedActivation = (): void => {
             const handle = editorHandles.current.get(id);
             if (handle) handle.setDoc(res.data.decodedText);
-            else requestAnimationFrame(seedActivation);
+            else setTimeout(seedActivation, 0);
           };
-          requestAnimationFrame(seedActivation);
+          seedActivation();
           if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
           lastSavedTextRef.current.set(id, res.data.decodedText);
         });
