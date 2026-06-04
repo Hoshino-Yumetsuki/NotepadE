@@ -136,7 +136,7 @@ export interface RevealHandlers {
  *   </div>
  */
 export function useReveal(): {
-  hostRef: React.RefObject<HTMLElement>;
+  hostRef: React.RefObject<HTMLElement | null>;
   handlers: RevealHandlers;
 } {
   const hostRef = useRef<HTMLElement>(null);

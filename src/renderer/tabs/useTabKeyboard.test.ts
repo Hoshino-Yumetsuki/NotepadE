@@ -14,8 +14,8 @@ function press(init: KeyboardEventInit): void {
 
 describe('useTabKeyboard', () => {
   let store: TabsStore;
-  let onNewTab: ReturnType<typeof vi.fn>;
-  let onRename: ReturnType<typeof vi.fn>;
+  let onNewTab: ReturnType<typeof vi.fn<() => void>>;
+  let onRename: ReturnType<typeof vi.fn<(editorId: string) => void>>;
   let a: string;
   let b: string;
   let c: string;
@@ -25,8 +25,8 @@ describe('useTabKeyboard', () => {
     a = store.newTab();
     b = store.newTab();
     c = store.newTab();
-    onNewTab = vi.fn();
-    onRename = vi.fn();
+    onNewTab = vi.fn<() => void>();
+    onRename = vi.fn<(editorId: string) => void>();
     renderHook(() => useTabKeyboard(store, { onNewTab, onRename }));
   });
 

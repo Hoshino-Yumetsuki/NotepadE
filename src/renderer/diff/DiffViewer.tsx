@@ -71,7 +71,7 @@ function DiffColumn({
 }: {
   rows: DiffRow[];
   side: 'left' | 'right';
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onScroll: () => void;
   fontFamily: string;
   fontSize: number;
