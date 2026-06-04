@@ -12,6 +12,7 @@ import {
 } from '@fluentui/react-components';
 import type { SearchOptions } from './searchEngine';
 import { FindGlyph, FindDimensions, SEGOE_MDL2_FONT_FAMILY } from './findTokens';
+import { useT } from '../../i18n';
 
 /**
  * Find/Replace bar (RENDERER, Lane B) — 1:1 with the UWP FindAndReplaceControl.
@@ -77,6 +78,8 @@ export function FindBar(props: FindBarProps): JSX.Element {
     onDismiss,
     status,
   } = props;
+
+  const { t } = useT();
 
   const [query, setQuery] = useState<string>(initialQuery);
   const [replacement, setReplacement] = useState<string>('');
@@ -233,10 +236,13 @@ export function FindBar(props: FindBarProps): JSX.Element {
       }}
     >
       {/* Toggle-replace chevron (spans both rows when replace is shown). */}
-      <Tooltip content={showReplace ? 'Hide replace' : 'Show replace'} relationship="label">
+      <Tooltip
+        content={t('FindAndReplace_ToggleReplaceModeButton.ToolTipService.ToolTip')}
+        relationship="label"
+      >
         <Button
           appearance="subtle"
-          aria-label={showReplace ? 'Hide replace' : 'Show replace'}
+          aria-label={t('FindAndReplace_ToggleReplaceModeButton.ToolTipService.ToolTip')}
           data-testid="find-toggle-replace"
           onClick={() => onToggleReplace(!showReplace)}
           style={{
@@ -260,8 +266,8 @@ export function FindBar(props: FindBarProps): JSX.Element {
         <Input
           input={{ ref: findInputRef }}
           data-testid="find-input"
-          aria-label="Find"
-          placeholder="Find"
+          aria-label={t('FindAndReplace_FindBar.PlaceholderText')}
+          placeholder={t('FindAndReplace_FindBar.PlaceholderText')}
           value={query}
           onChange={(_, d) => setQueryText(d.value)}
           onKeyDown={onFindKeyDown}
@@ -269,10 +275,13 @@ export function FindBar(props: FindBarProps): JSX.Element {
         />
         <Menu checkedValues={checkedValues} onCheckedValueChange={onCheckedValueChange}>
           <MenuTrigger disableButtonEnhancement>
-            <Tooltip content="Search options" relationship="label">
+            <Tooltip
+              content={t('FindAndReplace_SearchOptionButton.ToolTipService.ToolTip')}
+              relationship="label"
+            >
               <Button
                 appearance={optionsActive ? 'primary' : 'subtle'}
-                aria-label="Search options"
+                aria-label={t('FindAndReplace_SearchOptionButton.ToolTipService.ToolTip')}
                 data-testid="find-options"
                 style={iconBtnStyle}
                 icon={<Glyph code={FindGlyph.options} size={FindDimensions.glyphFontSize} />}
@@ -286,7 +295,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 value="matchCase"
                 data-testid="find-opt-match-case"
               >
-                Match case
+                {t('FindAndReplace_SearchOptionToggleButton_MatchCase.Text')}
               </MenuItemCheckbox>
               <MenuItemCheckbox
                 name="findOption"
@@ -294,7 +303,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 disabled={useRegex}
                 data-testid="find-opt-whole-word"
               >
-                Match whole word
+                {t('FindAndReplace_SearchOptionToggleButton_MatchWholeWord.Text')}
               </MenuItemCheckbox>
               <MenuItemCheckbox
                 name="findOption"
@@ -302,7 +311,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 disabled={wholeWord}
                 data-testid="find-opt-use-regex"
               >
-                Use regular expressions
+                {t('FindAndReplace_SearchOptionToggleButton_UseRegex.Text')}
               </MenuItemCheckbox>
             </MenuList>
           </MenuPopover>
@@ -316,10 +325,13 @@ export function FindBar(props: FindBarProps): JSX.Element {
             {status}
           </span>
         )}
-        <Tooltip content="Find previous (Shift+F3)" relationship="label">
+        <Tooltip
+          content={t('FindAndReplace_SearchBackwardButton.ToolTipService.ToolTip')}
+          relationship="label"
+        >
           <Button
             appearance="subtle"
-            aria-label="Find previous"
+            aria-label={t('FindAndReplace_SearchBackwardButton.ToolTipService.ToolTip')}
             data-testid="find-prev"
             disabled={!hasQuery}
             onClick={() => doFind('previous')}
@@ -327,10 +339,13 @@ export function FindBar(props: FindBarProps): JSX.Element {
             icon={<Glyph code={FindGlyph.searchBackward} size={FindDimensions.glyphFontSize} />}
           />
         </Tooltip>
-        <Tooltip content="Find next (F3)" relationship="label">
+        <Tooltip
+          content={t('FindAndReplace_SearchForwardButton.ToolTipService.ToolTip')}
+          relationship="label"
+        >
           <Button
             appearance="subtle"
-            aria-label="Find next"
+            aria-label={t('FindAndReplace_SearchForwardButton.ToolTipService.ToolTip')}
             data-testid="find-next"
             disabled={!hasQuery}
             onClick={() => doFind('next')}
@@ -338,10 +353,13 @@ export function FindBar(props: FindBarProps): JSX.Element {
             icon={<Glyph code={FindGlyph.searchForward} size={FindDimensions.glyphFontSize} />}
           />
         </Tooltip>
-        <Tooltip content="Close (Esc)" relationship="label">
+        <Tooltip
+          content={t('FindAndReplace_DismissButton.ToolTipService.ToolTip')}
+          relationship="label"
+        >
           <Button
             appearance="subtle"
-            aria-label="Close find bar"
+            aria-label={t('FindAndReplace_DismissButton.ToolTipService.ToolTip')}
             data-testid="find-dismiss"
             onClick={onDismiss}
             style={iconBtnStyle}
@@ -357,17 +375,20 @@ export function FindBar(props: FindBarProps): JSX.Element {
             input={{ ref: replaceInputRef }}
             data-testid="replace-input"
             aria-label="Replace with"
-            placeholder="Replace"
+            placeholder={t('FindAndReplace_ReplaceBar.PlaceholderText')}
             value={replacement}
             onChange={(_, d) => setReplacement(d.value)}
             onKeyDown={onReplaceKeyDown}
             style={{ gridColumn: '2', fontSize: FindDimensions.textFontSize }}
           />
           <div style={{ gridColumn: '3', display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Tooltip content="Replace (Enter)" relationship="label">
+            <Tooltip
+              content={t('FindAndReplace_ReplaceButton.ToolTipService.ToolTip')}
+              relationship="label"
+            >
               <Button
                 appearance="subtle"
-                aria-label="Replace"
+                aria-label={t('FindAndReplace_ReplaceButton.ToolTipService.ToolTip')}
                 data-testid="replace-one"
                 disabled={!hasQuery}
                 onClick={() => doReplaceOne('next')}
@@ -375,10 +396,13 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 icon={<Glyph code={FindGlyph.replace} size={FindDimensions.glyphFontSize} />}
               />
             </Tooltip>
-            <Tooltip content="Replace all (Ctrl+Alt+Enter)" relationship="label">
+            <Tooltip
+              content={t('FindAndReplace_ReplaceAllButton.ToolTipService.ToolTip')}
+              relationship="label"
+            >
               <Button
                 appearance="subtle"
-                aria-label="Replace all"
+                aria-label={t('FindAndReplace_ReplaceAllButton.ToolTipService.ToolTip')}
                 data-testid="replace-all"
                 disabled={!hasQuery}
                 onClick={doReplaceAll}
