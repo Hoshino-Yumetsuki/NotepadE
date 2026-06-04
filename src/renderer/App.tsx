@@ -33,6 +33,7 @@ import { DiffViewer } from './diff/DiffViewer';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
+import { useT } from './i18n';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -66,6 +67,12 @@ export function App(): JSX.Element {
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
   // status-bar visibility (showStatusBar), and the theme resolution above.
   const { settings, update: updateSettings } = useSettings();
+
+  // Live translator (Phase 6 wave 2). The settings toolbar button below is the
+  // first useT() consumer: its label re-localizes on a settings.appLanguage
+  // switch with NO reload (provider mounted in main.tsx). Wave-2 grows more
+  // wrapped strings from here.
+  const { t } = useT();
 
   // Settings surface open/close state (entry point in the tab strip toolbar).
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
@@ -438,9 +445,9 @@ export function App(): JSX.Element {
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
         <Button
           appearance="subtle"
-          aria-label="Open settings"
+          aria-label={t('MainMenu_Button_Settings.Text')}
           data-testid="open-settings"
-          title="Settings (Ctrl+,)"
+          title={`${t('MainMenu_Button_Settings.Text')} (Ctrl+,)`}
           onClick={() => setSettingsOpen(true)}
           icon={
             <span aria-hidden style={{ fontFamily: '"Segoe MDL2 Assets"', fontSize: 16 }}>
