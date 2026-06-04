@@ -1,4 +1,4 @@
-import { FluentProvider, webDarkTheme, webLightTheme } from '@fluentui/react-components';
+import { FluentProvider, Button } from '@fluentui/react-components';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keymap } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
@@ -12,6 +12,11 @@ import { installTabsTestHook } from './tabs/tabsTestHook';
 import { StatusBar } from './statusbar/StatusBar';
 import { useStatusBarModel } from './statusbar/useStatusBarModel';
 import { recordLastSaved, forgetEditor } from './statusbar/fileStatusTracker';
+import { useSettings } from './settings/useSettings';
+import { useAppTheme } from './theme/useAppTheme';
+import { SettingsSurface } from './settings/SettingsSurface';
+import { installSettingsTestHook } from './settings/settingsTestHook';
+import { tokensForAppTheme } from './theme/tokens';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -29,15 +34,19 @@ import { recordLastSaved, forgetEditor } from './statusbar/fileStatusTracker';
  * keeps encodingId/eolId as OPAQUE per-tab labels — never re-derived.
  */
 export function App(): JSX.Element {
-  const [isDark, setIsDark] = useState<boolean>(
-    typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches,
-  );
-  // Forced-colors (Windows High Contrast). Drives the strip-local HC token set
-  // for the Phase-2 strip (app-wide HC theming is deferred to Phase 5). The
-  // golden harness toggles this via emulateMedia({ forcedColors: 'active' }).
-  const [forcedColors, setForcedColors] = useState<boolean>(
-    typeof window !== 'undefined' && (window.matchMedia?.('(forced-colors: active)').matches ?? false),
-  );
+  // Live app theme (Phase 5, Lane C): resolves themeMode + OS theme + accent into
+  // a FluentProvider theme and the active 'light'|'dark'|'hc' bucket, recomputed
+  // on theme.onOsThemeChanged / theme.onAccentChanged / settings.onChanged with
+  // NO reload. Replaces the Phase-2 hardcoded web{Light,Dark}Theme selection.
+  const appTheme = useAppTheme();
+  const resolvedTheme = appTheme.resolved;
+
+  // Live settings bag (MAIN-owned). Shared by the settings surface, the live
+  // status-bar visibility (showStatusBar), and the theme resolution above.
+  const { settings, update: updateSettings } = useSettings();
+
+  // Settings surface open/close state (entry point in the tab strip toolbar).
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
   const { tabs, activeEditorId, store } = useTabsStore(tabsStore);
 
@@ -67,22 +76,6 @@ export function App(): JSX.Element {
   useEffect(() => {
     if (store.count() === 0) store.newTab();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
-    if (!mq) return;
-    const onChange = (e: MediaQueryListEvent): void => setIsDark(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia?.('(forced-colors: active)');
-    if (!mq) return;
-    const onChange = (e: MediaQueryListEvent): void => setForcedColors(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   // Keep labelsRef pointed at the active tab's opaque labels.
@@ -167,33 +160,71 @@ export function App(): JSX.Element {
   // Status-bar view model (Lane C): derives the 8-column props from the active
   // tab + its live CM6 view and binds every action to window.notepads (PA-8).
   const statusModel = useStatusBarModel({
-    theme: forcedColors ? 'hc' : isDark ? 'dark' : 'light',
+    theme: resolvedTheme,
     store,
     getActiveHandle: () =>
       store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
     activeEditorId,
   });
 
+  // Settings test seam (Phase 5 Gate-5 harness): exposes open/close + the live
+  // settings bag + the resolved theme bucket. PA-8-clean (no IPC). Re-installs
+  // when the live values change so the getters close over current state.
+  useEffect(() => {
+    return installSettingsTestHook({
+      open: () => setSettingsOpen(true),
+      close: () => setSettingsOpen(false),
+      getSettings: () => settings,
+      getResolvedTheme: () => resolvedTheme,
+    });
+  }, [settings, resolvedTheme]);
+
+  // Settings entry point — Ctrl+, opens the settings surface (UWP parity: the
+  // app menu's Settings command). The toolbar gear (below) is the mouse path.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setSettingsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <FluentProvider
-      theme={isDark ? webDarkTheme : webLightTheme}
+      theme={appTheme.theme}
       style={{
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: isDark ? '#2E2E2E' : '#F0F0F0',
+        backgroundColor: tokensForAppTheme(resolvedTheme).base,
       }}
     >
       <TabStrip
         tabs={tabs}
         activeEditorId={activeEditorId}
         store={store}
-        isDark={isDark}
-        theme={forcedColors ? 'hc' : isDark ? 'dark' : 'light'}
+        isDark={resolvedTheme === 'dark'}
+        theme={resolvedTheme}
         onNewTab={() => store.newTab()}
         onCloseTab={(id) => closeTab(id)}
       />
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
+        <Button
+          appearance="subtle"
+          aria-label="Open settings"
+          data-testid="open-settings"
+          title="Settings (Ctrl+,)"
+          onClick={() => setSettingsOpen(true)}
+          icon={
+            <span aria-hidden style={{ fontFamily: '"Segoe MDL2 Assets"', fontSize: 16 }}>
+              {String.fromCharCode(0xe713)}
+            </span>
+          }
+          style={{ position: 'absolute', top: 6, right: 8, zIndex: 5, minWidth: 0 }}
+        />
         {tabs.map((tab) => (
           <div
             key={tab.editorId}
@@ -216,7 +247,14 @@ export function App(): JSX.Element {
         ))}
       </div>
       {find.findBar}
-      <StatusBar {...statusModel} />
+      {settings.showStatusBar ? <StatusBar {...statusModel} /> : null}
+      <SettingsSurface
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        update={updateSettings}
+        theme={appTheme.theme}
+      />
     </FluentProvider>
   );
 }

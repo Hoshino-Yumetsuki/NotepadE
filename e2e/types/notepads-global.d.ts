@@ -16,6 +16,7 @@ import type {
   SaveResult,
   EncodingId,
   EolId,
+  Settings,
 } from '../../src/shared/ipc-contract';
 
 /**
@@ -134,6 +135,28 @@ export interface NotepadsTestHook {
   editor?: NotepadsEditorTestHook;
   /** Phase-4 status-bar seam. Present once useStatusBarModel mounts (Lane C). */
   statusbar?: NotepadsStatusBarTestHook;
+  /** Phase-5 settings seam. Present once the settings surface mounts (Lane C). */
+  settings?: NotepadsSettingsTestHook;
+}
+
+/**
+ * Settings test seam (Phase-5, Lane C). PA-8-clean: composes only the live
+ * settings bag (window.notepads.settings) + the resolved FluentProvider theme
+ * bucket the App renders. Lets the Gate-5 harness open the surface, read a single
+ * persisted setting, and assert the active theme bucket.
+ *
+ * MUST stay in sync with the seam installed in
+ * src/renderer/settings/settingsTestHook.ts.
+ */
+export interface NotepadsSettingsTestHook {
+  /** Open the settings surface (same as the toolbar gear / Ctrl+, command). */
+  openSettings(): void;
+  /** Close the settings surface. */
+  closeSettings(): void;
+  /** The resolved theme bucket the FluentProvider is using ('light'|'dark'|'hc'). */
+  getActiveTheme(): 'light' | 'dark' | 'hc';
+  /** Read one persisted setting value by key (from the live MAIN-owned bag). */
+  getSetting<K extends keyof Settings>(key: K): Settings[K];
 }
 
 /**
