@@ -1,5 +1,5 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { existsSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -55,6 +55,31 @@ export interface LaunchOptions {
 export function makeUserDataDir(label = 'notepads-e2e'): string {
   const dir = mkdtempSync(join(tmpdir(), `${label}-`));
   return dir;
+}
+
+/**
+ * Best-effort recursive delete of a temp dir, tolerant of Windows EPERM.
+ *
+ * A second Electron instance (broker / two-window specs) holds a lock on a shared
+ * userDataDir; on Windows the lock can outlive `app.close()` by a few ms, so a
+ * naive `rmSync` in a test's `finally` throws EPERM and — fatally — that throw
+ * OVERWRITES the real assertion failure in the report. This retries with a short
+ * backoff and then gives up silently (the OS reaps the temp dir regardless), so
+ * cleanup never masks the actual test outcome.
+ */
+export function safeRm(dir: string, attempts = 8, delayMs = 125): void {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+      return;
+    } catch {
+      if (i === attempts - 1) return; // give up: temp dir, OS will reap it
+      const until = Date.now() + delayMs;
+      while (Date.now() < until) {
+        /* tiny synchronous backoff — keeps the helper sync for use in finally */
+      }
+    }
+  }
 }
 
 /**

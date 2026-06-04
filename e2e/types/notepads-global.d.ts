@@ -122,6 +122,25 @@ export interface NotepadsEditorTestHook {
   seedDoc?(text: string, caret?: number): void;
 }
 
+/**
+ * Cross-window transfer test seam (Phase-6, Workstream 6.A). PA-8-clean: composes
+ * only the live TabsStore + the frozen window.notepads.dragOut/window contract —
+ * it orchestrates the SAME path the real HTML5 drag handler calls, it does not
+ * bypass it. Lets the Gate-6 two-window transfer suite drive begin/complete/void
+ * within a single e2e process (the raw cross-process drag is unsynthesizable).
+ *
+ * MUST stay in sync with TransferTestHook in
+ * src/renderer/tabs/transferWiring.ts.
+ */
+export interface NotepadsTransferTestHook {
+  /** Build the envelope for `editorId` and call dragOut.begin; resolves to the token (or null). */
+  begin(editorId: string): Promise<string | null>;
+  /** Complete a transfer at `dropIndex` in THIS (target) window. */
+  complete(token: string, dropIndex: number): Promise<boolean>;
+  /** Apply the UWP SetDraggedOutside void-drop rule; returns whether it acted (spawned). */
+  voidDrop(editorId: string): boolean;
+}
+
 export interface NotepadsTestHook {
   /** Calls window.notepads.file.open(path) then loads decodedText into CM6. */
   openFileIntoEditor(path: string): Promise<Result<OpenedFile>>;
@@ -137,6 +156,8 @@ export interface NotepadsTestHook {
   statusbar?: NotepadsStatusBarTestHook;
   /** Phase-5 settings seam. Present once the settings surface mounts (Lane C). */
   settings?: NotepadsSettingsTestHook;
+  /** Phase-6 cross-window transfer seam. Present once transferWiring installs (lane-a). */
+  transfer?: NotepadsTransferTestHook;
 }
 
 /**

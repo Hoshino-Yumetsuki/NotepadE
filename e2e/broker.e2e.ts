@@ -1,8 +1,8 @@
 import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
-import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
-import { launchApp, makeUserDataDir, type LaunchedApp } from './helpers/launch';
+import { launchApp, makeUserDataDir, safeRm, type LaunchedApp } from './helpers/launch';
 
 /**
  * VERIFICATION GATE 6 — line 1: single-instance broker + activation
@@ -46,7 +46,7 @@ function seedWorkspace(label: string): { dir: string; file: string; name: string
   const name = 'opened-by-argv.txt';
   const file = join(dir, name);
   writeFileSync(file, 'broker argv content\n', 'utf8');
-  return { dir, file, name, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+  return { dir, file, name, cleanup: () => safeRm(dir) };
 }
 
 /** Resolve the active tab's filePath via the renderer tab seam (PA-8-clean). */
@@ -71,7 +71,7 @@ async function setSetting(app: LaunchedApp, patch: Record<string, unknown>): Pro
 
 test.describe('Gate 6 — single-instance broker + activation', () => {
   // ---- argv file open ----------------------------------------------------
-  test.fixme('launching with a file argv opens that file in the first window', async () => {
+  test('launching with a file argv opens that file in the first window', async () => {
     const ws = seedWorkspace('argv');
     const userDataDir = makeUserDataDir('np-broker-argv');
     const app = await launchApp({ userDataDir, extraArgs: [ws.file] });
@@ -86,12 +86,12 @@ test.describe('Gate 6 — single-instance broker + activation', () => {
     } finally {
       await app.app.close();
       ws.cleanup();
-      rmSync(userDataDir, { recursive: true, force: true });
+      safeRm(userDataDir);
     }
   });
 
   // ---- second instance: REDIRECT when alwaysOpenNewWindow is OFF ----------
-  test.fixme(
+  test(
     'second instance with alwaysOpenNewWindow OFF redirects to the existing window (no spawn)',
     async () => {
       const ws = seedWorkspace('redirect');
@@ -117,13 +117,13 @@ test.describe('Gate 6 — single-instance broker + activation', () => {
       } finally {
         await primary.app.close();
         ws.cleanup();
-        rmSync(userDataDir, { recursive: true, force: true });
+        safeRm(userDataDir);
       }
     },
   );
 
   // ---- second instance: SPAWN when alwaysOpenNewWindow is ON -------------
-  test.fixme(
+  test(
     'second instance with alwaysOpenNewWindow ON spawns a new window',
     async () => {
       const ws = seedWorkspace('spawn');
@@ -145,13 +145,13 @@ test.describe('Gate 6 — single-instance broker + activation', () => {
       } finally {
         await primary.app.close();
         ws.cleanup();
-        rmSync(userDataDir, { recursive: true, force: true });
+        safeRm(userDataDir);
       }
     },
   );
 
   // ---- notepads://newinstance ALWAYS spawns -----------------------------
-  test.fixme('notepads://newinstance spawns a window regardless of alwaysOpenNewWindow', async () => {
+  test('notepads://newinstance spawns a window regardless of alwaysOpenNewWindow', async () => {
     const userDataDir = makeUserDataDir('np-broker-protocol');
     const primary = await launchApp({ userDataDir });
     try {
@@ -167,12 +167,12 @@ test.describe('Gate 6 — single-instance broker + activation', () => {
       await second.close().catch(() => void 0);
     } finally {
       await primary.app.close();
-      rmSync(userDataDir, { recursive: true, force: true });
+      safeRm(userDataDir);
     }
   });
 
   // ---- relative path resolves against the captured cwd ------------------
-  test.fixme('a relative-path activation resolves against the captured cwd', async () => {
+  test('a relative-path activation resolves against the captured cwd', async () => {
     const ws = seedWorkspace('cwd');
     const userDataDir = makeUserDataDir('np-broker-cwd');
     const primary = await launchApp({ userDataDir });
@@ -192,7 +192,7 @@ test.describe('Gate 6 — single-instance broker + activation', () => {
     } finally {
       await primary.app.close();
       ws.cleanup();
-      rmSync(userDataDir, { recursive: true, force: true });
+      safeRm(userDataDir);
     }
   });
 });
