@@ -19,9 +19,11 @@ import { brokerRequest as brokerRequestImpl } from './broker.js';
 import {
   toggleCompact,
   createCompactState,
+  windowStateFrom,
   type CompactState,
   type CompactWindowPort,
   type WindowAction,
+  type WindowState,
 } from './compact-overlay.js';
 
 function errMsg(e: unknown): string {
@@ -136,4 +138,49 @@ export function windowSetCompactOverlay(
   } catch (e) {
     return { ok: false, error: errMsg(e) };
   }
+}
+
+// ---------------------------------------------------------------------------
+//  MAIN test seam (NOTEPADS_E2E only) — window state reader
+// ---------------------------------------------------------------------------
+
+/** Resolve the window the e2e harness is asserting: focused, else first live. */
+function primaryWindow(): BrowserWindow | null {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) return focused;
+  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed()) ?? null;
+}
+
+/** True when the window is currently in the compact-overlay substitute state. */
+function isCompact(win: BrowserWindow): boolean {
+  return compactState.get(win)?.snapshot != null;
+}
+
+/**
+ * Read the primary window's live state for the Gate-7 compact behavior matrix:
+ * the real bounds/alwaysOnTop/maximize/fullscreen flags plus our compact-state
+ * truth, shaped by the pure `windowStateFrom`. Returns null if no live window
+ * exists. Exported so `installWindowTestSeam` can expose it; never wired into the
+ * production IPC surface (it reads from the same `compactState` the real toggle
+ * mutates, so it reflects genuine state, not emulation).
+ */
+export function readWindowStateForTest(): WindowState | null {
+  const win = primaryWindow();
+  if (!win) return null;
+  return windowStateFrom(compactPort(win).readFlags(), isCompact(win));
+}
+
+/**
+ * Augment the shared `globalThis.__notepadsMainTest` seam (installed by the
+ * broker) with `readWindowState`, gated on NOTEPADS_E2E so it never widens the
+ * production surface. Call once from bootstrap AFTER `installMainTestSeam` so the
+ * base object already exists; if it doesn't (defensive), create it.
+ */
+export function installWindowTestSeam(): void {
+  if (process.env['NOTEPADS_E2E'] !== '1') return;
+  const g = globalThis as unknown as {
+    __notepadsMainTest?: { readWindowState?: () => WindowState | null };
+  };
+  const seam = (g.__notepadsMainTest ??= {});
+  seam.readWindowState = readWindowStateForTest;
 }

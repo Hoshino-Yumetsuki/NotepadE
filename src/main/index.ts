@@ -9,6 +9,7 @@ import { app, BrowserWindow } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createMainWindow } from './window-factory.js';
+import { installWindowTestSeam } from './window.js';
 import { registerIpcHandlers } from './ipc.js';
 import { initThemePush } from './theme.js';
 import {
@@ -49,6 +50,9 @@ function initOnce(): void {
   initBroker(spawnWindow);
   // e2e-only MAIN seam (broker internals via app.evaluate). No-op in production.
   installMainTestSeam();
+  // e2e-only window-state reader on the same seam (Gate-7 compact matrix). No-op
+  // in production; installed after the broker seam so it augments the base object.
+  installWindowTestSeam();
 }
 
 function bootstrap(): void {

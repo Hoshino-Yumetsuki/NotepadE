@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   toggleCompact,
   createCompactState,
+  windowStateFrom,
   COMPACT_WIDTH,
   COMPACT_HEIGHT,
   type CompactWindowPort,
@@ -156,5 +157,35 @@ describe('toggleCompact', () => {
     const res = toggleCompact(win, state, false); // never entered
     expect(res.isCompactOverlay).toBe(false);
     expect(win.calls).toEqual([]);
+  });
+});
+
+describe('windowStateFrom', () => {
+  it('shapes the e2e readWindowState payload from flags + compact flag', () => {
+    const state = windowStateFrom(
+      { bounds: RECT, alwaysOnTop: true, maximized: false, fullScreen: false },
+      true,
+    );
+    expect(state).toEqual({
+      isCompactOverlay: true,
+      bounds: { width: RECT.width, height: RECT.height },
+      isAlwaysOnTop: true,
+      isMaximized: false,
+      isFullScreen: false,
+    });
+  });
+
+  it('projects bounds down to width/height only and carries maximize/fullscreen', () => {
+    const state = windowStateFrom(
+      { bounds: { x: 5, y: 9, width: 800, height: 600 }, alwaysOnTop: false, maximized: true, fullScreen: true },
+      false,
+    );
+    expect(state).toEqual({
+      isCompactOverlay: false,
+      bounds: { width: 800, height: 600 },
+      isAlwaysOnTop: false,
+      isMaximized: true,
+      isFullScreen: true,
+    });
   });
 });

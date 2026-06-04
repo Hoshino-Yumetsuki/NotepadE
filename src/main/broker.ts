@@ -22,6 +22,7 @@
 import { app, BrowserWindow } from 'electron';
 import { resolve } from 'node:path';
 import type { ActivationEvent } from '../shared/ipc-contract.js';
+import type { WindowState } from './compact-overlay.js';
 import { IpcChannels } from '../shared/ipc-channels.js';
 import { getSettings } from './settings.js';
 import {
@@ -248,6 +249,14 @@ export interface MainTestSeam {
     argv: readonly string[],
     cwd: string,
   ): Promise<{ parsed: ParsedArgv; windowCount: number; targetId: number | null }>;
+  /**
+   * Read the primary (focused, else first live) window's live state for the
+   * Gate-7 compact behavior matrix. Installed by window.ts's `installWindowTestSeam`
+   * (the compact-state truth lives there), so it is OPTIONAL on this base shape —
+   * present whenever the window seam has been installed under NOTEPADS_E2E.
+   * Returns null if no live window exists.
+   */
+  readWindowState?(): WindowState | null;
 }
 
 /** Build the seam object. Routes through the SAME functions production uses. */

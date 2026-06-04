@@ -159,3 +159,33 @@ export function toggleCompact(
   // Already in the requested state — no-op.
   return { isCompactOverlay: enabled };
 }
+
+/**
+ * The window-state shape the e2e test seam (globalThis.__notepadsMainTest.
+ * readWindowState) reports, so the Gate-7 compact behavior matrix can assert the
+ * real window's contract: enter → COMPACT_WIDTH×COMPACT_HEIGHT + always-on-top,
+ * leave → restored bounds with maximize/fullscreen re-applied. Only width/height
+ * are reported (x/y vary by monitor and aren't part of the contract).
+ */
+export interface WindowState {
+  isCompactOverlay: boolean;
+  bounds: { width: number; height: number };
+  isAlwaysOnTop: boolean;
+  isMaximized: boolean;
+  isFullScreen: boolean;
+}
+
+/**
+ * Project live window flags + the compact flag into the e2e WindowState payload.
+ * Pure so it is unit-tested electron-free; window.ts feeds it the real window's
+ * flags and its compact-state truth.
+ */
+export function windowStateFrom(flags: WindowFlags, isCompactOverlay: boolean): WindowState {
+  return {
+    isCompactOverlay,
+    bounds: { width: flags.bounds.width, height: flags.bounds.height },
+    isAlwaysOnTop: flags.alwaysOnTop,
+    isMaximized: flags.maximized,
+    isFullScreen: flags.fullScreen,
+  };
+}
