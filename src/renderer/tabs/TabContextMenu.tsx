@@ -7,6 +7,7 @@ import {
   MenuDivider,
 } from '@fluentui/react-components';
 import type { ReactElement } from 'react';
+import { useT } from '../i18n';
 
 /**
  * ============================================================================
@@ -69,6 +70,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
 
   // UWP enable conditions (TabContextFlyout_Opening, lines 79-82).
   const multiTab = tabCount > 1;
+  const { t } = useT();
 
   return (
     <Menu openOnContext positioning="below">
@@ -76,7 +78,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
       <MenuPopover>
         <MenuList data-testid="tab-menu">
           <MenuItem data-testid="tab-menu-close" secondaryContent="Ctrl+W" onClick={onClose}>
-            Close
+            {t('Tab_ContextFlyout_CloseButtonDisplayText')}
           </MenuItem>
           <MenuItem
             data-testid="tab-menu-close-others"
@@ -84,7 +86,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
             aria-disabled={!multiTab}
             onClick={onCloseOthers}
           >
-            Close Others
+            {t('Tab_ContextFlyout_CloseOthersButtonDisplayText')}
           </MenuItem>
           <MenuItem
             data-testid="tab-menu-close-right"
@@ -92,10 +94,10 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
             aria-disabled={!multiTab}
             onClick={onCloseToRight}
           >
-            Close to the Right
+            {t('Tab_ContextFlyout_CloseRightButtonDisplayText')}
           </MenuItem>
           <MenuItem data-testid="tab-menu-close-saved" onClick={onCloseSaved}>
-            Close Saved
+            {t('Tab_ContextFlyout_CloseSavedButtonDisplayText')}
           </MenuItem>
           <MenuDivider />
           <MenuItem
@@ -104,7 +106,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
             aria-disabled={!hasFilePath}
             onClick={onCopyFullPath}
           >
-            Copy Full Path
+            {t('Tab_ContextFlyout_CopyFullPathButtonDisplayText')}
           </MenuItem>
           <MenuItem
             data-testid="tab-menu-open-folder"
@@ -112,11 +114,11 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
             aria-disabled={!hasFilePath}
             onClick={onOpenContainingFolder}
           >
-            Open Containing Folder
+            {t('Tab_ContextFlyout_OpenContainingFolderButtonDisplayText')}
           </MenuItem>
           <MenuDivider />
           <MenuItem data-testid="tab-menu-rename" secondaryContent="F2" onClick={onRename}>
-            Rename
+            {t('Tab_ContextFlyout_RenameButtonDisplayText')}
           </MenuItem>
         </MenuList>
       </MenuPopover>
