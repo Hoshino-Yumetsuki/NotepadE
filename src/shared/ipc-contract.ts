@@ -165,6 +165,124 @@ export interface SessionApi {
 }
 
 // ---------------------------------------------------------------------------
+//  settings — persisted app settings  (Phase 5)
+// ---------------------------------------------------------------------------
+//
+// MAIN owns the persisted settings store (replaces UWP ApplicationSettingsStore /
+// AppSettingsService + ThemeSettingsService). The renderer NEVER touches the
+// store directly — it reads the whole bag via `settings.get()`, patches fields
+// via `settings.set(patch)`, and reacts to `settings.onChanged`. Every field +
+// default below is grounded 1:1 in the UWP source (AppSettingsService.cs /
+// ThemeSettingsService.cs); see DEFAULT_SETTINGS for the verbatim defaults.
+
+/** Editor font slant. Mirrors UWP Windows.UI.Text.FontStyle. */
+export type FontStyleId = 'normal' | 'italic' | 'oblique';
+
+/** Text-wrap mode. Mirrors the UWP TextWrapping values the app actually uses. */
+export type TextWrapMode = 'noWrap' | 'wrap';
+
+/**
+ * Default decoding preference (UWP EditorDefaultDecoding):
+ *   'auto'  → guess encoding at read time (UWP null sentinel / codePage -1),
+ *   'utf-8' → force UTF-8 (no BOM),
+ *   'ansi'  → force the system/current-culture ANSI code page.
+ */
+export type DefaultDecoding = 'auto' | 'utf-8' | 'ansi';
+
+/** Web-search engine selection. Mirrors UWP SearchEngine enum. */
+export type SearchEngineId = 'bing' | 'google' | 'duckDuckGo' | 'custom';
+
+/** Theme mode (UWP UseWindowsTheme=true → 'system', else the requested theme). */
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+/** Tab-as-spaces width (UWP EditorDefaultTabIndents): -1 = real tab. */
+export type TabIndents = -1 | 2 | 4 | 8;
+
+/**
+ * The full persisted settings bag (MAIN-owned). Field names mirror the UWP
+ * AppSettingsService / ThemeSettingsService properties; grouped by settings pane.
+ */
+export interface Settings {
+  // --- Text & Editor ---
+  editorFontFamily: string;
+  editorFontSize: number;
+  editorFontStyle: FontStyleId;
+  /** OpenType weight (UWP FontWeight.Weight ushort); 400 = Normal. */
+  editorFontWeight: number;
+  textWrapping: TextWrapMode;
+  displayLineHighlighter: boolean;
+  displayLineNumbers: boolean;
+  /** Spellcheck red-underline highlight (UWP IsHighlightMisspelledWordsEnabled). */
+  highlightMisspelledWords: boolean;
+  defaultLineEnding: EolId;
+  /** Default write encoding as an opaque EncodingId (UWP EditorDefaultEncoding). */
+  defaultEncoding: EncodingId;
+  defaultDecoding: DefaultDecoding;
+  tabIndents: TabIndents;
+  searchEngine: SearchEngineId;
+  customSearchUrl: string;
+  // --- Personalization ---
+  themeMode: ThemeMode;
+  /** Background tint opacity 0..1 (UWP AppBackgroundPanelTintOpacity). */
+  tintOpacity: number;
+  useWindowsAccentColor: boolean;
+  /** Custom accent as #RRGGBB; empty string = follow the resolved app accent. */
+  customAccentColor: string;
+  // --- Advanced ---
+  showStatusBar: boolean;
+  smartCopy: boolean;
+  sessionSnapshot: boolean;
+  alwaysOpenNewWindow: boolean;
+  exitWhenLastTabClosed: boolean;
+  /** BCP-47 language tag, or '' = follow the OS UI language (29-locale set, Phase 6). */
+  appLanguage: string;
+}
+
+/**
+ * Verbatim UWP defaults (AppSettingsService.cs Initialize* + ThemeSettingsService.cs
+ * Initialize*). MAIN applies these when a key is absent; both tiers import this so
+ * there is a single source of truth (pure data — PA-8 clean, no fs).
+ */
+export const DEFAULT_SETTINGS: Settings = {
+  editorFontFamily: 'Consolas',
+  editorFontSize: 14,
+  editorFontStyle: 'normal',
+  editorFontWeight: 400,
+  textWrapping: 'noWrap',
+  displayLineHighlighter: true,
+  displayLineNumbers: true,
+  highlightMisspelledWords: false,
+  defaultLineEnding: 'crlf',
+  defaultEncoding: 'UTF-8',
+  defaultDecoding: 'auto',
+  tabIndents: -1,
+  searchEngine: 'bing',
+  customSearchUrl: '',
+  themeMode: 'system',
+  tintOpacity: 0.75,
+  useWindowsAccentColor: true,
+  customAccentColor: '',
+  showStatusBar: true,
+  smartCopy: false,
+  sessionSnapshot: false,
+  alwaysOpenNewWindow: false,
+  exitWhenLastTabClosed: false,
+  appLanguage: '',
+};
+
+export interface SettingsApi {
+  /** Read the full persisted settings (MAIN-owned, DEFAULT_SETTINGS applied). */
+  get(): Promise<Result<Settings>>;
+  /**
+   * Patch one or more settings. MAIN merges, persists, then broadcasts
+   * `EvtSettingsChanged` to ALL windows. Returns the merged settings.
+   */
+  set(patch: Partial<Settings>): Promise<Result<Settings>>;
+  /** Subscribe to settings changes (this or any other window / external write). */
+  onChanged(cb: (settings: Settings) => void): Unsubscribe;
+}
+
+// ---------------------------------------------------------------------------
 //  window — broker request/redirect / fullscreen / compact overlay  (Phase 6)
 // ---------------------------------------------------------------------------
 
@@ -278,6 +396,7 @@ export interface NotepadsApi {
   file: FileApi;
   encoding: EncodingApi;
   session: SessionApi;
+  settings: SettingsApi;
   window: WindowApi;
   dragOut: DragOutApi;
   editor: EditorApi;

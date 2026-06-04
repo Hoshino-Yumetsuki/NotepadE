@@ -24,6 +24,10 @@ export const IpcChannels = {
   SessionLoadLast: 'notepads:session:loadLast',
   SessionClearRecovered: 'notepads:session:clearRecovered',
 
+  // settings
+  SettingsGet: 'notepads:settings:get',
+  SettingsSet: 'notepads:settings:set',
+
   // window
   WindowBrokerRequest: 'notepads:window:brokerRequest',
   WindowSetFullScreen: 'notepads:window:setFullScreen',
@@ -48,6 +52,7 @@ export const IpcChannels = {
   EvtEditorRelease: 'notepads:evt:editor:release',
   EvtThemeOsChanged: 'notepads:evt:theme:osChanged',
   EvtThemeAccentChanged: 'notepads:evt:theme:accentChanged',
+  EvtSettingsChanged: 'notepads:evt:settings:changed',
   EvtAppActivation: 'notepads:evt:app:activation',
   EvtAppProtocol: 'notepads:evt:app:protocol',
 } as const;

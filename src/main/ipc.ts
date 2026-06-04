@@ -59,6 +59,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.SessionLoadLast, () => loadLast());
   ipcMain.handle(IpcChannels.SessionClearRecovered, () => clearRecovered());
 
+  // --- settings (Phase 5) ---
+  ipcMain.handle(IpcChannels.SettingsGet, () => notImplemented(IpcChannels.SettingsGet));
+  ipcMain.handle(IpcChannels.SettingsSet, () => notImplemented(IpcChannels.SettingsSet));
+
   // --- window (Phase 6) ---
   ipcMain.handle(IpcChannels.WindowBrokerRequest, () =>
     notImplemented(IpcChannels.WindowBrokerRequest),

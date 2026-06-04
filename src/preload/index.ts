@@ -15,6 +15,7 @@ import type {
   DragEnvelope,
   AdoptPayload,
   ThemeState,
+  Settings,
   ActivationEvent,
   AnsiEncodingEntry,
   OpenedFile,
@@ -55,6 +56,11 @@ const api: NotepadsApi = {
       invoke<{ written: boolean }>(IpcChannels.SessionSnapshot, data),
     loadLast: () => invoke<SessionSnapshot | null>(IpcChannels.SessionLoadLast),
     clearRecovered: () => invoke<void>(IpcChannels.SessionClearRecovered),
+  },
+  settings: {
+    get: () => invoke<Settings>(IpcChannels.SettingsGet),
+    set: (patch: Partial<Settings>) => invoke<Settings>(IpcChannels.SettingsSet, patch),
+    onChanged: (cb) => subscribe<Settings>(IpcChannels.EvtSettingsChanged, cb),
   },
   window: {
     brokerRequest: (args) => invoke<void>(IpcChannels.WindowBrokerRequest, args),
