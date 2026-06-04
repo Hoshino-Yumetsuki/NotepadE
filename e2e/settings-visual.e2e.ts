@@ -8,6 +8,7 @@ import {
   selectPane,
   patchSettings,
   getActiveTheme,
+  forceSurfaceOpaqueForCapture,
 } from './helpers/settings';
 
 /**
@@ -55,6 +56,10 @@ let launched: LaunchedApp;
 
 test.beforeAll(async () => {
   launched = await launchApp();
+  // A FIXED viewport makes the dialog box (and therefore the golden) deterministic
+  // across runs / machines — without it the Electron window size varies and the
+  // baseline dimensions never reproduce.
+  await launched.page.setViewportSize({ width: 1280, height: 800 });
 });
 
 test.afterAll(async () => {
@@ -62,16 +67,39 @@ test.afterAll(async () => {
 });
 
 /**
- * Arrange a deterministic settings surface for the golden: 'system' theme mode so
- * emulateMedia decides the bucket, the OS accent (no custom hex variance), and the
- * Text & Editor pane selected so every theme captures the SAME pane content. The
- * surface is opened fresh each case to avoid any prior-pane scroll drift.
+ * Arrange a deterministic settings surface for the golden, opened fresh each case
+ * to avoid prior-pane scroll drift. The OS accent (no custom hex variance) and the
+ * Text & Editor pane are fixed so every theme captures the SAME pane content.
+ *
+ * The bucket is pinned DETERMINISTICALLY rather than inferred from the OS scheme:
+ *   - light/dark → themeMode is set explicitly (resolveBucket returns the mode
+ *     verbatim when it is not 'system'), so the capture never races the
+ *     prefers-color-scheme propagation. (An isolated 'dark' run surfaced that race
+ *     as an R9 failure — emulateMedia({colorScheme}) alone didn't settle the bucket
+ *     on a cold launch.)
+ *   - hc → forced-colors:'active' wins over themeMode in resolveBucket, so a fixed
+ *     'light' mode under forcedColors still resolves to 'hc'.
+ *
+ * The surface is opened ONCE (kept open across cases): re-clicking the gear while
+ * the modal is open would land on the backdrop, and a close→reopen toggle races the
+ * Fluent close/open motion (an observed failure left the dialog shut and the capture
+ * waiting forever on an absent surface). The surface re-themes LIVE on the themeMode
+ * / forced-colors change, so reusing the open dialog is both correct and stable.
  */
-async function arrangeSettingsSurface(): Promise<void> {
+async function arrangeSettingsSurface(tc: ThemeCase): Promise<void> {
   const { page } = launched;
-  await patchSettings(page, { themeMode: 'system', useWindowsAccentColor: true });
-  await openSettings(page);
+  const themeMode = tc.name === 'dark' ? 'dark' : 'light';
+  await patchSettings(page, { themeMode, useWindowsAccentColor: true });
+  // Open via the gear only if the surface isn't already up (first case opens it;
+  // later cases reuse the live-re-themed dialog).
+  const alreadyOpen = await page.locator(SETTINGS_SELECTORS.surface).count();
+  if (alreadyOpen === 0) {
+    await openSettings(page);
+  }
   await selectPane(page, 'textEditor');
+  // Pin the surface opaque so the golden capture is independent of the Fluent open
+  // motion (its opacity-0 base does not reliably resolve to 1 under Electron WAAPI).
+  await forceSurfaceOpaqueForCapture(page);
 }
 
 for (const tc of THEME_CASES) {
@@ -79,12 +107,12 @@ for (const tc of THEME_CASES) {
     const { page } = launched;
 
     await page.emulateMedia({ colorScheme: tc.colorScheme, forcedColors: tc.forcedColors });
-    await arrangeSettingsSurface();
+    await arrangeSettingsSurface(tc);
 
     const surface = page.locator(SETTINGS_SELECTORS.surface);
     await expect(surface).toBeVisible();
 
-    // R9 GUARD: assert the surface genuinely entered the emulated theme BEFORE the
+    // R9 GUARD: assert the surface genuinely entered the target theme BEFORE the
     // pixel diff. getActiveTheme() is the resolved FluentProvider bucket; for hc we
     // additionally confirm forced-colors is live (its keywords resolve to the user
     // palette, so there is no fixed RGB to luma-check).
@@ -104,7 +132,7 @@ for (const tc of THEME_CASES) {
     // Capture via a page-level screenshot CLIPPED to the surface box (Fluent's
     // Dialog re-measures on layout ticks; a one-shot boundingBox clip sidesteps the
     // element-stability wait that stalls a locator screenshot). animations:'disabled'
-    // freezes the dialog open transition + Fluent ripples.
+    // freezes Fluent ripples; the open transition is already settled above.
     const box = await surface.boundingBox();
     if (!box) throw new Error('settings surface has no bounding box (not laid out)');
     const actual = await page.screenshot({

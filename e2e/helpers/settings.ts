@@ -68,11 +68,47 @@ export async function closeSettings(page: Page): Promise<void> {
   await expect(page.locator(SETTINGS_SELECTORS.surface)).toBeHidden();
 }
 
-/** Select a settings nav section (real click) and assert its pane mounted. */
+/**
+ * Prepare the settings DialogSurface for a deterministic golden capture by forcing
+ * it to full opacity. Fluent v9 animates the dialog open via the WAAPI with the
+ * surface's BASE opacity pinned at 0; under Electron the open keyframe's fill does
+ * NOT reliably resolve to opacity 1 unless a re-render/reflow nudges it, so a fixed
+ * wait can screenshot a still-transparent (blank) dialog — that produced a ~6KB
+ * "blank" golden. Rather than gate on an unreliable computed value, we pin the
+ * surface opaque with a test-only inline style (the visual content underneath is
+ * already mounted), making the capture independent of the open-motion timing. This
+ * is capture tooling only; it does not touch app code or the contract.
+ */
+export async function forceSurfaceOpaqueForCapture(page: Page): Promise<void> {
+  const surface = page.locator(SETTINGS_SELECTORS.surface);
+  await expect(surface).toBeVisible();
+  await page.evaluate((sel) => {
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (el) {
+      el.style.setProperty('opacity', '1', 'important');
+      el.style.setProperty('transform', 'none', 'important');
+    }
+  }, SETTINGS_SELECTORS.surface);
+  await expect
+    .poll(() =>
+      page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        return el ? Number(getComputedStyle(el).opacity) : 0;
+      }, SETTINGS_SELECTORS.surface),
+    )
+    .toBeGreaterThanOrEqual(1);
+}
+
+/**
+ * Select a settings nav section (real click) and assert its pane mounted. The pane
+ * mounts immediately on selection (the open-motion opacity quirk does not block the
+ * nav), so a forced click + pane-visible assertion is sufficient and race-free.
+ */
 export async function selectPane(
   page: Page,
   section: 'textEditor' | 'personalization' | 'advanced' | 'about',
 ): Promise<void> {
+  await expect(page.locator(SETTINGS_SELECTORS.surface)).toBeVisible();
   await page.locator(navItem(section)).click({ force: true });
   await expect(page.locator(`[data-testid="settings-pane-${section}"]`)).toBeVisible();
 }
