@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { I18nProvider } from './i18n';
 import './env.d';
+// Frameless window chrome: body reset (kill stray scrollbar) + drag region.
+import './chrome.css';
 // Acrylic-approximation surface styles (Phase 7): the .np-acrylic class for the
 // settings pane + in-app notification surfaces, driven by per-theme CSS vars.
 import './theme/acrylic.css';

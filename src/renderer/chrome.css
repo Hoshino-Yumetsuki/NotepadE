@@ -1,0 +1,25 @@
+/*
+ * Window-chrome baseline. The app is a frameless 100vh shell: zero the default
+ * UA body margin and lock overflow so the editor region (not the document) owns
+ * scrolling — otherwise the 8px margin + 100vh overflows and paints a stray
+ * window scrollbar. #root fills the window.
+ */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Frameless drag region: the tab strip background drags the window; interactive
+   controls inside it opt back out so clicks/tabs still work. */
+[data-drag-region] {
+  -webkit-app-region: drag;
+}
+[data-drag-region] button,
+[data-drag-region] [role='tab'],
+[data-no-drag] {
+  -webkit-app-region: no-drag;
+}

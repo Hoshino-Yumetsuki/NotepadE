@@ -699,6 +699,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     <div
       data-testid="tab-strip"
       data-theme={resolvedTheme}
+      data-drag-region
       style={
         {
           display: 'flex',
