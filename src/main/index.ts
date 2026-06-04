@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createMainWindow } from './window-factory.js';
 import { registerIpcHandlers } from './ipc.js';
+import { initThemePush } from './theme.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -46,6 +47,7 @@ function applyE2eUserDataOverride(): void {
 applyE2eUserDataOverride();
 
 app.whenReady().then(() => {
+  initThemePush();
   bootstrap();
 
   app.on('activate', () => {
