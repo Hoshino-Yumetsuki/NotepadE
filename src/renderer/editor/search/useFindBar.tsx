@@ -36,6 +36,7 @@ import {
   searchExtension,
 } from './findController';
 import { findKeymap, type FindKeymapCallbacks } from './findKeymap';
+import { useT, type Translator } from '../../i18n';
 
 /** What the App must provide: a getter for the currently-active editor view. */
 export interface UseFindBarOptions {
@@ -56,14 +57,20 @@ export interface FindBarHost {
 }
 
 /** Format the UWP-style "n of m" / "No results" status text. */
-function formatStatus(outcome: FindOutcome | null, hasQuery: boolean): string | undefined {
+function formatStatus(
+  outcome: FindOutcome | null,
+  hasQuery: boolean,
+  t: Translator['t'],
+): string | undefined {
   if (!hasQuery) return undefined;
-  if (!outcome || !outcome.match) return 'No results';
+  if (!outcome || !outcome.match) return t('FindAndReplace_NotificationMsg_NotFound');
   return outcome.wrapped ? 'Wrapped' : undefined;
 }
 
 export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   const { getActiveView } = opts;
+
+  const { t } = useT();
 
   const [open, setOpen] = useState<boolean>(false);
   const [showReplace, setShowReplace] = useState<boolean>(false);
@@ -132,9 +139,9 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       const q = toQuery(query, options);
       activeQueryRef.current = q;
       const outcome = direction === 'next' ? findNextInView(view, q) : findPreviousInView(view, q);
-      setStatus(formatStatus(outcome, query.length > 0));
+      setStatus(formatStatus(outcome, query.length > 0, t));
     },
-    [getActiveView],
+    [getActiveView, t],
   );
 
   const onReplaceOne = useCallback(
@@ -144,10 +151,10 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       const q = toQuery(query, options);
       activeQueryRef.current = q;
       const did = replaceOne(view, q, replacement);
-      setStatus(did ? undefined : 'No results');
+      setStatus(did ? undefined : t('FindAndReplace_NotificationMsg_NotFound'));
       refreshHighlights(view, q);
     },
-    [getActiveView],
+    [getActiveView, t],
   );
 
   const onReplaceAll = useCallback(
@@ -157,10 +164,10 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       const q = toQuery(query, options);
       activeQueryRef.current = q;
       const count = replaceAllInView(view, q, replacement);
-      setStatus(count > 0 ? `Replaced ${count}` : 'No results');
+      setStatus(count > 0 ? `Replaced ${count}` : t('FindAndReplace_NotificationMsg_NotFound'));
       refreshHighlights(view, q);
     },
-    [getActiveView],
+    [getActiveView, t],
   );
 
   // --- Editor seam (keymap + extensions) -------------------------------------
