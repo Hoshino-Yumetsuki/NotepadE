@@ -51,27 +51,32 @@ export type EdgeShadowDirection = 'down' | 'up';
  * `direction: 'up'` casts upward (the status bar elevates onto the editor above).
  * Returns a zero-height transparent element in HC (opacity 0) so it is inert.
  *
- * The element is intended to be placed as a flex sibling OUTSIDE the strip/bar
- * boxes (so it never enters those clipped golden captures), with the band height
- * equal to EDGE_SHADOW_BLUR.
+ * The element is ABSOLUTELY positioned and must be mounted inside the
+ * position:relative editor region (#app-shell) — anchored to its top edge for
+ * 'down' and its bottom edge for 'up'. Being out of flow, it never re-flows the
+ * strip/bar flex boxes, so their clipped golden captures stay pixel-identical.
  */
 export function edgeShadowStyle(theme: AppTheme, direction: EdgeShadowDirection): CSSProperties {
   const o = edgeShadowOpacity(theme);
+  // ABSOLUTE, out-of-flow caster: mounted inside a position:relative editor
+  // region, it overlays the top edge ('down') or bottom edge ('up') and never
+  // enters the flex layout. This is what keeps the strip/bar golden captures
+  // (which clip to those elements' boundingBox) pixel-identical — a flex sibling
+  // would re-flow the column and shift the captured box. HC (opacity 0) collapses
+  // to a zero-height, fully-transparent element.
   if (o <= 0) {
-    return { height: 0, flex: '0 0 auto', pointerEvents: 'none' };
+    return { position: 'absolute', left: 0, right: 0, top: 0, height: 0, pointerEvents: 'none' };
   }
   // down: chrome is ABOVE the caster → darkest at the TOP, fade downward.
   // up:   chrome is BELOW the caster → darkest at the BOTTOM, fade upward.
   const gradientTo = direction === 'down' ? 'bottom' : 'top';
   return {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    [direction === 'down' ? 'top' : 'bottom']: 0,
     height: EDGE_SHADOW_BLUR,
-    flex: '0 0 auto',
     pointerEvents: 'none',
-    // Overlap the editor edge without consuming layout height in the editor
-    // region: pull the caster onto the editor by its own height.
-    marginBottom: direction === 'down' ? -EDGE_SHADOW_BLUR : 0,
-    marginTop: direction === 'up' ? -EDGE_SHADOW_BLUR : 0,
-    position: 'relative',
     zIndex: 2,
     background: `linear-gradient(to ${gradientTo}, ${shadowColor(o)} 0%, transparent 100%)`,
   };

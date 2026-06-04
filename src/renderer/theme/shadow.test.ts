@@ -33,14 +33,19 @@ describe('edgeShadowStyle', () => {
   it("'down' fades toward the bottom (strip casts onto editor below)", () => {
     const s = edgeShadowStyle('light', 'down');
     expect(String(s.background)).toContain('to bottom');
-    // Negative bottom margin overlaps the editor without adding layout height.
-    expect(s.marginBottom).toBe(-EDGE_SHADOW_BLUR);
+    // Absolute, out-of-flow caster anchored to the TOP edge of the editor region
+    // so it never re-flows the strip's flex box (keeps the golden pixel-identical).
+    expect(s.position).toBe('absolute');
+    expect(s.top).toBe(0);
+    expect(s.bottom).toBeUndefined();
   });
 
   it("'up' fades toward the top (bar casts onto editor above)", () => {
     const s = edgeShadowStyle('dark', 'up');
     expect(String(s.background)).toContain('to top');
-    expect(s.marginTop).toBe(-EDGE_SHADOW_BLUR);
+    expect(s.position).toBe('absolute');
+    expect(s.bottom).toBe(0);
+    expect(s.top).toBeUndefined();
   });
 
   it('carries the theme opacity in the gradient color', () => {

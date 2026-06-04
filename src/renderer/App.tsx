@@ -462,12 +462,16 @@ export function App(): JSX.Element {
         onBeginTransfer={(id) => beginTransfer(store, transferSource.current, id)}
         onVoidDrop={(id) => handleVoidDrop(store, id)}
       />
-      {/* Edge-shadow elevation (Phase 7, Task #28): the tab strip casts a downward
-          drop shadow onto the editor surface. Rendered as a sibling caster OUTSIDE
-          the strip's golden-clipped box so the Gate-2 baseline stays pixel-identical;
-          inert (height 0) in HC. */}
-      <div data-testid="tab-strip-shadow" aria-hidden style={edgeShadowStyle(resolvedTheme, 'down')} />
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
+        {/* Edge-shadow elevation (Phase 7, Task #28): absolute, out-of-flow casters
+            overlaid on the editor region. 'down' = tab strip elevates onto editor;
+            'up' = status bar elevates onto editor. Anchored inside #app-shell so they
+            never re-flow the strip/bar flex boxes — keeping the Gate-2/Gate-4 golden
+            captures pixel-identical. Inert (height 0) in HC. */}
+        <div data-testid="tab-strip-shadow" aria-hidden style={edgeShadowStyle(resolvedTheme, 'down')} />
+        {settings.showStatusBar ? (
+          <div data-testid="status-bar-shadow" aria-hidden style={edgeShadowStyle(resolvedTheme, 'up')} />
+        ) : null}
         <Button
           appearance="subtle"
           aria-label={t('MainMenu_Button_Settings.Text')}
@@ -560,12 +564,6 @@ export function App(): JSX.Element {
         })}
       </div>
       {find.findBar}
-      {/* Status-bar edge-shadow (Phase 7, Task #28): the bar casts an upward drop
-          shadow onto the editor. Sibling caster OUTSIDE the bar's golden box; only
-          rendered when the bar is visible; inert (height 0) in HC. */}
-      {settings.showStatusBar ? (
-        <div data-testid="status-bar-shadow" aria-hidden style={edgeShadowStyle(resolvedTheme, 'up')} />
-      ) : null}
       {settings.showStatusBar ? <StatusBar {...statusModel} /> : null}
       <SettingsSurface
         open={settingsOpen}
