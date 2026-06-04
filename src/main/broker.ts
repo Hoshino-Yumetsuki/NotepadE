@@ -20,15 +20,18 @@
  */
 
 import { app, BrowserWindow } from 'electron';
-import { resolve, isAbsolute } from 'node:path';
+import { resolve } from 'node:path';
 import type { ActivationEvent } from '../shared/ipc-contract.js';
 import { IpcChannels } from '../shared/ipc-channels.js';
 import { getSettings } from './settings.js';
-
-/** The `notepads://` custom protocol scheme (UWP NotepadsProtocolService). */
-const PROTOCOL_SCHEME = 'notepads';
-/** Protocol verb that always forces a new instance/window. */
-const NEW_INSTANCE_VERB = 'newinstance';
+import {
+  PROTOCOL_SCHEME,
+  NEW_INSTANCE_VERB,
+  parseArgv as parseArgvPure,
+  isNewInstanceProtocol,
+  resolveCwdRelative,
+  type ParsedArgv,
+} from './argv-parse.js';
 
 /** How the broker spawns a new window. Injected so index.ts owns window-factory. */
 type SpawnWindow = () => BrowserWindow;
@@ -56,40 +59,15 @@ function trackFocus(): void {
   });
 }
 
-/** Resolve a single argv token to an absolute path against `cwd`. */
-function resolveArg(token: string, cwd: string): string {
-  return isAbsolute(token) ? token : resolve(cwd, token);
-}
-
 /**
- * Parse an argv array into file paths + an optional `notepads://` url. The first
- * element is the executable (and, in dev, the script) — we skip electron's own
- * switches (leading '-') and the app path, keeping bare tokens as candidate
- * paths. A token matching the protocol scheme is captured as the protocol url.
+ * Parse argv against `cwd`, supplying electron's process identity to the pure
+ * parser so it can skip the executable + bundled main entry / app path.
  */
-function parseArgv(argv: readonly string[], cwd: string): { paths: string[]; protocolUrl: string | null } {
-  const paths: string[] = [];
-  let protocolUrl: string | null = null;
-  for (const token of argv) {
-    if (!token || token.startsWith('-')) continue;
-    if (token.startsWith(`${PROTOCOL_SCHEME}://`)) {
-      protocolUrl = token;
-      continue;
-    }
-    // Skip the electron executable and the bundled main entry on cold start.
-    if (token === process.execPath) continue;
-    if (token.endsWith('.js') || token.endsWith('.cjs') || token.endsWith('.mjs')) continue;
-    if (token === '.' || token === app.getAppPath()) continue;
-    paths.push(resolveArg(token, cwd));
-  }
-  return { paths, protocolUrl };
-}
-
-/** Does the protocol url request a brand-new instance (the `newinstance` verb)? */
-function isNewInstanceProtocol(protocolUrl: string | null): boolean {
-  if (!protocolUrl) return false;
-  const rest = protocolUrl.slice(`${PROTOCOL_SCHEME}://`.length).replace(/\/+$/, '');
-  return rest.toLowerCase() === NEW_INSTANCE_VERB;
+function parseArgv(argv: readonly string[], cwd: string): ParsedArgv {
+  return parseArgvPure(argv, cwd, {
+    execPath: process.execPath,
+    appPath: app.getAppPath(),
+  });
 }
 
 /** Pick the redirect target: the last-focused live window, else any live one. */
@@ -228,4 +206,94 @@ export function flushPendingActivation(): void {
     pendingActivation = null;
     void routeActivation(ev);
   }
+}
+
+// ---------------------------------------------------------------------------
+//  MAIN test seam (NOTEPADS_E2E only)
+// ---------------------------------------------------------------------------
+
+/**
+ * The single-instance lock is skipped under NOTEPADS_E2E (index.ts), so a second
+ * `electron.launch` under the same flag also becomes "primary" and never drives
+ * the real `second-instance` redirect/cwd path on the first process. This seam
+ * exposes the GENUINE broker internals IN-PROCESS so the Gate-6 harness can
+ * exercise them via `app.evaluate(() => globalThis.__notepadsMainTest...)`,
+ * mirroring the renderer transfer seam: real code paths, no emulation.
+ *
+ * Installed once from bootstrap, gated on NOTEPADS_E2E so it never widens the
+ * production surface.
+ */
+export interface MainTestSeam {
+  /** Pure argv parse (paths + protocol url) against the supplied cwd. */
+  parseArgv(argv: readonly string[], cwd: string): ParsedArgv;
+  /** Resolve a single bare token to an absolute path against cwd. */
+  resolveCwdRelative(token: string, cwd: string): string;
+  /** Whether a protocol url is the `newinstance` verb. */
+  isNewInstanceProtocol(protocolUrl: string | null): boolean;
+  /** Live window count (live BrowserWindows). */
+  windowCount(): number;
+  /**
+   * Drive the real `routeActivation` with an already-built event and resolve
+   * once routing completes; returns the resulting window count + the id of the
+   * window the activation was delivered to (the target's id, or null).
+   */
+  routeActivation(event: ActivationEvent): Promise<{ windowCount: number; targetId: number | null }>;
+  /**
+   * Model an OS `second-instance` exactly as the real handler does: parse argv
+   * against `cwd`, then route. Resolves with the parsed result + the resulting
+   * window count so the harness can assert redirect (count unchanged) vs spawn
+   * (count +1) and the cwd-resolved paths.
+   */
+  simulateSecondInstance(
+    argv: readonly string[],
+    cwd: string,
+  ): Promise<{ parsed: ParsedArgv; windowCount: number; targetId: number | null }>;
+}
+
+/** Build the seam object. Routes through the SAME functions production uses. */
+function buildMainTestSeam(): MainTestSeam {
+  const liveCount = (): number =>
+    BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed()).length;
+
+  const routeAndReport = async (
+    event: ActivationEvent,
+  ): Promise<{ windowCount: number; targetId: number | null }> => {
+    const before = new Set(BrowserWindow.getAllWindows().map((w) => w.id));
+    await routeActivation(event);
+    // The target is the spawned window (a new id) when forceNew, else the
+    // redirect target. Report it for the harness to correlate.
+    const after = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
+    const spawned = after.find((w) => !before.has(w.id));
+    const target = spawned ?? redirectTarget();
+    return { windowCount: liveCount(), targetId: target ? target.id : null };
+  };
+
+  return {
+    parseArgv,
+    resolveCwdRelative,
+    isNewInstanceProtocol,
+    windowCount: liveCount,
+    routeActivation: routeAndReport,
+    simulateSecondInstance: async (argv, cwd) => {
+      const parsed = parseArgv(argv, cwd);
+      const { windowCount, targetId } = await routeAndReport({
+        paths: parsed.paths,
+        cwd,
+        protocolUrl: parsed.protocolUrl,
+      });
+      return { parsed, windowCount, targetId };
+    },
+  };
+}
+
+/**
+ * Install the MAIN test seam on `globalThis.__notepadsMainTest` when running
+ * under the e2e harness. No-op otherwise (production surface stays clean). Call
+ * once from bootstrap after `initBroker` so the seam's routeActivation has a
+ * window factory.
+ */
+export function installMainTestSeam(): void {
+  if (process.env['NOTEPADS_E2E'] !== '1') return;
+  (globalThis as unknown as { __notepadsMainTest?: MainTestSeam }).__notepadsMainTest =
+    buildMainTestSeam();
 }

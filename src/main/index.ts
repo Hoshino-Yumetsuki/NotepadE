@@ -17,6 +17,7 @@ import {
   initBroker,
   processInitialActivation,
   flushPendingActivation,
+  installMainTestSeam,
 } from './broker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -46,6 +47,8 @@ function initOnce(): void {
   registerIpcHandlers();
   initThemePush();
   initBroker(spawnWindow);
+  // e2e-only MAIN seam (broker internals via app.evaluate). No-op in production.
+  installMainTestSeam();
 }
 
 function bootstrap(): void {
