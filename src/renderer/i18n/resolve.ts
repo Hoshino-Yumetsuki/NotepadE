@@ -22,6 +22,7 @@ import {
   type LocaleTable,
   type SupportedLocale,
 } from './locales/index';
+import { SUPPLEMENT } from './locales/supplement';
 
 export { SUPPORTED_LOCALES, BASE_LOCALE, type SupportedLocale, type LocaleTable };
 
@@ -91,15 +92,24 @@ export function format(template: string, args: ReadonlyArray<string | number> = 
 }
 
 /**
- * Look a key up in `table`, falling back to the en-US table, then to the key
+ * Look a key up in `table`, falling back to the en-US table, then to the
+ * web-port SUPPLEMENT overlay (locale value → en-US value), then to the key
  * itself (so a never-translated key is visible rather than blank). This is the
  * single missing-key policy the whole framework shares.
+ *
+ * The generated tables ALWAYS win: the supplement is consulted only after both
+ * the resolved table and the en-US generated table miss, so a supplement key can
+ * never shadow a ported .resw key (the disjoint-keys guard in resolve.test.ts
+ * asserts the two key sets never overlap anyway). `locale` selects the per-locale
+ * supplement value; omitted (or absent in the entry) → the entry's en-US value.
  */
-export function lookup(table: LocaleTable, key: string): string {
+export function lookup(table: LocaleTable, key: string, locale?: SupportedLocale): string {
   const direct = table[key];
   if (direct !== undefined) return direct;
   const base = LOCALE_TABLES[BASE_LOCALE][key];
   if (base !== undefined) return base;
+  const sup = SUPPLEMENT[key];
+  if (sup !== undefined) return (locale && sup[locale]) ?? sup['en-US'];
   return key;
 }
 

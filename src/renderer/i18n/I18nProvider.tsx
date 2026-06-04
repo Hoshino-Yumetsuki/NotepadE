@@ -135,10 +135,10 @@ export function useT(): Translator {
   return useMemo<Translator>(
     () => ({
       locale,
-      t: (key, ...args) => format(lookup(table, key), args),
+      t: (key, ...args) => format(lookup(table, key, locale), args),
       plural: (count, singularKey, pluralKey, ...args) => {
         const key = Math.abs(count) === 1 ? singularKey : pluralKey;
-        return format(lookup(table, key), args);
+        return format(lookup(table, key, locale), args);
       },
     }),
     [locale, table],

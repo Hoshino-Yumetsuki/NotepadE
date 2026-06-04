@@ -14,6 +14,7 @@ import {
   SUPPORTED_LOCALES,
   BASE_LOCALE,
 } from './resolve';
+import { SUPPLEMENT } from './locales/supplement';
 
 describe('i18n locale set', () => {
   it('ports all 29 UWP locales', () => {
@@ -106,5 +107,44 @@ describe('lookup (missing-key fallback)', () => {
 
   it('falls back to the key itself when absent everywhere', () => {
     expect(lookup({}, 'Totally_Unknown_Key')).toBe('Totally_Unknown_Key');
+  });
+});
+
+describe('SUPPLEMENT overlay (web-port keys with no .resw origin)', () => {
+  it('is DISJOINT from the generated tables — never shadows a ported key', () => {
+    // The core invariant: a supplement key must only ADD a key absent from the
+    // generated tables, so the 29-locale matrix + port-resw --check stay the
+    // single source of truth for ported strings. Checked against en-US (every
+    // generated locale shares the en-US key set per the key-parity test above).
+    const generatedKeys = new Set(Object.keys(tableFor(BASE_LOCALE)));
+    const overlap = Object.keys(SUPPLEMENT).filter((k) => generatedKeys.has(k));
+    expect(overlap).toEqual([]);
+  });
+
+  it('every supplement entry carries an en-US value', () => {
+    for (const [key, entry] of Object.entries(SUPPLEMENT)) {
+      expect(entry['en-US'], `${key} missing en-US`).toBeTruthy();
+    }
+  });
+
+  it('resolves a supplement key only after the generated chain misses', () => {
+    // Not in the resolved table nor the generated en-US table → overlay supplies it.
+    expect(lookup(tableFor('en-US'), 'StatusBar_LineEnding_Crlf', 'en-US')).toBe('Windows (CRLF)');
+    expect(lookup(tableFor('zh-CN'), 'FindAndReplace_MatchCountText', 'zh-CN')).toBe('{0} of {1}');
+  });
+
+  it('falls a supplement key through to its en-US value when the locale is untranslated', () => {
+    // Entries are en-US-only for now; any resolved locale gets the en-US string.
+    expect(lookup(tableFor('de-DE'), 'TabStrip_NewTabButton.AutomationProperties.Name', 'de-DE')).toBe(
+      'New tab',
+    );
+  });
+
+  it('does not let a supplement key override a real generated key', () => {
+    // A known ported key resolves from the generated table, not the overlay,
+    // even if a same-named overlay entry existed (it cannot, per the disjoint guard).
+    const en = tableFor('en-US');
+    const portedKey = 'TextEditor_LineColumnIndicator_ShortText';
+    expect(lookup(en, portedKey, 'en-US')).toBe(en[portedKey]);
   });
 });
