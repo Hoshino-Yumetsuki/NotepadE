@@ -16,6 +16,13 @@
 import { BrowserWindow } from 'electron';
 import type { Result } from '../shared/ipc-contract.js';
 import { brokerRequest as brokerRequestImpl } from './broker.js';
+import {
+  planCompactEnter,
+  planCompactLeave,
+  type CompactSnapshot,
+  type WindowAction,
+  type WindowFlags,
+} from './compact-overlay.js';
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -26,17 +33,45 @@ function windowFor(event: Electron.IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
-/** Remembered pre-compact state per window, so leaving compact restores it. */
-interface PriorWindowState {
-  bounds: Electron.Rectangle;
-  alwaysOnTop: boolean;
-  /** The compact-overlay target size (UWP CompactOverlay default ~500x360). */
-}
-const priorState = new WeakMap<BrowserWindow, PriorWindowState>();
+/** Remembered pre-compact snapshot per window, so leaving compact restores it. */
+const priorState = new WeakMap<BrowserWindow, CompactSnapshot>();
 
-/** UWP CompactOverlay default view size. */
-const COMPACT_WIDTH = 500;
-const COMPACT_HEIGHT = 360;
+/** Read the live flags the compact planner snapshots/normalizes from. */
+function readFlags(win: BrowserWindow): WindowFlags {
+  const b = win.getBounds();
+  return {
+    bounds: { x: b.x, y: b.y, width: b.width, height: b.height },
+    alwaysOnTop: win.isAlwaysOnTop(),
+    maximized: win.isMaximized(),
+    fullScreen: win.isFullScreen(),
+  };
+}
+
+/** Apply the planner's declarative actions to a real BrowserWindow, in order. */
+function applyActions(win: BrowserWindow, actions: WindowAction[]): void {
+  for (const a of actions) {
+    switch (a.type) {
+      case 'setFullScreen':
+        win.setFullScreen(a.value);
+        break;
+      case 'unmaximize':
+        win.unmaximize();
+        break;
+      case 'maximize':
+        win.maximize();
+        break;
+      case 'setAlwaysOnTop':
+        win.setAlwaysOnTop(a.value, 'floating');
+        break;
+      case 'setSize':
+        win.setSize(a.width, a.height, true);
+        break;
+      case 'setBounds':
+        win.setBounds(a.bounds, true);
+        break;
+    }
+  }
+}
 
 /**
  * Ask the broker to open paths (redirect into the focused window or spawn a new
@@ -72,9 +107,12 @@ export function windowSetFullScreen(
 
 /**
  * Enter/leave the compact-overlay substitute. Entering snapshots the current
- * bounds + always-on-top flag, then makes the window small + always-on-top.
- * Leaving restores the snapshot. Idempotent: re-entering while compact re-uses
- * the original snapshot, and leaving when not compact is a no-op.
+ * bounds + flags (including maximized/fullscreen), normalizes the window out of
+ * maximize/fullscreen, then makes it small + always-on-top. Leaving restores the
+ * snapshot EXACTLY, re-applying maximize/fullscreen if they were set. Idempotent:
+ * re-entering while compact re-uses the original snapshot, and leaving when not
+ * compact is a no-op. The decision logic lives in compact-overlay.ts (pure +
+ * unit-tested); this shell only reads live flags and applies the planned actions.
  */
 export function windowSetCompactOverlay(
   event: Electron.IpcMainInvokeEvent,
@@ -85,16 +123,15 @@ export function windowSetCompactOverlay(
   try {
     const isCompact = priorState.has(win);
     if (enabled && !isCompact) {
-      priorState.set(win, { bounds: win.getBounds(), alwaysOnTop: win.isAlwaysOnTop() });
-      win.setAlwaysOnTop(true, 'floating');
-      win.setSize(COMPACT_WIDTH, COMPACT_HEIGHT, true);
+      const { snapshot, actions } = planCompactEnter(readFlags(win));
+      priorState.set(win, snapshot);
+      applyActions(win, actions);
       return { ok: true, data: { isCompactOverlay: true } };
     }
     if (!enabled && isCompact) {
-      const prior = priorState.get(win)!;
+      const snapshot = priorState.get(win)!;
       priorState.delete(win);
-      win.setAlwaysOnTop(prior.alwaysOnTop);
-      win.setBounds(prior.bounds, true);
+      applyActions(win, planCompactLeave(snapshot));
       return { ok: true, data: { isCompactOverlay: false } };
     }
     // Already in the requested state.
