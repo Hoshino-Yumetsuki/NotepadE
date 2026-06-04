@@ -29,7 +29,7 @@ export function registerIpcHandlers(): void {
   // --- file ---
   ipcMain.handle(IpcChannels.FileOpen, (_e, path: string) => openFile(path));
   ipcMain.handle(IpcChannels.FileSave, (_e, args: SaveArgs) => saveFile(args));
-  ipcMain.handle(IpcChannels.FileSaveAs, () => notImplemented(IpcChannels.FileSaveAs));
+  ipcMain.handle(IpcChannels.FileSaveAs, (_e, args: SaveAsArgs) => saveFileAs(args));
   ipcMain.handle(IpcChannels.FileReloadFromDisk, (_e, path: string) => reloadFromDisk(path));
   ipcMain.handle(IpcChannels.FileRevalidatePath, (_e, path: string) => revalidatePath(path));
 
