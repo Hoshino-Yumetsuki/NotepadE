@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { launchApp, type LaunchedApp } from './helpers/launch';
 import { compareToBaseline, formatDiff } from '../scripts/visual-diff';
 import { resetToSingleTab } from './helpers/tabs';
+import { driveOsTheme, resetOsTheme } from './helpers/settings';
 
 /**
  * VERIFICATION GATE 4 — status bar (docs/plan/05 §4.C + §GATE 4).
@@ -15,9 +16,16 @@ import { resetToSingleTab } from './helpers/tabs';
  *
  *   (1) Golden image per theme (light / dark / high-contrast) at ≤0.1% pixel
  *       delta, reusing scripts/visual-diff.ts (the same harness + tolerance as
- *       the Gate-2 tab strip). Themes are driven via emulateMedia, matching the
- *       tab-strip visual flow; App re-reads prefers-color-scheme / forced-colors
- *       reactively (no reload).
+ *       the Gate-2 tab strip). The OS light/dark flip is driven through the MAIN
+ *       `nativeTheme.themeSource` seam (driveOsTheme), NOT emulateMedia: MAIN owns
+ *       the OS theme via nativeTheme and the renderer reads it through
+ *       window.notepads.theme (PA-8), so an emulated prefers-color-scheme is
+ *       overridden by MAIN's authoritative push. Relying on emulateMedia alone made
+ *       the dark/hc goldens pass only when an earlier test had already nudged
+ *       nativeTheme — a false green that failed IN ISOLATION (R10). Driving the seam
+ *       per-test makes each case self-contained. High-contrast still folds in the
+ *       renderer forced-colors query via emulateMedia (useAppTheme reads it directly).
+ *       App re-resolves the bucket reactively (no reload).
  *   (2) An 8-column flyout MATRIX: open each column's flyout and assert the exact
  *       action items (testids) the UWP StatusBar.cs wires, so a regression that
  *       drops/relabels an action fails loudly.
@@ -74,6 +82,9 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  // Hygiene: return nativeTheme to following the host so a later spec in the same
+  // process starts from the real OS theme rather than a value this suite pinned.
+  if (launched) await resetOsTheme(launched.app);
   await launched?.app.close();
 });
 
@@ -105,8 +116,14 @@ const THEME_CASES: ThemeCase[] = [
 
 for (const tc of THEME_CASES) {
   test(`status bar golden image — ${tc.name} theme <=0.1% delta @visual`, async () => {
-    const { page } = launched;
+    const { page, app } = launched;
 
+    // Drive the OS light/dark flip through the MAIN nativeTheme seam (authoritative
+    // for the renderer's resolved bucket), and the high-contrast query through
+    // emulateMedia (useAppTheme folds forced-colors in directly). This makes each
+    // case self-contained so it passes IN ISOLATION, not only after a prior test
+    // happened to set nativeTheme (R10).
+    await driveOsTheme(app, tc.colorScheme);
     await page.emulateMedia({ colorScheme: tc.colorScheme, forcedColors: tc.forcedColors });
     await arrangeDefaultStatusBar(page);
 
@@ -165,6 +182,9 @@ for (const tc of THEME_CASES) {
 
 test.describe('Gate 4 — status bar flyout action matrix', () => {
   test.beforeEach(async () => {
+    // Pin dark via the MAIN nativeTheme seam (same R10 rationale as the goldens) so
+    // these flyout assertions render against a deterministic theme in isolation.
+    await driveOsTheme(launched.app, 'dark');
     await launched.page.emulateMedia({ colorScheme: 'dark', forcedColors: 'none' });
     await arrangeDefaultStatusBar(launched.page);
   });
