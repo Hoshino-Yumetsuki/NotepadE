@@ -23,9 +23,12 @@ import { driveOsTheme, resetOsTheme } from './helpers/settings';
  *       overridden by MAIN's authoritative push. Relying on emulateMedia alone made
  *       the dark/hc goldens pass only when an earlier test had already nudged
  *       nativeTheme — a false green that failed IN ISOLATION (R10). Driving the seam
- *       per-test makes each case self-contained. High-contrast still folds in the
- *       renderer forced-colors query via emulateMedia (useAppTheme reads it directly).
- *       App re-resolves the bucket reactively (no reload).
+ *       per-test makes each case self-contained. High-contrast additionally needs a
+ *       page.reload() after emulateMedia({ forcedColors: 'active' }): CDP emulation
+ *       sets the queried value but does not fire a forced-colors `change` event into a
+ *       freshly-launched renderer, so useAppTheme only resolves the 'hc' bucket by
+ *       reading the query AT MOUNT (the freshly-reloaded-page hardening R9 recommends).
+ *       App re-resolves the bucket reactively (no reload) for light/dark.
  *   (2) An 8-column flyout MATRIX: open each column's flyout and assert the exact
  *       action items (testids) the UWP StatusBar.cs wires, so a regression that
  *       drops/relabels an action fails loudly.
@@ -120,11 +123,23 @@ for (const tc of THEME_CASES) {
 
     // Drive the OS light/dark flip through the MAIN nativeTheme seam (authoritative
     // for the renderer's resolved bucket), and the high-contrast query through
-    // emulateMedia (useAppTheme folds forced-colors in directly). This makes each
-    // case self-contained so it passes IN ISOLATION, not only after a prior test
-    // happened to set nativeTheme (R10).
+    // emulateMedia. This makes each case self-contained so it passes IN ISOLATION,
+    // not only after a prior test happened to set nativeTheme/forced-colors (R10).
     await driveOsTheme(app, tc.colorScheme);
     await page.emulateMedia({ colorScheme: tc.colorScheme, forcedColors: tc.forcedColors });
+
+    // R10 (high-contrast): emulateMedia({ forcedColors: 'active' }) sets the queried
+    // value but, in a freshly-launched page with no prior emulation, does NOT dispatch
+    // a `change` event to useAppTheme's forced-colors MediaQueryList listener — so the
+    // renderer's highContrast state, initialized false at mount, never flips and the
+    // bucket stays 'dark'. (In the full suite an earlier emulation had latched it true:
+    // the latent ordering dependency.) Reload the page so useAppTheme re-initializes
+    // highContrast from matchMedia('(forced-colors: active)') AT MOUNT — the same
+    // freshly-reloaded-page hardening R9 recommends. emulateMedia + the MAIN nativeTheme
+    // seam both persist across a renderer reload, so the page remounts under HC + dark.
+    if (tc.name === 'hc') {
+      await page.reload();
+    }
     await arrangeDefaultStatusBar(page);
 
     const bar = page.locator(STATUS.bar);
