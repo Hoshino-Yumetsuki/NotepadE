@@ -48,6 +48,12 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   'TabStrip_ScrollRightButton.AutomationProperties.Name': { 'en-US': 'Scroll tabs right' },
   // Find match counter (gap #3) — awaiting-translation. {0}=current, {1}=total.
   'FindAndReplace_MatchCountText': { 'en-US': '{0} of {1}' },
+  // Find/replace a11y aria-labels — awaiting-translation. The web port adds an
+  // accessible name on the find/replace container and the replace input (UWP
+  // exposed these via AutomationProperties; distinct from the existing
+  // FindAndReplace_ReplaceBar.PlaceholderText="Replace" generated key).
+  'FindAndReplace_FindAndReplaceControl.AutomationProperties.Name': { 'en-US': 'Find and replace' },
+  'FindAndReplace_ReplaceBar.AutomationProperties.Name': { 'en-US': 'Replace with' },
   // Status-bar a11y aria-labels — awaiting-translation. The UWP status bar exposed
   // these affordances via AutomationProperties on its native controls; the web port
   // re-declares them as overlay keys (no .resw origin) for screen-reader parity.
