@@ -379,6 +379,18 @@ export function App(): JSX.Element {
         void window.notepads.window.setFullScreen(!fullScreenRef.current).then((res) => {
           if (res.ok) fullScreenRef.current = res.data.isFullScreen;
         });
+      } else if (
+        e.key === 'F12' &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.shiftKey
+      ) {
+        // F12 → toggle the compact-overlay window (frameless always-on-top, the
+        // 0.A sign-off #8 substitute). Bare F12 only, so a modified chord never
+        // triggers it; MAIN owns the actual window state machine (window.ts).
+        e.preventDefault();
+        onCompact();
       }
     };
     const onCompact = (): void => {
