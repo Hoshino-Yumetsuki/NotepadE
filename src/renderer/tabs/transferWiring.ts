@@ -81,17 +81,20 @@ export async function completeTransfer(token: string, dropIndex: number): Promis
  * Apply an `editor.adopt` push: insert the moved tab at dropIndex and seed its
  * document. The target rebuilds undo history fresh from the adopted text — the
  * source's undo stack is intentionally NOT carried (UWP parity).
+ *
+ * MAIN only ever pushes adopt to the TARGET window (release goes to the source),
+ * so an adopt is ALWAYS cross-window here. editorSeq is per-renderer, so the
+ * source's `payload.editorId` (e.g. editor-1) can clash with an unrelated tab the
+ * target already owns; reusing it would activate that blank tab and drop the
+ * adopted doc (R3). We therefore ignore the source id for our local namespace and
+ * mint a FRESH local editorId, seed under it, and return it so the caller can key
+ * its diff baseline by the real local id.
  */
-export function applyAdopt(store: TabsStore, source: TransferTextSource, payload: AdoptPayload): void {
-  const { editorId, file, pendingText, isModified, dropIndex, viewMode } = payload;
-  // If a tab with this editorId already exists (e.g. same-window echo), switch to
-  // it instead of duplicating (UWP "File already opened" guard).
-  if (store.get(editorId)) {
-    store.activate(editorId);
-    return;
-  }
+export function applyAdopt(store: TabsStore, source: TransferTextSource, payload: AdoptPayload): string {
+  const { file, pendingText, isModified, dropIndex, viewMode } = payload;
+  const localId = store.mintEditorId();
   store.newTab({
-    editorId,
+    editorId: localId,
     filePath: file.filePath,
     encodingId: file.encodingId,
     eolId: file.eolId,
@@ -100,10 +103,11 @@ export function applyAdopt(store: TabsStore, source: TransferTextSource, payload
     index: dropIndex,
     activate: true,
   });
-  store.setViewMode(editorId, viewMode);
+  store.setViewMode(localId, viewMode);
   // Seed the visible document: the dirty pending text if modified, else the
   // last-saved baseline. The editor seam wires the doc into the CM6 instance.
-  source.seedAdoptedDoc(editorId, isModified && pendingText != null ? pendingText : file.decodedText);
+  source.seedAdoptedDoc(localId, isModified && pendingText != null ? pendingText : file.decodedText);
+  return localId;
 }
 
 /** Apply an `editor.release` push: drop the moved tab from the SOURCE window. */

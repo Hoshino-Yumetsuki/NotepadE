@@ -129,6 +129,20 @@ export class TabsStore {
     return this.state.tabs.findIndex((t) => t.editorId === editorId);
   }
 
+  /**
+   * Mint a fresh, renderer-unique editorId WITHOUT creating a tab. Used by the
+   * cross-window adopt path: editorSeq is per-renderer, so a transferred tab's
+   * source id can collide with an unrelated tab in the target window. The target
+   * re-keys the adopted tab under a fresh local id from this same namespace.
+   */
+  mintEditorId(): string {
+    let id = nextEditorId();
+    // editorSeq advances independently of explicitly-forced ids (session restore,
+    // adopt), so guard against a fresh id that happens to match an existing tab.
+    while (this.indexOf(id) !== -1) id = nextEditorId();
+    return id;
+  }
+
   get(editorId: string): TabState | undefined {
     return this.state.tabs.find((t) => t.editorId === editorId);
   }

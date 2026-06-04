@@ -236,9 +236,11 @@ export function App(): JSX.Element {
   // and/or source). MAIN is the sole router; these only mutate the local store.
   useEffect(() => {
     const offAdopt = window.notepads.editor.onAdopt((payload) => {
-      applyAdopt(store, transferSource.current, payload);
-      // Carry the adopted tab's last-saved baseline for the diff pane.
-      lastSavedTextRef.current.set(payload.editorId, payload.file.decodedText);
+      // applyAdopt re-keys the adopted tab under a FRESH local editorId (the
+      // source's id can collide cross-window — Task #20). Key the diff baseline
+      // by the returned local id, not payload.editorId.
+      const localId = applyAdopt(store, transferSource.current, payload);
+      lastSavedTextRef.current.set(localId, payload.file.decodedText);
     });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
       applyRelease(store, editorId),
