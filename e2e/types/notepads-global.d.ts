@@ -205,4 +205,3 @@ declare global {
   }
 }
 
-export {};
