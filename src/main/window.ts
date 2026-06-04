@@ -17,11 +17,11 @@ import { BrowserWindow } from 'electron';
 import type { Result } from '../shared/ipc-contract.js';
 import { brokerRequest as brokerRequestImpl } from './broker.js';
 import {
-  planCompactEnter,
-  planCompactLeave,
-  type CompactSnapshot,
+  toggleCompact,
+  createCompactState,
+  type CompactState,
+  type CompactWindowPort,
   type WindowAction,
-  type WindowFlags,
 } from './compact-overlay.js';
 
 function errMsg(e: unknown): string {
@@ -33,19 +33,8 @@ function windowFor(event: Electron.IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
-/** Remembered pre-compact snapshot per window, so leaving compact restores it. */
-const priorState = new WeakMap<BrowserWindow, CompactSnapshot>();
-
-/** Read the live flags the compact planner snapshots/normalizes from. */
-function readFlags(win: BrowserWindow): WindowFlags {
-  const b = win.getBounds();
-  return {
-    bounds: { x: b.x, y: b.y, width: b.width, height: b.height },
-    alwaysOnTop: win.isAlwaysOnTop(),
-    maximized: win.isMaximized(),
-    fullScreen: win.isFullScreen(),
-  };
-}
+/** Remembered per-window compact state, so leaving compact restores the snapshot. */
+const compactState = new WeakMap<BrowserWindow, CompactState>();
 
 /** Apply the planner's declarative actions to a real BrowserWindow, in order. */
 function applyActions(win: BrowserWindow, actions: WindowAction[]): void {
@@ -71,6 +60,22 @@ function applyActions(win: BrowserWindow, actions: WindowAction[]): void {
         break;
     }
   }
+}
+
+/** Adapt a real BrowserWindow to the pure compact driver's window port. */
+function compactPort(win: BrowserWindow): CompactWindowPort {
+  return {
+    readFlags: () => {
+      const b = win.getBounds();
+      return {
+        bounds: { x: b.x, y: b.y, width: b.width, height: b.height },
+        alwaysOnTop: win.isAlwaysOnTop(),
+        maximized: win.isMaximized(),
+        fullScreen: win.isFullScreen(),
+      };
+    },
+    apply: (actions) => applyActions(win, actions),
+  };
 }
 
 /**
@@ -121,21 +126,13 @@ export function windowSetCompactOverlay(
   const win = windowFor(event);
   if (!win) return { ok: false, error: 'No window for this renderer' };
   try {
-    const isCompact = priorState.has(win);
-    if (enabled && !isCompact) {
-      const { snapshot, actions } = planCompactEnter(readFlags(win));
-      priorState.set(win, snapshot);
-      applyActions(win, actions);
-      return { ok: true, data: { isCompactOverlay: true } };
+    let state = compactState.get(win);
+    if (!state) {
+      state = createCompactState();
+      compactState.set(win, state);
     }
-    if (!enabled && isCompact) {
-      const snapshot = priorState.get(win)!;
-      priorState.delete(win);
-      applyActions(win, planCompactLeave(snapshot));
-      return { ok: true, data: { isCompactOverlay: false } };
-    }
-    // Already in the requested state.
-    return { ok: true, data: { isCompactOverlay: enabled } };
+    const { isCompactOverlay } = toggleCompact(compactPort(win), state, enabled);
+    return { ok: true, data: { isCompactOverlay } };
   } catch (e) {
     return { ok: false, error: errMsg(e) };
   }

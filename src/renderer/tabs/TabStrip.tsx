@@ -27,6 +27,7 @@ import {
   type TabTheme,
   type TabThemeTokens,
 } from './tokens';
+import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 
 /**
  * ============================================================================
@@ -93,6 +94,8 @@ interface SortableTabProps {
   index: number;
   active: boolean;
   tokens: TabThemeTokens;
+  /** Resolved strip theme — selects the cursor-follow reveal tint (Phase 7). */
+  revealTheme: TabTheme;
   width: number;
   tabCount: number;
   renaming: boolean;
@@ -121,6 +124,7 @@ function SortableTab(props: SortableTabProps): JSX.Element {
     index,
     active,
     tokens,
+    revealTheme,
     width,
     tabCount,
     renaming,
@@ -139,6 +143,11 @@ function SortableTab(props: SortableTabProps): JSX.Element {
   });
   const [hovered, setHovered] = useState(false);
   const renameRef = useRef<HTMLInputElement | null>(null);
+  // Cursor-follow reveal highlight (Phase 7, Task #27): writes --reveal-x/y/opacity
+  // on the tab header so the radial layer below tracks the pointer. Disabled in HC
+  // (tokensForReveal('hc') is transparent), matching the UWP no-reveal HC material.
+  const reveal = useReveal();
+  const revealTokens = tokensForReveal(revealTheme);
 
   useEffect(() => {
     if (renaming && renameRef.current) {
@@ -228,7 +237,11 @@ function SortableTab(props: SortableTabProps): JSX.Element {
       onRename={actions.onRename}
     >
       <div
-        ref={setNodeRef}
+        ref={(node) => {
+          setNodeRef(node);
+          // Compose dnd-kit's node ref with the reveal host ref (Phase 7).
+          (reveal.hostRef as React.MutableRefObject<HTMLElement | null>).current = node;
+        }}
         {...attributes}
         role="tab"
         aria-selected={active}
@@ -242,9 +255,32 @@ function SortableTab(props: SortableTabProps): JSX.Element {
         onDragStart={transferEnabled ? onNativeDragStart : undefined}
         onDragEnd={transferEnabled ? onNativeDragEnd : undefined}
         onPointerDown={onPointerDown}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onPointerMove={reveal.handlers.onPointerMove}
+        onMouseEnter={(e) => {
+          setHovered(true);
+          reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+          reveal.handlers.onPointerLeave();
+        }}
       >
+        {/* Cursor-follow reveal highlight (Phase 7) — under the content, above the
+            flat fill. pointer-events:none so it never steals tab clicks; opacity
+            is driven by --reveal-opacity (0 at rest → golden-safe). */}
+        <span
+          aria-hidden
+          data-reveal-layer="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: revealGradient(revealTokens),
+            opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
+            transition: 'opacity 120ms ease-out',
+            zIndex: 0,
+          }}
+        />
         {/* Top selection indicator bar (accent), only when active. */}
         {active && (
           <span
@@ -256,6 +292,7 @@ function SortableTab(props: SortableTabProps): JSX.Element {
               right: 0,
               height: TabDimensions.selectionBarHeight,
               background: 'var(--tab-accent, #0078D4)',
+              zIndex: 1,
             }}
           />
         )}
@@ -274,6 +311,8 @@ function SortableTab(props: SortableTabProps): JSX.Element {
             fontSize: TabDimensions.modifiedDotSize,
             color: 'var(--tab-accent, #0078D4)',
             flex: '0 0 auto',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           {TabGlyph.modifiedDot}
@@ -302,6 +341,8 @@ function SortableTab(props: SortableTabProps): JSX.Element {
               border: '1px solid var(--tab-accent, #0078D4)',
               outline: 'none',
               padding: '0 2px',
+              position: 'relative',
+              zIndex: 1,
             }}
           />
         ) : (
@@ -314,6 +355,8 @@ function SortableTab(props: SortableTabProps): JSX.Element {
               minWidth: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             {tabTitle(tab)}
@@ -347,6 +390,8 @@ function SortableTab(props: SortableTabProps): JSX.Element {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           {TabGlyph.close}
@@ -413,6 +458,72 @@ function ScrollButton(props: {
       }}
     >
       {glyph}
+    </button>
+  );
+}
+
+/**
+ * Add-tab (+) button (E710) — fixed to the right of the strip. SetsView chrome:
+ * shows the reveal grey on hover plus the cursor-follow radial highlight (Phase 7,
+ * Task #27). HC reveal tint is transparent (no material), matching UWP HC.
+ */
+function AddTabButton(props: {
+  tokens: TabThemeTokens;
+  revealTheme: TabTheme;
+  onNewTab(): void;
+}): JSX.Element {
+  const { tokens, revealTheme, onNewTab } = props;
+  const [hovered, setHovered] = useState(false);
+  const reveal = useReveal();
+  const revealTokens = tokensForReveal(revealTheme);
+  return (
+    <button
+      ref={reveal.hostRef as React.Ref<HTMLButtonElement>}
+      type="button"
+      data-testid="tab-add"
+      aria-label="New tab"
+      onClick={onNewTab}
+      onPointerMove={reveal.handlers.onPointerMove}
+      onMouseEnter={(e) => {
+        setHovered(true);
+        reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        reveal.handlers.onPointerLeave();
+      }}
+      style={{
+        width: TabDimensions.addButtonWidth,
+        height: TabDimensions.addButtonHeight,
+        flex: '0 0 auto',
+        marginLeft: -1,
+        border: 'none',
+        background: hovered ? tokens.headerHover : 'transparent',
+        color: tokens.textDefault,
+        cursor: 'default',
+        fontFamily: SEGOE_MDL2_FONT_FAMILY,
+        fontSize: TabDimensions.addGlyphSize,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <span
+        aria-hidden
+        data-reveal-layer="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: revealGradient(revealTokens),
+          opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
+          transition: 'opacity 120ms ease-out',
+          zIndex: 0,
+        }}
+      />
+      <span style={{ position: 'relative', zIndex: 1 }}>{TabGlyph.add}</span>
     </button>
   );
 }
@@ -640,6 +751,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
                 index={index}
                 active={tab.editorId === activeEditorId}
                 tokens={tokens}
+                revealTheme={resolvedTheme}
                 width={tabWidth}
                 tabCount={tabs.length}
                 renaming={renamingId === tab.editorId}
@@ -668,29 +780,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       )}
 
       {/* Add-tab button (E710) — fixed to the right of the strip. */}
-      <button
-        type="button"
-        data-testid="tab-add"
-        aria-label="New tab"
-        onClick={onNewTab}
-        style={{
-          width: TabDimensions.addButtonWidth,
-          height: TabDimensions.addButtonHeight,
-          flex: '0 0 auto',
-          marginLeft: -1,
-          border: 'none',
-          background: 'transparent',
-          color: tokens.textDefault,
-          cursor: 'default',
-          fontFamily: SEGOE_MDL2_FONT_FAMILY,
-          fontSize: TabDimensions.addGlyphSize,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {TabGlyph.add}
-      </button>
+      <AddTabButton tokens={tokens} revealTheme={resolvedTheme} onNewTab={onNewTab} />
     </div>
   );
 }

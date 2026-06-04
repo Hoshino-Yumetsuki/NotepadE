@@ -7,7 +7,7 @@ import {
   MenuDivider,
   Slider,
 } from '@fluentui/react-components';
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import type { AnsiEncodingEntry, EncodingId, EolId } from '@shared/ipc-contract';
 import {
   StatusGlyph,
@@ -17,6 +17,7 @@ import {
   type StatusTheme,
   type StatusThemeTokens,
 } from './tokens';
+import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 import {
   formatLineColumn,
   eolDisplayText,
@@ -145,10 +146,22 @@ interface CellProps {
  * wrapped by a Fluent Menu pass `onClick` undefined and let the trigger handle
  * activation; the overlay still tracks hover for visual parity.
  */
+/**
+ * The resolved status-bar theme, shared with every Cell so the cursor-follow
+ * reveal layer (Phase 7) picks the right tint without threading the theme string
+ * through all 8 column components. Defaults to 'light'; StatusBar provides it.
+ */
+const StatusRevealThemeContext = createContext<StatusTheme>('light');
+
 function Cell(props: CellProps): JSX.Element {
   const { tokens, testid, ariaLabel, padLeft, onClick, title, children } = props;
   const isStatic = props.static ?? false;
   const [hovered, setHovered] = useState(false);
+  // Cursor-follow reveal highlight (Phase 7, Task #27). Interactive cells track
+  // the pointer into --reveal-x/y/opacity for the radial layer below; static
+  // cells (col 7 shadow icon) get no reveal. HC tint is transparent (no material).
+  const reveal = useReveal();
+  const revealTokens = tokensForReveal(useContext(StatusRevealThemeContext));
 
   const style: CSSProperties = {
     display: 'inline-flex',
@@ -164,20 +177,30 @@ function Cell(props: CellProps): JSX.Element {
     whiteSpace: 'nowrap',
     userSelect: 'none',
     cursor: 'default',
+    position: 'relative',
+    overflow: 'hidden',
     // Hover-reveal overlay, only on interactive cells (UWP PointerEntered).
     background: !isStatic && hovered ? tokens.hover : 'transparent',
   };
 
   return (
     <div
+      ref={isStatic ? undefined : (reveal.hostRef as React.Ref<HTMLDivElement>)}
       data-testid={testid}
       role={isStatic ? undefined : 'button'}
       aria-label={ariaLabel}
       tabIndex={isStatic ? undefined : 0}
       title={title}
       style={style}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={(e) => {
+        setHovered(true);
+        if (!isStatic) reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        if (!isStatic) reveal.handlers.onPointerLeave();
+      }}
+      onPointerMove={isStatic ? undefined : reveal.handlers.onPointerMove}
       onClick={isStatic ? undefined : onClick}
       onKeyDown={
         isStatic || !onClick
@@ -190,7 +213,24 @@ function Cell(props: CellProps): JSX.Element {
             }
       }
     >
-      {children}
+      {!isStatic && (
+        <span
+          aria-hidden
+          data-reveal-layer="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: revealGradient(revealTokens),
+            opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
+            transition: 'opacity 120ms ease-out',
+            zIndex: 0,
+          }}
+        />
+      )}
+      <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center' }}>
+        {children}
+      </span>
     </div>
   );
 }
@@ -650,6 +690,7 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
   const tokens = tokensForStatusTheme(props.theme);
 
   return (
+    <StatusRevealThemeContext.Provider value={props.theme}>
     <div
       data-testid="status-bar"
       data-theme={props.theme}
@@ -704,5 +745,6 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
       />
       <ShadowWindowColumn tokens={tokens} isShadowWindow={props.isShadowWindow} />
     </div>
+    </StatusRevealThemeContext.Provider>
   );
 }

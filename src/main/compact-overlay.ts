@@ -104,3 +104,58 @@ export function planCompactLeave(snapshot: CompactSnapshot): WindowAction[] {
   if (snapshot.wasFullScreen) actions.push({ type: 'setFullScreen', value: true });
   return actions;
 }
+
+/**
+ * The window operations the stateful toggle driver needs, abstracted so the
+ * driver (and its idempotent guard) is unit-testable without electron. window.ts
+ * supplies a thin adapter over the real BrowserWindow; tests supply a fake.
+ */
+export interface CompactWindowPort {
+  /** Read the window's current flags (bounds + alwaysOnTop/maximized/fullScreen). */
+  readFlags(): WindowFlags;
+  /** Apply the planner's declarative actions to the window, in order. */
+  apply(actions: WindowAction[]): void;
+}
+
+/**
+ * Per-window compact state. Holds the pre-compact snapshot while compact, or null
+ * when normal. window.ts keeps one of these per BrowserWindow (in a WeakMap); the
+ * driver reads/writes it so the guard logic stays here, pure and tested.
+ */
+export interface CompactState {
+  snapshot: CompactSnapshot | null;
+}
+
+/** Fresh state for a window that has never entered compact. */
+export function createCompactState(): CompactState {
+  return { snapshot: null };
+}
+
+/**
+ * Drive a compact-overlay toggle against a window port, mutating `state`.
+ * Idempotent by the `state.snapshot` guard: entering when already compact, or
+ * leaving when already normal, applies NOTHING and preserves the original
+ * snapshot — so a maximized window that gets a redundant F12 still restores to
+ * maximized on the real leave. Returns the resolved compact flag.
+ */
+export function toggleCompact(
+  port: CompactWindowPort,
+  state: CompactState,
+  enabled: boolean,
+): { isCompactOverlay: boolean } {
+  const isCompact = state.snapshot !== null;
+  if (enabled && !isCompact) {
+    const { snapshot, actions } = planCompactEnter(port.readFlags());
+    state.snapshot = snapshot;
+    port.apply(actions);
+    return { isCompactOverlay: true };
+  }
+  if (!enabled && isCompact) {
+    const snapshot = state.snapshot!;
+    state.snapshot = null;
+    port.apply(planCompactLeave(snapshot));
+    return { isCompactOverlay: false };
+  }
+  // Already in the requested state — no-op.
+  return { isCompactOverlay: enabled };
+}
