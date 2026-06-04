@@ -59,10 +59,14 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     minHeight: 320,
     show: false,
     backgroundColor: process.platform === 'win32' ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
-    // Mica material on Win11: the desktop wallpaper shows through behind the
-    // translucent renderer tint. backgroundColor is transparent so the material
-    // is visible; on Win10 (no mica) the renderer's tinted base still fills it.
-    ...(process.platform === 'win32' ? { backgroundMaterial: 'mica' as const } : {}),
+    // Acrylic material on Win11: matches the original Notepads' wallpaper-sampling
+    // translucency (acrylic samples the desktop wallpaper behind the window, unlike
+    // mica which is composited from it). backgroundColor is the transparent
+    // '#00000000' so the material shows through; on Win10 the renderer's tinted
+    // base fills it. We must NOT set transparent:true — Win11 keeps the rounded
+    // corners when only backgroundMaterial is set, but a transparent window loses
+    // the DWM frame and its corner rounding. backgroundMaterial drives the blur.
+    ...(process.platform === 'win32' ? { backgroundMaterial: 'acrylic' as const } : {}),
     autoHideMenuBar: true,
     // Snap Layouts on Windows via overlaid caption controls.
     titleBarStyle: process.platform === 'win32' ? 'hidden' : 'default',
