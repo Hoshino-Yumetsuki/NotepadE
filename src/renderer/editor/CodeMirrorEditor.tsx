@@ -156,8 +156,12 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // serialization never re-introduces CR. EOL is re-applied by MAIN.
         EditorState.lineSeparator.of(SHADOW_EOL),
         EditorView.theme({
-          '&': { height: '100%' },
+          // Transparent surface so the window's acrylic material (single tint
+          // layer on the app root) shows through the editor — matching upstream
+          // Notepads, whose TextEditor RootGrid is Background="Transparent".
+          '&': { height: '100%', backgroundColor: 'transparent' },
           '.cm-scroller': { overflow: 'auto' },
+          '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
         }),
       ];
       if (showLineNumbers) extensions.push(lineNumbers());

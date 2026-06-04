@@ -122,7 +122,9 @@ export type TabTheme = 'light' | 'dark' | 'hc';
 
 /** Light theme — base #F0F0F0, white overlays. */
 export const LIGHT_TOKENS: TabThemeTokens = {
-  stripBackground: '#F0F0F0',
+  // Transparent so the window's single acrylic tint layer (app root) shows
+  // through the tab strip — upstream Notepads' SetsView strip is also transparent.
+  stripBackground: 'transparent',
   headerSelected: 'rgba(255, 255, 255, 0.25)',
   headerHover: 'rgba(255, 255, 255, 0.15)',
   headerPressed: 'rgba(255, 255, 255, 0.25)',
@@ -134,7 +136,7 @@ export const LIGHT_TOKENS: TabThemeTokens = {
 
 /** Dark theme — base #2E2E2E, black overlays. */
 export const DARK_TOKENS: TabThemeTokens = {
-  stripBackground: '#2E2E2E',
+  stripBackground: 'transparent',
   headerSelected: 'rgba(0, 0, 0, 0.25)',
   headerHover: 'rgba(0, 0, 0, 0.20)',
   headerPressed: 'rgba(0, 0, 0, 0.25)',

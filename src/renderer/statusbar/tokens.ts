@@ -94,7 +94,7 @@ export type StatusTheme = 'light' | 'dark' | 'hc';
 
 /** Light theme — base #F0F0F0. */
 export const LIGHT_STATUS_TOKENS: StatusThemeTokens = {
-  background: '#F0F0F0',
+  background: 'transparent',
   text: 'rgba(0, 0, 0, 0.80)',
   accent: '#0078D4',
   hover: 'rgba(0, 0, 0, 0.06)',
@@ -103,7 +103,7 @@ export const LIGHT_STATUS_TOKENS: StatusThemeTokens = {
 
 /** Dark theme — base #2E2E2E. */
 export const DARK_STATUS_TOKENS: StatusThemeTokens = {
-  background: '#2E2E2E',
+  background: 'transparent',
   text: 'rgba(255, 255, 255, 0.80)',
   accent: '#0091F8',
   hover: 'rgba(255, 255, 255, 0.08)',
