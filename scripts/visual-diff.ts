@@ -7,8 +7,12 @@
  * tab-strip tolerance: <= 0.1% of pixels may differ.
  *
  * This is TEST-SIDE ONLY. It runs in the Playwright/Node test runner, never in the
- * renderer — so importing `node:fs`/`pngjs` here does NOT violate PA-8 (the scan's
+ * renderer — so importing `node:fs`/`jimp` here does NOT violate PA-8 (the scan's
  * renderer rule only covers src/renderer/**; e2e/ + scripts/ are test tooling).
+ *
+ * PNG decode/encode is handled by jimp; the per-pixel comparison stays on
+ * pixelmatch (fed jimp's raw RGBA bitmap) so the exact <=0.1% pixel-ratio gate is
+ * preserved. jimp is async, so compareToBaseline returns a Promise.
  *
  * Baselines: docs/plan/03 requires <=0.1% pixel delta per theme (Light/Dark/HC).
  * Initial baselines are captured from the rendered component (self-referential
@@ -18,7 +22,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { PNG } from 'pngjs';
+import { Jimp } from 'jimp';
 import pixelmatch from 'pixelmatch';
 
 /** GATE 2 tolerance: at most 0.1% of pixels may differ. */
@@ -57,8 +61,16 @@ export interface CompareOptions {
   diffDir?: string;
 }
 
-function loadPng(buf: Buffer): PNG {
-  return PNG.sync.read(buf);
+interface RawImage {
+  data: Buffer;
+  width: number;
+  height: number;
+}
+
+/** Decode PNG bytes to a raw RGBA bitmap via jimp. */
+async function loadPng(buf: Buffer): Promise<RawImage> {
+  const img = await Jimp.read(buf);
+  return { data: img.bitmap.data, width: img.bitmap.width, height: img.bitmap.height };
 }
 
 /**
@@ -68,12 +80,12 @@ function loadPng(buf: Buffer): PNG {
  * @param baselinePath Absolute path to the committed baseline PNG.
  * @param name        Stable label used for the diff-output filename.
  */
-export function compareToBaseline(
+export async function compareToBaseline(
   actualPng: Buffer,
   baselinePath: string,
   name: string,
   options: CompareOptions = {},
-): DiffResult {
+): Promise<DiffResult> {
   const maxRatio = options.maxRatio ?? TAB_STRIP_MAX_DIFF_RATIO;
   const threshold = options.threshold ?? PIXELMATCH_THRESHOLD;
   const createMissingBaseline = options.createMissingBaseline ?? false;
@@ -82,7 +94,7 @@ export function compareToBaseline(
     if (createMissingBaseline) {
       mkdirSync(dirname(baselinePath), { recursive: true });
       writeFileSync(baselinePath, actualPng);
-      const actual = loadPng(actualPng);
+      const actual = await loadPng(actualPng);
       return {
         diffPixels: 0,
         totalPixels: actual.width * actual.height,
@@ -99,8 +111,8 @@ export function compareToBaseline(
     );
   }
 
-  const baseline = loadPng(readFileSync(baselinePath));
-  const actual = loadPng(actualPng);
+  const baseline = await loadPng(readFileSync(baselinePath));
+  const actual = await loadPng(actualPng);
 
   if (baseline.width !== actual.width || baseline.height !== actual.height) {
     throw new Error(
@@ -111,8 +123,9 @@ export function compareToBaseline(
   }
 
   const { width, height } = baseline;
-  const diff = new PNG({ width, height });
-  const diffPixels = pixelmatch(baseline.data, actual.data, diff.data, width, height, {
+  // jimp gives a w*h*4 RGBA bitmap; reuse it as pixelmatch's diff output buffer.
+  const diffImg = new Jimp({ width, height });
+  const diffPixels = pixelmatch(baseline.data, actual.data, diffImg.bitmap.data, width, height, {
     threshold,
   });
 
@@ -125,7 +138,7 @@ export function compareToBaseline(
     const diffDir = options.diffDir ?? dirname(baselinePath);
     mkdirSync(diffDir, { recursive: true });
     diffPath = join(diffDir, `${name}.diff.png`);
-    writeFileSync(diffPath, PNG.sync.write(diff));
+    writeFileSync(diffPath, await diffImg.getBuffer('image/png'));
   }
 
   return { diffPixels, totalPixels, ratio, pass, diffPath, baselineCreated: false };

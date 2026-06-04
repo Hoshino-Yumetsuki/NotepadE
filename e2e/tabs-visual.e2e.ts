@@ -151,7 +151,7 @@ for (const tc of THEME_CASES) {
     });
     const baselinePath = join(BASELINE_DIR, `tab-strip-${tc.name}.png`);
 
-    const result = compareToBaseline(actual, baselinePath, `tab-strip-${tc.name}`, {
+    const result = await compareToBaseline(actual, baselinePath, `tab-strip-${tc.name}`, {
       createMissingBaseline: UPDATE_BASELINES,
     });
 

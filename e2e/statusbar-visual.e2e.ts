@@ -176,7 +176,7 @@ for (const tc of THEME_CASES) {
       },
     });
     const baselinePath = join(BASELINE_DIR, `status-bar-${tc.name}.png`);
-    const result = compareToBaseline(actual, baselinePath, `status-bar-${tc.name}`, {
+    const result = await compareToBaseline(actual, baselinePath, `status-bar-${tc.name}`, {
       createMissingBaseline: UPDATE_BASELINES,
     });
 

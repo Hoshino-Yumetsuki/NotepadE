@@ -210,7 +210,7 @@ export async function captureGolden(args: CaptureGoldenArgs): Promise<CaptureGol
   });
 
   const baselinePath = join(BASELINE_DIR, `${component}-${tc.name}.png`);
-  const result = compareToBaseline(actual, baselinePath, `${component}-${tc.name}`, {
+  const result = await compareToBaseline(actual, baselinePath, `${component}-${tc.name}`, {
     createMissingBaseline: UPDATE_BASELINES,
   });
 

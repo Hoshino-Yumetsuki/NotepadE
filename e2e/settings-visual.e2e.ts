@@ -147,7 +147,7 @@ for (const tc of THEME_CASES) {
     });
     const baselinePath = join(BASELINE_DIR, `settings-${tc.name}.png`);
 
-    const result = compareToBaseline(actual, baselinePath, `settings-${tc.name}`, {
+    const result = await compareToBaseline(actual, baselinePath, `settings-${tc.name}`, {
       createMissingBaseline: UPDATE_BASELINES,
     });
 
