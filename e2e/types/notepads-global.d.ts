@@ -132,6 +132,26 @@ export interface NotepadsTestHook {
   tabs?: NotepadsTabsTestHook;
   /** Phase-3 editor-surface seam. Present once the editor seam installs (lane-b). */
   editor?: NotepadsEditorTestHook;
+  /** Phase-4 status-bar seam. Present once useStatusBarModel mounts (Lane C). */
+  statusbar?: NotepadsStatusBarTestHook;
+}
+
+/**
+ * Status-bar test seam (Phase-4, Lane C). PA-8-clean: composes only
+ * window.notepads.file.revalidatePath + the renderer column-0 state machine.
+ * Lets the e2e force a synchronous external-modification check (it cannot wait
+ * on the ~3s poll timer).
+ *
+ * MUST stay in sync with the seam installed in
+ * src/renderer/statusbar/useStatusBarModel.ts.
+ */
+export interface NotepadsStatusBarTestHook {
+  /**
+   * Force one external-modification check on the ACTIVE file-backed tab and
+   * return the derived column-0 state ('none' | 'modifiedOutside' |
+   * 'renamedMovedDeleted'). Untitled/no-path tabs resolve to 'none'.
+   */
+  checkFileStatus(): Promise<'none' | 'modifiedOutside' | 'renamedMovedDeleted'>;
 }
 
 declare global {

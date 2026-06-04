@@ -28,6 +28,22 @@ export interface NotepadsTestHook {
   tabs?: import('../tabs/tabsTestHook').TabsTestHook;
   /** Editor-surface seam (Phase 3) — installed separately by installEditorTestHook. */
   editor?: EditorTestHook;
+  /** Status-bar seam (Phase 4) — installed separately by useStatusBarModel (Lane C). */
+  statusbar?: StatusBarTestHook;
+}
+
+/**
+ * Status-bar test seam (Phase 4, Lane C). PA-8-clean: composes only
+ * window.notepads.file.revalidatePath + the renderer column-0 state machine, so
+ * the e2e can force a synchronous external-modification check without waiting on
+ * the ~3s poll timer.
+ *
+ * MUST stay in sync with NotepadsStatusBarTestHook in
+ * e2e/types/notepads-global.d.ts.
+ */
+export interface StatusBarTestHook {
+  /** Force a check on the active file-backed tab; returns the derived column-0 state. */
+  checkFileStatus(): Promise<'none' | 'modifiedOutside' | 'renamedMovedDeleted'>;
 }
 
 /**

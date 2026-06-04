@@ -11,6 +11,7 @@ import { useTabKeyboard } from './tabs/useTabKeyboard';
 import { installTabsTestHook } from './tabs/tabsTestHook';
 import { StatusBar } from './statusbar/StatusBar';
 import { useStatusBarModel } from './statusbar/useStatusBarModel';
+import { recordLastSaved, forgetEditor } from './statusbar/fileStatusTracker';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -104,6 +105,9 @@ export function App(): JSX.Element {
       store.setLabels(id, file.encodingId, file.eolId);
       store.setFilePath(id, file.filePath);
       labelsRef.current = { encodingId: file.encodingId, eolId: file.eolId };
+      // Seed the external-modification baseline (column 0) from the authoritative
+      // OpenedFile mtime so a later disk change is detectable (Lane C, Gate-4).
+      if (file.filePath) recordLastSaved(id, file.filePath, file.dateModifiedMs);
     },
     [store],
   );
@@ -134,6 +138,16 @@ export function App(): JSX.Element {
   // Tabs test seam (Phase 2 matrix harness).
   useEffect(() => installTabsTestHook(store), [store]);
 
+  // Close a tab and drop its external-modification baseline (Lane C, Gate-4):
+  // the per-editor mtime ledger must not leak across a closed editorId.
+  const closeTab = useCallback(
+    (id: string): void => {
+      forgetEditor(id);
+      store.close(id);
+    },
+    [store],
+  );
+
   // App-level tab keyboard shortcuts.
   useTabKeyboard(store, {
     onNewTab: () => store.newTab(),
@@ -147,7 +161,7 @@ export function App(): JSX.Element {
         window.dispatchEvent(evt);
       }
     },
-    onCloseActive: (id) => store.close(id),
+    onCloseActive: (id) => closeTab(id),
   });
 
   // Status-bar view model (Lane C): derives the 8-column props from the active
@@ -177,7 +191,7 @@ export function App(): JSX.Element {
         isDark={isDark}
         theme={forcedColors ? 'hc' : isDark ? 'dark' : 'light'}
         onNewTab={() => store.newTab()}
-        onCloseTab={(id) => store.close(id)}
+        onCloseTab={(id) => closeTab(id)}
       />
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
         {tabs.map((tab) => (

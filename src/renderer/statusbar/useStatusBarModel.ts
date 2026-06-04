@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EncodingId, EolId, AnsiEncodingEntry } from '@shared/ipc-contract';
 import type { CodeMirrorHandle } from '../editor/CodeMirrorEditor';
+import type { NotepadsTestHook, StatusBarTestHook } from '../editor/test-hook';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { StatusTheme } from './tokens';
 import { computeLineColumn, type LineColumn } from './statusModel';
 import type { FileModificationState, StatusBarProps } from './StatusBar';
+import {
+  recordLastSaved,
+  getLastSaved,
+  deriveModificationState,
+} from './fileStatusTracker';
 
 /**
  * useStatusBarModel — derives StatusBarProps from the active tab + its CM6 view
@@ -36,6 +42,8 @@ export function useStatusBarModel(args: {
   const [lineColumn, setLineColumn] = useState<LineColumn>({ line: 1, column: 1, selectedCount: 0 });
   const [zoomPercent, setZoomPercent] = useState(100);
   const [ansiEncodings, setAnsiEncodings] = useState<readonly AnsiEncodingEntry[]>([]);
+  // Column-0 external-modification state machine (Gate-4 line 3).
+  const [fileModificationState, setFileModificationState] = useState<FileModificationState>('none');
 
   // Recompute Ln/Col from the active editor's '\n' doc + main selection.
   const refreshCaret = useCallback(() => {
@@ -63,6 +71,62 @@ export function useStatusBarModel(args: {
     };
   }, []);
 
+  // --- column-0 external-modification state machine (UWP parity) -----------
+  // Live refs so the test seam + interval always see the CURRENT active tab,
+  // not a stale render closure. Only the ACTIVE file-backed tab is checked.
+  const activeIdRef = useRef<string | null>(activeEditorId);
+  const activePathRef = useRef<string | null>(filePath);
+  activeIdRef.current = activeEditorId;
+  activePathRef.current = filePath;
+
+  // Force one synchronous check against disk: revalidate the active file-backed
+  // tab and map the outcome vs its last-saved baseline. Untitled/no-path → 'none'.
+  const checkFileStatus = useCallback(async (): Promise<FileModificationState> => {
+    const id = activeIdRef.current;
+    const path = activePathRef.current;
+    if (!id || path === null) {
+      setFileModificationState('none');
+      return 'none';
+    }
+    const r = await window.notepads.file.revalidatePath(path);
+    const outcome = r.ok ? r.data : { exists: false, dateModifiedMs: 0 };
+    const next = deriveModificationState(path, outcome, getLastSaved(id));
+    // Guard against a tab switch racing the await: only commit if still active.
+    if (activeIdRef.current === id && activePathRef.current === path) {
+      setFileModificationState(next);
+    }
+    return next;
+  }, []);
+
+  // Poll the active tab ~every 3s (UWP CheckAndUpdateFileStatusAsync cadence).
+  // Reset to 'none' immediately on tab switch; an untitled tab never polls.
+  useEffect(() => {
+    setFileModificationState('none');
+    if (!activeEditorId || filePath === null) return;
+    void checkFileStatus();
+    const id = window.setInterval(() => void checkFileStatus(), 3000);
+    return () => window.clearInterval(id);
+  }, [activeEditorId, filePath, checkFileStatus]);
+
+  // Test seam: window.__notepadsTest.statusbar.checkFileStatus() forces a check
+  // synchronously (the e2e cannot wait on the 3s timer). PA-8 clean — it only
+  // composes window.notepads.file.revalidatePath + the renderer state machine.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const seam: StatusBarTestHook = { checkFileStatus };
+    const existing = window.__notepadsTest;
+    if (existing) {
+      existing.statusbar = seam;
+    } else {
+      // Editor/tabs hooks not installed yet; stash a partial so the seam is
+      // reachable. installTestHook preserves sibling seams via Object semantics.
+      window.__notepadsTest = { statusbar: seam } as unknown as NotepadsTestHook;
+    }
+    return () => {
+      if (window.__notepadsTest) window.__notepadsTest.statusbar = undefined;
+    };
+  }, [checkFileStatus]);
+
   const onReopenWithEncoding = useCallback(
     (id: EncodingId) => {
       if (filePath) void window.notepads.encoding.decodeWith(filePath, id);
@@ -70,10 +134,23 @@ export function useStatusBarModel(args: {
     [filePath],
   );
 
+  // Reload from disk, then re-baseline the last-saved mtime from the fresh
+  // OpenedFile so the indicator returns to 'none' (UWP resets state on reload).
+  const reloadAndRebaseline = useCallback(
+    async (id: string, path: string) => {
+      const r = await window.notepads.file.reloadFromDisk(path);
+      if (r.ok) {
+        recordLastSaved(id, path, r.data.dateModifiedMs);
+        setFileModificationState('none');
+      }
+    },
+    [],
+  );
+
   return useMemo<StatusBarProps>(
     () => ({
       theme,
-      fileModificationState: 'none' as FileModificationState,
+      fileModificationState,
       filePath,
       fileNamePlaceholder: placeholder,
       isModified,
@@ -84,7 +161,7 @@ export function useStatusBarModel(args: {
       ansiEncodings,
       isShadowWindow,
       onReloadFromDisk: () => {
-        if (filePath) void window.notepads.file.reloadFromDisk(filePath);
+        if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId, filePath);
       },
       onCopyFullPath: () => {
         if (filePath) void window.notepads.shell.copyPath(filePath);
@@ -103,7 +180,7 @@ export function useStatusBarModel(args: {
         if (activeEditorId) store.setViewMode(activeEditorId, { preview: false, diff: true });
       },
       onRevertAllChanges: () => {
-        if (activeEditorId && filePath) void window.notepads.file.reloadFromDisk(filePath);
+        if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId, filePath);
       },
       onGoToLine: () => {
         window.dispatchEvent(new CustomEvent('notepads:go-to-line'));
@@ -115,11 +192,19 @@ export function useStatusBarModel(args: {
       },
       onReopenWithEncoding,
       onSaveWithEncoding: (id: EncodingId) => {
-        if (filePath) void window.notepads.file.save({ filePath, encodingId: id });
+        if (!filePath || !activeEditorId) return;
+        void window.notepads.file.save({ filePath, encodingId: id }).then((r) => {
+          // Re-baseline from the SaveResult mtime so a save clears the indicator.
+          if (r.ok) {
+            recordLastSaved(activeEditorId, r.data.filePath, r.data.dateModifiedMs);
+            setFileModificationState('none');
+          }
+        });
       },
     }),
     [
       theme,
+      fileModificationState,
       filePath,
       placeholder,
       isModified,
@@ -132,6 +217,7 @@ export function useStatusBarModel(args: {
       activeEditorId,
       store,
       onReopenWithEncoding,
+      reloadAndRebaseline,
     ],
   );
 }
