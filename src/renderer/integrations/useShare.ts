@@ -38,11 +38,8 @@ export async function shareDocument(args: { title: string; text: string }): Prom
  *   // Share command: share({ title: activeTabName, text: activeShadowText })
  */
 export function useShare(): ShareActions {
-  const share = useCallback(
-    async (args: { title: string; text: string }): Promise<void> => {
-      await shareDocument(args);
-    },
-    [],
-  );
+  const share = useCallback(async (args: { title: string; text: string }): Promise<void> => {
+    await shareDocument(args);
+  }, []);
   return { share };
 }

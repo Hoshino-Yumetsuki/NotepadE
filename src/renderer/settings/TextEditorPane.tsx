@@ -17,7 +17,13 @@ import {
   type SpinButtonOnChangeData,
 } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
-import type { EolId, FontStyleId, TabIndents, SearchEngineId, DefaultDecoding } from '@shared/ipc-contract';
+import type {
+  EolId,
+  FontStyleId,
+  TabIndents,
+  SearchEngineId,
+  DefaultDecoding,
+} from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
   FONT_FAMILIES,
@@ -45,7 +51,11 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
   return (
     <SettingsPane id="textEditor">
       <SettingGroup title="Editor">
-        <SettingRow id="textWrapping" label="Word wrap" description="Wrap long lines to the editor width.">
+        <SettingRow
+          id="textWrapping"
+          label="Word wrap"
+          description="Wrap long lines to the editor width."
+        >
           <Switch
             checked={settings.textWrapping === 'wrap'}
             onChange={(_e, d) => update({ textWrapping: d.checked ? 'wrap' : 'noWrap' })}
@@ -78,9 +88,7 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
             data-testid="setting-tabIndents-dropdown"
             value={tabIndentLabel(settings.tabIndents)}
             selectedOptions={[String(settings.tabIndents)]}
-            onOptionSelect={(_e, d) =>
-              update({ tabIndents: Number(d.optionValue) as TabIndents })
-            }
+            onOptionSelect={(_e, d) => update({ tabIndents: Number(d.optionValue) as TabIndents })}
           >
             {TAB_INDENTS.map((t) => (
               <Option key={t.value} value={String(t.value)}>
@@ -119,9 +127,7 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           <Dropdown
             value={fontStyleLabel(settings.editorFontStyle)}
             selectedOptions={[settings.editorFontStyle]}
-            onOptionSelect={(_e, d) =>
-              update({ editorFontStyle: d.optionValue as FontStyleId })
-            }
+            onOptionSelect={(_e, d) => update({ editorFontStyle: d.optionValue as FontStyleId })}
           >
             {FONT_STYLES.map((s) => (
               <Option key={s.id} value={s.id}>
@@ -190,9 +196,7 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           <Dropdown
             value={searchEngineLabel(settings.searchEngine)}
             selectedOptions={[settings.searchEngine]}
-            onOptionSelect={(_e, d) =>
-              update({ searchEngine: d.optionValue as SearchEngineId })
-            }
+            onOptionSelect={(_e, d) => update({ searchEngine: d.optionValue as SearchEngineId })}
           >
             {SEARCH_ENGINES.map((s) => (
               <Option key={s.id} value={s.id}>

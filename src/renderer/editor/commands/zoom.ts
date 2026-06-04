@@ -85,7 +85,7 @@ export const zoomStyle = EditorView.updateListener.of((update) => {
   const now = update.state.field(zoomField, false);
   if (prev === now) return;
   const base = update.state.facet(editorSettings).fontSize;
-  const px = (now ?? DEFAULT_ZOOM) * base / 100;
+  const px = ((now ?? DEFAULT_ZOOM) * base) / 100;
   update.view.dom.style.setProperty('--cm-zoom-font-size', `${px}px`);
 });
 

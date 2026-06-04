@@ -112,14 +112,9 @@ export function compareToBaseline(
 
   const { width, height } = baseline;
   const diff = new PNG({ width, height });
-  const diffPixels = pixelmatch(
-    baseline.data,
-    actual.data,
-    diff.data,
-    width,
-    height,
-    { threshold },
-  );
+  const diffPixels = pixelmatch(baseline.data, actual.data, diff.data, width, height, {
+    threshold,
+  });
 
   const totalPixels = width * height;
   const ratio = totalPixels === 0 ? 0 : diffPixels / totalPixels;

@@ -181,7 +181,11 @@ export function initBroker(spawn: SpawnWindow): void {
 export function processInitialActivation(): void {
   const parsed = parseArgv(process.argv, process.cwd());
   if (parsed.paths.length === 0 && parsed.protocolUrl === null) return;
-  void routeActivation({ paths: parsed.paths, cwd: process.cwd(), protocolUrl: parsed.protocolUrl });
+  void routeActivation({
+    paths: parsed.paths,
+    cwd: process.cwd(),
+    protocolUrl: parsed.protocolUrl,
+  });
 }
 
 /**
@@ -238,7 +242,9 @@ export interface MainTestSeam {
    * once routing completes; returns the resulting window count + the id of the
    * window the activation was delivered to (the target's id, or null).
    */
-  routeActivation(event: ActivationEvent): Promise<{ windowCount: number; targetId: number | null }>;
+  routeActivation(
+    event: ActivationEvent,
+  ): Promise<{ windowCount: number; targetId: number | null }>;
   /**
    * Model an OS `second-instance` exactly as the real handler does: parse argv
    * against `cwd`, then route. Resolves with the parsed result + the resulting

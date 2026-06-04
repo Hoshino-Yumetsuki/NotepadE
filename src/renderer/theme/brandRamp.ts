@@ -21,9 +21,7 @@
 import type { BrandVariants } from '@fluentui/react-components';
 
 /** The 16 Fluent brand shade keys, light→dark. */
-const SHADE_KEYS = [
-  10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
-] as const;
+const SHADE_KEYS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160] as const;
 
 /**
  * Target HSV "value" (brightness, 0..100) per shade. Light shades sit high,
@@ -31,9 +29,7 @@ const SHADE_KEYS = [
  * the seed's own value at generation time. Curve adapted from the Fluent
  * designer's default value ramp so the output reads as a coherent brand family.
  */
-const VALUE_CURVE = [
-  98, 95, 90, 84, 78, 72, 66, 60, 52, 46, 39, 33, 27, 22, 17, 12,
-] as const;
+const VALUE_CURVE = [98, 95, 90, 84, 78, 72, 66, 60, 52, 46, 39, 33, 27, 22, 17, 12] as const;
 
 interface Hsv {
   h: number; // 0..360

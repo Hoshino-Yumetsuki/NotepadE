@@ -107,7 +107,13 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element {
                   role="tablist"
                   aria-orientation="vertical"
                   data-testid="settings-nav"
-                  style={{ minWidth: 200, height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}
+                  style={{
+                    minWidth: 200,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                  }}
                 >
                   {SECTIONS.map((s) => (
                     <Button

@@ -1,4 +1,10 @@
-import { EditorState, EditorSelection, type SelectionRange, type StateCommand, type Extension } from '@codemirror/state';
+import {
+  EditorState,
+  EditorSelection,
+  type SelectionRange,
+  type StateCommand,
+  type Extension,
+} from '@codemirror/state';
 import { EditorView, type Command } from '@codemirror/view';
 import { editorSettings, type EditorSettings } from '../editorSettings';
 
@@ -44,7 +50,14 @@ export function runStateCommand(
   // A command may return true yet dispatch nothing (no-op consume); track both.
   void result;
   const m = state.selection.main;
-  return { doc: state.doc.toString(), anchor: m.anchor, head: m.head, from: m.from, to: m.to, changed };
+  return {
+    doc: state.doc.toString(),
+    anchor: m.anchor,
+    head: m.head,
+    from: m.from,
+    to: m.to,
+    changed,
+  };
 }
 
 /** Mount a real EditorView for view-driven commands. Caller destroys it. */

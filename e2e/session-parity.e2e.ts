@@ -236,7 +236,11 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
     }
 
     // Corrupt the session JSON on disk (truncated/garbage) before restart.
-    writeFileSync(join(userDataDir, 'NotepadsSessionData.json'), '{ this is not valid json', 'utf8');
+    writeFileSync(
+      join(userDataDir, 'NotepadsSessionData.json'),
+      '{ this is not valid json',
+      'utf8',
+    );
 
     app = await launchApp({ userDataDir });
     try {

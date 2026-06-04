@@ -34,7 +34,13 @@ import { indentSelection, outdentSelection } from './indent';
 import { moveLinesUp, moveLinesDown } from './moveLines';
 import { moveWordLeft, moveWordRight } from './moveWords';
 import { enterWithAutoIndent } from './autoIndent';
-import { setLtr, setRtl, directionCompartment, directionExtension, type TextDirection } from './direction';
+import {
+  setLtr,
+  setRtl,
+  directionCompartment,
+  directionExtension,
+  type TextDirection,
+} from './direction';
 import { toggleWordWrap, wordWrapCompartment, wordWrapExtension, wordWrapField } from './wordWrap';
 import { webSearchSelection } from './webSearch';
 import { smartCopyHandler } from './smartCopy';

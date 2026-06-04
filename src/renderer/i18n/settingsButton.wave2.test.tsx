@@ -24,7 +24,10 @@ function installMock(initial: Partial<Settings> = {}): void {
   (globalThis as unknown as { window: Window }).window.notepads = {
     settings: {
       get: vi.fn(async () => ({ ok: true as const, data: bag })),
-      set: vi.fn(async (patch: Partial<Settings>) => ({ ok: true as const, data: { ...bag, ...patch } })),
+      set: vi.fn(async (patch: Partial<Settings>) => ({
+        ok: true as const,
+        data: { ...bag, ...patch },
+      })),
       onChanged: (cb: (s: Settings) => void) => {
         changedCb = cb;
         return () => {

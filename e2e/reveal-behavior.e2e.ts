@@ -51,7 +51,9 @@ test.afterAll(async () => {
 });
 
 /** Center of the first tab's bounding box, in viewport px (for trusted moves). */
-async function firstTabCenter(page: Page): Promise<{ x: number; y: number; box: { x: number; y: number; width: number; height: number } }> {
+async function firstTabCenter(
+  page: Page,
+): Promise<{ x: number; y: number; box: { x: number; y: number; width: number; height: number } }> {
   const tab = page.locator(TAB_SELECTORS.tab).first();
   await expect(tab).toBeVisible();
   const box = await tab.boundingBox();
@@ -74,7 +76,10 @@ async function trustedMoveTo(page: Page, x: number, y: number): Promise<void> {
 }
 
 /** Read a --reveal-* custom property as written on the reveal host (the tab div). */
-async function revealVar(page: Page, name: '--reveal-x' | '--reveal-y' | '--reveal-opacity'): Promise<string> {
+async function revealVar(
+  page: Page,
+  name: '--reveal-x' | '--reveal-y' | '--reveal-opacity',
+): Promise<string> {
   return page
     .locator(TAB_SELECTORS.tab)
     .first()
@@ -108,9 +113,14 @@ test.describe('reveal brush — live behavioral contract @reveal', () => {
     // Assert they land within the host box and near the tab-center offset we drove to.
     const rx = Number.parseFloat(await revealVar(page, '--reveal-x'));
     const ry = Number.parseFloat(await revealVar(page, '--reveal-y'));
-    expect(rx, `--reveal-x should be inside the host width (${box.width})`).toBeGreaterThanOrEqual(0);
+    expect(rx, `--reveal-x should be inside the host width (${box.width})`).toBeGreaterThanOrEqual(
+      0,
+    );
     expect(rx).toBeLessThanOrEqual(Math.ceil(box.width));
-    expect(ry, `--reveal-y should be inside the host height (${box.height})`).toBeGreaterThanOrEqual(0);
+    expect(
+      ry,
+      `--reveal-y should be inside the host height (${box.height})`,
+    ).toBeGreaterThanOrEqual(0);
     expect(ry).toBeLessThanOrEqual(Math.ceil(box.height));
     // Drove to the center, so the recorded offset should be ~half the box.
     expect(Math.abs(rx - box.width / 2)).toBeLessThanOrEqual(2);
@@ -153,9 +163,7 @@ test.describe('reveal brush — live behavioral contract @reveal', () => {
     // theme-agnostic — but tokensForReveal('hc') made the gradient's hover tint
     // 'transparent', so the radial-gradient paints NO color. Assert the layer's
     // background gradient carries no non-transparent color stop (HC = inert layer).
-    await expect
-      .poll(async () => revealVar(page, '--reveal-opacity'))
-      .toBe('1');
+    await expect.poll(async () => revealVar(page, '--reveal-opacity')).toBe('1');
 
     const bg = await page
       .locator(`${TAB_SELECTORS.tab} [data-reveal-layer="true"]`)

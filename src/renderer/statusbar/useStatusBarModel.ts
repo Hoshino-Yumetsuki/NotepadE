@@ -6,11 +6,7 @@ import type { TabsStore } from '../tabs/useTabsStore';
 import type { StatusTheme } from './tokens';
 import { computeLineColumn, type LineColumn } from './statusModel';
 import type { FileModificationState, StatusBarProps } from './StatusBar';
-import {
-  recordLastSaved,
-  getLastSaved,
-  deriveModificationState,
-} from './fileStatusTracker';
+import { recordLastSaved, getLastSaved, deriveModificationState } from './fileStatusTracker';
 
 /**
  * useStatusBarModel — derives StatusBarProps from the active tab + its CM6 view
@@ -39,7 +35,11 @@ export function useStatusBarModel(args: {
   const eolId: EolId = tab?.eolId ?? 'crlf';
   const placeholder = tab?.untitledName || 'Untitled';
 
-  const [lineColumn, setLineColumn] = useState<LineColumn>({ line: 1, column: 1, selectedCount: 0 });
+  const [lineColumn, setLineColumn] = useState<LineColumn>({
+    line: 1,
+    column: 1,
+    selectedCount: 0,
+  });
   const [zoomPercent, setZoomPercent] = useState(100);
   const [ansiEncodings, setAnsiEncodings] = useState<readonly AnsiEncodingEntry[]>([]);
   // Column-0 external-modification state machine (Gate-4 line 3).
@@ -145,16 +145,13 @@ export function useStatusBarModel(args: {
 
   // Reload from disk, then re-baseline the last-saved mtime from the fresh
   // OpenedFile so the indicator returns to 'none' (UWP resets state on reload).
-  const reloadAndRebaseline = useCallback(
-    async (id: string, path: string) => {
-      const r = await window.notepads.file.reloadFromDisk(path);
-      if (r.ok) {
-        recordLastSaved(id, path, r.data.dateModifiedMs);
-        setFileModificationState('none');
-      }
-    },
-    [],
-  );
+  const reloadAndRebaseline = useCallback(async (id: string, path: string) => {
+    const r = await window.notepads.file.reloadFromDisk(path);
+    if (r.ok) {
+      recordLastSaved(id, path, r.data.dateModifiedMs);
+      setFileModificationState('none');
+    }
+  }, []);
 
   return useMemo<StatusBarProps>(
     () => ({

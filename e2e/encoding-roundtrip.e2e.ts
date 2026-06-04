@@ -62,10 +62,10 @@ async function openAutoDetect(path: string): Promise<Result<OpenedFile>> {
 
 /** Reopen-with an explicit label (window.notepads.encoding.decodeWith). */
 async function reopenWith(path: string, encodingId: string): Promise<Result<OpenedFile>> {
-  return launched.page.evaluate(
-    ([p, id]) => window.notepads.encoding.decodeWith(p, id),
-    [path, encodingId] as const,
-  );
+  return launched.page.evaluate(([p, id]) => window.notepads.encoding.decodeWith(p, id), [
+    path,
+    encodingId,
+  ] as const);
 }
 
 /** Save '\n'-normalized text with explicit encoding+EOL (window.notepads.file.save). */
@@ -94,7 +94,9 @@ test('corpus materializes the full Gate-3 set (>=150 files incl. large/empty/.LO
   expect(manifest.filter((e) => e.isLarge).length).toBe(1);
   expect(manifest.filter((e) => e.family === 'empty').length).toBe(1);
   expect(manifest.filter((e) => e.isLog).length).toBeGreaterThanOrEqual(1);
-  expect(manifest.filter((e) => e.roundTripClass === 'normalizing').length).toBeGreaterThanOrEqual(1);
+  expect(manifest.filter((e) => e.roundTripClass === 'normalizing').length).toBeGreaterThanOrEqual(
+    1,
+  );
 });
 
 test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the corpus', async () => {
@@ -140,7 +142,9 @@ test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the cor
 
       const shadow = normalizeToLf(reopened.data.decodedText);
       const saved = await saveWith(path, shadow, entry.reopenEncodingId, entry.expectedEol);
-      expect(saved.ok, `file.save failed for ${entry.fileName}: ${JSON.stringify(saved)}`).toBe(true);
+      expect(saved.ok, `file.save failed for ${entry.fileName}: ${JSON.stringify(saved)}`).toBe(
+        true,
+      );
 
       const writtenBytes = readFileSync(path);
       if (sha256(writtenBytes) !== sha256(originalBytes)) {
@@ -181,10 +185,9 @@ test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the cor
   const missRate = detectionScored === 0 ? 0 : detectionMisses / detectionScored;
 
   // --- Assertions (zero tolerance on bytes; <=2% detection miss). ---
-  expect(
-    byteMismatches.length,
-    `BYTE MISMATCHES (must be 0):\n${byteMismatches.join('\n')}`,
-  ).toBe(0);
+  expect(byteMismatches.length, `BYTE MISMATCHES (must be 0):\n${byteMismatches.join('\n')}`).toBe(
+    0,
+  );
 
   expect(
     normalizingFailures.length,
@@ -212,9 +215,10 @@ test('no file-size cap (#10): the >1,024,000-byte file opens, edits, and saves 0
 
   // OPEN — the old UWP hard refusal must NOT be reproduced.
   const opened = await openAutoDetect(path);
-  expect(opened.ok, `large file failed to open (cap must be dropped): ${JSON.stringify(opened)}`).toBe(
-    true,
-  );
+  expect(
+    opened.ok,
+    `large file failed to open (cap must be dropped): ${JSON.stringify(opened)}`,
+  ).toBe(true);
   if (!opened.ok) return;
 
   // EDIT — append a line, then SAVE; reopen the edited text and assert it round-trips.
@@ -234,8 +238,7 @@ test('no file-size cap (#10): the >1,024,000-byte file opens, edits, and saves 0
   const resave = await saveWith(path, editedShadow, large.reopenEncodingId, large.expectedEol);
   expect(resave.ok).toBe(true);
   const resavedBytes = readFileSync(path);
-  expect(
-    sha256(editedBytes),
-    'large-file edit save must be byte-stable (idempotent re-save)',
-  ).toBe(sha256(resavedBytes));
+  expect(sha256(editedBytes), 'large-file edit save must be byte-stable (idempotent re-save)').toBe(
+    sha256(resavedBytes),
+  );
 });

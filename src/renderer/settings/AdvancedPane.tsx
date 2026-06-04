@@ -55,19 +55,13 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
             onChange={(_e, d) => update({ sessionSnapshot: d.checked })}
           />
         </SettingRow>
-        <SettingRow
-          id="alwaysOpenNewWindow"
-          label="Always open files in a new window"
-        >
+        <SettingRow id="alwaysOpenNewWindow" label="Always open files in a new window">
           <Switch
             checked={settings.alwaysOpenNewWindow}
             onChange={(_e, d) => update({ alwaysOpenNewWindow: d.checked })}
           />
         </SettingRow>
-        <SettingRow
-          id="exitWhenLastTabClosed"
-          label="Exit when the last tab is closed"
-        >
+        <SettingRow id="exitWhenLastTabClosed" label="Exit when the last tab is closed">
           <Switch
             checked={settings.exitWhenLastTabClosed}
             onChange={(_e, d) => update({ exitWhenLastTabClosed: d.checked })}

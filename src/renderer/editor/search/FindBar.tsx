@@ -46,7 +46,12 @@ export interface FindBarProps {
   /** Find-next / find-previous. */
   onFind: (query: string, options: SearchOptions, direction: FindDirection) => void;
   /** Replace the current match then advance; direction mirrors UWP replace-prev. */
-  onReplaceOne: (query: string, options: SearchOptions, replacement: string, direction: FindDirection) => void;
+  onReplaceOne: (
+    query: string,
+    options: SearchOptions,
+    replacement: string,
+    direction: FindDirection,
+  ) => void;
   /** Replace every occurrence (one undo step). */
   onReplaceAll: (query: string, options: SearchOptions, replacement: string) => void;
   /** Live query/options change (drives match highlighting + counting). */
@@ -62,7 +67,9 @@ export interface FindBarProps {
 /** A small Segoe MDL2 glyph rendered as an icon button face. */
 function Glyph({ code, size }: { code: string; size: number }): JSX.Element {
   return (
-    <span style={{ fontFamily: SEGOE_MDL2_FONT_FAMILY, fontSize: size, lineHeight: 1 }}>{code}</span>
+    <span style={{ fontFamily: SEGOE_MDL2_FONT_FAMILY, fontSize: size, lineHeight: 1 }}>
+      {code}
+    </span>
   );
 }
 
@@ -137,7 +144,8 @@ export function FindBar(props: FindBarProps): JSX.Element {
       // Whole-word & regex are mutually exclusive: if BOTH ended up on, the one
       // that flipped on most recently (i.e. wasn't on before) wins.
       if (nextWholeWord && nextUseRegex) {
-        if (!wholeWord) nextUseRegex = false; // whole-word just enabled → regex off
+        if (!wholeWord)
+          nextUseRegex = false; // whole-word just enabled → regex off
         else nextWholeWord = false; // regex just enabled → whole-word off
       }
       setMatchCase(nextMatchCase);
@@ -321,7 +329,10 @@ export function FindBar(props: FindBarProps): JSX.Element {
       {/* Find action buttons (prev / next / dismiss). */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {status !== undefined && (
-          <span data-testid="find-status" style={{ fontSize: 12, opacity: 0.75, marginRight: 4, whiteSpace: 'nowrap' }}>
+          <span
+            data-testid="find-status"
+            style={{ fontSize: 12, opacity: 0.75, marginRight: 4, whiteSpace: 'nowrap' }}
+          >
             {status}
           </span>
         )}

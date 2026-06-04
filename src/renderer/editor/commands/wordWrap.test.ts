@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { EditorSelection } from '@codemirror/state';
-import {
-  toggleWordWrap,
-  wordWrapField,
-  wordWrapCompartment,
-  wordWrapExtension,
-} from './wordWrap';
+import { toggleWordWrap, wordWrapField, wordWrapCompartment, wordWrapExtension } from './wordWrap';
 import { mountView } from './testUtils';
 
 /**

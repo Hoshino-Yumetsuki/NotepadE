@@ -8,11 +8,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { TabState } from './types';
 import type { TabsStore } from './useTabsStore';
@@ -532,8 +528,17 @@ function AddTabButton(props: {
 }
 
 export function TabStrip(props: TabStripProps): JSX.Element {
-  const { tabs, activeEditorId, store, isDark, theme, onNewTab, onCloseTab, onBeginTransfer, onVoidDrop } =
-    props;
+  const {
+    tabs,
+    activeEditorId,
+    store,
+    isDark,
+    theme,
+    onNewTab,
+    onCloseTab,
+    onBeginTransfer,
+    onVoidDrop,
+  } = props;
   const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
   const tokens = tokensForTheme(resolvedTheme);
 
@@ -563,7 +568,8 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   const tabWidth = useMemo(() => {
     const n = tabs.length;
     if (n === 0) return TabDimensions.minWidth;
-    if (n === 1) return Math.max(TabDimensions.minWidth, Math.min(stripWidth, TabDimensions.maxWidth));
+    if (n === 1)
+      return Math.max(TabDimensions.minWidth, Math.min(stripWidth, TabDimensions.maxWidth));
     const even = stripWidth / n;
     return Math.max(TabDimensions.minWidth, Math.min(even, TabDimensions.maxWidth));
   }, [tabs.length, stripWidth]);

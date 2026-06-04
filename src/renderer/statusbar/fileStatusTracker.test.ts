@@ -31,7 +31,9 @@ describe('fileStatusTracker', () => {
   });
 
   it('maps an untitled (null path) tab to none', () => {
-    expect(deriveModificationState(null, { exists: true, dateModifiedMs: 5 }, undefined)).toBe('none');
+    expect(deriveModificationState(null, { exists: true, dateModifiedMs: 5 }, undefined)).toBe(
+      'none',
+    );
   });
 
   it('maps a null outcome (not yet checked) to none', () => {
@@ -42,21 +44,33 @@ describe('fileStatusTracker', () => {
   it('maps a missing file to renamedMovedDeleted (E9CE)', () => {
     recordLastSaved('e1', 'C:\\a.txt', 1000);
     expect(
-      deriveModificationState('C:\\a.txt', { exists: false, dateModifiedMs: 0 }, getLastSaved('e1')),
+      deriveModificationState(
+        'C:\\a.txt',
+        { exists: false, dateModifiedMs: 0 },
+        getLastSaved('e1'),
+      ),
     ).toBe('renamedMovedDeleted');
   });
 
   it('maps a present file with a moved mtime to modifiedOutside (E7BA)', () => {
     recordLastSaved('e1', 'C:\\a.txt', 1000);
     expect(
-      deriveModificationState('C:\\a.txt', { exists: true, dateModifiedMs: 2000 }, getLastSaved('e1')),
+      deriveModificationState(
+        'C:\\a.txt',
+        { exists: true, dateModifiedMs: 2000 },
+        getLastSaved('e1'),
+      ),
     ).toBe('modifiedOutside');
   });
 
   it('maps a present file with an unchanged mtime to none', () => {
     recordLastSaved('e1', 'C:\\a.txt', 1000);
     expect(
-      deriveModificationState('C:\\a.txt', { exists: true, dateModifiedMs: 1000 }, getLastSaved('e1')),
+      deriveModificationState(
+        'C:\\a.txt',
+        { exists: true, dateModifiedMs: 1000 },
+        getLastSaved('e1'),
+      ),
     ).toBe('none');
   });
 
@@ -64,7 +78,11 @@ describe('fileStatusTracker', () => {
     // Path changed (rename/save-as) between record and check: never a false positive.
     recordLastSaved('e1', 'C:\\old.txt', 1000);
     expect(
-      deriveModificationState('C:\\new.txt', { exists: true, dateModifiedMs: 2000 }, getLastSaved('e1')),
+      deriveModificationState(
+        'C:\\new.txt',
+        { exists: true, dateModifiedMs: 2000 },
+        getLastSaved('e1'),
+      ),
     ).toBe('none');
   });
 

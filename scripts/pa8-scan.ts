@@ -35,24 +35,9 @@ interface Violation {
   text: string;
 }
 
-const SCANNED_EXTENSIONS = new Set([
-  '.ts',
-  '.tsx',
-  '.js',
-  '.jsx',
-  '.mjs',
-  '.cjs',
-]);
+const SCANNED_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
-const IGNORED_DIRS = new Set([
-  'node_modules',
-  'dist',
-  'out',
-  '.git',
-  'coverage',
-  'build',
-  '.vite',
-]);
+const IGNORED_DIRS = new Set(['node_modules', 'dist', 'out', '.git', 'coverage', 'build', '.vite']);
 
 const NODE_BUILTINS_FORBIDDEN_IN_RENDERER = ['fs', 'child_process', 'path'];
 
@@ -139,11 +124,7 @@ const RENDERER_IMPORT_RULES = NODE_BUILTINS_FORBIDDEN_IN_RENDERER.map((mod) => (
 // raw ipcRenderer leaking into renderer surface (defense-in-depth)
 const RAW_IPCRENDERER_RE = /\bipcRenderer\b/;
 
-function scanFile(
-  file: string,
-  isRenderer: boolean,
-  violations: Violation[],
-): void {
+function scanFile(file: string, isRenderer: boolean, violations: Violation[]): void {
   const content = readFileSync(file, 'utf8');
   const lines = content.split(/\r?\n/);
   const rel = toRel(file);

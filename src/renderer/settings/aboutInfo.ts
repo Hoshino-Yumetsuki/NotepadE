@@ -28,7 +28,10 @@ export const DEPENDENCY_CREDITS: readonly { label: string; url: string }[] = [
   { label: 'UTF-unknown', url: 'https://github.com/CharsetDetector/UTF-unknown' },
   { label: 'ColorCode-Universal', url: 'https://github.com/WilliamABradley/ColorCode-Universal' },
   { label: 'DiffPlex', url: 'https://github.com/mmanela/diffplex' },
-  { label: 'Windows Community Toolkit', url: 'https://github.com/windows-toolkit/WindowsCommunityToolkit' },
+  {
+    label: 'Windows Community Toolkit',
+    url: 'https://github.com/windows-toolkit/WindowsCommunityToolkit',
+  },
 ];
 
 /** License + disclaimer line. */

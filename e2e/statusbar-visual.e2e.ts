@@ -304,8 +304,12 @@ test.describe('Gate 4 — status bar flyout action matrix', () => {
     await page.locator(STATUS.encodingReopen).click({ force: true });
     await expect(page.locator('[data-testid="status-encoding-reopen-UTF-8"]')).toBeVisible();
     await expect(page.locator('[data-testid="status-encoding-reopen-UTF-8-BOM"]')).toBeVisible();
-    await expect(page.locator('[data-testid="status-encoding-reopen-UTF-16 LE BOM"]')).toBeVisible();
-    await expect(page.locator('[data-testid="status-encoding-reopen-UTF-16 BE BOM"]')).toBeVisible();
+    await expect(
+      page.locator('[data-testid="status-encoding-reopen-UTF-16 LE BOM"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-testid="status-encoding-reopen-UTF-16 BE BOM"]'),
+    ).toBeVisible();
     // The "More encodings" submenu trigger is present (ANSI rows fetched from MAIN).
     await expect(page.locator('[data-testid="status-encoding-reopen-more"]')).toBeVisible();
     await page.keyboard.press('Escape');

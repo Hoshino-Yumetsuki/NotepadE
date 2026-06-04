@@ -204,7 +204,10 @@ test.describe('Gate 6 — i18n 29-locale runtime switch', () => {
     const nonEnDistinct = LOCALES_29.filter((l) => l !== 'en-US').every(
       (l) => tableFor(l)[SETTINGS_KEY] && tableFor(l)[SETTINGS_KEY] !== en,
     );
-    expect(nonEnDistinct, 'every non-en locale resolves the anchor to a string distinct from en-US').toBe(true);
+    expect(
+      nonEnDistinct,
+      'every non-en locale resolves the anchor to a string distinct from en-US',
+    ).toBe(true);
   });
 
   for (const locale of LOCALES_29) {

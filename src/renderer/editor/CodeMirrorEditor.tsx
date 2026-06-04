@@ -147,9 +147,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // Ctrl-z→undo never claims the slot before our undoRedoExtension `any`
         // handler (which owns undo/redo/Ctrl+Y). history() the StateField stays.
         keymap.of(
-          defaultKeymap.filter(
-            (b) => b.key !== 'Mod-z' && b.key !== 'Mod-y' && b.mac !== 'Mod-z',
-          ),
+          defaultKeymap.filter((b) => b.key !== 'Mod-z' && b.key !== 'Mod-y' && b.mac !== 'Mod-z'),
         ),
         highlightActiveLine(),
         // Pin the document line separator to the shadow-buffer '\n' so doc

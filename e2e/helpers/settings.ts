@@ -119,7 +119,10 @@ export async function selectPane(
  * Read one persisted setting through the seam (the live MAIN-owned bag the UI
  * renders from — the source of truth for a live-affect / persistence assertion).
  */
-export async function getSetting<K extends keyof Settings>(page: Page, key: K): Promise<Settings[K]> {
+export async function getSetting<K extends keyof Settings>(
+  page: Page,
+  key: K,
+): Promise<Settings[K]> {
   return page.evaluate((k) => {
     const s = window.__notepadsTest?.settings;
     if (!s) throw new Error('window.__notepadsTest.settings not installed (lane-c seam missing).');
@@ -161,7 +164,9 @@ export async function expectSetting<K extends keyof Settings>(
   expected: Settings[K],
 ): Promise<void> {
   await expect
-    .poll(async () => getSetting(page, key), { message: `setting ${String(key)} = ${String(expected)}` })
+    .poll(async () => getSetting(page, key), {
+      message: `setting ${String(key)} = ${String(expected)}`,
+    })
     .toEqual(expected);
 }
 

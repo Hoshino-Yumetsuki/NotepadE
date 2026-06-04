@@ -9,9 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { brandRampFromAccent, isValidHex } from './brandRamp';
 
-const SHADE_KEYS = [
-  10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
-] as const;
+const SHADE_KEYS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160] as const;
 
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
@@ -47,7 +45,11 @@ describe('brandRampFromAccent', () => {
     // Allow ±1 per channel for HSV round-trip rounding.
     const seed = [0x00, 0x78, 0xd4];
     const got = ramp[80].slice(1);
-    const gv = [parseInt(got.slice(0, 2), 16), parseInt(got.slice(2, 4), 16), parseInt(got.slice(4, 6), 16)];
+    const gv = [
+      parseInt(got.slice(0, 2), 16),
+      parseInt(got.slice(2, 4), 16),
+      parseInt(got.slice(4, 6), 16),
+    ];
     gv.forEach((c, i) => expect(Math.abs(c - seed[i])).toBeLessThanOrEqual(1));
   });
 

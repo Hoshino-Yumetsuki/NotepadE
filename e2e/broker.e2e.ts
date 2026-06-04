@@ -33,7 +33,8 @@ import { launchApp, makeUserDataDir, safeRm, type LaunchedApp } from './helpers/
 /** Read the MAIN seam's live window count (live BrowserWindows). */
 async function windowCount(app: LaunchedApp): Promise<number> {
   return app.app.evaluate(() => {
-    const seam = (globalThis as { __notepadsMainTest?: { windowCount(): number } }).__notepadsMainTest;
+    const seam = (globalThis as { __notepadsMainTest?: { windowCount(): number } })
+      .__notepadsMainTest;
     if (!seam) throw new Error('__notepadsMainTest seam missing (NOTEPADS_E2E not set?)');
     return seam.windowCount();
   });
@@ -82,7 +83,11 @@ async function simulateSecondInstance(
       // Prepend the real exec path so parseArgv skips electron's own argv[0].
       const full = [process.execPath, ...arg.argv];
       const r = await seam.simulateSecondInstance(full, arg.cwd);
-      return { paths: r.parsed.paths, protocolUrl: r.parsed.protocolUrl, windowCount: r.windowCount };
+      return {
+        paths: r.parsed.paths,
+        protocolUrl: r.parsed.protocolUrl,
+        windowCount: r.windowCount,
+      };
     },
     { argv, cwd },
   );

@@ -52,11 +52,7 @@ describe('planCompactEnter', () => {
 
   it('unmaximizes a maximized (non-fullscreen) window before shrinking', () => {
     const { actions } = planCompactEnter(flags({ maximized: true }));
-    expect(actions.map((a) => a.type)).toEqual([
-      'unmaximize',
-      'setAlwaysOnTop',
-      'setSize',
-    ]);
+    expect(actions.map((a) => a.type)).toEqual(['unmaximize', 'setAlwaysOnTop', 'setSize']);
   });
 });
 

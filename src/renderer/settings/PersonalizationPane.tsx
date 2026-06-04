@@ -40,11 +40,7 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
             ))}
           </RadioGroup>
         </SettingRow>
-        <SettingRow
-          id="tintOpacity"
-          label="Background tint opacity"
-          description={`${tintPct}%`}
-        >
+        <SettingRow id="tintOpacity" label="Background tint opacity" description={`${tintPct}%`}>
           <Slider
             data-testid="setting-tintOpacity-slider"
             min={TINT_MIN}

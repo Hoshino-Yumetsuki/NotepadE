@@ -9,16 +9,16 @@ have no JS equivalent. Per the approved sign-off, these are **documented known
 gaps, not blockers.**
 
 Every gap below is pinned by a row in `regexParity.fixture.ts` (consumed by the
-Gate-3 regex-parity test), so the behavior is *verified and known*, never silent.
+Gate-3 regex-parity test), so the behavior is _verified and known_, never silent.
 
 ## Engine configuration (parity baseline)
 
-| .NET | JS RegExp | Notes |
-|------|-----------|-------|
-| `RegexOptions.Multiline` (always on) | `m` flag (always on) | `^`/`$` anchor at line boundaries. |
-| `RegexOptions.IgnoreCase` (unless match-case) | `i` flag (unless match-case) | Drives the match-case toggle: flags are `gmi` vs `gm`. |
-| `.` excludes `\n` by default | `.` excludes `\n` by default (no `s`/dotall flag) | Identical: `a.c` does not cross a line break. |
-| `RegexOptions.RightToLeft` (find-previous) | *no equivalent* | Emulated by a shim — see below. |
+| .NET                                          | JS RegExp                                         | Notes                                                  |
+| --------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| `RegexOptions.Multiline` (always on)          | `m` flag (always on)                              | `^`/`$` anchor at line boundaries.                     |
+| `RegexOptions.IgnoreCase` (unless match-case) | `i` flag (unless match-case)                      | Drives the match-case toggle: flags are `gmi` vs `gm`. |
+| `.` excludes `\n` by default                  | `.` excludes `\n` by default (no `s`/dotall flag) | Identical: `a.c` does not cross a line break.          |
+| `RegexOptions.RightToLeft` (find-previous)    | _no equivalent_                                   | Emulated by a shim — see below.                        |
 
 The shadow buffer is already `\n`-normalized, so both engines see the same line
 breaks; no `\r` conversion is needed before matching.
@@ -38,12 +38,12 @@ parity fixture, including the multiline line-start case.
 
 ## Documented `divergence` rows (replacement & pattern syntax)
 
-| Construct | .NET | JS RegExp (this engine) | Fixture row |
-|-----------|------|-------------------------|-------------|
-| Named-group **replacement** | `${name}` | `$<name>` | `divergence/named-group-js-syntax` |
-| End-of-string anchors | `\Z`, `\z` | *invalid* → pattern fails to compile; `compileQuery` surfaces the error. Use `$`. | `divergence/backslash-z-anchor-not-supported` |
-| Balancing groups | `(?<-name>)` | *no equivalent* → fails to compile → no match. | `divergence/balancing-groups-not-supported` |
-| Inline option groups | `(?i)`, `(?m)`, … | *not a flag toggle* → case is controlled by the match-case toggle (`gmi`/`gm`), not inline. | `divergence/inline-options-block` |
+| Construct                   | .NET              | JS RegExp (this engine)                                                                     | Fixture row                                   |
+| --------------------------- | ----------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Named-group **replacement** | `${name}`         | `$<name>`                                                                                   | `divergence/named-group-js-syntax`            |
+| End-of-string anchors       | `\Z`, `\z`        | _invalid_ → pattern fails to compile; `compileQuery` surfaces the error. Use `$`.           | `divergence/backslash-z-anchor-not-supported` |
+| Balancing groups            | `(?<-name>)`      | _no equivalent_ → fails to compile → no match.                                              | `divergence/balancing-groups-not-supported`   |
+| Inline option groups        | `(?i)`, `(?m)`, … | _not a flag toggle_ → case is controlled by the match-case toggle (`gmi`/`gm`), not inline. | `divergence/inline-options-block`             |
 
 ### Behavior contract for unsupported patterns
 

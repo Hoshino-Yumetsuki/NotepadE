@@ -60,10 +60,7 @@ export default defineConfig(({ command }) => ({
           name: 'notepads-dev-csp',
           apply: 'serve' as const,
           transformIndexHtml(html: string): string {
-            return html.replace(
-              /<meta http-equiv="Content-Security-Policy"[\s\S]*?\/>\s*/,
-              '',
-            );
+            return html.replace(/<meta http-equiv="Content-Security-Policy"[\s\S]*?\/>\s*/, '');
           },
         }
       : null,

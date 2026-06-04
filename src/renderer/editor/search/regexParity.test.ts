@@ -41,9 +41,7 @@ function regexOptions(o: SearchOptions): SearchOptions {
 }
 
 /** Run one fixture row through the real engine and return the engine's result. */
-function runCase(
-  c: RegexParityCase,
-): MatchSpan | null | MatchSpan[] | ReplaceAllResult {
+function runCase(c: RegexParityCase): MatchSpan | null | MatchSpan[] | ReplaceAllResult {
   const opts = regexOptions(c.options);
   switch (c.op) {
     case 'findNext':
@@ -67,7 +65,12 @@ describe('regex-parity fixture (Gate 3)', () => {
     // At least one row must end exactly at the caret (the <= boundary case).
     expect(
       RTL_REVERSE_CASES.some(
-        (c) => c.caret != null && c.expected != null && !Array.isArray(c.expected) && 'to' in c.expected && c.expected.to === c.caret,
+        (c) =>
+          c.caret != null &&
+          c.expected != null &&
+          !Array.isArray(c.expected) &&
+          'to' in c.expected &&
+          c.expected.to === c.caret,
       ),
     ).toBe(true);
     // Documented flavor divergences must be enumerated for sign-off (#5).

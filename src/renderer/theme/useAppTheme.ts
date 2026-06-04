@@ -58,7 +58,11 @@ function resolveAccent(settings: Settings, osAccent: string): string {
 }
 
 /** Resolve the light/dark/hc bucket from themeMode + OS theme + high contrast. */
-function resolveBucket(mode: ThemeMode, osTheme: 'light' | 'dark', highContrast: boolean): AppTheme {
+function resolveBucket(
+  mode: ThemeMode,
+  osTheme: 'light' | 'dark',
+  highContrast: boolean,
+): AppTheme {
   if (highContrast) return 'hc';
   if (mode === 'system') return osTheme;
   return mode;

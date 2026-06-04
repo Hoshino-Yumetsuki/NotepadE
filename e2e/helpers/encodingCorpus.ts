@@ -111,7 +111,11 @@ const WESTERN_PAYLOADS: string[][] = [
   ['Größe', 'Mañana', 'Garçon', 'Smörgåsbord'],
 ];
 const GB_PAYLOADS: string[][] = [GB_LINES, ['中文', '单行'], ['编码', '往返', '测试', '完成']];
-const SJIS_PAYLOADS: string[][] = [SJIS_LINES, ['日本語', '一行'], ['ひらがな', 'カタカナ', '漢字']];
+const SJIS_PAYLOADS: string[][] = [
+  SJIS_LINES,
+  ['日本語', '一行'],
+  ['ひらがな', 'カタカナ', '漢字'],
+];
 const BIG5_PAYLOADS: string[][] = [BIG5_LINES, ['繁體', '單行'], ['編碼', '往返', '測試', '完成']];
 
 function joinEol(lines: string[], eol: EolId): string {
@@ -231,8 +235,12 @@ export function buildCorpus(): ByteFile[] {
   }
   // --- UTF-16 LE / BE, +/- BOM -------------------------------------------
   for (const eol of EOLS) {
-    UNICODE_PAYLOADS.forEach((p) => add('utf16le-bom', LABELS.utf16leBom, LABELS.utf16leBom, p, eol));
-    UNICODE_PAYLOADS.forEach((p) => add('utf16be-bom', LABELS.utf16beBom, LABELS.utf16beBom, p, eol));
+    UNICODE_PAYLOADS.forEach((p) =>
+      add('utf16le-bom', LABELS.utf16leBom, LABELS.utf16leBom, p, eol),
+    );
+    UNICODE_PAYLOADS.forEach((p) =>
+      add('utf16be-bom', LABELS.utf16beBom, LABELS.utf16beBom, p, eol),
+    );
     // BOM-less UTF-16: detection is unreliable (jschardet); reopen-with the
     // explicit label guarantees the byte round-trip, but auto-detect may miss.
     UNICODE_PAYLOADS.forEach((p) =>

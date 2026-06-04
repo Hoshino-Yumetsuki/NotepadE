@@ -44,9 +44,8 @@ interface WindowState {
 /** Read the live primary-window state through the MAIN test seam. */
 async function readState(app: ElectronApplication): Promise<WindowState> {
   const state = await app.evaluate(() => {
-    const seam = (
-      globalThis as { __notepadsMainTest?: { readWindowState?: () => unknown } }
-    ).__notepadsMainTest;
+    const seam = (globalThis as { __notepadsMainTest?: { readWindowState?: () => unknown } })
+      .__notepadsMainTest;
     if (!seam?.readWindowState) {
       throw new Error('__notepadsMainTest.readWindowState missing (NOTEPADS_E2E not set?)');
     }
@@ -83,19 +82,12 @@ async function waitForState(
   predicate: (s: WindowState) => boolean,
   message: string,
 ): Promise<WindowState> {
-  await expect
-    .poll(async () => predicate(await readState(app)), { message })
-    .toBe(true);
+  await expect.poll(async () => predicate(await readState(app)), { message }).toBe(true);
   return readState(app);
 }
 
 /** Assert reported bounds are within BOUNDS_TOLERANCE of an expected w×h. */
-function expectBoundsNear(
-  state: WindowState,
-  width: number,
-  height: number,
-  label: string,
-): void {
+function expectBoundsNear(state: WindowState, width: number, height: number, label: string): void {
   expect(
     Math.abs(state.bounds.width - width),
     `${label}: width ${state.bounds.width} should be ~${width}`,
@@ -129,13 +121,21 @@ test.describe('window behavior matrix — compact overlay + full screen @window'
     // ENTER: bridge reports the compact flag, and the live window actually shrinks
     // to the compact size + goes always-on-top.
     expect(await setCompactOverlay(page, true)).toBe(true);
-    const compact = await waitForState(app, (s) => s.isCompactOverlay, 'window should enter compact');
+    const compact = await waitForState(
+      app,
+      (s) => s.isCompactOverlay,
+      'window should enter compact',
+    );
     expect(compact.isAlwaysOnTop, 'compact overlay is always-on-top').toBe(true);
     expectBoundsNear(compact, COMPACT_WIDTH, COMPACT_HEIGHT, 'compact enter');
 
     // LEAVE: flag clears, always-on-top drops, bounds restore to the pre-compact size.
     expect(await setCompactOverlay(page, false)).toBe(false);
-    const restored = await waitForState(app, (s) => !s.isCompactOverlay, 'window should leave compact');
+    const restored = await waitForState(
+      app,
+      (s) => !s.isCompactOverlay,
+      'window should leave compact',
+    );
     expect(restored.isAlwaysOnTop, 'always-on-top dropped on leave').toBe(false);
     expectBoundsNear(restored, restoreW, restoreH, 'compact leave restore');
   });
@@ -166,7 +166,11 @@ test.describe('window behavior matrix — compact overlay + full screen @window'
     // ENTER compact from maximized: the planner exits maximize before shrinking, so
     // the shrink is not fighting the OS maximize. Live window must be un-maximized.
     await setCompactOverlay(page, true);
-    const compact = await waitForState(app, (s) => s.isCompactOverlay, 'enter compact from maximized');
+    const compact = await waitForState(
+      app,
+      (s) => s.isCompactOverlay,
+      'enter compact from maximized',
+    );
     expect(compact.isMaximized, 'maximize cleared while compact').toBe(false);
     expectBoundsNear(compact, COMPACT_WIDTH, COMPACT_HEIGHT, 'compact from maximized');
 
@@ -188,7 +192,11 @@ test.describe('window behavior matrix — compact overlay + full screen @window'
     // ENTER compact from fullscreen: planner exits fullscreen FIRST (resizing a
     // fullscreen window is a no-op on Windows), then shrinks.
     await setCompactOverlay(page, true);
-    const compact = await waitForState(app, (s) => s.isCompactOverlay, 'enter compact from fullscreen');
+    const compact = await waitForState(
+      app,
+      (s) => s.isCompactOverlay,
+      'enter compact from fullscreen',
+    );
     expect(compact.isFullScreen, 'fullscreen cleared while compact').toBe(false);
     expectBoundsNear(compact, COMPACT_WIDTH, COMPACT_HEIGHT, 'compact from fullscreen');
 
@@ -211,7 +219,11 @@ test.describe('window behavior matrix — compact overlay + full screen @window'
     expect(full.isFullScreen).toBe(true);
 
     expect(await setFullScreen(page, false)).toBe(false);
-    const windowed = await waitForState(app, (s) => !s.isFullScreen, 'window should leave fullscreen');
+    const windowed = await waitForState(
+      app,
+      (s) => !s.isFullScreen,
+      'window should leave fullscreen',
+    );
     expect(windowed.isFullScreen).toBe(false);
   });
 });

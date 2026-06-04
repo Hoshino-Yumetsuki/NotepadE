@@ -187,7 +187,10 @@ export function useReveal(): {
     },
     [fromEvent],
   );
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => fromEvent(e), [fromEvent]);
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => fromEvent(e),
+    [fromEvent],
+  );
   const onPointerLeave = useCallback(() => write(0, 0, 0), [write]);
 
   useEffect(

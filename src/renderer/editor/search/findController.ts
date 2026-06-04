@@ -66,9 +66,7 @@ const highlightField = StateField.define<DecorationSet>({
       if (effect.is(setHighlightsEffect)) {
         const spans = effect.value;
         next = Decoration.set(
-          spans
-            .filter((s) => s.to > s.from)
-            .map((s) => highlightMark.range(s.from, s.to)),
+          spans.filter((s) => s.to > s.from).map((s) => highlightMark.range(s.from, s.to)),
           true,
         );
       }

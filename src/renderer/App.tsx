@@ -111,8 +111,7 @@ export function App(): JSX.Element {
     [store],
   );
   const getActiveHandle = useCallback(
-    () =>
-      store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
+    () => (store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null),
     [store],
   );
 
@@ -213,7 +212,8 @@ export function App(): JSX.Element {
   // Editor test hook reads the ACTIVE editor's handle + labels (existing Gate-1).
   useEffect(() => {
     const uninstall = installTestHook(
-      () => (store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null),
+      () =>
+        store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
       () => labelsRef.current,
       onFileOpened,
     );
@@ -241,10 +241,8 @@ export function App(): JSX.Element {
   // re-validates the path) and seeds a freshly-adopted editor's document. Stable
   // ref so the subscriptions + seam below don't re-bind every render.
   const transferSource = useRef<TransferTextSource>({
-    getLastSavedText: (id) =>
-      editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
-    getPendingText: (id) =>
-      editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
+    getLastSavedText: (id) => editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
+    getPendingText: (id) => editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
     seedAdoptedDoc: (id, text) => {
       // Seed once the adopted tab's editor handle exists. setTimeout(0), not rAF:
       // rAF never fires in a non-compositing window (Playwright primary / occluded
@@ -280,10 +278,7 @@ export function App(): JSX.Element {
   // Transfer test seam (Gate-6 harness, lane-h): drives the genuine begin/
   // complete/void-drop path since Playwright can't synthesize a real HTML5
   // cross-process drag. PA-8-clean (only window.notepads + store).
-  useEffect(
-    () => installTransferTestHook(store, transferSource.current),
-    [store],
-  );
+  useEffect(() => installTransferTestHook(store, transferSource.current), [store]);
 
   // App-window activation (Workstream 6.A): a broker redirect/spawn delivers the
   // file paths to open into THIS window. Open each via file.open into a new tab.
@@ -392,13 +387,7 @@ export function App(): JSX.Element {
         void window.notepads.window.setFullScreen(!fullScreenRef.current).then((res) => {
           if (res.ok) fullScreenRef.current = res.data.isFullScreen;
         });
-      } else if (
-        e.key === 'F12' &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.metaKey &&
-        !e.shiftKey
-      ) {
+      } else if (e.key === 'F12' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
         // F12 → toggle the compact-overlay window (frameless always-on-top, the
         // 0.A sign-off #8 substitute). Bare F12 only, so a modified chord never
         // triggers it; MAIN owns the actual window state machine (window.ts).
@@ -424,8 +413,7 @@ export function App(): JSX.Element {
   // print host + MAIN webContents.print(). A dispatched 'notepads:share' event
   // hands the active document to MAIN's share/clipboard path. PA-8 (typed bridge).
   useEffect(() => {
-    const readText = (id: string): string =>
-      editorHandles.current.get(id)?.getShadowText() ?? '';
+    const readText = (id: string): string => editorHandles.current.get(id)?.getShadowText() ?? '';
     const onKey = (e: KeyboardEvent): void => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
         e.preventDefault();
@@ -480,9 +468,17 @@ export function App(): JSX.Element {
             'up' = status bar elevates onto editor. Anchored inside #app-shell so they
             never re-flow the strip/bar flex boxes — keeping the Gate-2/Gate-4 golden
             captures pixel-identical. Inert (height 0) in HC. */}
-        <div data-testid="tab-strip-shadow" aria-hidden style={edgeShadowStyle(resolvedTheme, 'down')} />
+        <div
+          data-testid="tab-strip-shadow"
+          aria-hidden
+          style={edgeShadowStyle(resolvedTheme, 'down')}
+        />
         {settings.showStatusBar ? (
-          <div data-testid="status-bar-shadow" aria-hidden style={edgeShadowStyle(resolvedTheme, 'up')} />
+          <div
+            data-testid="status-bar-shadow"
+            aria-hidden
+            style={edgeShadowStyle(resolvedTheme, 'up')}
+          />
         ) : null}
         <Button
           appearance="subtle"

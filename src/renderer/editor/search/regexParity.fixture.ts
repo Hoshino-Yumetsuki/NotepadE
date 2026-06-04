@@ -61,11 +61,7 @@ export interface RegexParityCase {
    *   - findAll                 : MatchSpan[]
    *   - replaceAll              : { text, count }
    */
-  expected:
-    | MatchSpan
-    | null
-    | MatchSpan[]
-    | { text: string; count: number };
+  expected: MatchSpan | null | MatchSpan[] | { text: string; count: number };
   /** Sign-off note for `divergence`/`shim` rows (the .NET delta being recorded). */
   note?: string;
 }
@@ -348,7 +344,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     replacement: '$<last> $<first>',
     expected: { text: 'smith john', count: 1 },
-    note: ".NET named groups use ${name} in replacement; JS RegExp uses $<name>. The engine passes the replacement to RegExp.replace verbatim, so JS syntax ($<name>) is the supported form — documented divergence.",
+    note: '.NET named groups use ${name} in replacement; JS RegExp uses $<name>. The engine passes the replacement to RegExp.replace verbatim, so JS syntax ($<name>) is the supported form — documented divergence.',
   },
   {
     id: 'divergence/backslash-z-anchor-not-supported',
@@ -361,7 +357,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     wrap: false,
     // \Z is invalid in JS RegExp → buildRegex throws → engine returns null.
     expected: null,
-    note: ".NET \\Z / \\z (end-of-string anchors) are not valid JS RegExp; the pattern fails to compile and finds nothing. Use $ (with/without Multiline). Documented divergence — compileQuery surfaces the error to the UI.",
+    note: '.NET \\Z / \\z (end-of-string anchors) are not valid JS RegExp; the pattern fails to compile and finds nothing. Use $ (with/without Multiline). Documented divergence — compileQuery surfaces the error to the UI.',
   },
   {
     id: 'divergence/balancing-groups-not-supported',

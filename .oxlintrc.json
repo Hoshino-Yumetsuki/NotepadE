@@ -25,8 +25,14 @@
             "paths": [
               { "name": "fs", "message": "PA-8: no fs in renderer; use window.notepads." },
               { "name": "node:fs", "message": "PA-8: no fs in renderer; use window.notepads." },
-              { "name": "child_process", "message": "PA-8: no child_process in renderer; use window.notepads." },
-              { "name": "node:child_process", "message": "PA-8: no child_process in renderer; use window.notepads." },
+              {
+                "name": "child_process",
+                "message": "PA-8: no child_process in renderer; use window.notepads."
+              },
+              {
+                "name": "node:child_process",
+                "message": "PA-8: no child_process in renderer; use window.notepads."
+              },
               { "name": "path", "message": "PA-8: no path in renderer; use window.notepads." },
               { "name": "node:path", "message": "PA-8: no path in renderer; use window.notepads." },
               { "name": "electron", "message": "PA-8: renderer talks only to window.notepads." }

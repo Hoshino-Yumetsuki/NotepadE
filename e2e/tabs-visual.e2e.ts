@@ -2,7 +2,13 @@ import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp, type LaunchedApp } from './helpers/launch';
 import { compareToBaseline, formatDiff } from '../scripts/visual-diff';
-import { TAB_SELECTORS, seedTabs, clickTab, expectTabCount, resetToSingleTab } from './helpers/tabs';
+import {
+  TAB_SELECTORS,
+  seedTabs,
+  clickTab,
+  expectTabCount,
+  resetToSingleTab,
+} from './helpers/tabs';
 
 /**
  * VERIFICATION GATE 2 — Golden-image diff (docs/plan/03 §GATE 2).

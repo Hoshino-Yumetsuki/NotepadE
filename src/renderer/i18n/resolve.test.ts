@@ -58,7 +58,7 @@ describe('matchLocale', () => {
 });
 
 describe('resolveLocale', () => {
-  it("explicit appLanguage wins over the OS languages", () => {
+  it('explicit appLanguage wins over the OS languages', () => {
     expect(resolveLocale('ja-JP', ['en-US'])).toBe('ja-JP');
   });
 
@@ -135,9 +135,9 @@ describe('SUPPLEMENT overlay (web-port keys with no .resw origin)', () => {
 
   it('falls a supplement key through to its en-US value when the locale is untranslated', () => {
     // Entries are en-US-only for now; any resolved locale gets the en-US string.
-    expect(lookup(tableFor('de-DE'), 'TabStrip_NewTabButton.AutomationProperties.Name', 'de-DE')).toBe(
-      'New tab',
-    );
+    expect(
+      lookup(tableFor('de-DE'), 'TabStrip_NewTabButton.AutomationProperties.Name', 'de-DE'),
+    ).toBe('New tab');
   });
 
   it('does not let a supplement key override a real generated key', () => {

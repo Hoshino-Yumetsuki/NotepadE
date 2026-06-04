@@ -28,7 +28,9 @@ function makeSettings(patch: Partial<Settings> = {}): Settings {
 describe('TextEditorPane', () => {
   it('reflects word-wrap from the bag and writes the patch on toggle', () => {
     const update = vi.fn();
-    renderPane(<TextEditorPane settings={makeSettings({ textWrapping: 'noWrap' })} update={update} />);
+    renderPane(
+      <TextEditorPane settings={makeSettings({ textWrapping: 'noWrap' })} update={update} />,
+    );
     const row = screen.getByTestId('setting-textWrapping');
     const sw = within(row).getByRole('switch');
     expect(sw).not.toBeChecked();
@@ -64,14 +66,19 @@ describe('TextEditorPane', () => {
 describe('PersonalizationPane', () => {
   it('reflects themeMode and writes on radio change', () => {
     const update = vi.fn();
-    renderPane(<PersonalizationPane settings={makeSettings({ themeMode: 'system' })} update={update} />);
+    renderPane(
+      <PersonalizationPane settings={makeSettings({ themeMode: 'system' })} update={update} />,
+    );
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
     expect(update).toHaveBeenCalledWith({ themeMode: 'dark' });
   });
 
   it('hides the custom-accent row when Windows accent is on', () => {
     renderPane(
-      <PersonalizationPane settings={makeSettings({ useWindowsAccentColor: true })} update={vi.fn()} />,
+      <PersonalizationPane
+        settings={makeSettings({ useWindowsAccentColor: true })}
+        update={vi.fn()}
+      />,
     );
     expect(screen.queryByTestId('setting-customAccentColor')).toBeNull();
   });

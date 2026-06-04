@@ -195,7 +195,8 @@ function Cell(props: CellProps): JSX.Element {
       style={style}
       onMouseEnter={(e) => {
         setHovered(true);
-        if (!isStatic) reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+        if (!isStatic)
+          reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
       }}
       onMouseLeave={() => {
         setHovered(false);
@@ -229,7 +230,9 @@ function Cell(props: CellProps): JSX.Element {
           }}
         />
       )}
-      <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center' }}>
+      <span
+        style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center' }}
+      >
         {children}
       </span>
     </div>
@@ -265,7 +268,9 @@ function ModificationStateColumn(props: {
   const { tokens, state, onReloadFromDisk } = props;
   // 'none' renders an empty Auto/MinWidth-4 column placeholder (UWP MinWidth=4).
   if (state === 'none') {
-    return <div data-testid="status-mod-state" style={{ minWidth: StatusDimensions.col0MinWidth }} />;
+    return (
+      <div data-testid="status-mod-state" style={{ minWidth: StatusDimensions.col0MinWidth }} />
+    );
   }
   const glyph =
     state === 'modifiedOutside' ? StatusGlyph.fileModified : StatusGlyph.fileRenamedMovedDeleted;
@@ -404,8 +409,15 @@ function ModificationColumn(props: {
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-modification" ariaLabel={t('TextEditor_ModificationIndicator_Text')} title={t('TextEditor_ModificationIndicator_Text')}>
-            <span style={{ color: tokens.accent }}>{t('TextEditor_ModificationIndicator_Text')}</span>
+          <Cell
+            tokens={tokens}
+            testid="status-modification"
+            ariaLabel={t('TextEditor_ModificationIndicator_Text')}
+            title={t('TextEditor_ModificationIndicator_Text')}
+          >
+            <span style={{ color: tokens.accent }}>
+              {t('TextEditor_ModificationIndicator_Text')}
+            </span>
           </Cell>
         </div>
       </MenuTrigger>
@@ -472,7 +484,12 @@ function ZoomColumn(props: {
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-zoom" ariaLabel={t('StatusBar_Zoom')} title={`${clamped}%`}>
+          <Cell
+            tokens={tokens}
+            testid="status-zoom"
+            ariaLabel={t('StatusBar_Zoom')}
+            title={`${clamped}%`}
+          >
             <span data-testid="status-zoom-text">{clamped}%</span>
           </Cell>
         </div>
@@ -561,7 +578,12 @@ function EolColumn(props: {
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-eol" ariaLabel={t('StatusBar_LineEnding')} title={eolDisplayText(eolId)}>
+          <Cell
+            tokens={tokens}
+            testid="status-eol"
+            ariaLabel={t('StatusBar_LineEnding')}
+            title={eolDisplayText(eolId)}
+          >
             <span data-testid="status-eol-text">{eolDisplayText(eolId)}</span>
           </Cell>
         </div>
@@ -601,10 +623,7 @@ function EncodingColumn(props: {
   // UWP's flyout has two parent submenus ("Reopen with" / "Save with"), each
   // listing the four Unicode rows inline then a "More encodings" submenu of the
   // ANSI table. We build both from the same model (statusModel.buildEncodingMenuModel).
-  const encodingSubmenu = (
-    action: (id: EncodingId) => void,
-    keyPrefix: string,
-  ): JSX.Element => (
+  const encodingSubmenu = (action: (id: EncodingId) => void, keyPrefix: string): JSX.Element => (
     <MenuList data-testid={`status-encoding-${keyPrefix}`}>
       {model.unicode.map((row) => (
         <MenuItem
@@ -618,7 +637,9 @@ function EncodingColumn(props: {
       <MenuDivider />
       <Menu positioning="above-end">
         <MenuTrigger disableButtonEnhancement>
-          <MenuItem data-testid={`status-encoding-${keyPrefix}-more`}>{t('TextEditor_EncodingIndicator_FlyoutItem_MoreEncodings')}</MenuItem>
+          <MenuItem data-testid={`status-encoding-${keyPrefix}-more`}>
+            {t('TextEditor_EncodingIndicator_FlyoutItem_MoreEncodings')}
+          </MenuItem>
         </MenuTrigger>
         <MenuPopover>
           <MenuList data-testid={`status-encoding-${keyPrefix}-more-list`}>
@@ -641,7 +662,12 @@ function EncodingColumn(props: {
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-encoding" ariaLabel={t('StatusBar_Encoding')} title={encodingId}>
+          <Cell
+            tokens={tokens}
+            testid="status-encoding"
+            ariaLabel={t('StatusBar_Encoding')}
+            title={encodingId}
+          >
             <span data-testid="status-encoding-text">{encodingId}</span>
           </Cell>
         </div>
@@ -650,13 +676,17 @@ function EncodingColumn(props: {
         <MenuList data-testid="status-encoding-menu">
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
-              <MenuItem data-testid="status-encoding-reopen">{t('TextEditor_EncodingIndicator_FlyoutItem_ReopenWithEncoding')}</MenuItem>
+              <MenuItem data-testid="status-encoding-reopen">
+                {t('TextEditor_EncodingIndicator_FlyoutItem_ReopenWithEncoding')}
+              </MenuItem>
             </MenuTrigger>
             <MenuPopover>{encodingSubmenu(onReopenWithEncoding, 'reopen')}</MenuPopover>
           </Menu>
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
-              <MenuItem data-testid="status-encoding-save">{t('TextEditor_EncodingIndicator_FlyoutItem_SaveWithEncoding')}</MenuItem>
+              <MenuItem data-testid="status-encoding-save">
+                {t('TextEditor_EncodingIndicator_FlyoutItem_SaveWithEncoding')}
+              </MenuItem>
             </MenuTrigger>
             <MenuPopover>{encodingSubmenu(onSaveWithEncoding, 'save')}</MenuPopover>
           </Menu>
@@ -699,60 +729,64 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
 
   return (
     <StatusRevealThemeContext.Provider value={props.theme}>
-    <div
-      data-testid="status-bar"
-      data-theme={props.theme}
-      role="status"
-      style={{
-        display: 'grid',
-        // Auto / * / Auto x6 — verbatim UWP ColumnDefinitions (xaml:14-23).
-        gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto',
-        alignItems: 'stretch',
-        height: StatusDimensions.height,
-        minHeight: StatusDimensions.height,
-        background: tokens.background,
-        borderTop: `1px solid ${tokens.topBorder}`,
-        color: tokens.text,
-        overflow: 'hidden',
-      }}
-    >
-      <ModificationStateColumn
-        tokens={tokens}
-        state={props.fileModificationState}
-        onReloadFromDisk={props.onReloadFromDisk}
-      />
-      <PathColumn
-        tokens={tokens}
-        filePath={props.filePath}
-        placeholder={props.fileNamePlaceholder}
-        onReloadFromDisk={props.onReloadFromDisk}
-        onCopyFullPath={props.onCopyFullPath}
-        onOpenContainingFolder={props.onOpenContainingFolder}
-        onRename={props.onRename}
-      />
-      <ModificationColumn
-        tokens={tokens}
-        isModified={props.isModified}
-        onPreviewChanges={props.onPreviewChanges}
-        onRevertAllChanges={props.onRevertAllChanges}
-      />
-      <LineColumnColumn tokens={tokens} lineColumn={props.lineColumn} onGoToLine={props.onGoToLine} />
-      <ZoomColumn
-        tokens={tokens}
-        zoomPercent={props.zoomPercent}
-        onSetZoom={props.onSetZoom}
-        onResetZoom={props.onResetZoom}
-      />
-      <EolColumn tokens={tokens} eolId={props.eolId} onChangeEol={props.onChangeEol} />
-      <EncodingColumn
-        tokens={tokens}
-        encodingId={props.encodingId}
-        ansiEncodings={props.ansiEncodings}
-        onReopenWithEncoding={props.onReopenWithEncoding}
-        onSaveWithEncoding={props.onSaveWithEncoding}
-      />
-      <ShadowWindowColumn tokens={tokens} isShadowWindow={props.isShadowWindow} />
-    </div>
+      <div
+        data-testid="status-bar"
+        data-theme={props.theme}
+        role="status"
+        style={{
+          display: 'grid',
+          // Auto / * / Auto x6 — verbatim UWP ColumnDefinitions (xaml:14-23).
+          gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto',
+          alignItems: 'stretch',
+          height: StatusDimensions.height,
+          minHeight: StatusDimensions.height,
+          background: tokens.background,
+          borderTop: `1px solid ${tokens.topBorder}`,
+          color: tokens.text,
+          overflow: 'hidden',
+        }}
+      >
+        <ModificationStateColumn
+          tokens={tokens}
+          state={props.fileModificationState}
+          onReloadFromDisk={props.onReloadFromDisk}
+        />
+        <PathColumn
+          tokens={tokens}
+          filePath={props.filePath}
+          placeholder={props.fileNamePlaceholder}
+          onReloadFromDisk={props.onReloadFromDisk}
+          onCopyFullPath={props.onCopyFullPath}
+          onOpenContainingFolder={props.onOpenContainingFolder}
+          onRename={props.onRename}
+        />
+        <ModificationColumn
+          tokens={tokens}
+          isModified={props.isModified}
+          onPreviewChanges={props.onPreviewChanges}
+          onRevertAllChanges={props.onRevertAllChanges}
+        />
+        <LineColumnColumn
+          tokens={tokens}
+          lineColumn={props.lineColumn}
+          onGoToLine={props.onGoToLine}
+        />
+        <ZoomColumn
+          tokens={tokens}
+          zoomPercent={props.zoomPercent}
+          onSetZoom={props.onSetZoom}
+          onResetZoom={props.onResetZoom}
+        />
+        <EolColumn tokens={tokens} eolId={props.eolId} onChangeEol={props.onChangeEol} />
+        <EncodingColumn
+          tokens={tokens}
+          encodingId={props.encodingId}
+          ansiEncodings={props.ansiEncodings}
+          onReopenWithEncoding={props.onReopenWithEncoding}
+          onSaveWithEncoding={props.onSaveWithEncoding}
+        />
+        <ShadowWindowColumn tokens={tokens} isShadowWindow={props.isShadowWindow} />
+      </div>
     </StatusRevealThemeContext.Provider>
   );
 }

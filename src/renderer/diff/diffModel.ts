@@ -32,12 +32,7 @@
 import { diffLines, diffChars } from 'diff';
 
 /** Per-row change classification (mirrors DiffPlex ChangeType for our columns). */
-export type DiffRowKind =
-  | 'unchanged'
-  | 'inserted'
-  | 'deleted'
-  | 'modified'
-  | 'imaginary';
+export type DiffRowKind = 'unchanged' | 'inserted' | 'deleted' | 'modified' | 'imaginary';
 
 /** Per-piece classification inside a MODIFIED row (character-level sub-diff). */
 export type DiffPieceKind = 'unchanged' | 'inserted' | 'deleted';
@@ -97,7 +92,10 @@ function splitLines(value: string): string[] {
  *   - left  pieces keep `unchanged` + `deleted` spans (the old line),
  *   - right pieces keep `unchanged` + `inserted` spans (the new line).
  */
-function charPieces(oldLine: string, newLine: string): {
+function charPieces(
+  oldLine: string,
+  newLine: string,
+): {
   left: DiffPiece[];
   right: DiffPiece[];
 } {

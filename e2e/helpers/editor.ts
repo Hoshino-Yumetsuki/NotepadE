@@ -108,16 +108,14 @@ export async function getDocText(page: Page): Promise<string> {
 }
 
 export async function getSelection(page: Page): Promise<{ from: number; to: number }> {
-  return page.evaluate(
-    () => window.__notepadsTest?.editor?.getSelection() ?? { from: 0, to: 0 },
-  );
+  return page.evaluate(() => window.__notepadsTest?.editor?.getSelection() ?? { from: 0, to: 0 });
 }
 
 export async function setSelection(page: Page, from: number, to: number): Promise<void> {
-  await page.evaluate(
-    ([f, t]) => window.__notepadsTest?.editor?.setSelection(f, t),
-    [from, to] as const,
-  );
+  await page.evaluate(([f, t]) => window.__notepadsTest?.editor?.setSelection(f, t), [
+    from,
+    to,
+  ] as const);
 }
 
 export async function getZoomPercent(page: Page): Promise<number> {

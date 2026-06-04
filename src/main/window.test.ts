@@ -29,12 +29,14 @@ const RECT: WindowRect = { x: 100, y: 80, width: 1100, height: 720 };
  * a second read after enter sees the compact state — proving the guard, not the
  * port, is what makes re-entry a no-op.
  */
-function fakeWindow(initial: Partial<{
-  bounds: WindowRect;
-  alwaysOnTop: boolean;
-  maximized: boolean;
-  fullScreen: boolean;
-}> = {}): CompactWindowPort & { calls: string[] } {
+function fakeWindow(
+  initial: Partial<{
+    bounds: WindowRect;
+    alwaysOnTop: boolean;
+    maximized: boolean;
+    fullScreen: boolean;
+  }> = {},
+): CompactWindowPort & { calls: string[] } {
   let bounds: WindowRect = initial.bounds ?? RECT;
   let alwaysOnTop = initial.alwaysOnTop ?? false;
   let maximized = initial.maximized ?? false;
@@ -95,10 +97,7 @@ describe('toggleCompact', () => {
     win.calls.length = 0;
     const res = toggleCompact(win, state, false);
     expect(res.isCompactOverlay).toBe(false);
-    expect(win.calls).toEqual([
-      'setAlwaysOnTop:false',
-      `setBounds:${RECT.width}x${RECT.height}`,
-    ]);
+    expect(win.calls).toEqual(['setAlwaysOnTop:false', `setBounds:${RECT.width}x${RECT.height}`]);
   });
 
   it('round-trips a maximized window: clears on enter, re-maximizes on leave', () => {
@@ -177,7 +176,12 @@ describe('windowStateFrom', () => {
 
   it('projects bounds down to width/height only and carries maximize/fullscreen', () => {
     const state = windowStateFrom(
-      { bounds: { x: 5, y: 9, width: 800, height: 600 }, alwaysOnTop: false, maximized: true, fullScreen: true },
+      {
+        bounds: { x: 5, y: 9, width: 800, height: 600 },
+        alwaysOnTop: false,
+        maximized: true,
+        fullScreen: true,
+      },
       false,
     );
     expect(state).toEqual({

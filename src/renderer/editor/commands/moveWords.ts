@@ -27,7 +27,11 @@ function isLetterOrDigit(ch: string): boolean {
  * Expand [selStart, selEnd) to whole-word boundaries, mirroring UWP
  * GetMovingWordsIndexData. Returns the widened [startIndex, endIndex).
  */
-function movingWordSpan(doc: string, selStart: number, selEnd: number): { start: number; end: number } {
+function movingWordSpan(
+  doc: string,
+  selStart: number,
+  selEnd: number,
+): { start: number; end: number } {
   let startIndex = selStart;
   if (selEnd === selStart || (selStart < doc.length && isLetterOrDigit(doc[selStart]))) {
     while (startIndex > 0) {
@@ -113,7 +117,16 @@ export const moveWordLeft: StateCommand = ({ state, dispatch }): boolean => {
   }
 
   const moveAmount = replacedStart - startIndex;
-  const swap = swapSpans(doc, replacedStart, replacedEnd, startIndex, endIndex, start, end, moveAmount);
+  const swap = swapSpans(
+    doc,
+    replacedStart,
+    replacedEnd,
+    startIndex,
+    endIndex,
+    start,
+    end,
+    moveAmount,
+  );
   let anchor = swap.anchor;
   if (anchor < 0) anchor = 0;
   dispatch(
@@ -150,7 +163,16 @@ export const moveWordRight: StateCommand = ({ state, dispatch }): boolean => {
   }
 
   const moveAmount = replacedEnd - endIndex;
-  const swap = swapSpans(doc, startIndex, endIndex, replacedStart, replacedEnd, start, end, moveAmount);
+  const swap = swapSpans(
+    doc,
+    startIndex,
+    endIndex,
+    replacedStart,
+    replacedEnd,
+    start,
+    end,
+    moveAmount,
+  );
   dispatch(
     state.update({
       changes: { from: swap.from, to: swap.to, insert: swap.text },

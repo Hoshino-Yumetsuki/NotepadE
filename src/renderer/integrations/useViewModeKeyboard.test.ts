@@ -9,7 +9,13 @@ import { useViewModeKeyboard } from './useViewModeKeyboard';
  */
 
 function dispatchKey(code: string, opts: Partial<KeyboardEventInit> = {}): boolean {
-  const e = new KeyboardEvent('keydown', { code, altKey: true, bubbles: true, cancelable: true, ...opts });
+  const e = new KeyboardEvent('keydown', {
+    code,
+    altKey: true,
+    bubbles: true,
+    cancelable: true,
+    ...opts,
+  });
   window.dispatchEvent(e);
   return e.defaultPrevented;
 }

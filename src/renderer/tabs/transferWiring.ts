@@ -41,7 +41,11 @@ export interface TransferTextSource {
  * (0) — MAIN re-stamps it authoritatively from the IPC sender, so the renderer
  * never needs (or has) its own window id.
  */
-export function buildEnvelope(store: TabsStore, source: TransferTextSource, editorId: string): DragEnvelope | null {
+export function buildEnvelope(
+  store: TabsStore,
+  source: TransferTextSource,
+  editorId: string,
+): DragEnvelope | null {
   const tab = store.get(editorId);
   if (!tab) return null;
   return {
@@ -90,7 +94,11 @@ export async function completeTransfer(token: string, dropIndex: number): Promis
  * mint a FRESH local editorId, seed under it, and return it so the caller can key
  * its diff baseline by the real local id.
  */
-export function applyAdopt(store: TabsStore, source: TransferTextSource, payload: AdoptPayload): string {
+export function applyAdopt(
+  store: TabsStore,
+  source: TransferTextSource,
+  payload: AdoptPayload,
+): string {
   const { file, pendingText, isModified, dropIndex, viewMode } = payload;
   const localId = store.mintEditorId();
   store.newTab({
@@ -106,7 +114,10 @@ export function applyAdopt(store: TabsStore, source: TransferTextSource, payload
   store.setViewMode(localId, viewMode);
   // Seed the visible document: the dirty pending text if modified, else the
   // last-saved baseline. The editor seam wires the doc into the CM6 instance.
-  source.seedAdoptedDoc(localId, isModified && pendingText != null ? pendingText : file.decodedText);
+  source.seedAdoptedDoc(
+    localId,
+    isModified && pendingText != null ? pendingText : file.decodedText,
+  );
   return localId;
 }
 
@@ -160,7 +171,9 @@ export function installTransferTestHook(store: TabsStore, source: TransferTextSo
     envelope: (editorId) => buildEnvelope(store, source, editorId),
   };
 
-  const existing = window.__notepadsTest as (NotepadsTestHook & { transfer?: TransferTestHook }) | undefined;
+  const existing = window.__notepadsTest as
+    | (NotepadsTestHook & { transfer?: TransferTestHook })
+    | undefined;
   if (existing) {
     existing.transfer = transfer;
   } else {
@@ -168,7 +181,9 @@ export function installTransferTestHook(store: TabsStore, source: TransferTextSo
   }
 
   return () => {
-    const hook = window.__notepadsTest as (NotepadsTestHook & { transfer?: TransferTestHook }) | undefined;
+    const hook = window.__notepadsTest as
+      | (NotepadsTestHook & { transfer?: TransferTestHook })
+      | undefined;
     if (hook) delete hook.transfer;
   };
 }

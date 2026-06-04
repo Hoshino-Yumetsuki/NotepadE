@@ -49,10 +49,7 @@ describe('nextZoomIn / nextZoomOut (snap-then-step + clamp)', () => {
 
 describe('zoom commands on a live view', () => {
   function view() {
-    return mountView('hello', EditorSelection.cursor(0), [
-      editorSettings.of({}),
-      zoomField,
-    ]);
+    return mountView('hello', EditorSelection.cursor(0), [editorSettings.of({}), zoomField]);
   }
 
   it('zoomIn raises the zoom field by one step', () => {

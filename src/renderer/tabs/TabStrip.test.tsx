@@ -31,7 +31,10 @@ function pointerDown(el: Element, button: number, opts: PointerEventInit = {}): 
  * Playwright matrix (pointer drag needs a real layout engine).
  */
 
-function renderStrip(store: TabsStore, isDark = false): {
+function renderStrip(
+  store: TabsStore,
+  isDark = false,
+): {
   onNewTab: ReturnType<typeof vi.fn>;
   onCloseTab: ReturnType<typeof vi.fn>;
 } {
@@ -148,9 +151,7 @@ describe('TabStrip interactions', () => {
     const b = store.newTab();
     store.activate(a);
     renderStrip(store);
-    const bEl = screen
-      .getAllByTestId('tab')
-      .find((t) => t.getAttribute('data-editor-id') === b)!;
+    const bEl = screen.getAllByTestId('tab').find((t) => t.getAttribute('data-editor-id') === b)!;
     pointerDown(bEl, 0);
     expect(store.activeEditorId).toBe(b);
   });
@@ -160,9 +161,7 @@ describe('TabStrip interactions', () => {
     const b = store.newTab();
     store.activate(a);
     renderStrip(store);
-    const bEl = screen
-      .getAllByTestId('tab')
-      .find((t) => t.getAttribute('data-editor-id') === b)!;
+    const bEl = screen.getAllByTestId('tab').find((t) => t.getAttribute('data-editor-id') === b)!;
     pointerDown(bEl, 0, { ctrlKey: true });
     expect(store.activeEditorId).toBe(a);
   });

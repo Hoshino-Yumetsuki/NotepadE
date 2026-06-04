@@ -20,7 +20,10 @@ function installMock(initial: Partial<Settings> = {}): void {
   (globalThis as unknown as { window: Window }).window.notepads = {
     settings: {
       get: vi.fn(async () => ({ ok: true as const, data: bag })),
-      set: vi.fn(async (patch: Partial<Settings>) => ({ ok: true as const, data: { ...bag, ...patch } })),
+      set: vi.fn(async (patch: Partial<Settings>) => ({
+        ok: true as const,
+        data: { ...bag, ...patch },
+      })),
       onChanged: (cb: (s: Settings) => void) => {
         changedCb = cb;
         return () => {
@@ -46,7 +49,11 @@ function Probe(): JSX.Element {
       <span data-testid="fmt">{t('FileOpenErrorDialog_Content', 'a.txt', 'denied')}</span>
       <span data-testid="missing">{t('Totally_Unknown_Key')}</span>
       <span data-testid="plural-1">
-        {plural(1, 'TextEditor_LineColumnIndicator_FullText_SingularSelectedWord', 'TextEditor_LineColumnIndicator_FullText_PluralSelectedWord')}
+        {plural(
+          1,
+          'TextEditor_LineColumnIndicator_FullText_SingularSelectedWord',
+          'TextEditor_LineColumnIndicator_FullText_PluralSelectedWord',
+        )}
       </span>
     </div>
   );
@@ -66,7 +73,9 @@ describe('I18nProvider + useT runtime switch', () => {
     );
     await screen.findByText(tableFor('en-US').FileOpenErrorDialog_PrimaryButtonText);
     expect(screen.getByTestId('locale').textContent).toBe('en-US');
-    expect(screen.getByTestId('fmt').textContent).toBe('Sorry, file "a.txt" couldn\'t be opened: denied');
+    expect(screen.getByTestId('fmt').textContent).toBe(
+      'Sorry, file "a.txt" couldn\'t be opened: denied',
+    );
   });
 
   it('re-localizes with NO reload when appLanguage changes via onChanged', async () => {

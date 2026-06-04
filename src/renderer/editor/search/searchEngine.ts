@@ -48,9 +48,7 @@ export interface MatchSpan {
 }
 
 /** Result of compiling a query — surfaces regex errors like UWP's regexError. */
-export type CompileResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type CompileResult = { ok: true } | { ok: false; error: string };
 
 const EMPTY_OPTIONS_GUARD = '';
 
@@ -103,7 +101,11 @@ function buildRegex(query: string, options: SearchOptions): RegExp {
  * primitive the RightToLeft shim is built on (and is also used for replace-all
  * match counting). Guards against zero-width matches looping forever.
  */
-export function findAllRegexMatches(text: string, query: string, options: SearchOptions): MatchSpan[] {
+export function findAllRegexMatches(
+  text: string,
+  query: string,
+  options: SearchOptions,
+): MatchSpan[] {
   const out: MatchSpan[] = [];
   if (query.length === 0) return out;
   let re: RegExp;
@@ -201,7 +203,8 @@ function findPreviousRegex(
 
   let best: MatchSpan | null = null;
   for (const span of all) {
-    if (span.to <= caret) best = span; // keep the last (rightmost) qualifying match
+    if (span.to <= caret)
+      best = span; // keep the last (rightmost) qualifying match
     else break; // matches are in ascending order; once past the caret, stop
   }
   if (best) return best;

@@ -204,4 +204,3 @@ declare global {
     __notepadsTest: NotepadsTestHook;
   }
 }
-

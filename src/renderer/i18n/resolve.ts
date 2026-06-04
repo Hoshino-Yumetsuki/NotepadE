@@ -63,7 +63,10 @@ export function matchLocale(requested: string): SupportedLocale | undefined {
  *   - else BASE_LOCALE.
  * `uiLanguages` is injected (navigator.languages) so this stays pure/testable.
  */
-export function resolveLocale(appLanguage: string, uiLanguages: readonly string[]): SupportedLocale {
+export function resolveLocale(
+  appLanguage: string,
+  uiLanguages: readonly string[],
+): SupportedLocale {
   if (appLanguage.trim()) {
     const explicit = matchLocale(appLanguage);
     if (explicit) return explicit;

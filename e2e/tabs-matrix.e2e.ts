@@ -164,10 +164,7 @@ test('copy-path: routes the file-backed tab path through the shell.copyPath IPC 
   });
 
   // Open the file so a file-backed tab exists.
-  const opened = await page.evaluate(
-    (p) => window.__notepadsTest!.openFileIntoEditor(p),
-    filePath,
-  );
+  const opened = await page.evaluate((p) => window.__notepadsTest!.openFileIntoEditor(p), filePath);
   expect(opened.ok).toBe(true);
 
   const tabs = await listTabs(page);
@@ -180,9 +177,7 @@ test('copy-path: routes the file-backed tab path through the shell.copyPath IPC 
   // Poll the main-process record (the IPC round-trip is async).
   await expect
     .poll(() =>
-      app.evaluate(
-        () => (globalThis as unknown as { __copyPathCalls: string[] }).__copyPathCalls,
-      ),
+      app.evaluate(() => (globalThis as unknown as { __copyPathCalls: string[] }).__copyPathCalls),
     )
     .toEqual([filePath]);
 });

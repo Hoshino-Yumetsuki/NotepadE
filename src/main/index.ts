@@ -26,8 +26,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 function loadRenderer(win: BrowserWindow): void {
   // vite-plugin-electron sets VITE_DEV_SERVER_URL in dev; keep ELECTRON_RENDERER_URL
   // as a fallback for any external launcher. Absent both → production file load.
-  const devServerUrl =
-    process.env['VITE_DEV_SERVER_URL'] ?? process.env['ELECTRON_RENDERER_URL'];
+  const devServerUrl = process.env['VITE_DEV_SERVER_URL'] ?? process.env['ELECTRON_RENDERER_URL'];
   if (devServerUrl) {
     void win.loadURL(devServerUrl);
   } else {

@@ -84,9 +84,9 @@ test.describe('Gate 5 — settings persistence + live-affect across restart', ()
       //   showStatusBar=false → the Phase-4 status bar unmounts from the shell.
       await expect(page.locator(SETTINGS_SELECTORS.statusBar)).toHaveCount(0);
       //   themeMode=dark → the resolved bucket flips to 'dark' WITHOUT a reload.
-      await expect.poll(() => page.evaluate(() => window.__notepadsTest.settings!.getActiveTheme())).toBe(
-        'dark',
-      );
+      await expect
+        .poll(() => page.evaluate(() => window.__notepadsTest.settings!.getActiveTheme()))
+        .toBe('dark');
       //   the remaining rows reconcile into the live bag the UI renders from.
       await expectSetting(page, 'tabIndents', 4);
       await expectSetting(page, 'defaultLineEnding', 'lf');

@@ -108,10 +108,7 @@ export function I18nProvider({ children }: { children: ReactNode }): JSX.Element
   }, []);
 
   // Live: settings changes (this or any other window / external write).
-  useEffect(
-    () => window.notepads.settings.onChanged((s) => setAppLanguage(s.appLanguage)),
-    [],
-  );
+  useEffect(() => window.notepads.settings.onChanged((s) => setAppLanguage(s.appLanguage)), []);
 
   // Live: OS / browser UI language changes (the runtime re-resolves when
   // appLanguage follows the OS, i.e. appLanguage === '').

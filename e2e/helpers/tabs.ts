@@ -116,7 +116,11 @@ export async function clickMenuItem(page: Page, selector: string): Promise<void>
  *     (its PointerSensor binds document listeners expecting trusted events).
  * CDP trusted events drive the genuine dnd wiring and produce a real reorder.
  */
-export async function dragTabTo(page: Page, fromEditorId: string, toEditorId: string): Promise<void> {
+export async function dragTabTo(
+  page: Page,
+  fromEditorId: string,
+  toEditorId: string,
+): Promise<void> {
   const from = page.locator(tabByEditorId(fromEditorId));
   const to = page.locator(tabByEditorId(toEditorId));
   const fb = await from.boundingBox();
@@ -130,7 +134,13 @@ export async function dragTabTo(page: Page, fromEditorId: string, toEditorId: st
 
   const client = await page.context().newCDPSession(page);
   const move = (x: number, y: number): Promise<unknown> =>
-    client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'left', buttons: 1 });
+    client.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x,
+      y,
+      button: 'left',
+      buttons: 1,
+    });
 
   await client.send('Input.dispatchMouseEvent', {
     type: 'mousePressed',

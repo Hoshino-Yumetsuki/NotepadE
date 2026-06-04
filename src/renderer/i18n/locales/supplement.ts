@@ -38,16 +38,16 @@ export type SupplementEntry = { 'en-US': string } & Partial<Record<SupportedLoca
  */
 export const SUPPLEMENT: Record<string, SupplementEntry> = {
   // EOL display labels (gap #1) — awaiting-translation.
-  'StatusBar_LineEnding_Crlf': { 'en-US': 'Windows (CRLF)' },
-  'StatusBar_LineEnding_Cr': { 'en-US': 'Macintosh (CR)' },
-  'StatusBar_LineEnding_Lf': { 'en-US': 'Unix (LF)' },
+  StatusBar_LineEnding_Crlf: { 'en-US': 'Windows (CRLF)' },
+  StatusBar_LineEnding_Cr: { 'en-US': 'Macintosh (CR)' },
+  StatusBar_LineEnding_Lf: { 'en-US': 'Unix (LF)' },
   // Tab-strip web aria-labels (gap #3) — awaiting-translation.
   'TabStrip_NewTabButton.AutomationProperties.Name': { 'en-US': 'New tab' },
   'TabStrip_CloseTabButton.AutomationProperties.Name': { 'en-US': 'Close tab' },
   'TabStrip_ScrollLeftButton.AutomationProperties.Name': { 'en-US': 'Scroll tabs left' },
   'TabStrip_ScrollRightButton.AutomationProperties.Name': { 'en-US': 'Scroll tabs right' },
   // Find match counter (gap #3) — awaiting-translation. {0}=current, {1}=total.
-  'FindAndReplace_MatchCountText': { 'en-US': '{0} of {1}' },
+  FindAndReplace_MatchCountText: { 'en-US': '{0} of {1}' },
   // Find/replace a11y aria-labels — awaiting-translation. The web port adds an
   // accessible name on the find/replace container and the replace input (UWP
   // exposed these via AutomationProperties; distinct from the existing
@@ -57,12 +57,12 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   // Status-bar a11y aria-labels — awaiting-translation. The UWP status bar exposed
   // these affordances via AutomationProperties on its native controls; the web port
   // re-declares them as overlay keys (no .resw origin) for screen-reader parity.
-  'StatusBar_FilePath': { 'en-US': 'File path' },
-  'StatusBar_Zoom': { 'en-US': 'Zoom' },
-  'StatusBar_ZoomLevel': { 'en-US': 'Zoom level' },
-  'StatusBar_Encoding': { 'en-US': 'Encoding' },
-  'StatusBar_LineEnding': { 'en-US': 'Line ending' },
-  'StatusBar_LineColumnGoTo': { 'en-US': 'Line and column, go to line' },
+  StatusBar_FilePath: { 'en-US': 'File path' },
+  StatusBar_Zoom: { 'en-US': 'Zoom' },
+  StatusBar_ZoomLevel: { 'en-US': 'Zoom level' },
+  StatusBar_Encoding: { 'en-US': 'Encoding' },
+  StatusBar_LineEnding: { 'en-US': 'Line ending' },
+  StatusBar_LineColumnGoTo: { 'en-US': 'Line and column, go to line' },
   // Shadow-window (secondary instance) hint title — awaiting-translation.
-  'StatusBar_ShadowWindowHint': { 'en-US': 'This is a shadow window' },
+  StatusBar_ShadowWindowHint: { 'en-US': 'This is a shadow window' },
 };

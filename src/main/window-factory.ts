@@ -58,7 +58,8 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     minWidth: 480,
     minHeight: 320,
     show: false,
-    backgroundColor: process.platform === 'win32' ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
+    backgroundColor:
+      process.platform === 'win32' ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
     // Acrylic material on Win11: matches the original Notepads' wallpaper-sampling
     // translucency (acrylic samples the desktop wallpaper behind the window, unlike
     // mica which is composited from it). backgroundColor is the transparent

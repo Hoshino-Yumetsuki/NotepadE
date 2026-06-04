@@ -83,12 +83,18 @@ async function hasTab(page: Page, editorId: string): Promise<boolean> {
 }
 
 /** Run the genuine transfer via the seam: begin on SOURCE, complete on TARGET. */
-async function transfer(source: Page, target: Page, editorId: string, dropIndex: number): Promise<void> {
+async function transfer(
+  source: Page,
+  target: Page,
+  editorId: string,
+  dropIndex: number,
+): Promise<void> {
   const token = await source.evaluate(async (id) => {
     const t = await window.__notepadsTest.transfer!.begin(id);
     return t;
   }, editorId);
-  if (!token) throw new Error('transfer.begin returned null (envelope build / dragOut.begin failed)');
+  if (!token)
+    throw new Error('transfer.begin returned null (envelope build / dragOut.begin failed)');
   const ok = await target.evaluate(
     async ([tok, idx]) => window.__notepadsTest.transfer!.complete(tok as string, idx as number),
     [token, dropIndex] as const,
@@ -119,9 +125,16 @@ test.describe('Gate 6 — cross-window tab transfer', () => {
       // active tab id and assert against THAT. (Asserting `editorId` here would read
       // w2's leftover blank editor-1 and wrongly see mod=false.)
       await expect
-        .poll(() => w2.evaluate((fp) => window.__notepadsTest.tabs?.list().some((t) => t.filePath === fp), file), {
-          timeout: 10_000,
-        })
+        .poll(
+          () =>
+            w2.evaluate(
+              (fp) => window.__notepadsTest.tabs?.list().some((t) => t.filePath === fp),
+              file,
+            ),
+          {
+            timeout: 10_000,
+          },
+        )
         .toBe(true);
       const adoptedId = await w2.evaluate(() => window.__notepadsTest.tabs?.activeId() ?? null);
       expect(adoptedId, 'adopt activates the freshly-minted local tab').not.toBe(null);

@@ -32,11 +32,7 @@ import { applyEol } from './eol.js';
 import { snapshot, loadLast, clearRecovered } from './session.js';
 import { getSettings, setSettings } from './settings.js';
 import { getThemeState } from './theme.js';
-import {
-  windowBrokerRequest,
-  windowSetFullScreen,
-  windowSetCompactOverlay,
-} from './window.js';
+import { windowBrokerRequest, windowSetFullScreen, windowSetCompactOverlay } from './window.js';
 import { dragOutBegin, dragOutComplete } from './dragout.js';
 import { openContainingFolder, copyPath, webSearch, print, share } from './shell.js';
 

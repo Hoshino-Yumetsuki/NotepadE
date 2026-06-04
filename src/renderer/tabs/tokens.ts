@@ -177,7 +177,6 @@ export function tokensForTheme(theme: TabTheme): TabThemeTokens {
   }
 }
 
-
 /** Reorder/settle animation durations (SetsView.xaml drag states). */
 export const TabAnimation = {
   /** Reorder / reorder-target transition (0.240s). */

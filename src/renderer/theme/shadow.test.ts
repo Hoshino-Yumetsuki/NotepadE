@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  edgeShadowOpacity,
-  edgeShadowStyle,
-  EDGE_SHADOW_BLUR,
-} from './shadow';
+import { edgeShadowOpacity, edgeShadowStyle, EDGE_SHADOW_BLUR } from './shadow';
 
 /**
  * Edge-shadow / elevation unit tests (Phase 7, Task #28). Verifies the per-theme

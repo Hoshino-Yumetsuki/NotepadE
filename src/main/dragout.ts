@@ -27,12 +27,7 @@
 
 import { BrowserWindow } from 'electron';
 import { stat } from 'node:fs/promises';
-import type {
-  Result,
-  DragEnvelope,
-  AdoptPayload,
-  OpenedFile,
-} from '../shared/ipc-contract.js';
+import type { Result, DragEnvelope, AdoptPayload, OpenedFile } from '../shared/ipc-contract.js';
 import { IpcChannels } from '../shared/ipc-channels.js';
 
 /** A pending transfer keyed by token: the envelope + the authoritative source. */
