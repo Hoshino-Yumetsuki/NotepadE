@@ -261,7 +261,15 @@ export function App(): JSX.Element {
             eolId: res.data.eolId,
             activate: true,
           });
-          editorHandles.current.get(id)?.setDoc(res.data.decodedText);
+          // The new tab's editor mounts on a later render; seed once its handle
+          // exists (setDoc itself queues until the CM6 view is initialized). The
+          // handle is null synchronously right after newTab, so retry via rAF.
+          const seedActivation = (): void => {
+            const handle = editorHandles.current.get(id);
+            if (handle) handle.setDoc(res.data.decodedText);
+            else requestAnimationFrame(seedActivation);
+          };
+          requestAnimationFrame(seedActivation);
           if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
           lastSavedTextRef.current.set(id, res.data.decodedText);
         });

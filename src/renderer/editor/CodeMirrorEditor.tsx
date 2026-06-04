@@ -86,13 +86,21 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
   ) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
+    // Doc queued via setDoc BEFORE the view exists (a tab created then seeded in
+    // the same tick: the imperative handle is live before the mount effect runs).
+    // Flushed once the view initializes below, so new-tab open/adopt never drops.
+    const pendingDocRef = useRef<string | null>(null);
 
     useImperativeHandle(
       ref,
       (): CodeMirrorHandle => ({
         setDoc(text: string): void {
           const view = viewRef.current;
-          if (!view) return;
+          if (!view) {
+            // View not yet mounted — queue; the mount effect flushes it.
+            pendingDocRef.current = text;
+            return;
+          }
           const normalized = normalizeToShadow(text);
           view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: normalized },
@@ -158,6 +166,18 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       viewRef.current = view;
       // Seed the zoom CSS variable so the initial font-size reflects 100%.
       initZoomVar(view);
+      // Flush any doc queued via setDoc before the view existed (new-tab open /
+      // cross-window adopt seeded in the same tick as tab creation).
+      if (pendingDocRef.current !== null) {
+        view.dispatch({
+          changes: {
+            from: 0,
+            to: view.state.doc.length,
+            insert: normalizeToShadow(pendingDocRef.current),
+          },
+        });
+        pendingDocRef.current = null;
+      }
 
       return () => {
         view.destroy();
