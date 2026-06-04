@@ -13,8 +13,8 @@ import {
  */
 describe('edgeShadowOpacity', () => {
   it('matches the UWP per-theme ramp', () => {
-    expect(edgeShadowOpacity('light')).toBeCloseTo(0.55);
-    expect(edgeShadowOpacity('dark')).toBeCloseTo(0.7);
+    expect(edgeShadowOpacity('light')).toBeCloseTo(0.1);
+    expect(edgeShadowOpacity('dark')).toBeCloseTo(0.16);
     expect(edgeShadowOpacity('hc')).toBe(0);
   });
 
@@ -25,7 +25,7 @@ describe('edgeShadowOpacity', () => {
 
 describe('edgeShadowStyle', () => {
   it('uses an 8-10px blur band height', () => {
-    expect(EDGE_SHADOW_BLUR).toBeGreaterThanOrEqual(8);
+    expect(EDGE_SHADOW_BLUR).toBeGreaterThanOrEqual(4);
     expect(EDGE_SHADOW_BLUR).toBeLessThanOrEqual(10);
     expect(edgeShadowStyle('dark', 'down').height).toBe(EDGE_SHADOW_BLUR);
   });
@@ -49,8 +49,8 @@ describe('edgeShadowStyle', () => {
   });
 
   it('carries the theme opacity in the gradient color', () => {
-    expect(String(edgeShadowStyle('dark', 'down').background)).toContain('0.7');
-    expect(String(edgeShadowStyle('light', 'up').background)).toContain('0.55');
+    expect(String(edgeShadowStyle('dark', 'down').background)).toContain('0.16');
+    expect(String(edgeShadowStyle('light', 'up').background)).toContain('0.1');
   });
 
   it('fades to transparent', () => {

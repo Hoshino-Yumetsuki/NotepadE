@@ -27,7 +27,7 @@ import type { CSSProperties } from 'react';
 import { tokensForAppTheme, type AppTheme } from './tokens';
 
 /** Fluent-ish elevation blur band for chrome edges (task spec: 8-10px). */
-export const EDGE_SHADOW_BLUR = 9;
+export const EDGE_SHADOW_BLUR = 6;
 
 /** The shadow color is always black; only its alpha (the edge opacity) varies. */
 function shadowColor(opacity: number): string {

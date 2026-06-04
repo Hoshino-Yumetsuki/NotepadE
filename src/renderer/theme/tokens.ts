@@ -48,7 +48,7 @@ export const LIGHT_APP_TOKENS: AppThemeTokens = {
   titlebar: '#D2D2D2',
   captionHover: '#B4B4B4',
   captionPressed: '#969696',
-  tabEdgeShadowOpacity: 0.55,
+  tabEdgeShadowOpacity: 0.1,
 };
 
 /** Dark theme — base #2E2E2E (UWP darkModeBaseColor). */
@@ -57,7 +57,7 @@ export const DARK_APP_TOKENS: AppThemeTokens = {
   titlebar: '#2D2D2D',
   captionHover: '#5A5A5A',
   captionPressed: '#787878',
-  tabEdgeShadowOpacity: 0.7,
+  tabEdgeShadowOpacity: 0.16,
 };
 
 /**
@@ -86,6 +86,21 @@ export function tokensForAppTheme(theme: AppTheme): AppThemeTokens {
 
 /** UWP default background tint opacity (InitializeAppBackgroundPanelTintOpacity). */
 export const DEFAULT_TINT_OPACITY = 0.75;
+
+/**
+ * Root background as a tinted, semi-transparent base so the window's mica/acrylic
+ * material shows through behind it (alpha = tintOpacity). HC stays fully opaque
+ * (Canvas system color — no material). tintOpacity is clamped to [0,1].
+ */
+export function appBackgroundTint(theme: AppTheme, tintOpacity: number): string {
+  if (theme === 'hc') return 'Canvas';
+  const a = Math.max(0, Math.min(1, tintOpacity));
+  const hex = tokensForAppTheme(theme).base.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
 
 // ---------------------------------------------------------------------------
 //  Acrylic approximation tokens (Phase 7, Task #26)

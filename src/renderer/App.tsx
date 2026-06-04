@@ -16,7 +16,7 @@ import { useSettings } from './settings/useSettings';
 import { useAppTheme } from './theme/useAppTheme';
 import { SettingsSurface } from './settings/SettingsSurface';
 import { installSettingsTestHook } from './settings/settingsTestHook';
-import { tokensForAppTheme } from './theme/tokens';
+import { appBackgroundTint } from './theme/tokens';
 import { edgeShadowStyle } from './theme/shadow';
 import {
   applyAdopt,
@@ -448,7 +448,7 @@ export function App(): JSX.Element {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: tokensForAppTheme(resolvedTheme).base,
+        backgroundColor: appBackgroundTint(resolvedTheme, settings.tintOpacity),
       }}
     >
       <TabStrip

@@ -58,7 +58,11 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     minWidth: 480,
     minHeight: 320,
     show: false,
-    backgroundColor: isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
+    backgroundColor: process.platform === 'win32' ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
+    // Mica material on Win11: the desktop wallpaper shows through behind the
+    // translucent renderer tint. backgroundColor is transparent so the material
+    // is visible; on Win10 (no mica) the renderer's tinted base still fills it.
+    ...(process.platform === 'win32' ? { backgroundMaterial: 'mica' as const } : {}),
     autoHideMenuBar: true,
     // Snap Layouts on Windows via overlaid caption controls.
     titleBarStyle: process.platform === 'win32' ? 'hidden' : 'default',
