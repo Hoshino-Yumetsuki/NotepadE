@@ -19,6 +19,7 @@ import type {
 } from '../shared/ipc-contract.js';
 import { decodeBytes, decodeBytesWith, encodeText } from './encoding.js';
 import { detectEol, applyEol } from './eol.js';
+import { addRecentDocument } from './shell.js';
 
 /** Cache of last-known encoding/EOL per path so save can reuse them. */
 const fileMeta = new Map<string, { encodingId: EncodingId; eolId: EolId }>();
@@ -34,6 +35,8 @@ export async function openFile(path: string): Promise<Result<OpenedFile>> {
     const eolId = detectEol(decodedText);
     const stats = await stat(path);
     fileMeta.set(path, { encodingId, eolId });
+    // Surface the opened file in the OS Jump List / Recents (UWP JumpListService).
+    addRecentDocument(path);
     return {
       ok: true,
       data: {
