@@ -3,6 +3,10 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launchApp, makeUserDataDir, safeRm, type LaunchedApp } from './helpers/launch';
+// Pure i18n resolution (no React/IPC/fs — safe in the Playwright Node context). Lets
+// the matrix compute the EXPECTED localized label per tag the SAME way the live
+// useT() consumer does, so each assertion is exact rather than "just changed".
+import { tableFor, SUPPORTED_LOCALES, type SupportedLocale } from '../src/renderer/i18n/resolve';
 
 /**
  * VERIFICATION GATE 6 — line 3: content integrations + i18n matrix
@@ -158,15 +162,23 @@ test.describe('Gate 6 — content integrations', () => {
 });
 
 /**
- * The 29 ported locales — the canonical SUPPORTED_LOCALES set from
- * src/renderer/i18n/locales/index.ts (resolve.test.ts asserts length === 29). Kept
- * verbatim so the matrix iterates the EXACT tags the i18n framework ships.
+ * The 29 ported locales — taken VERBATIM from the i18n framework's own
+ * SUPPORTED_LOCALES (src/renderer/i18n/locales/index.ts; resolve.test.ts asserts
+ * length === 29). Importing the canonical set (rather than a hand-copied list)
+ * guarantees the matrix can never drift from what the framework actually ships.
  */
-const LOCALES_29: string[] = [
-  'ar-YE', 'bg-BG', 'cs-CZ', 'de-CH', 'de-DE', 'en-US', 'es-ES', 'fi-FI', 'fr-FR', 'hi-IN',
-  'hr-HR', 'hu-HU', 'it-IT', 'ja-JP', 'ka-GE', 'ko-KR', 'nl-NL', 'or-IN', 'pl-PL', 'pt-BR',
-  'pt-PT', 'ru-RU', 'sr-cyrl', 'sr-Latn', 'tr-TR', 'uk-UA', 'vi-VN', 'zh-CN', 'zh-TW',
-];
+const LOCALES_29: readonly SupportedLocale[] = SUPPORTED_LOCALES;
+
+/**
+ * The settings-toolbar Button's label is the first visible useT() consumer in the
+ * live App (App.tsx: aria-label/title = t('MainMenu_Button_Settings.Text')). The
+ * matrix asserts THIS DOM string re-localizes on an appLanguage switch. The key is
+ * present in all 29 locale tables and ONLY en-US resolves to "Settings" — every
+ * other tag resolves to a DISTINCT string, so a silent fallback-to-en could not
+ * masquerade as a successful switch (the lead's GAP-3 false-green guard).
+ */
+const SETTINGS_KEY = 'MainMenu_Button_Settings.Text';
+const SETTINGS_BTN = '[data-testid="open-settings"]';
 
 /** Set one persisted setting through the frozen contract (MAIN-owned). */
 async function setSetting(page: Page, patch: Record<string, unknown>): Promise<void> {
@@ -183,24 +195,51 @@ test.describe('Gate 6 — i18n 29-locale runtime switch', () => {
     expect(LOCALES_29.length, 'exactly 29 ported locales').toBe(29);
   });
 
+  test('the anchor key is fully ported and en-US is distinguishable (no false-green via fallback)', () => {
+    // GAP-3 guard: the assertion below is only meaningful if (a) every locale truly
+    // ports the key (else it falls back to en and the matrix proves nothing), and
+    // (b) the non-en values differ from en-US (else a fallback would read as a switch).
+    const en = tableFor('en-US')[SETTINGS_KEY];
+    expect(en, 'en-US anchor label resolves').toBeTruthy();
+    const nonEnDistinct = LOCALES_29.filter((l) => l !== 'en-US').every(
+      (l) => tableFor(l)[SETTINGS_KEY] && tableFor(l)[SETTINGS_KEY] !== en,
+    );
+    expect(nonEnDistinct, 'every non-en locale resolves the anchor to a string distinct from en-US').toBe(true);
+  });
+
   for (const locale of LOCALES_29) {
-    // BLOCKED (wave 2): the i18n framework (I18nProvider + useT) is NOT mounted in
-    // production — src/renderer/main.tsx renders <App/> with no <I18nProvider>, and no
-    // component consumes useT() yet (string-wrap is deferred to wave 2 per task #14).
-    // So settings.set({appLanguage}) persists+broadcasts but nothing in the live DOM
-    // re-localizes — there is no observable surface to assert against and no i18n test
-    // seam. This stays fixme until the provider is mounted + at least one visible string
-    // is wrapped (then assert a known UI label re-renders in `locale` with NO reload).
-    test.fixme(`locale ${locale} loads and switches at runtime (no reload)`, async () => {
+    // LIVE (wave 2 landed): main.tsx now wraps the tree in <I18nProvider> (11cf394)
+    // and App's settings Button consumes useT('MainMenu_Button_Settings.Text') (the
+    // first visible localized string). settings.set({appLanguage}) broadcasts and the
+    // provider re-binds the active table with NO reload, so the Button's aria-label/
+    // title re-render in `locale`. We assert the live DOM equals the locale's OWN
+    // resolved value (computed via the same pure tableFor), which both proves the
+    // switch and — because non-en values are distinct from en — rejects a fallback.
+    test(`locale ${locale} loads and switches at runtime (no reload)`, async () => {
       const userDataDir = makeUserDataDir(`np-i18n-${locale}`);
+      const expected = tableFor(locale)[SETTINGS_KEY];
       let app: LaunchedApp | undefined;
       try {
         app = await launchApp({ userDataDir });
         const { page } = app;
+        const btn = page.locator(SETTINGS_BTN);
+        await expect(btn).toBeVisible({ timeout: 10_000 });
+
+        // Switch the MAIN-owned locale; the live provider re-localizes with NO reload.
         await setSetting(page, { appLanguage: locale });
-        // FINALIZE (wave 2): assert a wrapped, visible UI string re-renders in `locale`
-        // without page.reload() (live I18nProvider language switch).
-        expect(locale.length).toBeGreaterThan(0);
+
+        // The Button's aria-label (and title prefix) must become THIS locale's value.
+        await expect(btn).toHaveAttribute('aria-label', expected, { timeout: 10_000 });
+        const title = await btn.getAttribute('title');
+        expect(title ?? '', `title carries the localized "${expected}"`).toContain(expected);
+
+        // Belt-and-braces for non-en: prove it actually CHANGED from the en-US default
+        // the app boots with (defends against a no-op switch reading green).
+        if (locale !== 'en-US') {
+          expect(expected, 'sanity: non-en expected differs from en-US').not.toBe(
+            tableFor('en-US')[SETTINGS_KEY],
+          );
+        }
       } finally {
         await app?.app.close();
         safeRm(userDataDir);
