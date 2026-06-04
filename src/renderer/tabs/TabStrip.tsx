@@ -28,6 +28,7 @@ import {
   type TabThemeTokens,
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
+import { useT } from '../i18n';
 
 /**
  * ============================================================================
@@ -148,6 +149,7 @@ function SortableTab(props: SortableTabProps): JSX.Element {
   // (tokensForReveal('hc') is transparent), matching the UWP no-reveal HC material.
   const reveal = useReveal();
   const revealTokens = tokensForReveal(revealTheme);
+  const { t } = useT();
 
   useEffect(() => {
     if (renaming && renameRef.current) {
@@ -367,7 +369,7 @@ function SortableTab(props: SortableTabProps): JSX.Element {
         <button
           type="button"
           data-testid="tab-close"
-          aria-label="Close tab"
+          aria-label={t('TabStrip_CloseTabButton.AutomationProperties.Name')}
           tabIndex={-1}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
@@ -474,6 +476,7 @@ function AddTabButton(props: {
 }): JSX.Element {
   const { tokens, revealTheme, onNewTab } = props;
   const [hovered, setHovered] = useState(false);
+  const { t } = useT();
   const reveal = useReveal();
   const revealTokens = tokensForReveal(revealTheme);
   return (
@@ -481,7 +484,7 @@ function AddTabButton(props: {
       ref={reveal.hostRef as React.Ref<HTMLButtonElement>}
       type="button"
       data-testid="tab-add"
-      aria-label="New tab"
+      aria-label={t('TabStrip_NewTabButton.AutomationProperties.Name')}
       onClick={onNewTab}
       onPointerMove={reveal.handlers.onPointerMove}
       onMouseEnter={(e) => {

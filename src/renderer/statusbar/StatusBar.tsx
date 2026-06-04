@@ -18,6 +18,7 @@ import {
   type StatusThemeTokens,
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
+import { useT } from '../i18n';
 import {
   formatLineColumn,
   eolDisplayText,
@@ -318,6 +319,7 @@ function PathColumn(props: {
   onRename: () => void;
 }): JSX.Element {
   const { tokens, filePath, placeholder } = props;
+  const { t } = useT();
   const hasFile = filePath !== null;
   const text = filePath ?? placeholder;
 
@@ -328,7 +330,7 @@ function PathColumn(props: {
           <Cell
             tokens={tokens}
             testid="status-path"
-            ariaLabel="File path"
+            ariaLabel={t('StatusBar_FilePath')}
             title={text}
             padLeft={StatusDimensions.pathPadLeft}
           >
@@ -392,6 +394,7 @@ function ModificationColumn(props: {
   onRevertAllChanges: () => void;
 }): JSX.Element | null {
   const { tokens, isModified } = props;
+  const { t } = useT();
   // UWP shows "Modified" only when the buffer is dirty; otherwise the column is
   // collapsed (empty Auto width).
   if (!isModified) {
@@ -401,8 +404,8 @@ function ModificationColumn(props: {
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-modification" ariaLabel="Modified" title="Modified">
-            <span style={{ color: tokens.accent }}>Modified</span>
+          <Cell tokens={tokens} testid="status-modification" ariaLabel={t('TextEditor_ModificationIndicator_Text')} title={t('TextEditor_ModificationIndicator_Text')}>
+            <span style={{ color: tokens.accent }}>{t('TextEditor_ModificationIndicator_Text')}</span>
           </Cell>
         </div>
       </MenuTrigger>
@@ -413,14 +416,14 @@ function ModificationColumn(props: {
             icon={<Glyph glyph={StatusGlyph.previewChanges} />}
             onClick={props.onPreviewChanges}
           >
-            Preview text changes
+            {t('TextEditor_ModificationIndicator_MenuFlyoutItem_PreviewTextChanges.Text')}
           </MenuItem>
           <MenuItem
             data-testid="status-modification-revert"
             icon={<Glyph glyph={StatusGlyph.revert} />}
             onClick={props.onRevertAllChanges}
           >
-            Revert all changes
+            {t('TextEditor_ModificationIndicator_MenuFlyoutItem_RevertAllChanges.Text')}
           </MenuItem>
         </MenuList>
       </MenuPopover>
@@ -438,11 +441,12 @@ function LineColumnColumn(props: {
   onGoToLine: () => void;
 }): JSX.Element {
   const { tokens, lineColumn, onGoToLine } = props;
+  const { t } = useT();
   return (
     <Cell
       tokens={tokens}
       testid="status-linecol"
-      ariaLabel="Line and column, go to line"
+      ariaLabel={t('StatusBar_LineColumnGoTo')}
       onClick={onGoToLine}
     >
       <span data-testid="status-linecol-text">{formatLineColumn(lineColumn)}</span>
@@ -461,13 +465,14 @@ function ZoomColumn(props: {
   onResetZoom: () => void;
 }): JSX.Element {
   const { tokens, zoomPercent, onSetZoom, onResetZoom } = props;
+  const { t } = useT();
   const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(zoomPercent)));
 
   return (
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-zoom" ariaLabel="Zoom" title={`${clamped}%`}>
+          <Cell tokens={tokens} testid="status-zoom" ariaLabel={t('StatusBar_Zoom')} title={`${clamped}%`}>
             <span data-testid="status-zoom-text">{clamped}%</span>
           </Cell>
         </div>
@@ -488,7 +493,7 @@ function ZoomColumn(props: {
           </button>
           <Slider
             data-testid="status-zoom-slider"
-            aria-label="Zoom level"
+            aria-label={t('StatusBar_ZoomLevel')}
             min={ZOOM_MIN}
             max={ZOOM_MAX}
             value={clamped}
@@ -551,11 +556,12 @@ function EolColumn(props: {
   onChangeEol: (eol: EolId) => void;
 }): JSX.Element {
   const { tokens, eolId, onChangeEol } = props;
+  const { t } = useT();
   return (
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-eol" ariaLabel="Line ending" title={eolDisplayText(eolId)}>
+          <Cell tokens={tokens} testid="status-eol" ariaLabel={t('StatusBar_LineEnding')} title={eolDisplayText(eolId)}>
             <span data-testid="status-eol-text">{eolDisplayText(eolId)}</span>
           </Cell>
         </div>
@@ -589,6 +595,7 @@ function EncodingColumn(props: {
   onSaveWithEncoding: (encodingId: EncodingId) => void;
 }): JSX.Element {
   const { tokens, encodingId, ansiEncodings, onReopenWithEncoding, onSaveWithEncoding } = props;
+  const { t } = useT();
   const model = buildEncodingMenuModel(ansiEncodings);
 
   // UWP's flyout has two parent submenus ("Reopen with" / "Save with"), each
@@ -611,7 +618,7 @@ function EncodingColumn(props: {
       <MenuDivider />
       <Menu positioning="above-end">
         <MenuTrigger disableButtonEnhancement>
-          <MenuItem data-testid={`status-encoding-${keyPrefix}-more`}>More encodings</MenuItem>
+          <MenuItem data-testid={`status-encoding-${keyPrefix}-more`}>{t('TextEditor_EncodingIndicator_FlyoutItem_MoreEncodings')}</MenuItem>
         </MenuTrigger>
         <MenuPopover>
           <MenuList data-testid={`status-encoding-${keyPrefix}-more-list`}>
@@ -634,7 +641,7 @@ function EncodingColumn(props: {
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
         <div>
-          <Cell tokens={tokens} testid="status-encoding" ariaLabel="Encoding" title={encodingId}>
+          <Cell tokens={tokens} testid="status-encoding" ariaLabel={t('StatusBar_Encoding')} title={encodingId}>
             <span data-testid="status-encoding-text">{encodingId}</span>
           </Cell>
         </div>
@@ -643,13 +650,13 @@ function EncodingColumn(props: {
         <MenuList data-testid="status-encoding-menu">
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
-              <MenuItem data-testid="status-encoding-reopen">Reopen with encoding</MenuItem>
+              <MenuItem data-testid="status-encoding-reopen">{t('TextEditor_EncodingIndicator_FlyoutItem_ReopenWithEncoding')}</MenuItem>
             </MenuTrigger>
             <MenuPopover>{encodingSubmenu(onReopenWithEncoding, 'reopen')}</MenuPopover>
           </Menu>
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
-              <MenuItem data-testid="status-encoding-save">Save with encoding</MenuItem>
+              <MenuItem data-testid="status-encoding-save">{t('TextEditor_EncodingIndicator_FlyoutItem_SaveWithEncoding')}</MenuItem>
             </MenuTrigger>
             <MenuPopover>{encodingSubmenu(onSaveWithEncoding, 'save')}</MenuPopover>
           </Menu>
@@ -668,13 +675,14 @@ function ShadowWindowColumn(props: {
   isShadowWindow: boolean;
 }): JSX.Element | null {
   const { tokens, isShadowWindow } = props;
+  const { t } = useT();
   if (!isShadowWindow) return <div data-testid="status-shadow" />;
   return (
     <Cell
       tokens={tokens}
       testid="status-shadow"
       static
-      title="This is a shadow window"
+      title={t('StatusBar_ShadowWindowHint')}
       padLeft={StatusDimensions.shadowPad}
     >
       <Glyph glyph={StatusGlyph.shadowWindow} color={tokens.text} />
