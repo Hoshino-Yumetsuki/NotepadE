@@ -30,6 +30,21 @@ function bootstrap(): void {
   loadRenderer(mainWindow);
 }
 
+/**
+ * Honor the deterministic e2e userData override BEFORE `app.whenReady()` so the
+ * session manager and Electron agree on a single root. The Playwright harness
+ * (e2e/helpers/launch.ts) exports NOTEPADS_E2E_USERDATA to drive kill→restart
+ * session-parity against the same NotepadsSessionData.json + BackupFiles/.
+ */
+function applyE2eUserDataOverride(): void {
+  const override = process.env['NOTEPADS_E2E_USERDATA'];
+  if (override && override.length > 0) {
+    app.setPath('userData', override);
+  }
+}
+
+applyE2eUserDataOverride();
+
 app.whenReady().then(() => {
   bootstrap();
 
