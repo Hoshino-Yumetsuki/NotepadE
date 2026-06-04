@@ -11,10 +11,15 @@ import { dirname, join } from 'node:path';
 import { createMainWindow } from './window-factory.js';
 import { registerIpcHandlers } from './ipc.js';
 import { initThemePush } from './theme.js';
+import {
+  acquireSingleInstance,
+  registerProtocolClient,
+  initBroker,
+  processInitialActivation,
+  flushPendingActivation,
+} from './broker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-let mainWindow: BrowserWindow | null = null;
 
 function loadRenderer(win: BrowserWindow): void {
   const devServerUrl = process.env['ELECTRON_RENDERER_URL'];
@@ -25,10 +30,30 @@ function loadRenderer(win: BrowserWindow): void {
   }
 }
 
-function bootstrap(): void {
+/** Create a fresh window and load the renderer into it. The broker's spawn fn. */
+function spawnWindow(): BrowserWindow {
+  const win = createMainWindow();
+  loadRenderer(win);
+  return win;
+}
+
+/**
+ * One-time process init: IPC handlers, theme push, broker. Separated from the
+ * per-window spawn so `activate` (macOS dock re-open) can recreate a window
+ * WITHOUT re-registering handlers or re-initializing the broker.
+ */
+function initOnce(): void {
   registerIpcHandlers();
-  mainWindow = createMainWindow();
-  loadRenderer(mainWindow);
+  initThemePush();
+  initBroker(spawnWindow);
+}
+
+function bootstrap(): void {
+  initOnce();
+  spawnWindow();
+  // Deliver any cold-start file/protocol activation once the first window exists.
+  processInitialActivation();
+  flushPendingActivation();
 }
 
 /**
@@ -46,19 +71,32 @@ function applyE2eUserDataOverride(): void {
 
 applyE2eUserDataOverride();
 
-app.whenReady().then(() => {
-  initThemePush();
-  bootstrap();
+/**
+ * Single-instance lock: the first process becomes the broker; a later launch
+ * forwards its argv via 'second-instance' and quits. Skipped under the e2e
+ * harness, where each Playwright spec is its own isolated process (the lock
+ * would otherwise race across the rapid launch/teardown cycle) and the two-
+ * window transfer is exercised by spawning within a single process.
+ */
+const isE2e = process.env['NOTEPADS_E2E'] === '1';
+const isPrimary = isE2e ? true : acquireSingleInstance();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      bootstrap();
+if (isPrimary) {
+  registerProtocolClient();
+
+  app.whenReady().then(() => {
+    bootstrap();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        spawnWindow();
+      }
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
     }
   });
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+}
