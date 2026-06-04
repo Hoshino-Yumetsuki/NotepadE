@@ -12,3 +12,4 @@ test-results/
 Thumbs.db
 .env
 .env.*
+.idea
