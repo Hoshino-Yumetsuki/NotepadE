@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type ElectronApplication } from '@playwright/test';
 import type { Settings } from '../../src/shared/ipc-contract';
 
 /**
@@ -100,15 +100,17 @@ export async function forceSurfaceOpaqueForCapture(page: Page): Promise<void> {
 }
 
 /**
- * Select a settings nav section (real click) and assert its pane mounted. The pane
- * mounts immediately on selection (the open-motion opacity quirk does not block the
- * nav), so a forced click + pane-visible assertion is sufficient and race-free.
+ * Select a settings nav section (real click) and assert its pane mounted. The
+ * Fluent Dialog opens with base opacity 0 and the WAAPI open fill does not reliably
+ * resolve to 1 under Electron, which leaves the NavItem non-hit-testable so a nav
+ * click is dropped (the target pane never mounts). Pinning the surface opaque first
+ * (content is already mounted) makes the genuine nav click land deterministically.
  */
 export async function selectPane(
   page: Page,
   section: 'textEditor' | 'personalization' | 'advanced' | 'about',
 ): Promise<void> {
-  await expect(page.locator(SETTINGS_SELECTORS.surface)).toBeVisible();
+  await forceSurfaceOpaqueForCapture(page);
   await page.locator(navItem(section)).click({ force: true });
   await expect(page.locator(`[data-testid="settings-pane-${section}"]`)).toBeVisible();
 }
@@ -192,4 +194,34 @@ export async function brandBackground(page: Page): Promise<string> {
     if (!el) return '';
     return getComputedStyle(el).getPropertyValue('--colorBrandBackground').trim();
   }, SETTINGS_SELECTORS.surface);
+}
+
+/**
+ * Drive the OS theme by setting Electron's `nativeTheme.themeSource` in the MAIN
+ * process — the genuine system-theme signal. This fires nativeTheme's 'updated'
+ * event, which src/main/theme.ts broadcasts as EvtThemeOsChanged, which
+ * useAppTheme consumes via window.notepads.theme.onOsThemeChanged → the resolved
+ * bucket re-computes with NO reload.
+ *
+ * This is THE nativeTheme seam the Gate-5 brief calls for. emulateMedia cannot be
+ * used for the light/dark OS flip here: MAIN owns the OS theme via nativeTheme and
+ * the renderer never reads prefers-color-scheme for it (PA-8), so the renderer's
+ * emulated media query is overridden by MAIN's authoritative push. Forced-colors
+ * (high contrast) is still driven via emulateMedia because useAppTheme folds the
+ * renderer forced-colors media query directly into the bucket.
+ */
+export async function driveOsTheme(
+  app: ElectronApplication,
+  theme: 'light' | 'dark',
+): Promise<void> {
+  await app.evaluate(({ nativeTheme }, t) => {
+    nativeTheme.themeSource = t;
+  }, theme);
+}
+
+/** Reset nativeTheme back to following the host OS (test teardown hygiene). */
+export async function resetOsTheme(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ nativeTheme }) => {
+    nativeTheme.themeSource = 'system';
+  });
 }

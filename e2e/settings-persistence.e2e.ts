@@ -59,7 +59,10 @@ test.describe('Gate 5 — settings persistence + live-affect across restart', ()
     let app: LaunchedApp = await launchApp({ userDataDir });
     try {
       const { page } = app;
-
+      // A fixed, wide viewport so the 880px settings dialog fits on-screen — at the
+      // default Electron window size the NavDrawer overflows to a negative x and its
+      // items can't be clicked (an off-screen nav drops the section switch).
+      await page.setViewportSize({ width: 1280, height: 800 });
       // Baseline: the status bar is visible (showStatusBar default true) and the
       // seam reports the verbatim DEFAULT_SETTINGS so the deltas below are real.
       await expect(page.locator(SETTINGS_SELECTORS.statusBar)).toBeVisible();
