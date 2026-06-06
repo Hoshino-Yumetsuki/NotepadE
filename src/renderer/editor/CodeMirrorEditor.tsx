@@ -10,6 +10,7 @@ import { initZoomVar } from './commands/zoom';
 import type { TextDirection } from './commands/direction';
 import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/wordWrap';
 import { lineNumberGlow } from './lineNumberGlow';
+import { tokensForAppTheme } from '../theme/tokens';
 
 /**
  * Imperative handle the host (App) uses to drive the editor without owning the
@@ -202,7 +203,14 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
     // RenderLineNumbersInternal uses the control's FontFamily/FontSize) at a muted
     // ~0.6α foreground — #99000000 light / #99EEEEEE dark. Mirror both here so the
     // numbers match the body text rather than CM6's default proportional UI font.
-    '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
+    // The gutter is position:sticky inside the horizontal scroller. With a
+    // transparent background, content scrolled to the right slides LEFT under the
+    // gutter and shows through — line numbers and text overlap. Paint it with the
+    // app's OPAQUE base surface color so it fully occludes scrolled content (UWP
+    // sidesteps this entirely: its line numbers live in a separate, non-scrolling
+    // grid column). The base (#F0F0F0 / #2E2E2E / Canvas) matches the acrylic tint
+    // floor so the strip blends with the surrounding editor surface.
+    '.cm-gutters': { backgroundColor: tokensForAppTheme(themeMode).base, border: 'none' },
     '.cm-lineNumbers .cm-gutterElement': {
       fontFamily,
       color: themeMode === 'dark' ? 'rgba(238, 238, 238, 0.6)' : 'rgba(0, 0, 0, 0.6)',
