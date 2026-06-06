@@ -61,6 +61,35 @@ describe('TextEditorPane', () => {
     fireEvent.blur(input);
     expect(update).toHaveBeenCalledWith({ editorFontSize: 18 });
   });
+
+  it('writes tabIndents when a tab-width radio is chosen (UWP radio set)', () => {
+    const update = vi.fn();
+    renderPane(<TextEditorPane settings={makeSettings({ tabIndents: -1 })} update={update} />);
+    const row = screen.getByTestId('setting-tabIndents');
+    // "4 Spaces" is the 4-width radio (ported TabKey FourSpaces .resw label).
+    fireEvent.click(within(row).getByRole('radio', { name: '4 Spaces' }));
+    expect(update).toHaveBeenCalledWith({ tabIndents: 4 });
+  });
+
+  it('writes defaultLineEnding when a line-ending radio is chosen', () => {
+    const update = vi.fn();
+    renderPane(
+      <TextEditorPane settings={makeSettings({ defaultLineEnding: 'crlf' })} update={update} />,
+    );
+    const row = screen.getByTestId('setting-defaultLineEnding');
+    fireEvent.click(within(row).getByRole('radio', { name: 'Unix (LF)' }));
+    expect(update).toHaveBeenCalledWith({ defaultLineEnding: 'lf' });
+  });
+
+  it('writes defaultEncoding when an encoding radio is chosen (was free-text input)', () => {
+    const update = vi.fn();
+    renderPane(
+      <TextEditorPane settings={makeSettings({ defaultEncoding: 'UTF-8' })} update={update} />,
+    );
+    const row = screen.getByTestId('setting-defaultEncoding');
+    fireEvent.click(within(row).getByRole('radio', { name: 'UTF-8-BOM' }));
+    expect(update).toHaveBeenCalledWith({ defaultEncoding: 'UTF-8-BOM' });
+  });
 });
 
 describe('PersonalizationPane', () => {

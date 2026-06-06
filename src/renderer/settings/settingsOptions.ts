@@ -14,7 +14,9 @@ import type {
   TabIndents,
   SearchEngineId,
   DefaultDecoding,
+  EncodingId,
 } from '@shared/ipc-contract';
+import { UNICODE_ENCODINGS } from '../statusbar/statusModel';
 
 /** The 29 UWP-shipped locales (Strings/* folders), BCP-47 + English label. */
 export const APP_LANGUAGES: readonly { tag: string; label: string }[] = [
@@ -87,6 +89,16 @@ export const DECODING_OPTIONS: readonly { id: DefaultDecoding; label: string }[]
   { id: 'utf-8', label: 'UTF-8' },
   { id: 'ansi', label: 'ANSI (system code page)' },
 ];
+
+/**
+ * Default-encoding radio options (UWP TextAndEditorSettingsPage EncodingPanel:
+ * UTF-8 / UTF-8-BOM / UTF-16 LE BOM / UTF-16 BE BOM). Reuses the SAME four Unicode
+ * labels the status-bar encoding menu lists, so the opaque encodingId stays the
+ * single source of truth.
+ */
+export const ENCODING_OPTIONS: readonly { id: EncodingId; label: string }[] = UNICODE_ENCODINGS.map(
+  (id) => ({ id, label: id }),
+);
 
 /** Common monospace font families offered for the editor. */
 export const FONT_FAMILIES: readonly string[] = [

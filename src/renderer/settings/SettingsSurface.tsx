@@ -59,8 +59,15 @@ const SECTIONS: readonly { id: SectionId; labelKey: string; glyph: string }[] = 
 /** Segoe MDL2 ChromeClose (E711) for the pane close button. */
 const CLOSE_GLYPH = String.fromCharCode(0xe711);
 
+/** Segoe MDL2 GlobalNavigationButton (E700) — the hamburger rail toggle. */
+const HAMBURGER_GLYPH = String.fromCharCode(0xe700);
+
 /** UWP RootSplitView.OpenPaneLength — the right pane is 385px wide. */
 const PANE_WIDTH = 385;
+
+/** UWP NavigationView PaneDisplayMode=LeftCompact rail widths (compact / expanded). */
+const RAIL_COMPACT_WIDTH = 48;
+const RAIL_EXPANDED_WIDTH = 200;
 
 export interface SettingsSurfaceProps {
   open: boolean;
@@ -88,9 +95,16 @@ function NavGlyph({ glyph }: { glyph: string }): JSX.Element {
 
 export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null {
   const [section, setSection] = useState<SectionId>('textEditor');
+  // Rail expand state (UWP NavigationView LeftCompact: a hamburger toggles the rail
+  // between an icon-only compact strip and the 200px icon+label open pane).
+  const [expanded, setExpanded] = useState(false);
   const { settings, update, open, onOpenChange } = props;
   const resolvedTheme: AppTheme = props.resolvedTheme ?? 'dark';
   const { t } = useT();
+
+  // The active section's localized title (UWP SettingsPanel header TextBlock,
+  // FontSize 24, updated per ContentFrame navigation).
+  const sectionTitle = SECTIONS.find((s) => s.id === section)?.labelKey ?? '';
 
   // Slide-in perf gate: the pane animates transform: translateX over 160ms while
   // wearing .np-acrylic (backdrop-filter: blur(30px)). Re-blurring the 30px kernel
@@ -189,6 +203,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
           ...acrylicVars(resolvedTheme),
         }}
       >
+        {/* Pane chrome bar: title + close (UWP SplitView pane header). */}
         <div
           style={{
             display: 'flex',
@@ -212,34 +227,48 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
         <div
           style={{
             display: 'flex',
-            gap: 8,
+            gap: 0,
             flex: '1 1 auto',
             minHeight: 0,
-            // Trim the horizontal pane padding to 8px each side (was 12). With the
-            // compact icon rail below this gives the content column ~270px at the
-            // 385px pane width so rows read label-left / control-right without
-            // wrapping (Issue 1 width-budget fix).
-            padding: '0 8px 12px',
           }}
         >
+          {/* UWP NavigationView PaneDisplayMode=LeftCompact: a hamburger toggles the
+              rail between a 48px icon-only strip and a 200px icon+label pane. The rail
+              overlays nothing — it just widens — and items show a selection pill
+              (Fluent `secondary` appearance) + keep localized aria-labels/tooltips. */}
           <div
             role="tablist"
             aria-orientation="vertical"
             data-testid="settings-nav"
             style={{
-              // Compact icon-only rail (1:1 UWP NavigationView PaneDisplayMode=
-              // LeftCompact ~48px) instead of the old 132px icon+label rail that
-              // starved the content column. Each item keeps its localized title as
-              // an aria-label + native tooltip, so the rail stays accessible and
-              // re-localizes live without consuming horizontal space.
-              width: 40,
+              width: expanded ? RAIL_EXPANDED_WIDTH : RAIL_COMPACT_WIDTH,
               flex: '0 0 auto',
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
               gap: 2,
+              padding: '0 4px',
+              boxSizing: 'border-box',
+              transition: 'width 150ms ease',
+              overflow: 'hidden',
             }}
           >
+            <Button
+              appearance="subtle"
+              aria-label={t('SettingsNav_Expand.AutomationProperties.Name')}
+              aria-expanded={expanded}
+              data-testid="settings-nav-toggle"
+              icon={<NavGlyph glyph={HAMBURGER_GLYPH} />}
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                minWidth: 0,
+                width: '100%',
+                justifyContent: expanded ? 'flex-start' : 'center',
+                paddingLeft: expanded ? 10 : 0,
+                paddingRight: 0,
+                marginBottom: 4,
+              }}
+            />
             {SECTIONS.map((s) => (
               <Button
                 key={s.id}
@@ -254,22 +283,54 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 style={{
                   minWidth: 0,
                   width: '100%',
-                  justifyContent: 'center',
-                  paddingLeft: 0,
+                  justifyContent: expanded ? 'flex-start' : 'center',
+                  paddingLeft: expanded ? 10 : 0,
                   paddingRight: 0,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
                 }}
-              />
+              >
+                {/* Label appears only when expanded (icon-only rail otherwise). */}
+                {expanded ? t(s.labelKey) : null}
+              </Button>
             ))}
           </div>
-          <div style={{ flex: '1 1 auto', minWidth: 0, height: '100%', overflowY: 'auto' }}>
-            {section === 'textEditor' ? (
-              <TextEditorPane settings={settings} update={update} />
-            ) : null}
-            {section === 'personalization' ? (
-              <PersonalizationPane settings={settings} update={update} />
-            ) : null}
-            {section === 'advanced' ? <AdvancedPane settings={settings} update={update} /> : null}
-            {section === 'about' ? <AboutPane /> : null}
+          {/* Content column: per-section 24px title + bottom-border header
+              (UWP SettingsPanel.xaml 60px header row), then the scrolling pane. */}
+          <div
+            style={{
+              flex: '1 1 auto',
+              minWidth: 0,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '0 8px 0 12px',
+            }}
+          >
+            <div
+              data-testid="settings-section-title"
+              style={{
+                flex: '0 0 auto',
+                fontSize: 24,
+                lineHeight: '1.2',
+                fontWeight: 600,
+                padding: '0 0 10px 0',
+                marginBottom: 8,
+                borderBottom: '1px solid var(--colorNeutralStroke2)',
+              }}
+            >
+              {t(sectionTitle)}
+            </div>
+            <div style={{ flex: '1 1 auto', minWidth: 0, minHeight: 0, overflowY: 'auto' }}>
+              {section === 'textEditor' ? (
+                <TextEditorPane settings={settings} update={update} />
+              ) : null}
+              {section === 'personalization' ? (
+                <PersonalizationPane settings={settings} update={update} />
+              ) : null}
+              {section === 'advanced' ? <AdvancedPane settings={settings} update={update} /> : null}
+              {section === 'about' ? <AboutPane /> : null}
+            </div>
           </div>
         </div>
       </FluentProvider>

@@ -90,6 +90,14 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
     'de-DE': 'Einstellungen schließen',
     'ja-JP': '設定を閉じる',
   },
+  // Rail expand/collapse toggle (UWP NavigationView PaneDisplayMode=LeftCompact
+  // hamburger). UWP labeled it via the platform NavigationView template; the web
+  // port adds its own affordance, so this aria-label has no ported equivalent.
+  'SettingsNav_Expand.AutomationProperties.Name': {
+    'en-US': 'Toggle navigation pane',
+    'de-DE': 'Navigationsbereich umschalten',
+    'ja-JP': 'ナビゲーション ウィンドウの切り替え',
+  },
 
   // Settings panes (web port) — strings the UWP pages rendered inline/in code or
   // that the web layout adds. Reuse a ported key wherever one exists; these are

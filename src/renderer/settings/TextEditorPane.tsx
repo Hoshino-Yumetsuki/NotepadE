@@ -14,6 +14,8 @@ import {
   Option,
   SpinButton,
   Input,
+  RadioGroup,
+  Radio,
   type SpinButtonOnChangeData,
 } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
@@ -23,6 +25,7 @@ import type {
   TabIndents,
   SearchEngineId,
   DefaultDecoding,
+  EncodingId,
 } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
@@ -32,6 +35,7 @@ import {
   TAB_INDENTS,
   SEARCH_ENGINES,
   DECODING_OPTIONS,
+  ENCODING_OPTIONS,
   FONT_SIZE_MIN,
   FONT_SIZE_MAX,
 } from './settingsOptions';
@@ -76,7 +80,6 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
     FONT_STYLES.find((s) => s.id === v)?.label ?? 'Normal';
   const fontWeightLabel = (v: number): string =>
     FONT_WEIGHTS.find((w) => w.weight === v)?.label ?? String(v);
-  const eolLabel = (v: EolId): string => EOL_MENU_ROWS.find((r) => r.eol === v)?.text ?? v;
   const searchEngineLabel = (v: SearchEngineId): string =>
     v === 'custom'
       ? t('TextAndEditorPage_SearchEngineSettings_CustomSearchUrlRadioButton.Text')
@@ -130,19 +133,15 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           label={t('TextAndEditorPage_TabKeySettings_Title.Text')}
           description={t('TextAndEditorPage_TabKeySettings_Description.Text')}
         >
-          <Dropdown
-            data-testid="setting-tabIndents-dropdown"
-            value={tabIndentLabel(settings.tabIndents)}
-            selectedOptions={[String(settings.tabIndents)]}
-            onOptionSelect={(_e, d) => update({ tabIndents: Number(d.optionValue) as TabIndents })}
-            style={{ width: '100%' }}
+          <RadioGroup
+            data-testid="setting-tabIndents-group"
+            value={String(settings.tabIndents)}
+            onChange={(_e, d) => update({ tabIndents: Number(d.value) as TabIndents })}
           >
             {TAB_INDENTS.map((tt) => (
-              <Option key={tt.value} value={String(tt.value)}>
-                {tabIndentLabel(tt.value)}
-              </Option>
+              <Radio key={tt.value} value={String(tt.value)} label={tabIndentLabel(tt.value)} />
             ))}
-          </Dropdown>
+          </RadioGroup>
         </SettingRow>
       </SettingGroup>
 
@@ -222,18 +221,15 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           label={t('TextAndEditorPage_LineEndingSettings_Title.Text')}
           description={t('TextAndEditorPage_LineEndingSettings_Description.Text')}
         >
-          <Dropdown
-            value={eolLabel(settings.defaultLineEnding)}
-            selectedOptions={[settings.defaultLineEnding]}
-            onOptionSelect={(_e, d) => update({ defaultLineEnding: d.optionValue as EolId })}
-            style={{ width: '100%' }}
+          <RadioGroup
+            data-testid="setting-defaultLineEnding-group"
+            value={settings.defaultLineEnding}
+            onChange={(_e, d) => update({ defaultLineEnding: d.value as EolId })}
           >
             {EOL_MENU_ROWS.map((r) => (
-              <Option key={r.eol} value={r.eol}>
-                {r.text}
-              </Option>
+              <Radio key={r.eol} value={r.eol} label={r.text} />
             ))}
-          </Dropdown>
+          </RadioGroup>
         </SettingRow>
         <SettingRow
           id="defaultEncoding"
@@ -241,12 +237,15 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           label={t('TextAndEditorPage_EncodingSettings_Title.Text')}
           description={t('TextAndEditorPage_EncodingSettings_Description.Text')}
         >
-          <Input
-            data-testid="setting-defaultEncoding-input"
+          <RadioGroup
+            data-testid="setting-defaultEncoding-group"
             value={settings.defaultEncoding}
-            onChange={(_e, d) => update({ defaultEncoding: d.value })}
-            style={{ width: '100%' }}
-          />
+            onChange={(_e, d) => update({ defaultEncoding: d.value as EncodingId })}
+          >
+            {ENCODING_OPTIONS.map((o) => (
+              <Radio key={o.id} value={o.id} label={o.label} />
+            ))}
+          </RadioGroup>
         </SettingRow>
         <SettingRow
           id="defaultDecoding"
@@ -254,20 +253,15 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           label={t('TextAndEditorPage_DecodingSettings_Title.Text')}
           description={t('TextAndEditorPage_DecodingSettings_Description.Text')}
         >
-          <Dropdown
-            value={decodingLabel(settings.defaultDecoding)}
-            selectedOptions={[settings.defaultDecoding]}
-            onOptionSelect={(_e, d) =>
-              update({ defaultDecoding: d.optionValue as DefaultDecoding })
-            }
-            style={{ width: '100%' }}
+          <RadioGroup
+            data-testid="setting-defaultDecoding-group"
+            value={settings.defaultDecoding}
+            onChange={(_e, d) => update({ defaultDecoding: d.value as DefaultDecoding })}
           >
             {DECODING_OPTIONS.map((o) => (
-              <Option key={o.id} value={o.id}>
-                {decodingLabel(o.id)}
-              </Option>
+              <Radio key={o.id} value={o.id} label={decodingLabel(o.id)} />
             ))}
-          </Dropdown>
+          </RadioGroup>
         </SettingRow>
       </SettingGroup>
 
@@ -278,18 +272,15 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           label={t('TextAndEditorPage_SearchEngineSettings_Title.Text')}
           description={t('TextAndEditorPage_SearchEngineSettings_Description.Text')}
         >
-          <Dropdown
-            value={searchEngineLabel(settings.searchEngine)}
-            selectedOptions={[settings.searchEngine]}
-            onOptionSelect={(_e, d) => update({ searchEngine: d.optionValue as SearchEngineId })}
-            style={{ width: '100%' }}
+          <RadioGroup
+            data-testid="setting-searchEngine-group"
+            value={settings.searchEngine}
+            onChange={(_e, d) => update({ searchEngine: d.value as SearchEngineId })}
           >
             {SEARCH_ENGINES.map((s) => (
-              <Option key={s.id} value={s.id}>
-                {searchEngineLabel(s.id)}
-              </Option>
+              <Radio key={s.id} value={s.id} label={searchEngineLabel(s.id)} />
             ))}
-          </Dropdown>
+          </RadioGroup>
         </SettingRow>
         {settings.searchEngine === 'custom' ? (
           <SettingRow
