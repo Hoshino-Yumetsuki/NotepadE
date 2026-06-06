@@ -36,6 +36,21 @@
   backdrop-filter: blur(var(--acrylic-blur, 30px)) saturate(125%);
 }
 
+/*
+ * Perf: defer the expensive backdrop blur until the pane has stopped moving.
+ * While the settings pane slides in (transform: translateX over 160ms) it sets
+ * `data-acrylic-animating`; without this Chromium re-samples + re-blurs the 30px
+ * kernel over the full pane EVERY frame as it travels over changing content behind
+ * it — the source of the slide-in stutter. During motion we drop the blur (the
+ * translucent tint + luminosity still ride along, so it reads as a moving frosted
+ * panel) and the host re-enables the blur once the slide settles (attribute removed
+ * on animationend). The settled appearance is identical to the always-on blur.
+ */
+.np-acrylic[data-acrylic-animating] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* High-contrast hard-guard: never blur, always opaque (defense in depth on top
    of the host setting --acrylic-blur:0 / opaque Canvas tint). */
 @media (forced-colors: active) {

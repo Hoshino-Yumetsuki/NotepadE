@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Menu,
   MenuTrigger,
@@ -162,7 +162,7 @@ interface SortableTabProps {
   onVoidDrop?(editorId: string): void;
 }
 
-function SortableTab(props: SortableTabProps): JSX.Element {
+function SortableTabImpl(props: SortableTabProps): JSX.Element {
   const {
     tab,
     index,
@@ -192,6 +192,12 @@ function SortableTab(props: SortableTabProps): JSX.Element {
   // (tokensForReveal('hc') is transparent), matching the UWP no-reveal HC material.
   const reveal = useReveal();
   const revealTokens = tokensForReveal(revealTheme);
+  // The radial-gradient string depends only on the theme tokens (a stable
+  // module-level singleton per theme), so build it once per theme instead of
+  // re-concatenating it on every render — during a dnd-kit drag this component
+  // re-renders per pointer tick, and an inline rebuild would re-create the
+  // gradient (and invite a re-raster) each tick.
+  const revealBackground = useMemo(() => revealGradient(revealTokens), [revealTokens]);
   const { t } = useT();
 
   useEffect(() => {
@@ -320,7 +326,7 @@ function SortableTab(props: SortableTabProps): JSX.Element {
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            background: revealGradient(revealTokens),
+            background: revealBackground,
             opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
             transition: 'opacity 120ms ease-out',
             zIndex: 0,
@@ -446,7 +452,44 @@ function SortableTab(props: SortableTabProps): JSX.Element {
   );
 }
 
-/** A scroll-overflow chevron button (E76B / E76C). Hidden when not overflowing. */
+/**
+ * Memoized per-tab component. Without this, the tabs-store snapshot changing on
+ * ANY mutation (setModified/setCaret/setScroll/activate/reorder) re-renders the
+ * whole strip AND every tab — and during a dnd-kit drag each tab re-renders per
+ * pointer tick. The store keeps unmutated tab objects referentially stable
+ * (patch() only replaces the one changed tab), so this comparator re-renders a
+ * tab ONLY when something it actually paints changes:
+ *   - its own rendered fields (editorId / filePath / untitledName / isModified),
+ *   - its position/sizing (index / width / tabCount),
+ *   - its selection or rename mode (active / renaming / revealTheme / tokens),
+ *   - or any handler/transfer prop identity (kept stable by the parent).
+ * Mutations to caret/scroll on this or any tab — and any mutation to an
+ * UNRELATED tab — therefore skip this component entirely. Returns true to SKIP
+ * the re-render (props equal), false to render.
+ */
+const SortableTab = memo(SortableTabImpl, (prev, next): boolean => {
+  return (
+    prev.tab.editorId === next.tab.editorId &&
+    prev.tab.filePath === next.tab.filePath &&
+    prev.tab.untitledName === next.tab.untitledName &&
+    prev.tab.isModified === next.tab.isModified &&
+    prev.index === next.index &&
+    prev.active === next.active &&
+    prev.tokens === next.tokens &&
+    prev.revealTheme === next.revealTheme &&
+    prev.width === next.width &&
+    prev.tabCount === next.tabCount &&
+    prev.renaming === next.renaming &&
+    prev.onActivate === next.onActivate &&
+    prev.onClose === next.onClose &&
+    prev.onContextActions === next.onContextActions &&
+    prev.onBeginRename === next.onBeginRename &&
+    prev.onCommitRename === next.onCommitRename &&
+    prev.onCancelRename === next.onCancelRename &&
+    prev.onBeginTransfer === next.onBeginTransfer &&
+    prev.onVoidDrop === next.onVoidDrop
+  );
+});
 function ScrollButton(props: {
   testid: string;
   glyph: string;
@@ -634,6 +677,10 @@ function AddTabButton(props: {
   const { t } = useT();
   const reveal = useReveal();
   const revealTokens = tokensForReveal(revealTheme);
+  // Build the radial-gradient once per theme (tokensForReveal returns a stable
+  // per-theme singleton), matching the SortableTab fix — not rebuilt inline on
+  // every render.
+  const revealBackground = useMemo(() => revealGradient(revealTokens), [revealTokens]);
   return (
     <button
       ref={reveal.hostRef as React.Ref<HTMLButtonElement>}
@@ -683,7 +730,7 @@ function AddTabButton(props: {
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background: revealGradient(revealTokens),
+          background: revealBackground,
           opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
           transition: 'opacity 120ms ease-out',
           zIndex: 0,
@@ -858,6 +905,14 @@ export function TabStrip(props: TabStripProps): JSX.Element {
 
   const ids = useMemo(() => tabs.map((t) => t.editorId), [tabs]);
 
+  // Stable per-tab callbacks so the memoized SortableTab isn't forced to
+  // re-render by a fresh closure on every parent render. Each only closes over
+  // stable refs (store / the setRenamingId setter), so useCallback with an empty
+  // (or store-only) dep list is safe.
+  const activateTab = useCallback((id: string) => store.activate(id), [store]);
+  const beginRename = useCallback((id: string) => setRenamingId(id), []);
+  const cancelRename = useCallback(() => setRenamingId(null), []);
+
   // F2 (routed from useTabKeyboard via a window event) begins inline rename on
   // the active tab without TabStrip needing the keyboard hook itself.
   useEffect(() => {
@@ -936,12 +991,12 @@ export function TabStrip(props: TabStripProps): JSX.Element {
                 width={tabWidth}
                 tabCount={tabs.length}
                 renaming={renamingId === tab.editorId}
-                onActivate={(id) => store.activate(id)}
+                onActivate={activateTab}
                 onClose={closeTab}
                 onContextActions={onContextActions}
-                onBeginRename={(id) => setRenamingId(id)}
+                onBeginRename={beginRename}
                 onCommitRename={commitRename}
-                onCancelRename={() => setRenamingId(null)}
+                onCancelRename={cancelRename}
                 onBeginTransfer={onBeginTransfer}
                 onVoidDrop={onVoidDrop}
               />

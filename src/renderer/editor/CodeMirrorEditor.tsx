@@ -9,6 +9,7 @@ import { tryInsertLogEntry } from './commands/datetime';
 import { initZoomVar } from './commands/zoom';
 import type { TextDirection } from './commands/direction';
 import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/wordWrap';
+import { lineNumberGlow } from './lineNumberGlow';
 
 /**
  * Imperative handle the host (App) uses to drive the editor without owning the
@@ -281,6 +282,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     const lineNumbersCompartment = useRef(new Compartment());
     const activeLineCompartment = useRef(new Compartment());
     const fontSizeCompartment = useRef(new Compartment());
+    // Line-number REVEAL glow (UWP LineNumberGrid reveal border brush). Gated on
+    // showLineNumbers (no gutter → no glow) AND rebuilt on themeMode/accentColor
+    // so the bloom matches the live theme + accent. Self-contained in
+    // lineNumberGlow.ts; paints an inline-styled overlay (no CM6 theme selector).
+    const lineNumberGlowCompartment = useRef(new Compartment());
     // The host-authoritative document. setDoc updates this and the view is rebuilt
     // FROM it on every mount, so seeded text survives a remount. This matters
     // because React 18 StrictMode double-invokes the mount effect (create → destroy
@@ -382,6 +388,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // Line numbers gated on the prop, in a compartment so toggling the setting
         // mounts/unmounts the gutter live.
         lineNumbersCompartment.current.of(showLineNumbers ? lineNumbers() : []),
+        // Line-number reveal glow, mounted iff the gutter is shown. Empty when off
+        // so there is no overlay/listeners without a gutter to light.
+        lineNumberGlowCompartment.current.of(
+          showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : [],
+        ),
       ];
 
       const view = new EditorView({
@@ -448,6 +459,19 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         effects: lineNumbersCompartment.current.reconfigure(showLineNumbers ? lineNumbers() : []),
       });
     }, [showLineNumbers]);
+
+    // Line-number reveal glow: re-derive when the gutter is toggled OR the theme/
+    // accent changes (the glow tint is baked in at build time to keep the
+    // per-pointer path free of facet reads, so a theme/accent switch rebuilds it).
+    useEffect(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: lineNumberGlowCompartment.current.reconfigure(
+          showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : [],
+        ),
+      });
+    }, [showLineNumbers, themeMode, accentColor]);
 
     // Current-line highlight extension mount/unmount (theme rules are gated above).
     useEffect(() => {

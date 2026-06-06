@@ -378,6 +378,18 @@ export function App(): JSX.Element {
     [store, settings.exitWhenLastTabClosed, performClose],
   );
 
+  // Stable TabStrip callback identities. SortableTab is React.memo'd; if these were
+  // fresh inline closures (minted on every App render — App re-renders on EVERY
+  // store mutation via useSyncExternalStore), the memo comparator would always see
+  // changed handler props and re-render ALL tabs on any setModified/setCaret/etc.
+  // Wrapping them in useCallback lets the memo actually skip unrelated tabs.
+  const onNewTab = useCallback(() => store.newTab(), [store]);
+  const onBeginTransfer = useCallback(
+    (id: string) => beginTransfer(store, transferSource.current, id),
+    [store],
+  );
+  const onVoidDrop = useCallback((id: string) => handleVoidDrop(store, id), [store]);
+
   // Recompute a tab's dirty flag (Issue 3): compare the live '\n'-shadow text to
   // that tab's last-saved baseline (also normalized to '\n' — the stored baseline
   // is raw decoded text that may carry CRLF). Untitled buffers have no baseline
@@ -700,10 +712,10 @@ export function App(): JSX.Element {
         store={store}
         isDark={resolvedTheme === 'dark'}
         theme={resolvedTheme}
-        onNewTab={() => store.newTab()}
-        onCloseTab={(id) => closeTab(id)}
-        onBeginTransfer={(id) => beginTransfer(store, transferSource.current, id)}
-        onVoidDrop={(id) => handleVoidDrop(store, id)}
+        onNewTab={onNewTab}
+        onCloseTab={closeTab}
+        onBeginTransfer={onBeginTransfer}
+        onVoidDrop={onVoidDrop}
         menu={menuCommands}
       />
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>

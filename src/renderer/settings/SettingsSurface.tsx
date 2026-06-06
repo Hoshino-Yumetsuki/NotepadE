@@ -92,6 +92,31 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   const resolvedTheme: AppTheme = props.resolvedTheme ?? 'dark';
   const { t } = useT();
 
+  // Slide-in perf gate: the pane animates transform: translateX over 160ms while
+  // wearing .np-acrylic (backdrop-filter: blur(30px)). Re-blurring the 30px kernel
+  // over the full 385px×full-height pane every frame as it moves over changing
+  // content behind it is what makes the open stutter. So we keep the blur OFF during
+  // the slide (data-acrylic-animating in acrylic.css suppresses backdrop-filter; the
+  // tint + luminosity still ride along) and only switch the heavy blur on once the
+  // pane is stationary — on animationend. `will-change: transform` hints the
+  // compositor during the slide and is dropped once settled so it costs nothing at
+  // rest. The settled look is identical to the always-on blur.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      // Reset so the next open re-runs the slide cheap (the instance is kept mounted
+      // by the App across open/close, so state would otherwise persist).
+      setSettled(false);
+      return;
+    }
+    // Fallback: guarantee the settled blur even if animationend never arrives — a
+    // stripped/instant keyframe (the inlined <style> degrades to an instant show if
+    // chrome.css is absent) or a reduced-motion engine may skip the event. Slightly
+    // longer than the 160ms slide so it only fires if the event was genuinely missed.
+    const id = window.setTimeout(() => setSettled(true), 220);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
   // Esc closes the pane (UWP SettingsPage back/close). Bound only while open so it
   // never competes with the editor's own Esc handling (find-bar dismiss etc.).
   useEffect(() => {
@@ -135,6 +160,15 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
         theme={props.theme}
         data-testid="settings-surface"
         className="np-acrylic"
+        // While the slide is in flight the heavy backdrop blur is suppressed (see
+        // the `settled` gate above + acrylic.css). The attribute is omitted once
+        // settled, so the expensive blur only kicks in on the stationary pane.
+        data-acrylic-animating={settled ? undefined : ''}
+        // Switch the blur on the moment the slide finishes (the timeout above is the
+        // belt-and-braces fallback for a skipped/instant keyframe).
+        onAnimationEnd={(e) => {
+          if (e.animationName === 'np-settings-slide-in') setSettled(true);
+        }}
         // Stop scrim-dismiss when the click lands inside the pane itself.
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -148,6 +182,9 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
           animationName: 'np-settings-slide-in',
           animationDuration: '160ms',
           animationTimingFunction: 'ease-out',
+          // Hint the compositor during the slide; drop it at rest so a stationary
+          // pane pays nothing for the promotion.
+          willChange: settled ? undefined : 'transform',
           boxShadow: '-8px 0 24px rgba(0,0,0,0.35)',
           ...acrylicVars(resolvedTheme),
         }}
