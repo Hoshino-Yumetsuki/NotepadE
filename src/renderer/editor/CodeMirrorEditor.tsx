@@ -197,11 +197,15 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
           '.cm-activeLineGutter': { backgroundColor: overlay.activeLineGutter },
         }
       : {}),
-    // Gutter stays transparent (acrylic shows through) but line numbers get a
-    // readable muted color; the active line number is brightened.
+    // Gutter stays transparent (acrylic shows through). UWP rendered line numbers
+    // in the SAME font family/size as the editor body (TextEditorCore.LineNumbers
+    // RenderLineNumbersInternal uses the control's FontFamily/FontSize) at a muted
+    // ~0.6α foreground — #99000000 light / #99EEEEEE dark. Mirror both here so the
+    // numbers match the body text rather than CM6's default proportional UI font.
     '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
     '.cm-lineNumbers .cm-gutterElement': {
-      color: 'rgba(127, 127, 127, 0.75)',
+      fontFamily,
+      color: themeMode === 'dark' ? 'rgba(238, 238, 238, 0.6)' : 'rgba(0, 0, 0, 0.6)',
       padding: '0 8px 0 6px',
     },
     '.cm-lineNumbers .cm-activeLineGutter': { color: 'inherit' },

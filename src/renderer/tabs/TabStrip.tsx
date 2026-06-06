@@ -261,7 +261,9 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
     cursor: 'default',
     userSelect: 'none',
     opacity: isDragging ? 0.6 : 1,
-    fontSize: 13,
+    // UWP SetsViewItem header is ControlContentThemeFontSize (= 14px) in
+    // ContentControlThemeFontFamily (Segoe UI), per SetsView.xaml:769-770.
+    fontSize: 14,
     fontFamily: 'Segoe UI, system-ui, sans-serif',
     whiteSpace: 'nowrap',
     overflow: 'hidden',

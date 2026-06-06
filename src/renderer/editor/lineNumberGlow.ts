@@ -43,14 +43,18 @@ import type { Extension } from '@codemirror/state';
 //  Geometry + CSS-var contract
 // ---------------------------------------------------------------------------
 
-/** Radius of the radial bloom in CSS px (echoes the Fluent reveal hover radius). */
-export const GLOW_RADIUS_PX = 90;
+/**
+ * Radius of the edge bloom in CSS px. The Fluent reveal BORDER brush is a tight
+ * edge-light, not a wide blob — kept small so the glow hugs the gutter's right
+ * separator rather than washing the whole column.
+ */
+export const GLOW_RADIUS_PX = 60;
 /**
  * Horizontal falloff in px: glow is full while the pointer is over the gutter and
  * ramps to zero this many px to the RIGHT of the gutter's separator edge, so it
  * "intensifies as the cursor nears the left margin" exactly like the UWP brush.
  */
-export const GLOW_FALLOFF_PX = 96;
+export const GLOW_FALLOFF_PX = 60;
 
 /** Pointer Y within the (sticky) gutter box, in px from its top edge. */
 export const GLOW_VAR_Y = '--ln-glow-y';
@@ -80,21 +84,17 @@ export function parseHexColor(hex: string): { r: number; g: number; b: number } 
 }
 
 /**
- * The glow tint for a theme bucket + accent. The accent is rendered at a low
- * alpha (a touch brighter on dark, where reveal reads as a white-ish bloom, than
- * on light, where it must stay subtle over the pale gutter). HC returns
+ * The glow tint for a theme bucket. UWP's `SystemControlBackgroundTransparent‐
+ * RevealBorderBrush` is a NEUTRAL reveal-border light (a soft white-ish bloom on
+ * dark, black-ish on light) — it is NOT tinted with the app accent. We keep the
+ * `accentColor` parameter only for API stability; it is intentionally unused so
+ * the glow reads as the OS edge-light rather than a colored blob. HC returns
  * `transparent` — reveal material is inert under forced-colors.
  */
-export function glowColor(themeMode: 'light' | 'dark' | 'hc', accentColor: string): string {
+export function glowColor(themeMode: 'light' | 'dark' | 'hc', _accentColor: string): string {
   if (themeMode === 'hc') return 'transparent';
-  const rgb = parseHexColor(accentColor);
-  // Fall back to a neutral tint if the accent is malformed, so the glow still
-  // reads rather than vanishing on a bad input.
-  const alpha = themeMode === 'dark' ? 0.3 : 0.2;
-  if (!rgb) {
-    return themeMode === 'dark' ? `rgba(255, 255, 255, ${alpha})` : `rgba(0, 120, 212, ${alpha})`;
-  }
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+  // Neutral edge-light: a faint white bloom on dark, a faint black bloom on light.
+  return themeMode === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.14)';
 }
 
 /**

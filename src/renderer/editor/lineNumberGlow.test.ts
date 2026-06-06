@@ -37,15 +37,15 @@ describe('lineNumberGlow — pure helpers', () => {
     it('is transparent (inert) under high contrast', () => {
       expect(glowColor('hc', '#0078D4')).toBe('transparent');
     });
-    it('tints with the accent at dark alpha on dark', () => {
-      expect(glowColor('dark', '#0078D4')).toBe('rgba(0, 120, 212, 0.3)');
+    it('is a neutral white-ish bloom on dark (NOT accent-tinted)', () => {
+      expect(glowColor('dark', '#0078D4')).toBe('rgba(255, 255, 255, 0.22)');
     });
-    it('tints with the accent at light alpha on light', () => {
-      expect(glowColor('light', '#0078D4')).toBe('rgba(0, 120, 212, 0.2)');
+    it('is a neutral black-ish bloom on light (NOT accent-tinted)', () => {
+      expect(glowColor('light', '#0078D4')).toBe('rgba(0, 0, 0, 0.14)');
     });
-    it('falls back to a neutral tint when the accent is malformed', () => {
-      expect(glowColor('dark', 'not-a-color')).toBe('rgba(255, 255, 255, 0.3)');
-      expect(glowColor('light', 'not-a-color')).toBe('rgba(0, 120, 212, 0.2)');
+    it('ignores the accent entirely (UWP reveal border brush is neutral)', () => {
+      expect(glowColor('dark', 'not-a-color')).toBe('rgba(255, 255, 255, 0.22)');
+      expect(glowColor('light', '#ff0000')).toBe('rgba(0, 0, 0, 0.14)');
     });
   });
 
@@ -68,10 +68,10 @@ describe('lineNumberGlow — pure helpers', () => {
 
   describe('glowBackground', () => {
     it('builds a right-edge radial gradient bound to the Y var', () => {
-      const bg = glowBackground('rgba(0, 120, 212, 0.3)');
+      const bg = glowBackground('rgba(255, 255, 255, 0.22)');
       expect(bg).toContain(`circle ${GLOW_RADIUS_PX}px at 100%`);
       expect(bg).toContain(`var(${GLOW_VAR_Y}, -9999px)`);
-      expect(bg).toContain('rgba(0, 120, 212, 0.3) 0%');
+      expect(bg).toContain('rgba(255, 255, 255, 0.22) 0%');
       expect(bg).toContain('transparent 70%');
     });
   });
@@ -97,8 +97,8 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
     expect(overlay!.getAttribute('aria-hidden')).toBe('true');
     expect(overlay!.style.position).toBe('absolute');
     expect(overlay!.style.pointerEvents).toBe('none');
-    // Tinted with the accent at dark alpha.
-    expect(overlay!.style.background).toContain('rgba(0, 120, 212, 0.3)');
+    // Neutral white-ish bloom on dark (UWP reveal border brush is not accent-tinted).
+    expect(overlay!.style.background).toContain('rgba(255, 255, 255, 0.22)');
     view.destroy();
   });
 
