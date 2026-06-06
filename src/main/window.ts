@@ -35,6 +35,63 @@ function windowFor(event: Electron.IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
+/**
+ * Custom caption controls (replace the OS titleBarOverlay). The renderer's
+ * in-chrome min/max/close buttons drive these so the buttons themselves are
+ * transparent and the window acrylic shows through — 1:1 with the UWP
+ * ApplyThemeForTitleBarButtons transparent-button scheme. Each acts on the window
+ * that OWNS the calling renderer (PA-8: no windowId from the renderer).
+ */
+export function windowMinimize(event: Electron.IpcMainInvokeEvent): Result<void> {
+  const win = windowFor(event);
+  if (!win) return { ok: false, error: 'No window for this renderer' };
+  try {
+    win.minimize();
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+/** Toggle maximize/restore; resolves with the resulting maximized flag. */
+export function windowToggleMaximize(
+  event: Electron.IpcMainInvokeEvent,
+): Result<{ isMaximized: boolean }> {
+  const win = windowFor(event);
+  if (!win) return { ok: false, error: 'No window for this renderer' };
+  try {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+    return { ok: true, data: { isMaximized: win.isMaximized() } };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+export function windowClose(event: Electron.IpcMainInvokeEvent): Result<void> {
+  const win = windowFor(event);
+  if (!win) return { ok: false, error: 'No window for this renderer' };
+  try {
+    win.close();
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+/** Current maximized flag — seeds the renderer's restore glyph on mount. */
+export function windowIsMaximized(
+  event: Electron.IpcMainInvokeEvent,
+): Result<{ isMaximized: boolean }> {
+  const win = windowFor(event);
+  if (!win) return { ok: false, error: 'No window for this renderer' };
+  try {
+    return { ok: true, data: { isMaximized: win.isMaximized() } };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
 /** Remembered per-window compact state, so leaving compact restores the snapshot. */
 const compactState = new WeakMap<BrowserWindow, CompactState>();
 

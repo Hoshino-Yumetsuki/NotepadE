@@ -2,47 +2,23 @@
  * BrowserWindowFactory (0.A decision) — hardened webPreferences.
  *
  * PA-8 mandate: contextIsolation:true, nodeIntegration:false, sandbox:true.
- * Windows: titleBarStyle:'hidden' + titleBarOverlay for Snap Layouts; the UWP
- * TitleBarReservedArea (180px) maps to the overlay width.
+ * Windows: titleBarStyle:'hidden' WITHOUT a titleBarOverlay — the caption
+ * (min/max/close) buttons are CUSTOM in-app React controls (CaptionButtons) so
+ * they paint transparent and the window acrylic shows through them, 1:1 with the
+ * UWP ApplyThemeForTitleBarButtons transparent-button scheme. The OS overlay was
+ * an opaque band that could never blur with the acrylic chrome.
  */
 
 import { BrowserWindow, nativeTheme } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { IpcChannels } from '../shared/ipc-channels.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Base theme colors hardcoded per OS theme (docs/plan/02-phase-1 §5). */
 const BASE_BG_DARK = '#2E2E2E';
 const BASE_BG_LIGHT = '#F0F0F0';
-
-/** UWP TitleBarReservedArea width reserved for the caption band. */
-const TITLE_BAR_OVERLAY_HEIGHT = 32;
-
-/**
- * Caption-button (titleBarOverlay) colors for the current OS theme. The overlay
- * draws the OS Segoe Fluent min/max/close glyphs; we only own the band color and
- * the symbol color so the caption buttons stay legible in both themes. The glyphs
- * themselves are OS-drawn and untouched.
- */
-function captionColors(isDark: boolean): { color: string; symbolColor: string } {
-  return {
-    color: isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
-    symbolColor: isDark ? '#FFFFFF' : '#000000',
-  };
-}
-
-/**
- * Re-apply the caption colors for the current OS theme. Windows-only (the overlay
- * exists only there). No-op if the window has no overlay (other platforms) or is
- * gone. Called at creation and on every live OS-theme change so the caption
- * buttons re-tint without a relaunch (UWP updates the caption live).
- */
-function applyCaptionTheme(win: BrowserWindow): void {
-  if (process.platform !== 'win32' || win.isDestroyed()) return;
-  const { color, symbolColor } = captionColors(nativeTheme.shouldUseDarkColors);
-  win.setTitleBarOverlay({ color, symbolColor, height: TITLE_BAR_OVERLAY_HEIGHT });
-}
 
 export interface CreateWindowOptions {
   /** Extra args forwarded to the renderer (unused in skeleton). */
@@ -69,16 +45,12 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     // the DWM frame and its corner rounding. backgroundMaterial drives the blur.
     ...(process.platform === 'win32' ? { backgroundMaterial: 'acrylic' as const } : {}),
     autoHideMenuBar: true,
-    // Snap Layouts on Windows via overlaid caption controls.
+    // Frameless on Windows: hide the OS title bar (and its caption-button overlay)
+    // so our custom transparent CaptionButtons own the top-right. Aero Snap (drag
+    // to edge) + Win+Arrow still work; only the Win11 snap-assist hover flyout is
+    // unavailable without the OS maximize button — an accepted tradeoff for the
+    // transparent-button fidelity (matches the UWP look).
     titleBarStyle: process.platform === 'win32' ? 'hidden' : 'default',
-    ...(process.platform === 'win32'
-      ? {
-          titleBarOverlay: {
-            ...captionColors(isDark),
-            height: TITLE_BAR_OVERLAY_HEIGHT,
-          },
-        }
-      : {}),
     webPreferences: {
       // PA-8 HARD RULE — do not weaken.
       contextIsolation: true,
@@ -92,14 +64,16 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     win.show();
   });
 
-  // Live-update the caption-button colors on OS-theme change (Phase 7). Each
-  // window subscribes to nativeTheme and re-tints its overlay; the listener is
-  // removed when the window closes so it does not leak or fire on a dead window.
-  if (process.platform === 'win32') {
-    const onThemeUpdated = (): void => applyCaptionTheme(win);
-    nativeTheme.on('updated', onThemeUpdated);
-    win.once('closed', () => nativeTheme.removeListener('updated', onThemeUpdated));
-  }
+  // Push maximized-state changes to the renderer so the custom max/restore glyph
+  // stays correct when the window is maximized/restored by ANY path (our button,
+  // a drag-region double-click, Aero Snap, Win+Up). The renderer subscribes via
+  // window.notepads.window.onMaximizeChanged.
+  const sendMaxState = (): void => {
+    if (win.isDestroyed()) return;
+    win.webContents.send(IpcChannels.WindowMaximizeChanged, win.isMaximized());
+  };
+  win.on('maximize', sendMaxState);
+  win.on('unmaximize', sendMaxState);
 
   return win;
 }

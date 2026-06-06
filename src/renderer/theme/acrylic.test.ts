@@ -8,7 +8,6 @@ import {
   ACRYLIC_VAR_TINT,
   ACRYLIC_VAR_BLUR,
   ACRYLIC_VAR_LUMINOSITY,
-  DEFAULT_TINT_OPACITY,
 } from './tokens';
 
 /**
@@ -23,9 +22,13 @@ describe('tokensForAcrylic', () => {
     expect(tokensForAcrylic('hc')).toBe(HC_ACRYLIC_TOKENS);
   });
 
-  it('tints at the UWP default panel tint opacity (0.75)', () => {
-    expect(LIGHT_ACRYLIC_TOKENS.tint).toContain(`${DEFAULT_TINT_OPACITY}`);
-    expect(DARK_ACRYLIC_TOKENS.tint).toContain(`${DEFAULT_TINT_OPACITY}`);
+  it('tints the in-page acrylic (settings pane) at 0.75', () => {
+    // The .np-acrylic surface (settings pane / toasts) keeps a 0.75 tint — it is
+    // a true backdrop-filter blur over IN-PAGE content, independent of the window
+    // background tint default (DEFAULT_TINT_OPACITY, lowered to 0.5 so the window's
+    // rgba tint doesn't compound with Electron's own acrylic material into a solid).
+    expect(LIGHT_ACRYLIC_TOKENS.tint).toContain('0.75');
+    expect(DARK_ACRYLIC_TOKENS.tint).toContain('0.75');
   });
 
   it('grounds the tint on the chrome base colors (240 light / 46 dark)', () => {

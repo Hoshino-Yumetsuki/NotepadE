@@ -79,6 +79,11 @@ const api: NotepadsApi = {
       invoke<{ isFullScreen: boolean }>(IpcChannels.WindowSetFullScreen, enabled),
     setCompactOverlay: (enabled) =>
       invoke<{ isCompactOverlay: boolean }>(IpcChannels.WindowSetCompactOverlay, enabled),
+    minimize: () => invoke<void>(IpcChannels.WindowMinimize),
+    toggleMaximize: () => invoke<{ isMaximized: boolean }>(IpcChannels.WindowToggleMaximize),
+    close: () => invoke<void>(IpcChannels.WindowClose),
+    isMaximized: () => invoke<{ isMaximized: boolean }>(IpcChannels.WindowIsMaximized),
+    onMaximizeChanged: (cb) => subscribe<boolean>(IpcChannels.WindowMaximizeChanged, cb),
     quit: () => invoke<void>(IpcChannels.WindowQuit),
   },
   dragOut: {

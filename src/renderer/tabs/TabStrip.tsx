@@ -94,6 +94,14 @@ export interface TabStripProps {
    */
   onBeginTransfer?(editorId: string): Promise<string | null>;
   onVoidDrop?(editorId: string): void;
+  /**
+   * Custom window caption controls (min/max/close), rendered FLUSH at the strip's
+   * top-right corner — the strip is the top chrome row and owns the window's right
+   * edge. Optional so the Phase-2 tab tests (no caption) are unaffected. The slot
+   * sits after the add-tab button; on Windows it replaces the (removed) OS
+   * titleBarOverlay so the buttons paint transparent over the acrylic.
+   */
+  captionSlot?: React.ReactNode;
 }
 
 /** The label a tab shows: basename of filePath, else its untitled name. */
@@ -223,7 +231,13 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition: transition ?? `transform ${TabAnimation.reorderMs}ms`,
+    // dnd-kit owns `transition` mid-drag (transform easing). At rest we compose
+    // the reorder transform-settle with the UWP `<BrushTransition/>` background
+    // fade (+ foreground), so selecting/hovering a tab cross-fades its fill
+    // instead of snapping — the missing animation the user flagged ("生硬").
+    transition:
+      transition ??
+      `transform ${TabAnimation.reorderMs}ms, background-color ${TabAnimation.brushFadeMs}ms ease, color ${TabAnimation.brushFadeMs}ms ease`,
     width,
     minWidth: TabDimensions.minWidth,
     maxWidth: TabDimensions.maxWidth,
@@ -236,6 +250,13 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
     position: 'relative',
     flex: '0 0 auto',
     background: fill,
+    // NOTE: the selected-tab elevation (left/right side shadows + the strip→editor
+    // merge) is NOT drawn here — a box-shadow on this element is clipped by the tab
+    // list's overflow (scroller) and the strip's overflow, so it never reaches the
+    // neighbors, the menu/add buttons, or the editor below. It is rendered instead
+    // by the unclipped TabElevation overlay (see TabStrip), positioned over this
+    // tab's measured rect. We only lift the active tab above its siblings here.
+    zIndex: active ? 1 : undefined,
     color: textColor,
     cursor: 'default',
     userSelect: 'none',
@@ -738,6 +759,105 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
 }
 
 /**
+ * Unclipped selected-tab elevation overlay (UWP SetsView DropShadowPanels). A
+ * box-shadow on the tab element itself is clipped by the tab-list scroller and
+ * the strip overflow, so it can never reach the neighbor tabs, the menu/add
+ * buttons, or the editor below. This overlay is instead a direct child of the
+ * (overflow:visible) strip, positioned over the active tab's measured rect, so
+ * its shadow spills freely in every direction. It paints three things:
+ *
+ *   1. A FRAME over the active tab carrying the left+right side shadow — casts
+ *      onto the recessed neighbor tabs AND the menu/add buttons beside them.
+ *   2. Two "up" shadow segments along the strip's BOTTOM edge, flanking the
+ *      active tab — the RAISED editor sheet (selected tab + editor below it) casts
+ *      a soft shadow UP onto the recessed strip controls beside it (not the other
+ *      way round: the editor is the foreground, the flanking chrome is recessed).
+ *   3. A GAP under the active tab (between the two segments): no shadow there, so
+ *      the selected tab and the editor (which share the same wash, App #app-shell)
+ *      read as ONE connected sheet — the seam disappears (the UWP merge).
+ *
+ * Pure presentation, pointer-events:none, aria-hidden. Renders nothing in HC
+ * (alpha 0) or before the active tab is measured.
+ */
+function TabElevation(props: {
+  rect: { left: number; width: number } | null;
+  tokens: TabThemeTokens;
+}): JSX.Element | null {
+  const { rect, tokens } = props;
+  if (!rect || tokens.elevationShadowAlpha <= 0) return null;
+  const stripH = TabDimensions.height + TabDimensions.topBorderThickness;
+  // The strip→content boundary band is a THIN, faint soft line — the UWP
+  // BottomEdgeShadow is a BlurRadius-10 shadow of a 1px line (opacity 0.55/0.7),
+  // i.e. a barely-there hairline, not a solid band. A previous 6px-tall gradient
+  // at the full side-frame alpha (0.30/0.45) painted a thick grey band across the
+  // whole strip — the "阴影太大 / 发灰" the user flagged. Use the dedicated low
+  // band alpha and a 3px feather instead.
+  const blur = 3;
+  const alpha = tokens.elevationBandAlpha;
+  // Darkest at the BOTTOM (the raised editor's top edge), fading UP into the
+  // recessed strip — the editor casts onto the chrome, not the chrome onto it.
+  const up = `linear-gradient(to top, rgba(0,0,0,${alpha}) 0%, transparent 100%)`;
+  // rect is already clamped to the true strip width in the measure effect, so the
+  // tab's right edge is in-bounds; the right segment runs from it to the strip's
+  // right edge via right:0 (no strip-width arithmetic needed).
+  const tabRight = rect.left + rect.width;
+  return (
+    <>
+      {/* (1) Side-shadow frame over the active tab — left+right only (no bottom),
+          so the tab connects downward to the editor. zIndex above the tabs/buttons
+          so the shadow lands ON them. */}
+      <div
+        data-testid="tab-elevation"
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: rect.left,
+          width: rect.width,
+          height: stripH,
+          pointerEvents: 'none',
+          zIndex: 4,
+          boxShadow: tokens.elevationShadow,
+        }}
+      />
+      {/* (2a) Up shadow LEFT of the active tab — sits at the strip's bottom edge,
+          cast upward by the raised editor onto the recessed chrome. */}
+      {rect.left > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: stripH - blur,
+            left: 0,
+            width: rect.left,
+            height: blur,
+            pointerEvents: 'none',
+            zIndex: 4,
+            background: up,
+          }}
+        />
+      )}
+      {/* (2b) Up shadow RIGHT of the active tab (to the strip's right edge). */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: stripH - blur,
+          left: tabRight,
+          right: 0,
+          height: blur,
+          pointerEvents: 'none',
+          zIndex: 4,
+          background: up,
+        }}
+      />
+      {/* (3) The GAP under [rect.left, tabRight] is intentionally empty — the
+          merge: selected tab + editor share a wash and are joined by no shadow. */}
+    </>
+  );
+}
+
+/**
  * Add-tab (+) button (E710) — fixed to the right of the strip. SetsView chrome:
  * shows the reveal grey on hover plus the cursor-follow radial highlight (Phase 7,
  * Task #27). HC reveal tint is transparent (no material), matching UWP HC.
@@ -780,10 +900,12 @@ function AddTabButton(props: {
         height: TabDimensions.addButtonHeight,
         flex: '0 0 auto',
         marginLeft: 2,
-        // Subtle idle affordance so it reads as a button even when the strip
-        // background ≈ the glyph; brightens on hover via the reveal grey below.
-        border: `1px solid ${tokens.topBorder}`,
-        borderRadius: 4,
+        // UWP NewSetButton is BorderThickness="0", Background="Transparent",
+        // ButtonRevealStyle — NO border or radius. (A previous "affordance" hack
+        // added a 1px border + radius:4; the user flagged it as wrong: "加号按钮
+        // 是没有边框的".) The reveal grey below + the hover wash are the only
+        // affordance, exactly like the original.
+        border: 'none',
         background: hovered ? tokens.headerHover : 'transparent',
         // Full-contrast glyph (textSelected, not the dimmed textDefault) so the +
         // is legible at rest — the previous dim color is what made it "disappear".
@@ -828,11 +950,22 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     onBeginTransfer,
     onVoidDrop,
     menu,
+    captionSlot,
   } = props;
   const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
   const tokens = tokensForTheme(resolvedTheme);
 
+  // Root strip element — the unclipped elevation overlay is measured/positioned
+  // relative to this (the overlay must be a CHILD of an overflow:visible strip so
+  // its shadow can spill onto the neighbors, the menu/add buttons, and the editor
+  // below; a box-shadow on the tab itself is clipped by the scroller + strip).
+  const stripRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  // The active tab's box {left,width} in STRIP-LOCAL px (clamped to the visible
+  // strip), or null until measured. Drives TabElevation: the side shadows hug
+  // these edges and the strip→editor "down" shadow leaves a GAP here so the
+  // selected tab merges into the editor instead of being fenced off by a line.
+  const [activeRect, setActiveRect] = useState<{ left: number; width: number } | null>(null);
   const [stripWidth, setStripWidth] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [scrollWidth, setScrollWidth] = useState(0);
@@ -844,6 +977,14 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // ->RO feedback loop that saturates the main thread (caught by the reorder
   // e2e). Layout is stable mid-drag, so skipping the remeasure is safe.
   const draggingRef = useRef(false);
+  // Mirror of draggingRef as STATE so the elevation overlay can hide itself
+  // while a drag is in flight (a ref can't trigger a re-render). The overlay is
+  // measured against the active tab's *resting* x; mid-drag that tab is
+  // translated by dnd-kit, so a frozen overlay leaves its un-shadowed merge gap
+  // stranded at the old x — the "empty bottom" hole the user saw ("拖动标签页的
+  // 时候会留下一个空出来的底"). Hiding the overlay during the drag and
+  // remeasuring on drop removes it; the moving tab carries its own fill.
+  const [dragging, setDragging] = useState(false);
 
   const closeTab = useCallback(
     (editorId: string) => {
@@ -864,26 +1005,43 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     return Math.max(TabDimensions.minWidth, Math.min(even, TabDimensions.maxWidth));
   }, [tabs.length, stripWidth]);
 
-  // Observe the list region for resize so widths + overflow stay correct.
-  // The measure is rAF-coalesced (one read per frame regardless of how many
-  // notifications fire) and only writes state that actually changed, so a
-  // resize never triggers an unbounded re-measure cascade.
+  // Observe the strip for resize so tab widths + overflow stay correct. We measure
+  // the width AVAILABLE TO THE TABS = strip content width − the fixed chrome
+  // (hamburger, scroll buttons, add button, caption slot), i.e. every direct flex
+  // child except the tab list itself, the flex spacer, and the absolutely-
+  // positioned elevation overlay. This mirrors the UWP SetsView grid where the
+  // tab column is Width="Auto" (content-sized, capped to available) and the "*"
+  // padding sits AFTER the add button — so the + hugs the last tab and slides
+  // right as tabs are added, instead of being pinned to the window edge.
+  // rAF-coalesced; only writes state that actually changed; frozen mid-drag.
   useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
+    const strip = stripRef.current;
+    if (!strip) return;
     let rafId = 0;
     let pending = false;
 
     const readAndCommit = (): void => {
       pending = false;
       if (draggingRef.current) return; // frozen during drag
+      const stripEl = stripRef.current;
       const node = listRef.current;
-      if (!node) return;
+      if (!stripEl || !node) return;
+      // Available width for the tabs = strip content width − fixed chrome.
+      let fixed = 0;
+      for (const child of Array.from(stripEl.children)) {
+        const el = child as HTMLElement;
+        if (el === node) continue; // the tab list (sized to content / available)
+        if (el.dataset.flexSpacer !== undefined) continue; // the slack-absorbing spacer
+        const pos = el.style.position || getComputedStyle(el).position;
+        if (pos === 'absolute' || pos === 'fixed') continue; // elevation overlay (out of flow)
+        fixed += el.offsetWidth;
+      }
+      const avail = Math.max(0, stripEl.clientWidth - fixed);
       const cw = node.clientWidth;
       const sw = node.scrollWidth;
       const sl = node.scrollLeft;
       // Functional updaters with equality guards: no churn when unchanged.
-      setStripWidth((prev) => (prev === cw ? prev : cw));
+      setStripWidth((prev) => (prev === avail ? prev : avail));
       setClientWidth((prev) => (prev === cw ? prev : cw));
       setScrollWidth((prev) => (prev === sw ? prev : sw));
       setScrollLeft((prev) => (prev === sl ? prev : sl));
@@ -896,8 +1054,11 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     };
 
     schedule();
+    // Observe the strip (available width) AND the list (its own resize/scroll
+    // metrics); either changing reschedules a single coalesced read.
     const ro = new ResizeObserver(schedule);
-    ro.observe(el);
+    ro.observe(strip);
+    if (listRef.current) ro.observe(listRef.current);
     return () => {
       ro.disconnect();
       if (rafId) cancelAnimationFrame(rafId);
@@ -914,6 +1075,56 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     setScrollWidth((prev) => (prev === sw ? prev : sw));
     setClientWidth((prev) => (prev === cw ? prev : cw));
   };
+
+  // Joined editorId order — a reorder changes this (without changing
+  // activeEditorId or length), so the active-tab measure effect below depends on
+  // it to remeasure the moved tab's x. Also feeds the dnd-kit SortableContext.
+  const ids = useMemo(() => tabs.map((t) => t.editorId), [tabs]);
+
+  // Measure the active tab's box in STRIP-LOCAL coordinates so the unclipped
+  // elevation overlay can hug it. Re-runs whenever anything that moves the active
+  // tab changes (selection, per-tab width, scroll offset, tab count, strip width).
+  // The active tab DOM node carries data-active="true"; we read both rects and
+  // subtract origins, then clamp to the visible strip so a tab scrolled partly
+  // out of view doesn't push the shadow past the chrome edges. rAF-coalesced and
+  // frozen mid-drag (same rationale as the resize observer above).
+  useEffect(() => {
+    if (draggingRef.current) return;
+    let raf = 0;
+    const measure = (): void => {
+      const strip = stripRef.current;
+      if (!strip) {
+        setActiveRect((p) => (p === null ? p : null));
+        return;
+      }
+      const node = strip.querySelector<HTMLElement>('[data-testid="tab"][data-active="true"]');
+      if (!node) {
+        setActiveRect((p) => (p === null ? p : null));
+        return;
+      }
+      const sb = strip.getBoundingClientRect();
+      const tb = node.getBoundingClientRect();
+      // Clamp the tab box to the strip's own width (it may be scrolled past the
+      // menu/add buttons under overflow). If it's fully out of view, hide it.
+      const rawLeft = tb.left - sb.left;
+      const left = Math.max(0, rawLeft);
+      const right = Math.min(sb.width, rawLeft + tb.width);
+      const width = Math.max(0, right - left);
+      const next = width <= 0 ? null : { left, width };
+      setActiveRect((prev) =>
+        prev && next && prev.left === next.left && prev.width === next.width
+          ? prev
+          : (next ?? (prev === null ? prev : null)),
+      );
+    };
+    raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+    // `ids` (the joined editorId order) is included so a REORDER — which moves the
+    // active tab without changing activeEditorId/length — remeasures its new x.
+    // `dragging` is included so dropping (dragging:true→false) re-runs the effect
+    // and remeasures the active tab at its new resting position.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEditorId, tabWidth, scrollLeft, tabs.length, stripWidth, resolvedTheme, ids, dragging]);
 
   const scrollableWidth = Math.max(0, scrollWidth - clientWidth);
   // Chevrons show only when scrollableWidth exceeds the threshold (UWP: 65px).
@@ -933,10 +1144,12 @@ export function TabStrip(props: TabStripProps): JSX.Element {
 
   const onDragStart = (): void => {
     draggingRef.current = true;
+    setDragging(true);
   };
 
   const onDragEnd = (e: DragEndEvent): void => {
     draggingRef.current = false;
+    setDragging(false);
     const { active, over } = e;
     if (over && active.id !== over.id) {
       store.reorderById(String(active.id), String(over.id));
@@ -945,6 +1158,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
 
   const onDragCancel = (): void => {
     draggingRef.current = false;
+    setDragging(false);
   };
 
   // Build the context-menu action closures for a given tab.
@@ -978,8 +1192,6 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     [store],
   );
 
-  const ids = useMemo(() => tabs.map((t) => t.editorId), [tabs]);
-
   // Stable per-tab callbacks so the memoized SortableTab isn't forced to
   // re-render by a fresh closure on every parent render. Each only closes over
   // stable refs (store / the setRenamingId setter), so useCallback with an empty
@@ -1001,6 +1213,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
 
   return (
     <div
+      ref={stripRef}
       data-testid="tab-strip"
       data-theme={resolvedTheme}
       data-drag-region
@@ -1009,9 +1222,24 @@ export function TabStrip(props: TabStripProps): JSX.Element {
           display: 'flex',
           alignItems: 'stretch',
           height: TabDimensions.height + TabDimensions.topBorderThickness,
+          // border-box so the 1px top border is INSIDE the height: the flex content
+          // area is exactly TabDimensions.height (32px), so the tabs fill it with no
+          // leftover strip-background sliver under them. With the default content-box
+          // the 32px tabs left a 1px strip line at the bottom edge — the visible
+          // seam between the selected tab and the editor (the tab stopped 1px short
+          // of the content sheet). border-box closes that gap.
+          boxSizing: 'border-box',
           background: tokens.stripBackground,
           borderTop: `${TabDimensions.topBorderThickness}px solid ${tokens.topBorder}`,
-          overflow: 'hidden',
+          // overflow:visible (not hidden) so the unclipped TabElevation overlay can
+          // cast the selected-tab shadow DOWN onto the editor and sideways onto the
+          // menu/add buttons. The inner tab-list keeps its own overflowX:auto, so
+          // tabs still scroll/clip there — only the absolutely-positioned elevation
+          // overlay escapes. position:relative + a z-index above #app-shell (which
+          // is z:auto) lets that downward shadow land on the editor surface below.
+          position: 'relative',
+          overflow: 'visible',
+          zIndex: 3,
           // Expose the accent so the selection bar + modified dot inherit it
           // (HC maps this to the Highlight system color).
           ['--tab-accent' as string]: tokens.accent,
@@ -1039,8 +1267,15 @@ export function TabStrip(props: TabStripProps): JSX.Element {
         style={{
           display: 'flex',
           alignItems: 'stretch',
-          flex: '1 1 auto',
+          // Content-sized but capped to the available width (UWP tab column is
+          // Width="Auto" + ConstrainColumn): the list is only as wide as its tabs
+          // until they exceed the space, then it caps and scrolls internally. This
+          // is what lets the add button sit flush against the last tab (the "*"
+          // spacer AFTER the + absorbs the remaining width) instead of the list
+          // stretching full-width and pushing the + to the window edge.
+          flex: '0 1 auto',
           minWidth: 0,
+          maxWidth: stripWidth > 0 ? stripWidth : undefined,
           overflowX: 'auto',
           overflowY: 'hidden',
           scrollbarWidth: 'none',
@@ -1090,8 +1325,42 @@ export function TabStrip(props: TabStripProps): JSX.Element {
         />
       )}
 
-      {/* Add-tab button (E710) — fixed to the right of the strip. */}
+      {/* Add-tab button (E710) — sits flush against the last tab (UWP
+          SetsActionHeader, immediately after the Width="Auto" tab column). */}
       <AddTabButton tokens={tokens} revealTheme={resolvedTheme} onNewTab={onNewTab} />
+
+      {/* Flex spacer (UWP's Width="*" padding column, placed AFTER the add button):
+          absorbs the remaining strip width so the + hugs the tabs and the caption
+          slot is pushed to the window's right edge. It is also the draggable empty
+          band of the title bar. Excluded from the available-width sum (data-flex-
+          spacer) so it never feeds back into the tab sizing. */}
+      <div data-flex-spacer="true" style={{ flex: '1 1 auto', minWidth: 0 }} />
+
+      {/* Custom window caption controls (min/max/close), flush at the window's
+          top-right corner. Pulled up over the strip's 1px top border so the
+          buttons span the full caption height from y=0 (matching the OS caption
+          band they replace). no-drag is set on the buttons themselves. */}
+      {captionSlot && (
+        <div
+          data-testid="caption-slot"
+          style={{
+            flex: '0 0 auto',
+            display: 'flex',
+            alignItems: 'stretch',
+            marginTop: -TabDimensions.topBorderThickness,
+          }}
+        >
+          {captionSlot}
+        </div>
+      )}
+
+      {/* Unclipped selected-tab elevation (side shadows + strip→editor merge).
+          Last child so it paints over the tabs/buttons; positioned over the
+          measured active-tab rect. Hidden mid-drag (the dragged tab is
+          translated away from the measured rect, so a frozen overlay would
+          strand its merge gap as an "empty bottom" hole); remeasured on drop.
+          Renders nothing in HC or before measurement. */}
+      {!dragging && <TabElevation rect={activeRect} tokens={tokens} />}
     </div>
   );
 }

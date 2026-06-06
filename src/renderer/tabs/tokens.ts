@@ -113,6 +113,30 @@ export interface TabThemeTokens {
   textDefault: string;
   /** Selected tab text (higher contrast). */
   textSelected: string;
+  /**
+   * Selected-tab elevation shadow (box-shadow value, left+right edges only — no
+   * bottom, so the tab merges into the content below). UWP SetsView turns ON the
+   * left/right DropShadowPanels and OFF the bottom one for the selected state.
+   * Applied to the unclipped elevation FRAME overlay (TabStrip), not the tab box
+   * itself (a tab box-shadow is clipped by the scroller/strip overflow).
+   */
+  elevationShadow: string;
+  /**
+   * Black alpha shared by the elevation perimeter — the SAME value baked into
+   * `elevationShadow` above. The strip→editor "down" shadow segments that flank
+   * the selected tab (TabStrip) build their gradient from this so the elevated
+   * sheet (selected tab + editor) casts one coherent shadow on all sides. 0 in HC.
+   */
+  elevationShadowAlpha: number;
+  /**
+   * Peak alpha for the strip→content boundary band (the soft up-shadow that
+   * flanks the active tab along the strip's bottom edge). MUCH fainter than the
+   * side-frame alpha: the UWP BottomEdgeShadow is a BlurRadius-10 shadow of a 1px
+   * line — a barely-there soft line, not a solid band. Using the full
+   * `elevationShadowAlpha` here painted a thick grey band across the whole strip
+   * ("阴影太大 / 发灰"); this dedicated, lower value keeps it to "a little bit". 0 in HC.
+   */
+  elevationBandAlpha: number;
   /** Accent color for the selection bar + modified dot (OS accent / Highlight). */
   accent: string;
 }
@@ -131,6 +155,11 @@ export const LIGHT_TOKENS: TabThemeTokens = {
   topBorder: 'rgba(0, 0, 0, 0.10)',
   textDefault: 'rgba(0, 0, 0, 0.60)',
   textSelected: 'rgba(0, 0, 0, 0.90)',
+  // Left+right drop shadow (no bottom) — UWP SideEdgeShadow blur 8, opacity 0.55.
+  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.30), 3px 0 8px -2px rgba(0,0,0,0.30)',
+  elevationShadowAlpha: 0.3,
+  // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.55).
+  elevationBandAlpha: 0.08,
   accent: '#0078D4',
 };
 
@@ -143,6 +172,11 @@ export const DARK_TOKENS: TabThemeTokens = {
   topBorder: 'rgba(255, 255, 255, 0.10)',
   textDefault: 'rgba(255, 255, 255, 0.60)',
   textSelected: 'rgba(255, 255, 255, 0.90)',
+  // Left+right drop shadow (no bottom) — UWP SideEdgeShadow blur 8, opacity 0.7.
+  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.45), 3px 0 8px -2px rgba(0,0,0,0.45)',
+  elevationShadowAlpha: 0.45,
+  // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.7).
+  elevationBandAlpha: 0.12,
   accent: '#0078D4',
 };
 
@@ -162,6 +196,10 @@ export const HC_TOKENS: TabThemeTokens = {
   topBorder: 'CanvasText',
   textDefault: 'CanvasText',
   textSelected: 'HighlightText',
+  // HC: no elevation material (flat forced-colors chrome, matches UWP HC).
+  elevationShadow: 'none',
+  elevationShadowAlpha: 0,
+  elevationBandAlpha: 0,
   accent: 'Highlight',
 };
 
@@ -183,4 +221,10 @@ export const TabAnimation = {
   reorderMs: 240,
   /** Settle-back to NotDragging / NoReorderHint (0.2s). */
   settleMs: 200,
+  /**
+   * Tab background fade (UWP LayoutRoot `<BrushTransition/>`, default 0.167s).
+   * The selected/hover/normal fills cross-fade instead of snapping, so switching
+   * or hovering a tab animates instead of reading "生硬" (stiff/abrupt).
+   */
+  brushFadeMs: 167,
 } as const;

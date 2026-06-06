@@ -33,6 +33,24 @@ test('app mounts: shell + tab strip + editor render with no page error', async (
   await expect(page.locator('[data-testid="main-menu-button"]')).toBeVisible();
   await expect(page.locator('.cm-editor')).toBeVisible();
 
+  // Custom caption controls (Windows frameless): the min/max/close cluster
+  // replaces the OS titleBarOverlay, so it must actually mount + be wired. On
+  // non-Windows the native frame draws them and the slot is absent — assert
+  // conditionally on the real platform.
+  if (process.platform === 'win32') {
+    await expect(page.locator('[data-testid="caption-minimize"]')).toBeVisible();
+    await expect(page.locator('[data-testid="caption-maximize"]')).toBeVisible();
+    await expect(page.locator('[data-testid="caption-close"]')).toBeVisible();
+    // Maximize toggle round-trips through MAIN and reflects back on the glyph
+    // (aria-label flips Maximize→Restore). Proves the IPC chain + onMaximizeChanged.
+    const maxBtn = page.locator('[data-testid="caption-maximize"]');
+    const before = await maxBtn.getAttribute('aria-label');
+    await maxBtn.click();
+    await expect(maxBtn).not.toHaveAttribute('aria-label', before ?? '');
+    // Restore so the window state is clean for any later spec sharing the app.
+    await maxBtn.click();
+  }
+
   const mounted = await page.evaluate(() => {
     const root = document.getElementById('root');
     return {

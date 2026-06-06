@@ -38,6 +38,10 @@ import {
   windowBrokerRequest,
   windowSetFullScreen,
   windowSetCompactOverlay,
+  windowMinimize,
+  windowToggleMaximize,
+  windowClose,
+  windowIsMaximized,
   windowQuit,
 } from './window.js';
 import { dragOutBegin, dragOutComplete } from './dragout.js';
@@ -89,6 +93,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.WindowSetCompactOverlay, (e, enabled: boolean) =>
     windowSetCompactOverlay(e, enabled),
   );
+  // Custom caption controls (replace the OS titleBarOverlay — transparent buttons).
+  ipcMain.handle(IpcChannels.WindowMinimize, (e) => windowMinimize(e));
+  ipcMain.handle(IpcChannels.WindowToggleMaximize, (e) => windowToggleMaximize(e));
+  ipcMain.handle(IpcChannels.WindowClose, (e) => windowClose(e));
+  ipcMain.handle(IpcChannels.WindowIsMaximized, (e) => windowIsMaximized(e));
   ipcMain.handle(IpcChannels.WindowQuit, () => windowQuit());
 
   // --- dragOut (Phase 6) ---

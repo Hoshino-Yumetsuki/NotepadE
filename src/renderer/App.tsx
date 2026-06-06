@@ -18,6 +18,7 @@ import { SettingsSurface } from './settings/SettingsSurface';
 import { installSettingsTestHook } from './settings/settingsTestHook';
 import { appBackgroundTint } from './theme/tokens';
 import { edgeShadowStyle } from './theme/shadow';
+import { tokensForTheme } from './tabs/tokens';
 import {
   applyAdopt,
   applyRelease,
@@ -35,6 +36,7 @@ import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
 import { CloseReminderDialog } from './CloseReminderDialog';
+import { CaptionButtons } from './chrome/CaptionButtons';
 import { useT } from './i18n';
 
 /**
@@ -65,6 +67,12 @@ export function App(): JSX.Element {
   // NO reload. Replaces the Phase-2 hardcoded web{Light,Dark}Theme selection.
   const appTheme = useAppTheme();
   const resolvedTheme = appTheme.resolved;
+
+  // The window is frameless only on Windows (window-factory titleBarStyle:'hidden'
+  // with NO OS titleBarOverlay); there we render our own transparent caption
+  // controls. On macOS/Linux the native frame draws them, so the slot is omitted.
+  // Computed once (the platform never changes); PA-8: read navigator, not process.
+  const isFramelessWin = useMemo(() => navigator.userAgent.includes('Windows'), []);
 
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
   // status-bar visibility (showStatusBar), and the theme resolution above.
@@ -834,18 +842,28 @@ export function App(): JSX.Element {
         onBeginTransfer={onBeginTransfer}
         onVoidDrop={onVoidDrop}
         menu={menuCommands}
+        captionSlot={isFramelessWin ? <CaptionButtons theme={resolvedTheme} /> : undefined}
       />
-      <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
-        {/* Edge-shadow elevation (Phase 7, Task #28): absolute, out-of-flow casters
-            overlaid on the editor region. 'down' = tab strip elevates onto editor;
-            'up' = status bar elevates onto editor. Anchored inside #app-shell so they
-            never re-flow the strip/bar flex boxes — keeping the Gate-2/Gate-4 golden
-            captures pixel-identical. Inert (height 0) in HC. */}
-        <div
-          data-testid="tab-strip-shadow"
-          aria-hidden
-          style={edgeShadowStyle(resolvedTheme, 'down')}
-        />
+      <div
+        id="app-shell"
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          position: 'relative',
+          // Merge with the selected tab: the editor area carries the SAME wash the
+          // selected tab does (tab tokens headerSelected), so the selected tab and
+          // the content read as one connected sheet — the seam disappears (UWP
+          // SetsView: selected-tab brush == content brush). Unselected tabs are
+          // transparent, so they sit visually recessed against this washed content.
+          background: tokensForTheme(resolvedTheme).headerSelected,
+        }}
+      >
+        {/* Status-bar elevation caster (status bar lifts onto the editor from
+            below). The tab-strip 'down' caster was removed: it drew a full-width
+            shadow line across the WHOLE strip→editor boundary, which separated the
+            selected tab from the content instead of merging them. The selected
+            tab's own left/right box-shadow now provides its elevation (TabStrip),
+            and the shared wash above seals the seam. */}
         {settings.showStatusBar ? (
           <div
             data-testid="status-bar-shadow"

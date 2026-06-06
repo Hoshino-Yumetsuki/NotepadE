@@ -70,6 +70,15 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   // Shadow-window (secondary instance) hint title — awaiting-translation.
   StatusBar_ShadowWindowHint: { 'en-US': 'This is a shadow window' },
 
+  // Custom caption-button tooltips (web port) — no UWP .resw origin: the UWP app
+  // used OS-drawn title-bar buttons (ApplyThemeForTitleBarButtons) whose tooltips
+  // the system supplied. The Electron port draws its own transparent caption
+  // buttons (CaptionButtons.tsx) so it declares the tooltips/aria-labels here.
+  Caption_Minimize: { 'en-US': 'Minimize', 'de-DE': 'Minimieren', 'ja-JP': '最小化' },
+  Caption_Maximize: { 'en-US': 'Maximize', 'de-DE': 'Maximieren', 'ja-JP': '最大化' },
+  Caption_Restore: { 'en-US': 'Restore', 'de-DE': 'Wiederherstellen', 'ja-JP': '元に戻す' },
+  Caption_Close: { 'en-US': 'Close', 'de-DE': 'Schließen', 'ja-JP': '閉じる' },
+
   // ---------------------------------------------------------------------------
   // Settings-shell chrome (web port) — no UWP .resw origin. The UWP app used a
   // NavigationView whose section labels reuse the per-page *Page_Title.Content

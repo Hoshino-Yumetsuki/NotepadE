@@ -37,6 +37,15 @@ export const IpcChannels = {
   WindowBrokerRequest: 'notepads:window:brokerRequest',
   WindowSetFullScreen: 'notepads:window:setFullScreen',
   WindowSetCompactOverlay: 'notepads:window:setCompactOverlay',
+  // Custom caption controls (replaces the OS titleBarOverlay so the buttons are
+  // transparent and the acrylic shows through — 1:1 with the UWP
+  // ApplyThemeForTitleBarButtons transparent-button scheme).
+  WindowMinimize: 'notepads:window:minimize',
+  WindowToggleMaximize: 'notepads:window:toggleMaximize',
+  WindowClose: 'notepads:window:close',
+  WindowIsMaximized: 'notepads:window:isMaximized',
+  /** MAIN→renderer push: window maximized state changed (drives the restore glyph). */
+  WindowMaximizeChanged: 'notepads:window:maximizeChanged',
   WindowQuit: 'notepads:window:quit',
 
   // dragOut

@@ -312,7 +312,10 @@ export const DEFAULT_SETTINGS: Settings = {
   searchEngine: 'bing',
   customSearchUrl: '',
   themeMode: 'system',
-  tintOpacity: 0.75,
+  // 0.5 (not UWP's 0.75): this rgba tint layers OVER Electron's own acrylic
+  // material, so a high value compounds to a near-solid window. 0.5 keeps the
+  // frosted wallpaper visible. See theme/tokens.ts appBackgroundTint.
+  tintOpacity: 0.5,
   useWindowsAccentColor: true,
   customAccentColor: '',
   showStatusBar: true,
@@ -344,6 +347,25 @@ export interface WindowApi {
   brokerRequest(args: { paths: string[]; forceNewWindow?: boolean }): Promise<Result<void>>;
   setFullScreen(enabled: boolean): Promise<Result<{ isFullScreen: boolean }>>;
   setCompactOverlay(enabled: boolean): Promise<Result<{ isCompactOverlay: boolean }>>;
+  /**
+   * Custom caption controls (replace the OS titleBarOverlay so the buttons are
+   * transparent and the window acrylic shows through them — 1:1 with the UWP
+   * ApplyThemeForTitleBarButtons transparent-button scheme). MAIN owns the
+   * BrowserWindow (PA-8); the renderer's in-chrome buttons drive these.
+   */
+  minimize(): Promise<Result<void>>;
+  /** Toggle maximize/restore; resolves with the resulting maximized flag. */
+  toggleMaximize(): Promise<Result<{ isMaximized: boolean }>>;
+  close(): Promise<Result<void>>;
+  /** Current maximized flag (used to seed the restore glyph on mount). */
+  isMaximized(): Promise<Result<{ isMaximized: boolean }>>;
+  /**
+   * Subscribe to maximized-state changes (MAIN pushes on the window's
+   * maximize/unmaximize events) so the max/restore glyph stays in sync when the
+   * user double-clicks the drag region, snaps, or uses Win+Up. Returns an
+   * unsubscribe fn.
+   */
+  onMaximizeChanged(cb: (isMaximized: boolean) => void): () => void;
   /**
    * Quit the whole application (UWP ExitApp / ExitWhenLastTabClosed). Used when the
    * last tab is closed and `settings.exitWhenLastTabClosed` is on. MAIN owns the
