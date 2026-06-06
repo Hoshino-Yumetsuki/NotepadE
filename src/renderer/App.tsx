@@ -295,39 +295,148 @@ export function App(): JSX.Element {
   // cross-process drag. PA-8-clean (only window.notepads + store).
   useEffect(() => installTransferTestHook(store, transferSource.current), [store]);
 
+  // Open an absolute path into a tab (the shared open primitive). If the path is
+  // ALREADY open in this window, focus that tab instead of opening a duplicate
+  // (UWP focuses the existing set) — two editors on one path would let the second
+  // save silently clobber the first (edit-loss). Otherwise read via MAIN
+  // (file.open), seed a fresh tab with the authoritative labels, and seed the
+  // diff/dirty baseline BEFORE setDoc so the doc-change listener treats the loaded
+  // text as the clean baseline (Issue 3) rather than '' (which would mark it
+  // dirty). Used by activation-open, the Open dialog (Ctrl+O), the Open Recent
+  // submenu, and drag-drop — every path that opens a file on disk.
+  const openPathIntoTab = useCallback(
+    (path: string): void => {
+      // Focus an existing tab on the same path before opening a duplicate.
+      // Windows paths are case-insensitive, so compare case-folded there; the
+      // platform is read from navigator.userAgent (PA-8: no node `process`).
+      const winNT = navigator.userAgent.includes('Windows');
+      const norm = (p: string): string => (winNT ? p.toLowerCase() : p);
+      const target = norm(path);
+      const existing = store.tabs.find(
+        (tab) => tab.filePath !== null && norm(tab.filePath) === target,
+      );
+      if (existing) {
+        store.activate(existing.editorId);
+        return;
+      }
+      void window.notepads.file.open(path).then((res) => {
+        if (!res.ok) {
+          // Read failed (deleted / locked / permission denied). No renderer
+          // notification surface exists yet (doSave/saveAs also surface nothing
+          // on error — App.tsx); reporting is tracked separately by the lead.
+          return;
+        }
+        const id = store.newTab({
+          filePath: res.data.filePath,
+          encodingId: res.data.encodingId,
+          eolId: res.data.eolId,
+          activate: true,
+        });
+        // The new tab's editor mounts on a later render; seed once its handle
+        // exists. Call synchronously first, then setTimeout(0)-retry while the
+        // handle is null — NOT rAF, which never fires in a non-compositing
+        // window (the Playwright primary window, or a minimized/occluded one)
+        // and would leave the doc empty. setDoc tolerates an unmounted view.
+        const seedOpened = (): void => {
+          const handle = editorHandles.current.get(id);
+          if (handle) handle.setDoc(res.data.decodedText);
+          else setTimeout(seedOpened, 0);
+        };
+        lastSavedTextRef.current.set(id, res.data.decodedText);
+        seedOpened();
+        if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
+      });
+    },
+    [store],
+  );
+
+  // Open dialog (Ctrl+O + menu, UWP MainMenuButton_OpenButton): MAIN owns the
+  // native picker (PA-8); we open each chosen path via the shared primitive. A
+  // cancelled picker resolves ok with [] — treated as a no-op.
+  const doOpen = useCallback((): void => {
+    void window.notepads.file.openDialog().then((res) => {
+      if (!res.ok) return;
+      for (const path of res.data) openPathIntoTab(path);
+    });
+  }, [openPathIntoTab]);
+
+  // New Window (Ctrl+Shift+N + menu, UWP MenuCreateNewWindowButton): ask the
+  // broker to spawn a fresh empty window. MAIN owns window lifecycle (PA-8).
+  const doNewWindow = useCallback((): void => {
+    void window.notepads.window.brokerRequest({ paths: [], forceNewWindow: true });
+  }, []);
+
+  // Open / New Window accelerators (match the existing Ctrl+S effect style):
+  // Ctrl+O opens the native picker, Ctrl+Shift+N spawns a new window. Bare
+  // chords only — Ctrl+Shift+N must not collide with Ctrl+N new-tab (which
+  // requires !shift in useTabKeyboard).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        (e.key === 'o' || e.key === 'O')
+      ) {
+        e.preventDefault();
+        doOpen();
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        !e.altKey &&
+        (e.key === 'n' || e.key === 'N')
+      ) {
+        e.preventDefault();
+        doNewWindow();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doOpen, doNewWindow]);
+
   // App-window activation (Workstream 6.A): a broker redirect/spawn delivers the
-  // file paths to open into THIS window. Open each via file.open into a new tab.
+  // file paths to open into THIS window. Open each via the shared primitive.
   useEffect(() => {
     const off = window.notepads.app.onActivation((event) => {
-      for (const path of event.paths) {
-        void window.notepads.file.open(path).then((res) => {
-          if (!res.ok) return;
-          const id = store.newTab({
-            filePath: res.data.filePath,
-            encodingId: res.data.encodingId,
-            eolId: res.data.eolId,
-            activate: true,
-          });
-          // The new tab's editor mounts on a later render; seed once its handle
-          // exists. Call synchronously first, then setTimeout(0)-retry while the
-          // handle is null — NOT rAF, which never fires in a non-compositing
-          // window (the Playwright primary window, or a minimized/occluded one)
-          // and would leave the doc empty. setDoc tolerates an unmounted view.
-          const seedActivation = (): void => {
-            const handle = editorHandles.current.get(id);
-            if (handle) handle.setDoc(res.data.decodedText);
-            else setTimeout(seedActivation, 0);
-          };
-          // Baseline BEFORE setDoc so the doc-change listener sees the loaded text
-          // as the clean baseline (Issue 3) rather than '' (which marks it dirty).
-          lastSavedTextRef.current.set(id, res.data.decodedText);
-          seedActivation();
-          if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
-        });
-      }
+      for (const path of event.paths) openPathIntoTab(path);
     });
     return off;
-  }, [store]);
+  }, [openPathIntoTab]);
+
+  // Drag-drop open (UWP NotepadsMainPage Drop): dropping OS files onto the window
+  // opens each as a tab. The renderer can't read File.path under the sandbox, so
+  // each File is resolved to its absolute path via the preload webUtils helper
+  // (window.notepads.paths.forFile — PA-8: webUtils lives in preload, not here).
+  // CRITICAL: scope to OS-file drops only (dataTransfer.types includes 'Files')
+  // so this never intercepts the dnd-kit intra-strip reorder (pointer-driven, no
+  // dataTransfer) or the cross-window tab-transfer token drag (which carries
+  // 'application/x-notepads-token', NOT 'Files'). preventDefault on dragover so
+  // the browser's default "navigate to file" is suppressed and drop fires.
+  useEffect(() => {
+    const hasOsFiles = (e: DragEvent): boolean =>
+      Array.from(e.dataTransfer?.types ?? []).includes('Files');
+    const onDragOver = (e: DragEvent): void => {
+      if (!hasOsFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const onDrop = (e: DragEvent): void => {
+      if (!hasOsFiles(e)) return;
+      e.preventDefault();
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      for (const file of Array.from(files)) {
+        const path = window.notepads.paths.forFile(file);
+        if (path) openPathIntoTab(path);
+      }
+    };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [openPathIntoTab]);
 
   // Actually remove a tab and drop its external-modification baseline (Lane C,
   // Gate-4): the per-editor mtime ledger must not leak across a closed editorId.
@@ -636,12 +745,11 @@ export function App(): JSX.Element {
   }, [doSave, store]);
 
   // Each entry reuses the SAME handler the keyboard accelerators already drive:
-  // New→store.newTab, Find/Replace→the find bar's openFindBar, Full Screen→F11,
-  // CompactOverlay→F12, Print/Print All→the print host (Ctrl+P / Ctrl+Shift+P),
-  // Settings→the settings surface. Commands with no renderer implementation yet
-  // (New Window, Open dialog, Save/Save As/Save All) are left undefined so
-  // TabStrip renders them disabled — keeping the menu structure 1:1 with the UWP
-  // MainMenuButton flyout. See the per-item TODOs.
+  // New→store.newTab, Open→doOpen (Ctrl+O), New Window→doNewWindow (Ctrl+Shift+N),
+  // Find/Replace→the find bar's openFindBar, Full Screen→F11, CompactOverlay→F12,
+  // Print/Print All→the print host (Ctrl+P / Ctrl+Shift+P), Settings→the settings
+  // surface, Save/Save As/Save All→doSave/doSaveAll. onOpenRecent feeds the
+  // TabStrip Open Recent submenu (it fetches recent.list itself on flyout open).
   const menuCommands = useMemo(
     () => ({
       onNew: () => store.newTab(),
@@ -666,8 +774,14 @@ export function App(): JSX.Element {
       onSaveAll: () => {
         void doSaveAll();
       },
-      // TODO: wire these once their renderer commands exist.
-      // onNewWindow / onOpen
+      // Open dialog (Ctrl+O) + New Window (Ctrl+Shift+N) — drive the same
+      // doOpen/doNewWindow the accelerators use. Providing these auto-enables the
+      // matching disabled={!commands.onOpen/onNewWindow} MenuItems in TabStrip.
+      onOpen: doOpen,
+      onNewWindow: doNewWindow,
+      // Open Recent submenu (TabStrip fetches the list on flyout open via
+      // recent.list and opens each entry via this shared primitive).
+      onOpenRecent: openPathIntoTab,
     }),
     [
       store,
@@ -678,6 +792,9 @@ export function App(): JSX.Element {
       doPrintAll,
       doSave,
       doSaveAll,
+      doOpen,
+      doNewWindow,
+      openPathIntoTab,
     ],
   );
 

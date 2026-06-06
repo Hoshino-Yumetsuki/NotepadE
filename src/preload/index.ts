@@ -4,7 +4,7 @@
  * exposed to the renderer; every method wraps ipcRenderer.invoke / .on here.
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { IpcChannels } from '../shared/ipc-channels.js';
 import type {
   NotepadsApi,
@@ -20,6 +20,7 @@ import type {
   AnsiEncodingEntry,
   OpenedFile,
   SaveResult,
+  RecentEntry,
   EncodingId,
   EolId,
   Unsubscribe,
@@ -39,11 +40,21 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): Unsubscribe {
 const api: NotepadsApi = {
   file: {
     open: (path) => invoke<OpenedFile>(IpcChannels.FileOpen, path),
+    openDialog: () => invoke<string[]>(IpcChannels.FileOpenDialog),
     save: (args: SaveArgs) => invoke<SaveResult>(IpcChannels.FileSave, args),
     saveAs: (args: SaveAsArgs) => invoke<SaveResult>(IpcChannels.FileSaveAs, args),
     reloadFromDisk: (path) => invoke<OpenedFile>(IpcChannels.FileReloadFromDisk, path),
     revalidatePath: (path) =>
       invoke<{ exists: boolean; dateModifiedMs: number }>(IpcChannels.FileRevalidatePath, path),
+  },
+  recent: {
+    list: () => invoke<RecentEntry[]>(IpcChannels.RecentList),
+    clear: () => invoke<void>(IpcChannels.RecentClear),
+  },
+  paths: {
+    // webUtils.getPathForFile is synchronous and lives ONLY here in preload (PA-8);
+    // the renderer's drop handler passes the dropped File and gets back its path.
+    forFile: (file: File) => webUtils.getPathForFile(file),
   },
   encoding: {
     listAnsi: () => invoke<AnsiEncodingEntry[]>(IpcChannels.EncodingListAnsi),

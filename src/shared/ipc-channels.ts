@@ -9,10 +9,15 @@
 export const IpcChannels = {
   // file
   FileOpen: 'notepads:file:open',
+  FileOpenDialog: 'notepads:file:openDialog',
   FileSave: 'notepads:file:save',
   FileSaveAs: 'notepads:file:saveAs',
   FileReloadFromDisk: 'notepads:file:reloadFromDisk',
   FileRevalidatePath: 'notepads:file:revalidatePath',
+
+  // recent (in-app MRU; distinct from the OS jump list)
+  RecentList: 'notepads:recent:list',
+  RecentClear: 'notepads:recent:clear',
 
   // encoding
   EncodingListAnsi: 'notepads:encoding:listAnsi',

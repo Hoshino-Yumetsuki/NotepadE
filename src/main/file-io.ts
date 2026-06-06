@@ -20,6 +20,7 @@ import type {
 import { decodeBytes, decodeBytesWith, encodeText } from './encoding.js';
 import { detectEol, applyEol } from './eol.js';
 import { addRecentDocument } from './shell.js';
+import { addRecent } from './mru.js';
 
 /** Cache of last-known encoding/EOL per path so save can reuse them. */
 const fileMeta = new Map<string, { encodingId: EncodingId; eolId: EolId }>();
@@ -37,6 +38,9 @@ export async function openFile(path: string): Promise<Result<OpenedFile>> {
     fileMeta.set(path, { encodingId, eolId });
     // Surface the opened file in the OS Jump List / Recents (UWP JumpListService).
     addRecentDocument(path);
+    // Mirror it into the in-app MRU list (UWP MRUService). Fire-and-forget: the
+    // recent list is a nicety and must never delay/break the open.
+    void addRecent(path);
     return {
       ok: true,
       data: {
@@ -55,6 +59,35 @@ export async function openFile(path: string): Promise<Result<OpenedFile>> {
 
 export async function reloadFromDisk(path: string): Promise<Result<OpenedFile>> {
   return openFile(path);
+}
+
+/**
+ * Prompt for files to open via the native open dialog (multi-select; filters:
+ * Text .txt + All Files). Returns the chosen ABSOLUTE paths, or `[]` on cancel —
+ * cancellation is a normal success (the renderer treats `[]` as a no-op), unlike
+ * saveAs where a cancel is surfaced as an error. The renderer opens each returned
+ * path via `file.open`. PA-8: the dialog lives in MAIN; the renderer never sees it.
+ */
+export async function openFileDialog(): Promise<Result<string[]>> {
+  try {
+    const focused = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+    const options: Electron.OpenDialogOptions = {
+      title: 'Open',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Text Documents', extensions: ['txt'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    };
+    const picked = focused
+      ? await dialog.showOpenDialog(focused, options)
+      : await dialog.showOpenDialog(options);
+
+    if (picked.canceled) return { ok: true, data: [] };
+    return { ok: true, data: picked.filePaths };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
 }
 
 /**
@@ -160,6 +193,9 @@ async function writeShadowToPath(
 
   const stats = await stat(filePath);
   fileMeta.set(filePath, { encodingId, eolId });
+  // Mirror the saved file into the in-app MRU list (UWP MRUService fed save too).
+  // Fire-and-forget: persistence of the recent list must never break the save.
+  void addRecent(filePath);
   return { filePath, dateModifiedMs: stats.mtimeMs, encodingId, eolId };
 }
 

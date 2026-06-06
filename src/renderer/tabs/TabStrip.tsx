@@ -20,6 +20,7 @@ import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dn
 import { CSS } from '@dnd-kit/utilities';
 import type { TabState } from './types';
 import type { TabsStore } from './useTabsStore';
+import type { RecentEntry } from '@shared/ipc-contract';
 import { TabContextMenu } from './TabContextMenu';
 import {
   TabGlyph,
@@ -116,6 +117,14 @@ export interface MainMenuCommands {
   onNewWindow?: () => void;
   /** TODO: file-open dialog (Ctrl+O) — no renderer picker yet → disabled. */
   onOpen?: () => void;
+  /**
+   * Open Recent (UWP MenuOpenRecentlyUsedFileButton submenu). When provided, the
+   * MainMenu renders an "Open Recent" submenu populated from `recent.list()`
+   * (fetched when the flyout opens); selecting an entry opens its path. The list
+   * itself is fetched by the MainMenu via window.notepads.recent — this callback
+   * just opens one chosen absolute path (the App's shared open primitive).
+   */
+  onOpenRecent?: (path: string) => void;
   /** TODO: save active tab (Ctrl+S) — no renderer save handler yet → disabled. */
   onSave?: () => void;
   /** TODO: save-as (Ctrl+Shift+S) — no renderer save-as handler yet → disabled. */
@@ -563,12 +572,34 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
   const { tokens, commands } = props;
   const { t } = useT();
   const [hovered, setHovered] = useState(false);
+  // Recent-files list for the Open Recent submenu. Fetched from MAIN each time the
+  // flyout opens (window.notepads.recent.list — most-recent-first, already pruned)
+  // so it reflects files opened/saved since the last open. PA-8: window.notepads.*
+  const [recent, setRecent] = useState<RecentEntry[]>([]);
+  const onOpenRecent = commands.onOpenRecent;
+  const refreshRecent = useCallback((): void => {
+    // .catch so an IPC channel error doesn't surface as an unhandled rejection;
+    // fall back to an empty list (the submenu trigger then shows disabled).
+    void window.notepads.recent
+      .list()
+      .then((res) => {
+        if (res.ok) setRecent(res.data);
+        else setRecent([]);
+      })
+      .catch(() => setRecent([]));
+  }, []);
   // Segoe MDL2 GlobalNavigationButton (E700) — the UWP MainMenuButton glyph.
   // Defined locally (not in TabGlyph) because tokens.ts is owned by another lane.
   const MENU_GLYPH = String.fromCharCode(0xe700);
 
   return (
-    <Menu>
+    <Menu
+      onOpenChange={(_e, data) => {
+        // Refresh the recent list when the top-level flyout opens (only when the
+        // Open Recent submenu is actually wired, to avoid a needless IPC call).
+        if (data.open && onOpenRecent) refreshRecent();
+      }}
+    >
       <MenuTrigger disableButtonEnhancement>
         <button
           type="button"
@@ -611,6 +642,50 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           <MenuItem secondaryContent="Ctrl+O" disabled={!commands.onOpen} onClick={commands.onOpen}>
             {t('MainMenu_Button_Open.Text')}
           </MenuItem>
+          {/* Open Recent (UWP MenuOpenRecentlyUsedFileButton) — nested submenu of
+              the in-app MRU. Rendered only when onOpenRecent is wired; placed
+              directly after Open to mirror the UWP insert-after-Open ordering.
+              Disabled when the list is empty. The whole flyout refreshes `recent`
+              on open (see Menu onOpenChange). */}
+          {onOpenRecent && (
+            <Menu>
+              <MenuTrigger disableButtonEnhancement>
+                <MenuItem data-testid="open-recent" disabled={recent.length === 0}>
+                  {t('MainMenu_Button_Open_Recent.Text')}
+                </MenuItem>
+              </MenuTrigger>
+              <MenuPopover data-testid="open-recent-popover">
+                <MenuList>
+                  {recent.map((entry) => (
+                    <MenuItem
+                      key={entry.path}
+                      data-testid="open-recent-item"
+                      title={entry.path}
+                      onClick={() => onOpenRecent(entry.path)}
+                    >
+                      {entry.displayName}
+                    </MenuItem>
+                  ))}
+                  <MenuDivider />
+                  <MenuItem
+                    data-testid="open-recent-clear"
+                    onClick={() => {
+                      // .catch so an IPC error doesn't become an unhandled
+                      // rejection; on success clear the local list immediately.
+                      void window.notepads.recent
+                        .clear()
+                        .then((res) => {
+                          if (res.ok) setRecent([]);
+                        })
+                        .catch(() => {});
+                    }}
+                  >
+                    {t('MainMenu_Button_Open_Recent_ClearRecentlyOpenedSubItem_Text')}
+                  </MenuItem>
+                </MenuList>
+              </MenuPopover>
+            </Menu>
+          )}
           <MenuDivider />
           {/* TODO: save active tab (Ctrl+S) — no renderer save handler yet. */}
           <MenuItem secondaryContent="Ctrl+S" disabled={!commands.onSave} onClick={commands.onSave}>

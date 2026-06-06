@@ -94,6 +94,13 @@ export interface SaveResult {
 export interface FileApi {
   /** Read bytes from `path`, detect encoding+EOL, return decoded descriptor. */
   open(path: string): Promise<Result<OpenedFile>>;
+  /**
+   * Prompt for files to open via MAIN's native open dialog (multi-select, .txt +
+   * All Files). Returns the chosen ABSOLUTE paths, or `[]` when the user cancels
+   * (cancel is a normal success, NOT an error). The renderer then opens each path
+   * via `file.open`. PA-8: the dialog lives in MAIN; the renderer never touches it.
+   */
+  openDialog(): Promise<Result<string[]>>;
   /** Re-apply EOL + encode `shadowText`, write bytes to `filePath`. */
   save(args: SaveArgs): Promise<Result<SaveResult>>;
   /** Prompt for a path, then save. */
@@ -102,6 +109,52 @@ export interface FileApi {
   reloadFromDisk(path: string): Promise<Result<OpenedFile>>;
   /** Re-validate a stored absolute path via fs.stat (session/FAL substitute). */
   revalidatePath(path: string): Promise<Result<{ exists: boolean; dateModifiedMs: number }>>;
+}
+
+// ---------------------------------------------------------------------------
+//  recent — in-app most-recently-used file list  (UWP MRUService)
+// ---------------------------------------------------------------------------
+//
+// MAIN owns a persisted recent-files list (JSON under userData), the in-app
+// substitute for UWP's StorageApplicationPermissions.MostRecentlyUsedList — this
+// is SEPARATE from the OS jump list (app.addRecentDocument, fed in shell.ts). The
+// list is capped, de-duplicated by path (most-recent-first), and entries whose
+// file no longer exists are pruned on read (mirrors UWP's GetItemAsync skip).
+
+/** A single in-app recent-files entry (most-recent-first ordering). */
+export interface RecentEntry {
+  /** Absolute path on disk. */
+  path: string;
+  /** Basename for display (derived in MAIN; the renderer never touches path). */
+  displayName: string;
+  /** Last-modified time in epoch ms, when stat succeeded on read. */
+  mtimeMs?: number;
+}
+
+export interface RecentApi {
+  /** List recent files, most-recent-first, missing paths pruned (UWP top=10). */
+  list(): Promise<Result<RecentEntry[]>>;
+  /** Clear the entire in-app recent list (UWP MRUService.ClearAll). */
+  clear(): Promise<Result<void>>;
+}
+
+// ---------------------------------------------------------------------------
+//  paths — drag-drop File -> absolute path  (webUtils, PRELOAD-only)
+// ---------------------------------------------------------------------------
+//
+// Under the sandbox the renderer can't read `File.path`. The drop handler hands
+// the dropped `File` to this preload helper, which resolves the absolute path via
+// electron `webUtils.getPathForFile`. PA-8: the `webUtils` import lives ONLY in
+// preload; the renderer just calls `window.notepads.paths.forFile(file)`.
+
+export interface PathsApi {
+  /**
+   * Resolve a dropped `File` to its absolute on-disk path via preload's
+   * `webUtils.getPathForFile`. Returns `''` for a File with no backing path (e.g.
+   * synthetic / in-memory File). Synchronous: webUtils.getPathForFile is sync and
+   * needs no IPC round-trip (it is NOT a `Result<T>` channel).
+   */
+  forFile(file: File): string;
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +453,8 @@ export interface ShellApi {
 
 export interface NotepadsApi {
   file: FileApi;
+  recent: RecentApi;
+  paths: PathsApi;
   encoding: EncodingApi;
   session: SessionApi;
   settings: SettingsApi;

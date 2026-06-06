@@ -21,12 +21,14 @@ import type {
 } from '../shared/ipc-contract.js';
 import {
   openFile,
+  openFileDialog,
   saveFile,
   saveFileAs,
   reloadFromDisk,
   revalidatePath,
   decodeWithEncoding,
 } from './file-io.js';
+import { listRecentResult, clearRecent } from './mru.js';
 import { listAnsiEncodings } from './encoding.js';
 import { applyEol } from './eol.js';
 import { snapshot, loadLast, clearRecovered } from './session.js';
@@ -44,10 +46,15 @@ import { openContainingFolder, copyPath, webSearch, print, share } from './shell
 export function registerIpcHandlers(): void {
   // --- file ---
   ipcMain.handle(IpcChannels.FileOpen, (_e, path: string) => openFile(path));
+  ipcMain.handle(IpcChannels.FileOpenDialog, () => openFileDialog());
   ipcMain.handle(IpcChannels.FileSave, (_e, args: SaveArgs) => saveFile(args));
   ipcMain.handle(IpcChannels.FileSaveAs, (_e, args: SaveAsArgs) => saveFileAs(args));
   ipcMain.handle(IpcChannels.FileReloadFromDisk, (_e, path: string) => reloadFromDisk(path));
   ipcMain.handle(IpcChannels.FileRevalidatePath, (_e, path: string) => revalidatePath(path));
+
+  // --- recent (in-app MRU; distinct from the OS jump list) ---
+  ipcMain.handle(IpcChannels.RecentList, () => listRecentResult());
+  ipcMain.handle(IpcChannels.RecentClear, () => clearRecent());
 
   // --- encoding ---
   ipcMain.handle(IpcChannels.EncodingListAnsi, () => ({ ok: true, data: listAnsiEncodings() }));
