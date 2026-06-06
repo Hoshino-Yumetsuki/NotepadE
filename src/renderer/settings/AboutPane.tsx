@@ -20,20 +20,22 @@ import {
   DEPENDENCY_CREDITS,
   ABOUT_DISCLAIMER,
 } from './aboutInfo';
+import { useT } from '../i18n/I18nProvider';
 
 export function AboutPane(): JSX.Element {
+  const { t } = useT();
   return (
     <SettingsPane id="about">
       <SettingGroup title="">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Title3>{APP_NAME}</Title3>
           <Text size={300} style={{ opacity: 0.8 }} data-testid="about-version">
-            Version {APP_VERSION}
+            {t('AboutPage_Version_Label', APP_VERSION)}
           </Text>
         </div>
       </SettingGroup>
 
-      <SettingGroup title="Links">
+      <SettingGroup title={t('AboutPage_Links_GroupTitle')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {ABOUT_LINKS.map((l) => (
             <Link key={l.url} href={l.url} target="_blank" rel="noreferrer">
@@ -43,7 +45,7 @@ export function AboutPane(): JSX.Element {
         </div>
       </SettingGroup>
 
-      <SettingGroup title="Built with">
+      <SettingGroup title={t('AboutPage_BuiltWith_GroupTitle')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {DEPENDENCY_CREDITS.map((d) => (
             <Link key={d.url} href={d.url} target="_blank" rel="noreferrer">
@@ -55,7 +57,7 @@ export function AboutPane(): JSX.Element {
 
       <Divider />
       <div style={{ marginTop: 16 }}>
-        <Subtitle2>Disclaimer</Subtitle2>
+        <Subtitle2>{t('AboutPage_Disclaimer_Title.Text')}</Subtitle2>
         <Body1 as="p" style={{ marginTop: 6, opacity: 0.85 }}>
           {ABOUT_DISCLAIMER}
         </Body1>

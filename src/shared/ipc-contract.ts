@@ -291,6 +291,12 @@ export interface WindowApi {
   brokerRequest(args: { paths: string[]; forceNewWindow?: boolean }): Promise<Result<void>>;
   setFullScreen(enabled: boolean): Promise<Result<{ isFullScreen: boolean }>>;
   setCompactOverlay(enabled: boolean): Promise<Result<{ isCompactOverlay: boolean }>>;
+  /**
+   * Quit the whole application (UWP ExitApp / ExitWhenLastTabClosed). Used when the
+   * last tab is closed and `settings.exitWhenLastTabClosed` is on. MAIN owns the
+   * app lifecycle — the renderer never calls `app.quit` directly (PA-8).
+   */
+  quit(): Promise<Result<void>>;
 }
 
 // ---------------------------------------------------------------------------

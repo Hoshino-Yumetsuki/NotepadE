@@ -31,6 +31,23 @@ export const FindGlyph = {
 /** The icon font the UWP control uses. */
 export const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
 
+/**
+ * Find/Replace input background — 1:1 with the UWP TransparentTextBoxStyle
+ * ("CustomTextBoxBackground" ThemeDictionary in
+ * Notepads/src/Notepads/Resource/TransparentTextBoxStyle.xaml):
+ *   Light → #E0E0E0 @ opacity 0.7  → rgba(224,224,224,0.7)
+ *   Dark  → #1E1E1E @ opacity 0.7  → rgba(30,30,30,0.7)
+ *   HighContrast → Black (opaque)
+ * Keyed by the resolved app-theme bucket so the find/replace inputs read as the
+ * same translucent surface the UWP RichEditBox-backed find bar used, instead of
+ * the stock opaque Fluent <Input> field.
+ */
+export const FindInputBackground: Record<'light' | 'dark' | 'hc', string> = {
+  light: 'rgba(224, 224, 224, 0.7)',
+  dark: 'rgba(30, 30, 30, 0.7)',
+  hc: 'Canvas',
+} as const;
+
 /** Pixel dimensions from FindAndReplaceControl.xaml. */
 export const FindDimensions = {
   /** Each bar row height (XAML Height="36"). */

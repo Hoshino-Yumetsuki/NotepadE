@@ -27,6 +27,21 @@ const rowStyle: CSSProperties = {
   minHeight: 32,
 };
 
+/**
+ * Stacked-row variant (label above, control below). Used for WIDE controls
+ * (Dropdown / SpinButton / RadioGroup / Input / color picker): at the 385px pane
+ * width a wide control + a localized label cannot share one `space-between` line
+ * without the label wrapping into a vertical sliver, so those rows go full-width
+ * vertical — matching the UWP settings sub-pages, which stack titled controls.
+ */
+const rowStackStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'stretch',
+  gap: 6,
+  minHeight: 32,
+};
+
 const rowLabelStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -38,7 +53,10 @@ const rowLabelStyle: CSSProperties = {
 const paneStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  padding: '4px 8px 24px',
+  // Minimal horizontal inset (was 8px each side): the outer SettingsSurface pane
+  // already supplies the edge gutter, so trimming the stacked padding hands the
+  // content column more usable width — keeps rows on one line at the 385px pane.
+  padding: '4px 4px 24px 4px',
   overflowY: 'auto',
   height: '100%',
   boxSizing: 'border-box',
@@ -54,16 +72,25 @@ export function SettingGroup(props: { title: string; children: ReactNode }): JSX
   );
 }
 
-/** A single label-left / control-right setting row, with optional description. */
+/** A single setting row with optional description.
+ *
+ * `layout` (default 'inline') controls the geometry:
+ *  - 'inline' — label left, control right (use for narrow controls: Switch).
+ *  - 'stack'  — label above a full-width control (use for wide controls:
+ *    Dropdown / SpinButton / RadioGroup / Input / color picker) so neither the
+ *    label nor the control gets crushed at the 385px pane width.
+ */
 export function SettingRow(props: {
   label: string;
   description?: string;
   /** Used as a stable e2e/testing anchor: data-testid="setting-{id}". */
   id: string;
+  layout?: 'inline' | 'stack';
   children: ReactNode;
 }): JSX.Element {
+  const stacked = props.layout === 'stack';
   return (
-    <div style={rowStyle} data-testid={`setting-${props.id}`}>
+    <div style={stacked ? rowStackStyle : rowStyle} data-testid={`setting-${props.id}`}>
       <div style={rowLabelStyle}>
         <Text weight="semibold">{props.label}</Text>
         {props.description ? (
@@ -72,7 +99,7 @@ export function SettingRow(props: {
           </Text>
         ) : null}
       </div>
-      <div style={{ flex: '0 0 auto' }}>{props.children}</div>
+      <div style={stacked ? { width: '100%' } : { flex: '0 0 auto' }}>{props.children}</div>
     </div>
   );
 }

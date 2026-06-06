@@ -32,6 +32,7 @@ export const IpcChannels = {
   WindowBrokerRequest: 'notepads:window:brokerRequest',
   WindowSetFullScreen: 'notepads:window:setFullScreen',
   WindowSetCompactOverlay: 'notepads:window:setCompactOverlay',
+  WindowQuit: 'notepads:window:quit',
 
   // dragOut
   DragOutBegin: 'notepads:dragOut:begin',

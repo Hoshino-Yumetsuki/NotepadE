@@ -11,8 +11,14 @@ import {
   type MenuProps,
 } from '@fluentui/react-components';
 import type { SearchOptions } from './searchEngine';
-import { FindGlyph, FindDimensions, SEGOE_MDL2_FONT_FAMILY } from './findTokens';
+import {
+  FindGlyph,
+  FindDimensions,
+  SEGOE_MDL2_FONT_FAMILY,
+  FindInputBackground,
+} from './findTokens';
 import { useT } from '../../i18n';
+import { useAppTheme } from '../../theme/useAppTheme';
 
 /**
  * Find/Replace bar (RENDERER, Lane B) — 1:1 with the UWP FindAndReplaceControl.
@@ -87,6 +93,11 @@ export function FindBar(props: FindBarProps): JSX.Element {
   } = props;
 
   const { t } = useT();
+  // Resolve the app-theme bucket so the inputs paint the UWP
+  // TransparentTextBoxStyle translucent background (FindInputBackground) instead
+  // of the opaque stock Fluent <Input> field.
+  const { resolved } = useAppTheme();
+  const inputBackground = FindInputBackground[resolved];
 
   const [query, setQuery] = useState<string>(initialQuery);
   const [replacement, setReplacement] = useState<string>('');
@@ -279,7 +290,11 @@ export function FindBar(props: FindBarProps): JSX.Element {
           value={query}
           onChange={(_, d) => setQueryText(d.value)}
           onKeyDown={onFindKeyDown}
-          style={{ flex: '1 1 auto', fontSize: FindDimensions.textFontSize }}
+          style={{
+            flex: '1 1 auto',
+            fontSize: FindDimensions.textFontSize,
+            backgroundColor: inputBackground,
+          }}
         />
         <Menu checkedValues={checkedValues} onCheckedValueChange={onCheckedValueChange}>
           <MenuTrigger disableButtonEnhancement>
@@ -390,7 +405,11 @@ export function FindBar(props: FindBarProps): JSX.Element {
             value={replacement}
             onChange={(_, d) => setReplacement(d.value)}
             onKeyDown={onReplaceKeyDown}
-            style={{ gridColumn: '2', fontSize: FindDimensions.textFontSize }}
+            style={{
+              gridColumn: '2',
+              fontSize: FindDimensions.textFontSize,
+              backgroundColor: inputBackground,
+            }}
           />
           <div style={{ gridColumn: '3', display: 'flex', alignItems: 'center', gap: 2 }}>
             <Tooltip

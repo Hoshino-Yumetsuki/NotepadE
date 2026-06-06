@@ -68,6 +68,7 @@ const api: NotepadsApi = {
       invoke<{ isFullScreen: boolean }>(IpcChannels.WindowSetFullScreen, enabled),
     setCompactOverlay: (enabled) =>
       invoke<{ isCompactOverlay: boolean }>(IpcChannels.WindowSetCompactOverlay, enabled),
+    quit: () => invoke<void>(IpcChannels.WindowQuit),
   },
   dragOut: {
     begin: (envelope: DragEnvelope) =>

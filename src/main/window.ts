@@ -13,7 +13,7 @@
  * leaving restores them exactly.
  */
 
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import type { Result } from '../shared/ipc-contract.js';
 import { brokerRequest as brokerRequestImpl } from './broker.js';
 import {
@@ -135,6 +135,20 @@ export function windowSetCompactOverlay(
     }
     const { isCompactOverlay } = toggleCompact(compactPort(win), state, enabled);
     return { ok: true, data: { isCompactOverlay } };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+/**
+ * Quit the whole application (UWP ExitApp). Invoked by the renderer when the last
+ * tab is closed and `settings.exitWhenLastTabClosed` is on. MAIN owns the app
+ * lifecycle; `app.quit()` runs the normal close path (window-all-closed → quit).
+ */
+export function windowQuit(): Result<void> {
+  try {
+    app.quit();
+    return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: errMsg(e) };
   }

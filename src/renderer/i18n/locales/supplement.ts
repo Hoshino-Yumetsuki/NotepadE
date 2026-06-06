@@ -42,6 +42,10 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   StatusBar_LineEnding_Cr: { 'en-US': 'Macintosh (CR)' },
   StatusBar_LineEnding_Lf: { 'en-US': 'Unix (LF)' },
   // Tab-strip web aria-labels (gap #3) — awaiting-translation.
+  // The hamburger main-menu trigger (UWP MainMenuButton, glyph GlobalNavigationButton)
+  // had no explicit AutomationProperties.Name in XAML (it relied on the symbol's
+  // default narrator text); the web port declares one for screen-reader parity.
+  'MainMenuButton.AutomationProperties.Name': { 'en-US': 'Menu' },
   'TabStrip_NewTabButton.AutomationProperties.Name': { 'en-US': 'New tab' },
   'TabStrip_CloseTabButton.AutomationProperties.Name': { 'en-US': 'Close tab' },
   'TabStrip_ScrollLeftButton.AutomationProperties.Name': { 'en-US': 'Scroll tabs left' },
@@ -65,4 +69,81 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   StatusBar_LineColumnGoTo: { 'en-US': 'Line and column, go to line' },
   // Shadow-window (secondary instance) hint title — awaiting-translation.
   StatusBar_ShadowWindowHint: { 'en-US': 'This is a shadow window' },
+
+  // ---------------------------------------------------------------------------
+  // Settings-shell chrome (web port) — no UWP .resw origin. The UWP app used a
+  // NavigationView whose section labels reuse the per-page *Page_Title.Content
+  // ported keys (Text & Editor / Personalization / Advanced / About) and a
+  // "Settings" title from MainMenu_Button_Settings.Text; only the web overlay's
+  // own dismiss affordance has no ported equivalent.
+  'SettingsShell_Close.AutomationProperties.Name': {
+    'en-US': 'Close settings',
+    'de-DE': 'Einstellungen schließen',
+    'ja-JP': '設定を閉じる',
+  },
+
+  // Settings panes (web port) — strings the UWP pages rendered inline/in code or
+  // that the web layout adds. Reuse a ported key wherever one exists; these are
+  // only the genuine gaps. en-US-only entries fall through to English in every
+  // locale (parity with the existing overlay policy).
+  // Personalization — custom accent fields (UWP exposed a single accent toggle;
+  // the web port adds an explicit custom-hex editor below it).
+  PersonalizationPage_CustomAccentColor_Title: {
+    'en-US': 'Custom accent',
+    'de-DE': 'Benutzerdefinierte Akzentfarbe',
+    'ja-JP': 'カスタム アクセント',
+  },
+  PersonalizationPage_CustomAccentColor_Description: {
+    'en-US': 'Hex color, e.g. #0078D4.',
+    'de-DE': 'Hex-Farbe, z. B. #0078D4.',
+    'ja-JP': '16 進数の色 (例: #0078D4)。',
+  },
+  PersonalizationPage_CustomAccentColor_Invalid: {
+    'en-US': 'Invalid',
+    'de-DE': 'Ungültig',
+    'ja-JP': '無効',
+  },
+  PersonalizationPage_CustomAccentColorPicker_Label: {
+    'en-US': 'Custom accent color picker',
+    'de-DE': 'Auswahl der benutzerdefinierten Akzentfarbe',
+    'ja-JP': 'カスタム アクセント カラーの選択',
+  },
+  PersonalizationPage_AccentColorSettings_Description: {
+    'en-US': 'Follow the system accent.',
+    'de-DE': 'Dem Systemakzent folgen.',
+    'ja-JP': 'システムのアクセントに従います。',
+  },
+  // Text & Editor — the web port labels the font-family dropdown explicitly and
+  // gives the web-search section its own group header.
+  TextAndEditorPage_FontFamilySettings_Title: {
+    'en-US': 'Font family',
+    'de-DE': 'Schriftartfamilie',
+    'ja-JP': 'フォント ファミリ',
+  },
+  TextAndEditorPage_WebSearch_GroupTitle: {
+    'en-US': 'Web search',
+    'de-DE': 'Websuche',
+    'ja-JP': 'Web 検索',
+  },
+  TextAndEditorPage_CustomSearchUrl_Description: {
+    'en-US': 'Use {0} where the query should go.',
+    'de-DE': 'Verwenden Sie {0} an der Stelle der Suchanfrage.',
+    'ja-JP': 'クエリを挿入する位置に {0} を使用します。',
+  },
+  // About — the web port groups the links and renders a "Version {0}" line.
+  AboutPage_Links_GroupTitle: {
+    'en-US': 'Links',
+    'de-DE': 'Links',
+    'ja-JP': 'リンク',
+  },
+  AboutPage_BuiltWith_GroupTitle: {
+    'en-US': 'Built with',
+    'de-DE': 'Entwickelt mit',
+    'ja-JP': '使用ライブラリ',
+  },
+  AboutPage_Version_Label: {
+    'en-US': 'Version {0}',
+    'de-DE': 'Version {0}',
+    'ja-JP': 'バージョン {0}',
+  },
 };

@@ -14,16 +14,29 @@
 import { Switch, Dropdown, Option } from '@fluentui/react-components';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import { APP_LANGUAGES } from './settingsOptions';
+import { useT } from '../i18n/I18nProvider';
 import type { PaneProps } from './TextEditorPane';
 
 export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
+  const { t } = useT();
+  const systemDefaultLabel = t('AdvancedPage_LanguagePreferenceSettings_SystemDefaultText');
+  // The empty-tag entry is the localized "System Default"; named locales keep
+  // their endonym label (e.g. "日本語") so the list reads natively in any UI lang.
+  const languageLabel = (tag: string, label: string): string =>
+    tag === '' ? systemDefaultLabel : label;
   const langLabel =
-    APP_LANGUAGES.find((l) => l.tag === settings.appLanguage)?.label ?? 'System default';
+    languageLabel(
+      settings.appLanguage,
+      APP_LANGUAGES.find((l) => l.tag === settings.appLanguage)?.label ?? '',
+    ) || systemDefaultLabel;
 
   return (
     <SettingsPane id="advanced">
-      <SettingGroup title="Interface">
-        <SettingRow id="showStatusBar" label="Show status bar">
+      <SettingGroup title={t('AdvancedPage_StatusBarSettings_Title.Text')}>
+        <SettingRow
+          id="showStatusBar"
+          label={t('AdvancedPage_StatusBarSettings_ShowHideStatusBarToggleSwitch.OnContent')}
+        >
           <Switch
             checked={settings.showStatusBar}
             onChange={(_e, d) => update({ showStatusBar: d.checked })}
@@ -31,11 +44,11 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
         </SettingRow>
       </SettingGroup>
 
-      <SettingGroup title="Editing">
+      <SettingGroup title={t('AdvancedPage_SmartCopySettings_Title.Text')}>
         <SettingRow
           id="smartCopy"
-          label="Smart copy"
-          description="Copy the whole line when nothing is selected."
+          label={t('AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OnContent')}
+          description={t('AdvancedPage_SmartCopySettings_Description.Text')}
         >
           <Switch
             checked={settings.smartCopy}
@@ -44,24 +57,35 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
         </SettingRow>
       </SettingGroup>
 
-      <SettingGroup title="Session & windows">
+      <SettingGroup title={t('AdvancedPage_SessionSnapshotSettings_Title.Text')}>
         <SettingRow
           id="sessionSnapshot"
-          label="Save session on exit"
-          description="Restore open tabs the next time the app starts."
+          label={t('AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent')}
+          description={t('AdvancedPage_SessionSnapshotSettings_Description.Text')}
         >
           <Switch
             checked={settings.sessionSnapshot}
             onChange={(_e, d) => update({ sessionSnapshot: d.checked })}
           />
         </SettingRow>
-        <SettingRow id="alwaysOpenNewWindow" label="Always open files in a new window">
+        <SettingRow
+          id="alwaysOpenNewWindow"
+          label={t(
+            'AdvancedPage_LaunchPreferenceSettings_AlwaysOpenNewWindowToggleSwitch.OnContent',
+          )}
+          description={t('AdvancedPage_AlwaysOpenNewWindow_Description.Text')}
+        >
           <Switch
             checked={settings.alwaysOpenNewWindow}
             onChange={(_e, d) => update({ alwaysOpenNewWindow: d.checked })}
           />
         </SettingRow>
-        <SettingRow id="exitWhenLastTabClosed" label="Exit when the last tab is closed">
+        <SettingRow
+          id="exitWhenLastTabClosed"
+          label={t(
+            'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent',
+          )}
+        >
           <Switch
             checked={settings.exitWhenLastTabClosed}
             onChange={(_e, d) => update({ exitWhenLastTabClosed: d.checked })}
@@ -69,21 +93,23 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
         </SettingRow>
       </SettingGroup>
 
-      <SettingGroup title="Language">
+      <SettingGroup title={t('AdvancedPage_LanguagePreferenceSettings_Title.Text')}>
         <SettingRow
           id="appLanguage"
-          label="App language"
-          description="Applied after restart (full i18n is a later phase)."
+          layout="stack"
+          label={t('AdvancedPage_LanguagePreferenceSettings_Title.Text')}
+          description={t('AdvancedPage_LanguagePreferenceSettings_Description.Text')}
         >
           <Dropdown
             data-testid="setting-appLanguage-dropdown"
             value={langLabel}
             selectedOptions={[settings.appLanguage]}
             onOptionSelect={(_e, d) => update({ appLanguage: d.optionValue ?? '' })}
+            style={{ width: '100%' }}
           >
             {APP_LANGUAGES.map((l) => (
               <Option key={l.tag || 'system'} value={l.tag}>
-                {l.label}
+                {languageLabel(l.tag, l.label)}
               </Option>
             ))}
           </Dropdown>

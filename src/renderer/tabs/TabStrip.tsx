@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Menu,
+  MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItem,
+  MenuDivider,
+} from '@fluentui/react-components';
+import {
   DndContext,
   PointerSensor,
   useSensor,
@@ -63,6 +71,15 @@ export interface TabStripProps {
   /** Add-tab (+) handler. */
   onNewTab(): void;
   /**
+   * Main-menu (hamburger) command bag (Phase 8, UI-fidelity). Renders the app
+   * MenuFlyout to the LEFT of the tab strip (1:1 UWP MainMenuButton). Each entry
+   * is wired by the App to the EXISTING command/handler where one exists; entries
+   * with no underlying command yet are rendered disabled (greyed) to keep the
+   * structure UWP-identical. Optional so the Phase-2 tab tests (no menu) are
+   * unaffected.
+   */
+  menu?: MainMenuCommands;
+  /**
    * Close handler (override to add a dirty-save prompt later). Defaults to
    * store.close.
    */
@@ -84,6 +101,36 @@ function tabTitle(tab: TabState): string {
   // Renderer has no Node basename helper (PA-8); split on both separators here.
   const parts = tab.filePath.split(/[\\/]/);
   return parts[parts.length - 1] || tab.filePath;
+}
+
+/**
+ * App main-menu command bag (the hamburger MenuFlyout). Every entry maps to an
+ * EXISTING App command where one exists; an `undefined` callback renders that
+ * item disabled so the menu structure stays 1:1 with the UWP MainMenuButton flyout
+ * (New Window / Save All / Open Recent / Print / Print All have no renderer
+ * command yet — they come through as `undefined` → disabled). PA-8: pure callbacks.
+ */
+export interface MainMenuCommands {
+  onNew(): void;
+  /** TODO: multi-window (Ctrl+Shift+N) — no renderer command yet → disabled. */
+  onNewWindow?: () => void;
+  /** TODO: file-open dialog (Ctrl+O) — no renderer picker yet → disabled. */
+  onOpen?: () => void;
+  /** TODO: save active tab (Ctrl+S) — no renderer save handler yet → disabled. */
+  onSave?: () => void;
+  /** TODO: save-as (Ctrl+Shift+S) — no renderer save-as handler yet → disabled. */
+  onSaveAs?: () => void;
+  /** TODO: save all — no renderer command yet → disabled. */
+  onSaveAll?: () => void;
+  onFind(): void;
+  onReplace(): void;
+  onFullScreen(): void;
+  onCompactOverlay(): void;
+  /** Print the active document (Ctrl+P) — wired to the print host. */
+  onPrint?: () => void;
+  /** Print every open document (Ctrl+Shift+P) — wired to the print host. */
+  onPrintAll?: () => void;
+  onSettings(): void;
 }
 
 interface SortableTabProps {
@@ -461,6 +508,118 @@ function ScrollButton(props: {
 }
 
 /**
+ * Main-menu (hamburger) button — fixed to the LEFT of the strip (1:1 UWP
+ * MainMenuButton, glyph GlobalNavigationButton E700, 42×32). Opens the app
+ * MenuFlyout via Fluent v9 Menu primitives (NOT the preview NavDrawer, which
+ * breaks under React 19). Accelerator labels are right-aligned via MenuItem
+ * `secondaryContent`. Items whose command isn't implemented yet are disabled so
+ * the structure mirrors UWP. Marked no-drag so the click isn't eaten by the
+ * window drag region.
+ */
+function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands }): JSX.Element {
+  const { tokens, commands } = props;
+  const { t } = useT();
+  const [hovered, setHovered] = useState(false);
+  // Segoe MDL2 GlobalNavigationButton (E700) — the UWP MainMenuButton glyph.
+  // Defined locally (not in TabGlyph) because tokens.ts is owned by another lane.
+  const MENU_GLYPH = String.fromCharCode(0xe700);
+
+  return (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <button
+          type="button"
+          data-testid="main-menu-button"
+          aria-label={t('MainMenuButton.AutomationProperties.Name')}
+          // No app-region opt-out needed here: chrome.css already sets
+          // `-webkit-app-region: no-drag` on every <button> inside the
+          // [data-drag-region] strip (same as AddTabButton / scroll buttons), so
+          // the click opens the flyout instead of starting a window move.
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            width: TabDimensions.addButtonWidth,
+            height: TabDimensions.addButtonHeight,
+            flex: '0 0 auto',
+            border: 'none',
+            background: hovered ? tokens.headerHover : 'transparent',
+            color: tokens.textDefault,
+            cursor: 'default',
+            fontFamily: SEGOE_MDL2_FONT_FAMILY,
+            fontSize: 16,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {MENU_GLYPH}
+        </button>
+      </MenuTrigger>
+      <MenuPopover data-testid="main-menu-popover">
+        <MenuList>
+          <MenuItem secondaryContent="Ctrl+N" onClick={commands.onNew}>
+            {t('MainMenu_Button_New.Text')}
+          </MenuItem>
+          {/* TODO: multi-window support (Ctrl+Shift+N) — disabled until wired. */}
+          <MenuItem secondaryContent="Ctrl+Shift+N" disabled={!commands.onNewWindow}>
+            {t('MainMenu_Button_New_Window.Text')}
+          </MenuItem>
+          {/* TODO: file-open dialog (Ctrl+O) — no renderer picker yet. */}
+          <MenuItem secondaryContent="Ctrl+O" disabled={!commands.onOpen} onClick={commands.onOpen}>
+            {t('MainMenu_Button_Open.Text')}
+          </MenuItem>
+          <MenuDivider />
+          {/* TODO: save active tab (Ctrl+S) — no renderer save handler yet. */}
+          <MenuItem secondaryContent="Ctrl+S" disabled={!commands.onSave} onClick={commands.onSave}>
+            {t('MainMenu_Button_Save.Text')}
+          </MenuItem>
+          {/* TODO: save-as (Ctrl+Shift+S) — no renderer save-as handler yet. */}
+          <MenuItem
+            secondaryContent="Ctrl+Shift+S"
+            disabled={!commands.onSaveAs}
+            onClick={commands.onSaveAs}
+          >
+            {t('MainMenu_Button_SaveAs.Text')}
+          </MenuItem>
+          <MenuItem disabled={!commands.onSaveAll} onClick={commands.onSaveAll}>
+            {t('MainMenu_Button_SaveAll.Text')}
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem secondaryContent="Ctrl+F" onClick={commands.onFind}>
+            {t('MainMenu_Button_Find.Text')}
+          </MenuItem>
+          <MenuItem secondaryContent="Ctrl+Shift+F" onClick={commands.onReplace}>
+            {t('MainMenu_Button_Replace.Text')}
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem secondaryContent="F11" onClick={commands.onFullScreen}>
+            {t('App_EnterFullScreenMode_Text')}
+          </MenuItem>
+          <MenuItem secondaryContent="F12" onClick={commands.onCompactOverlay}>
+            {t('App_EnterCompactOverlayMode_Text')}
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem secondaryContent="Ctrl+P" onClick={commands.onPrint}>
+            {t('MainMenu_Button_Print.Text')}
+          </MenuItem>
+          <MenuItem secondaryContent="Ctrl+Shift+P" onClick={commands.onPrintAll}>
+            {t('MainMenu_Button_PrintAll.Text')}
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem
+            secondaryContent="Ctrl+,"
+            data-testid="open-settings"
+            onClick={commands.onSettings}
+          >
+            {t('MainMenu_Button_Settings.Text')}
+          </MenuItem>
+        </MenuList>
+      </MenuPopover>
+    </Menu>
+  );
+}
+
+/**
  * Add-tab (+) button (E710) — fixed to the right of the strip. SetsView chrome:
  * shows the reveal grey on hover plus the cursor-follow radial highlight (Phase 7,
  * Task #27). HC reveal tint is transparent (no material), matching UWP HC.
@@ -492,13 +651,21 @@ function AddTabButton(props: {
         reveal.handlers.onPointerLeave();
       }}
       style={{
+        // Pinned to the right of the strip with reserved, non-shrinkable space:
+        // the tab LIST (flex:1 1 auto) scrolls under overflow, the + never gets
+        // clipped or pushed off-screen (Issue 2 regression).
         width: TabDimensions.addButtonWidth,
         height: TabDimensions.addButtonHeight,
         flex: '0 0 auto',
-        marginLeft: -1,
-        border: 'none',
+        marginLeft: 2,
+        // Subtle idle affordance so it reads as a button even when the strip
+        // background ≈ the glyph; brightens on hover via the reveal grey below.
+        border: `1px solid ${tokens.topBorder}`,
+        borderRadius: 4,
         background: hovered ? tokens.headerHover : 'transparent',
-        color: tokens.textDefault,
+        // Full-contrast glyph (textSelected, not the dimmed textDefault) so the +
+        // is legible at rest — the previous dim color is what made it "disappear".
+        color: tokens.textSelected,
         cursor: 'default',
         fontFamily: SEGOE_MDL2_FONT_FAMILY,
         fontSize: TabDimensions.addGlyphSize,
@@ -538,6 +705,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     onCloseTab,
     onBeginTransfer,
     onVoidDrop,
+    menu,
   } = props;
   const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
   const tokens = tokensForTheme(resolvedTheme);
@@ -720,6 +888,9 @@ export function TabStrip(props: TabStripProps): JSX.Element {
         } as React.CSSProperties
       }
     >
+      {/* Main-menu (hamburger) button — LEFT of the tab strip (UWP MainMenuButton). */}
+      {menu && <MainMenu tokens={tokens} commands={menu} />}
+
       {showScrollButtons && (
         <ScrollButton
           testid="tab-scroll-left"

@@ -1,10 +1,18 @@
 /**
- * SettingsSurface — the settings window shell (Phase 5, Stream C).
+ * SettingsSurface — the settings pane shell (Phase 5, Stream C; UI-fidelity pass).
  *
- * A modal Dialog hosting a Fluent NavDrawer (4 sections) + the active pane, a
- * 1:1 structural port of the UWP SettingsPage (NavigationView with TextAndEditor
- * / Personalization / Advanced / About). The Nav uses Segoe MDL2 glyphs matching
- * the UWP NavigationViewItem icons.
+ * A RIGHT-side overlay pane (1:1 UWP RootSplitView DisplayMode=Overlay,
+ * PanePlacement=Right, OpenPaneLength=385): a dim scrim covers the app and the
+ * ~385px pane slides in from the right edge, full height. Dismisses on Esc or a
+ * scrim click. Inside it keeps the UWP SettingsPage layout — a vertical nav rail
+ * (TextAndEditor / Personalization / Advanced / About) on the left and the active
+ * pane on the right.
+ *
+ * (Replaces the prior centered modal Dialog; the open/close contract — the `open`
+ * + `onOpenChange` props the App drives via Ctrl+, / the hamburger menu and
+ * the installSettingsTestHook seam — is unchanged, as are every data-testid the
+ * Gate-5 e2e relies on: settings-surface / settings-nav / settings-nav-${id} /
+ * settings-close.)
  *
  * All four panes read/write the SAME live settings bag (useSettings, lifted to
  * the App so the bag is shared with the live theme + status-bar wiring). Changes
@@ -14,37 +22,45 @@
  * lives in useSettings/useAppTheme). No fs/path/child_process here.
  */
 
-import { useState } from 'react';
-import {
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  Button,
-  FluentProvider,
-  type Theme,
-} from '@fluentui/react-components';
+import { useEffect, useState } from 'react';
+import { Button, FluentProvider, type Theme } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
 import { TextEditorPane } from './TextEditorPane';
 import { PersonalizationPane } from './PersonalizationPane';
 import { AdvancedPane } from './AdvancedPane';
 import { AboutPane } from './AboutPane';
 import { acrylicVars, type AppTheme } from '../theme/tokens';
+import { useT } from '../i18n/I18nProvider';
 
 /** The four settings sections (UWP SettingsPage NavigationViewItem tags). */
 type SectionId = 'textEditor' | 'personalization' | 'advanced' | 'about';
 
-const SECTIONS: readonly { id: SectionId; label: string; glyph: string }[] = [
-  // Segoe MDL2 glyphs verbatim from UWP SettingsPage.xaml NavigationViewItem icons.
-  { id: 'textEditor', label: 'Text & Editor', glyph: String.fromCharCode(0xf17f) },
-  { id: 'personalization', label: 'Personalization', glyph: String.fromCharCode(0xe771) },
-  { id: 'advanced', label: 'Advanced', glyph: String.fromCharCode(0xe9e9) },
-  { id: 'about', label: 'About', glyph: String.fromCharCode(0xe946) },
+/**
+ * Section nav metadata. `labelKey` is the ported UWP NavigationViewItem.Content
+ * resource (verified present in all 29 locale tables) so the rail re-localizes
+ * live on a language switch; `glyph` is the Segoe MDL2 icon verbatim from
+ * SettingsPage.xaml.
+ */
+const SECTIONS: readonly { id: SectionId; labelKey: string; glyph: string }[] = [
+  {
+    id: 'textEditor',
+    labelKey: 'TextAndEditorPage_Title.Content',
+    glyph: String.fromCharCode(0xf17f),
+  },
+  {
+    id: 'personalization',
+    labelKey: 'PersonalizationPage_Title.Content',
+    glyph: String.fromCharCode(0xe771),
+  },
+  { id: 'advanced', labelKey: 'AdvancedPage_Title.Content', glyph: String.fromCharCode(0xe9e9) },
+  { id: 'about', labelKey: 'AboutPage_Title.Content', glyph: String.fromCharCode(0xe946) },
 ];
 
-/** Segoe MDL2 ChromeClose (E711) for the dialog close button. */
+/** Segoe MDL2 ChromeClose (E711) for the pane close button. */
 const CLOSE_GLYPH = String.fromCharCode(0xe711);
+
+/** UWP RootSplitView.OpenPaneLength — the right pane is 385px wide. */
+const PANE_WIDTH = 385;
 
 export interface SettingsSurfaceProps {
   open: boolean;
@@ -70,83 +86,156 @@ function NavGlyph({ glyph }: { glyph: string }): JSX.Element {
   );
 }
 
-export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element {
+export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null {
   const [section, setSection] = useState<SectionId>('textEditor');
-  const { settings, update } = props;
+  const { settings, update, open, onOpenChange } = props;
   const resolvedTheme: AppTheme = props.resolvedTheme ?? 'dark';
+  const { t } = useT();
+
+  // Esc closes the pane (UWP SettingsPage back/close). Bound only while open so it
+  // never competes with the editor's own Esc handling (find-bar dismiss etc.).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onOpenChange(false);
+      }
+    };
+    // Capture phase so the pane wins Esc over editor-level listeners while open.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, onOpenChange]);
+
+  if (!open) return null;
 
   return (
-    <Dialog open={props.open} onOpenChange={(_e, d) => props.onOpenChange(d.open)}>
-      <DialogSurface
+    <div
+      data-testid="settings-overlay"
+      // Dim scrim over the whole app; a click on it (outside the pane) closes.
+      onClick={() => onOpenChange(false)}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: 'rgba(0,0,0,0.4)',
+        display: 'flex',
+        justifyContent: 'flex-end',
+      }}
+    >
+      {/* Right-pane slide-in keyframes. Inlined here (chrome.css is another lane)
+          so the open transition works; degrades to an instant show if stripped. */}
+      <style>
+        {
+          '@keyframes np-settings-slide-in{from{transform:translateX(100%)}to{transform:translateX(0)}}'
+        }
+      </style>
+      <FluentProvider
+        theme={props.theme}
         data-testid="settings-surface"
         className="np-acrylic"
-        style={{ maxWidth: 880, width: '90vw', padding: 0, ...acrylicVars(resolvedTheme) }}
+        // Stop scrim-dismiss when the click lands inside the pane itself.
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: PANE_WIDTH,
+          maxWidth: '100vw',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          // Slide-in from the right edge is the open transition; the e2e capture
+          // helper pins transform:none so the golden is timing-independent.
+          animationName: 'np-settings-slide-in',
+          animationDuration: '160ms',
+          animationTimingFunction: 'ease-out',
+          boxShadow: '-8px 0 24px rgba(0,0,0,0.35)',
+          ...acrylicVars(resolvedTheme),
+        }}
       >
-        <FluentProvider theme={props.theme} style={{ background: 'transparent' }}>
-          <DialogBody style={{ display: 'block' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 16px 0',
-              }}
-            >
-              <DialogTitle action={null}>Settings</DialogTitle>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 12px 8px 16px',
+            flex: '0 0 auto',
+          }}
+        >
+          <span style={{ fontSize: 20, fontWeight: 600 }}>
+            {t('MainMenu_Button_Settings.Text')}
+          </span>
+          <Button
+            appearance="subtle"
+            aria-label={t('SettingsShell_Close.AutomationProperties.Name')}
+            data-testid="settings-close"
+            icon={<NavGlyph glyph={CLOSE_GLYPH} />}
+            onClick={() => onOpenChange(false)}
+          />
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            flex: '1 1 auto',
+            minHeight: 0,
+            // Trim the horizontal pane padding to 8px each side (was 12). With the
+            // compact icon rail below this gives the content column ~270px at the
+            // 385px pane width so rows read label-left / control-right without
+            // wrapping (Issue 1 width-budget fix).
+            padding: '0 8px 12px',
+          }}
+        >
+          <div
+            role="tablist"
+            aria-orientation="vertical"
+            data-testid="settings-nav"
+            style={{
+              // Compact icon-only rail (1:1 UWP NavigationView PaneDisplayMode=
+              // LeftCompact ~48px) instead of the old 132px icon+label rail that
+              // starved the content column. Each item keeps its localized title as
+              // an aria-label + native tooltip, so the rail stays accessible and
+              // re-localizes live without consuming horizontal space.
+              width: 40,
+              flex: '0 0 auto',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+            }}
+          >
+            {SECTIONS.map((s) => (
               <Button
-                appearance="subtle"
-                aria-label="Close settings"
-                data-testid="settings-close"
-                icon={<NavGlyph glyph={CLOSE_GLYPH} />}
-                onClick={() => props.onOpenChange(false)}
+                key={s.id}
+                role="tab"
+                aria-selected={section === s.id}
+                aria-label={t(s.labelKey)}
+                title={t(s.labelKey)}
+                appearance={section === s.id ? 'secondary' : 'subtle'}
+                icon={<NavGlyph glyph={s.glyph} />}
+                data-testid={`settings-nav-${s.id}`}
+                onClick={() => setSection(s.id)}
+                style={{
+                  minWidth: 0,
+                  width: '100%',
+                  justifyContent: 'center',
+                  paddingLeft: 0,
+                  paddingRight: 0,
+                }}
               />
-            </div>
-            <DialogContent>
-              <div style={{ display: 'flex', gap: 8, height: '70vh', minHeight: 420 }}>
-                <div
-                  role="tablist"
-                  aria-orientation="vertical"
-                  data-testid="settings-nav"
-                  style={{
-                    minWidth: 200,
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                  }}
-                >
-                  {SECTIONS.map((s) => (
-                    <Button
-                      key={s.id}
-                      role="tab"
-                      aria-selected={section === s.id}
-                      appearance={section === s.id ? 'secondary' : 'subtle'}
-                      icon={<NavGlyph glyph={s.glyph} />}
-                      data-testid={`settings-nav-${s.id}`}
-                      onClick={() => setSection(s.id)}
-                      style={{ justifyContent: 'flex-start', width: '100%' }}
-                    >
-                      {s.label}
-                    </Button>
-                  ))}
-                </div>
-                <div style={{ flex: '1 1 auto', minWidth: 0, height: '100%' }}>
-                  {section === 'textEditor' ? (
-                    <TextEditorPane settings={settings} update={update} />
-                  ) : null}
-                  {section === 'personalization' ? (
-                    <PersonalizationPane settings={settings} update={update} />
-                  ) : null}
-                  {section === 'advanced' ? (
-                    <AdvancedPane settings={settings} update={update} />
-                  ) : null}
-                  {section === 'about' ? <AboutPane /> : null}
-                </div>
-              </div>
-            </DialogContent>
-          </DialogBody>
-        </FluentProvider>
-      </DialogSurface>
-    </Dialog>
+            ))}
+          </div>
+          <div style={{ flex: '1 1 auto', minWidth: 0, height: '100%', overflowY: 'auto' }}>
+            {section === 'textEditor' ? (
+              <TextEditorPane settings={settings} update={update} />
+            ) : null}
+            {section === 'personalization' ? (
+              <PersonalizationPane settings={settings} update={update} />
+            ) : null}
+            {section === 'advanced' ? <AdvancedPane settings={settings} update={update} /> : null}
+            {section === 'about' ? <AboutPane /> : null}
+          </div>
+        </div>
+      </FluentProvider>
+    </div>
   );
 }

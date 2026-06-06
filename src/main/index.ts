@@ -81,6 +81,26 @@ function applyE2eUserDataOverride(): void {
 applyE2eUserDataOverride();
 
 /**
+ * GPU shared-context workaround (Win11 workstation GPUs). Some multi-GPU /
+ * workstation configs fail with "Failed to create shared context for
+ * virtualization" → "Exiting GPU process", which drops the window into the
+ * software-compositing fallback and causes severe scroll/typing lag.
+ *
+ * Forcing the ANGLE backend to D3D11 (instead of the default GL/virtualized
+ * path) makes the shared context creation succeed, and GPU rasterization keeps
+ * compositing on-GPU. This preserves the acrylic blur (we do NOT disable
+ * hardware acceleration, which would kill the backdrop material). Switches must
+ * be appended before `app.whenReady()`; module top-level satisfies that.
+ */
+function applyGpuWorkarounds(): void {
+  if (process.platform !== 'win32') return;
+  app.commandLine.appendSwitch('use-angle', 'd3d11');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+}
+
+applyGpuWorkarounds();
+
+/**
  * Single-instance lock: the first process becomes the broker; a later launch
  * forwards its argv via 'second-instance' and quits. Skipped under the e2e
  * harness, where each Playwright spec is its own isolated process (the lock

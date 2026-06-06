@@ -32,7 +32,12 @@ import { applyEol } from './eol.js';
 import { snapshot, loadLast, clearRecovered } from './session.js';
 import { getSettings, setSettings } from './settings.js';
 import { getThemeState } from './theme.js';
-import { windowBrokerRequest, windowSetFullScreen, windowSetCompactOverlay } from './window.js';
+import {
+  windowBrokerRequest,
+  windowSetFullScreen,
+  windowSetCompactOverlay,
+  windowQuit,
+} from './window.js';
 import { dragOutBegin, dragOutComplete } from './dragout.js';
 import { openContainingFolder, copyPath, webSearch, print, share } from './shell.js';
 
@@ -77,6 +82,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.WindowSetCompactOverlay, (e, enabled: boolean) =>
     windowSetCompactOverlay(e, enabled),
   );
+  ipcMain.handle(IpcChannels.WindowQuit, () => windowQuit());
 
   // --- dragOut (Phase 6) ---
   ipcMain.handle(IpcChannels.DragOutBegin, (e, envelope: DragEnvelope) =>

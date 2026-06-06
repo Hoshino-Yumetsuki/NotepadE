@@ -88,13 +88,29 @@ export function tokensForAppTheme(theme: AppTheme): AppThemeTokens {
 export const DEFAULT_TINT_OPACITY = 0.75;
 
 /**
+ * UWP HostBackdropAcrylic tint-opacity MIN THRESHOLD (0.35).
+ *
+ * The UWP AcrylicBrush remaps the configured TintOpacity through a luminosity
+ * floor before compositing: the solid base tint always contributes AT LEAST 35%,
+ * so the backdrop can never fully wash the surface out. Mirrored here as
+ * `effective = (1 - 0.35) * tintOpacity + 0.35` so our flat-rgba approximation
+ * reads as saturated as the shipping UWP acrylic instead of too light.
+ * (default tintOpacity 0.75 → effective alpha 0.8375.)
+ */
+export const ACRYLIC_TINT_MIN_THRESHOLD = 0.35;
+
+/**
  * Root background as a tinted, semi-transparent base so the window's mica/acrylic
- * material shows through behind it (alpha = tintOpacity). HC stays fully opaque
- * (Canvas system color — no material). tintOpacity is clamped to [0,1].
+ * material shows through behind it. HC stays fully opaque (Canvas system color —
+ * no material). tintOpacity is clamped to [0,1] and then remapped through the UWP
+ * acrylic min-threshold (0.35) so the surface matches the shipping app's weight
+ * rather than appearing washed out.
  */
 export function appBackgroundTint(theme: AppTheme, tintOpacity: number): string {
   if (theme === 'hc') return 'Canvas';
-  const a = Math.max(0, Math.min(1, tintOpacity));
+  const clamped = Math.max(0, Math.min(1, tintOpacity));
+  // UWP HostBackdropAcrylic min-threshold remap (0.35 floor) — see constant above.
+  const a = (1 - ACRYLIC_TINT_MIN_THRESHOLD) * clamped + ACRYLIC_TINT_MIN_THRESHOLD;
   const hex = tokensForAppTheme(theme).base.replace('#', '');
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);

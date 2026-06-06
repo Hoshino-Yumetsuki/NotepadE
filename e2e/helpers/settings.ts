@@ -26,9 +26,11 @@ import type { Settings } from '../../src/shared/ipc-contract';
  */
 
 export const SETTINGS_SELECTORS = {
-  /** Toolbar gear button in the app shell (mouse entry point). */
+  /** Hamburger MainMenu button, left of the tab strip (mouse entry point). */
+  menuButton: '[data-testid="main-menu-button"]',
+  /** The "Settings" item inside the hamburger MenuFlyout (mouse entry point). */
   open: '[data-testid="open-settings"]',
-  /** The modal Dialog surface hosting the nav + panes. */
+  /** The right-side overlay pane hosting the nav + panes. */
   surface: '[data-testid="settings-surface"]',
   close: '[data-testid="settings-close"]',
   nav: '[data-testid="settings-nav"]',
@@ -46,8 +48,13 @@ export function navItem(section: 'textEditor' | 'personalization' | 'advanced' |
   return `[data-testid="settings-nav-${section}"]`;
 }
 
-/** Open the settings surface via the REAL toolbar gear (mouse path) and wait for it. */
+/**
+ * Open the settings surface via the REAL mouse path: click the hamburger MainMenu
+ * button (left of the tab strip), then the "Settings" item in the flyout. Mirrors
+ * the UWP MainMenuButton → MenuFlyout → Settings flow.
+ */
 export async function openSettings(page: Page): Promise<void> {
+  await page.locator(SETTINGS_SELECTORS.menuButton).click({ force: true });
   await page.locator(SETTINGS_SELECTORS.open).click({ force: true });
   await expect(page.locator(SETTINGS_SELECTORS.surface)).toBeVisible();
 }

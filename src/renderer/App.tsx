@@ -1,4 +1,4 @@
-import { FluentProvider, Button } from '@fluentui/react-components';
+import { FluentProvider } from '@fluentui/react-components';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keymap, EditorView } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
@@ -34,7 +34,7 @@ import { DiffViewer } from './diff/DiffViewer';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
-import { useT } from './i18n';
+import { CloseReminderDialog } from './CloseReminderDialog';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -68,12 +68,6 @@ export function App(): JSX.Element {
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
   // status-bar visibility (showStatusBar), and the theme resolution above.
   const { settings, update: updateSettings } = useSettings();
-
-  // Live translator (Phase 6 wave 2). The settings toolbar button below is the
-  // first useT() consumer: its label re-localizes on a settings.appLanguage
-  // switch with NO reload (provider mounted in main.tsx). Wave-2 grows more
-  // wrapped strings from here.
-  const { t } = useT();
 
   // Settings surface open/close state (entry point in the tab strip toolbar).
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
@@ -196,6 +190,10 @@ export function App(): JSX.Element {
         if (handle) handle.setDoc(file.decodedText);
         else setTimeout(seedOpened, 0);
       };
+      // Seed the diff/dirty baseline TEXT (Phase 6 + Issue 3) BEFORE setDoc: the
+      // setDoc dispatch fires the doc-change listener → recomputeDirty, which must
+      // read the just-loaded text as the baseline so an open is "clean", not dirty.
+      lastSavedTextRef.current.set(id, file.decodedText);
       seedOpened();
       store.setLabels(id, file.encodingId, file.eolId);
       store.setFilePath(id, file.filePath);
@@ -203,8 +201,6 @@ export function App(): JSX.Element {
       // Seed the external-modification baseline (column 0) from the authoritative
       // OpenedFile mtime so a later disk change is detectable (Lane C, Gate-4).
       if (file.filePath) recordLastSaved(id, file.filePath, file.dateModifiedMs);
-      // Seed the diff baseline TEXT (Phase 6) from the authoritative decoded text.
-      lastSavedTextRef.current.set(id, file.decodedText);
     },
     [store],
   );
@@ -303,25 +299,156 @@ export function App(): JSX.Element {
             if (handle) handle.setDoc(res.data.decodedText);
             else setTimeout(seedActivation, 0);
           };
+          // Baseline BEFORE setDoc so the doc-change listener sees the loaded text
+          // as the clean baseline (Issue 3) rather than '' (which marks it dirty).
+          lastSavedTextRef.current.set(id, res.data.decodedText);
           seedActivation();
           if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
-          lastSavedTextRef.current.set(id, res.data.decodedText);
         });
       }
     });
     return off;
   }, [store]);
 
-  // Close a tab and drop its external-modification baseline (Lane C, Gate-4):
-  // the per-editor mtime ledger must not leak across a closed editorId.
-  const closeTab = useCallback(
+  // Actually remove a tab and drop its external-modification baseline (Lane C,
+  // Gate-4): the per-editor mtime ledger must not leak across a closed editorId.
+  // Then enforce the last-tab behavior (Issue 4, UWP NotepadsMainPage.xaml.cs:
+  // 496-602): after any close empties the strip, ON → quit the app, OFF → seed a
+  // fresh untitled so the window is never left blank. Callers gate dirty tabs
+  // behind the close-reminder dialog, so by the time we get here the user has
+  // already chosen Save or Don't Save — no unsaved work is silently dropped.
+  const performClose = useCallback(
     (id: string): void => {
       forgetEditor(id);
       lastSavedTextRef.current.delete(id);
       store.close(id);
+      if (store.count() === 0) {
+        if (settings.exitWhenLastTabClosed) void window.notepads.window.quit();
+        else store.newTab();
+      }
+    },
+    [store, settings.exitWhenLastTabClosed],
+  );
+
+  // Close-reminder dialog state (Issue 4, UWP SetCloseSaveReminderDialog). Non-null
+  // while a MODIFIED tab is awaiting the user's Save / Don't Save / Cancel choice.
+  const [pendingClose, setPendingClose] = useState<{ editorId: string; fileName: string } | null>(
+    null,
+  );
+
+  // Close a tab. With exitWhenLastTabClosed OFF, closing the sole PRISTINE untitled
+  // tab is refused (the window keeps one empty buffer). A MODIFIED tab routes
+  // through the save-reminder dialog (no silent data loss); a clean tab closes
+  // immediately via performClose.
+  const closeTab = useCallback(
+    (id: string): void => {
+      const tab = store.get(id);
+      if (!tab) return;
+      const exitOnLast = settings.exitWhenLastTabClosed;
+      const isLast = store.count() === 1;
+      const pristineUntitled = !tab.filePath && !tab.isModified;
+      // Guard: refuse to close the sole pristine untitled tab when not exiting.
+      if (!exitOnLast && isLast && pristineUntitled) return;
+
+      if (tab.isModified) {
+        setPendingClose({ editorId: id, fileName: tabTitle(tab) });
+        return;
+      }
+      performClose(id);
+    },
+    [store, settings.exitWhenLastTabClosed, performClose],
+  );
+
+  // Recompute a tab's dirty flag (Issue 3): compare the live '\n'-shadow text to
+  // that tab's last-saved baseline (also normalized to '\n' — the stored baseline
+  // is raw decoded text that may carry CRLF). Untitled buffers have no baseline
+  // entry → '' (any typed character makes them dirty). Drives the tab dot +
+  // status-bar "Modified" via store.setModified.
+  const recomputeDirty = useCallback(
+    (editorId: string): void => {
+      const handle = editorHandles.current.get(editorId);
+      if (!handle) return;
+      const baseline = normalizeToShadow(lastSavedTextRef.current.get(editorId) ?? '');
+      const dirty = handle.getShadowText() !== baseline;
+      store.setModified(editorId, dirty);
     },
     [store],
   );
+
+  // Save pipeline (Issue 3, UWP NotepadsMainPage.IO.cs:159-217). doSave writes the
+  // active (or given) tab: untitled / no filePath / saveAs → native Save-As picker
+  // (file.saveAs); else write the existing path (file.save). A plain Ctrl+S on an
+  // unmodified, already-on-disk doc is a no-op. On success: re-baseline the shadow
+  // text, set filePath + clear isModified (named tab title follows filePath).
+  const doSave = useCallback(
+    async (editorId: string, opts?: { saveAs?: boolean }): Promise<boolean> => {
+      const tab = store.get(editorId);
+      const handle = editorHandles.current.get(editorId);
+      if (!tab || !handle) return false;
+      const saveAs = opts?.saveAs ?? false;
+      const shadowText = handle.getShadowText();
+      const hasPath = !!tab.filePath;
+      // No-op: a clean, already-saved file with a plain Ctrl+S writes nothing.
+      if (!saveAs && hasPath && !tab.isModified) return true;
+
+      const res =
+        saveAs || !hasPath
+          ? await window.notepads.file.saveAs({
+              shadowText,
+              encodingId: tab.encodingId,
+              eolId: tab.eolId,
+              suggestedName: tabTitle(tab),
+            })
+          : await window.notepads.file.save({
+              filePath: tab.filePath as string,
+              shadowText,
+              encodingId: tab.encodingId,
+              eolId: tab.eolId,
+            });
+      // Cancelled picker or write error: leave the tab dirty, surface nothing.
+      if (!res.ok) return false;
+
+      // Re-baseline to the JUST-saved shadow text so the doc is clean again, and
+      // adopt the authoritative path + labels MAIN echoes back.
+      lastSavedTextRef.current.set(editorId, shadowText);
+      store.setFilePath(editorId, res.data.filePath);
+      store.setLabels(editorId, res.data.encodingId, res.data.eolId);
+      recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
+      store.setModified(editorId, false);
+      return true;
+    },
+    [store],
+  );
+
+  // Save All (UWP: loop modified editors). Untitled modified buffers each open a
+  // Save-As picker in turn. Sequential so the native dialogs don't stack; a
+  // cancelled picker (doSave → false) aborts the remaining saves.
+  const doSaveAll = useCallback(async (): Promise<void> => {
+    for (const t of store.tabs) {
+      if (t.isModified && !(await doSave(t.editorId))) break;
+    }
+  }, [store, doSave]);
+
+  // Close-reminder dialog outcomes (Issue 4, UWP SetCloseSaveReminderDialog).
+  // Save → write, then close only if the write succeeded (a cancelled Save-As
+  // picker aborts the close, keeping the tab). Don't Save → discard + close.
+  // Cancel / dismiss → keep the tab. Each clears the pending state first so the
+  // dialog closes before the (possibly async) save resolves.
+  const onReminderSave = useCallback((): void => {
+    const target = pendingClose;
+    if (!target) return;
+    setPendingClose(null);
+    void doSave(target.editorId).then((saved) => {
+      if (saved) performClose(target.editorId);
+    });
+  }, [pendingClose, doSave, performClose]);
+  const onReminderDontSave = useCallback((): void => {
+    const target = pendingClose;
+    if (!target) return;
+    setPendingClose(null);
+    performClose(target.editorId);
+  }, [pendingClose, performClose]);
+  const onReminderCancel = useCallback((): void => setPendingClose(null), []);
 
   // App-level tab keyboard shortcuts.
   useTabKeyboard(store, {
@@ -377,55 +504,74 @@ export function App(): JSX.Element {
   // dispatched 'notepads:toggle-compact' event toggles the compact-overlay
   // substitute (frameless always-on-top, per 0.A sign-off #8). Both route
   // through window.notepads.window (MAIN owns the BrowserWindow — PA-8). Local
-  // refs track the resolved state so each toggle flips it.
+  // refs track the resolved state so each toggle flips it. The toggles are
+  // lifted to stable callbacks so the main-menu flyout (hamburger) drives the
+  // same code path as the F11/F12 accelerators.
   const fullScreenRef = useRef(false);
   const compactRef = useRef(false);
+  const toggleFullScreen = useCallback((): void => {
+    void window.notepads.window.setFullScreen(!fullScreenRef.current).then((res) => {
+      if (res.ok) fullScreenRef.current = res.data.isFullScreen;
+    });
+  }, []);
+  const toggleCompact = useCallback((): void => {
+    void window.notepads.window.setCompactOverlay(!compactRef.current).then((res) => {
+      if (res.ok) compactRef.current = res.data.isCompactOverlay;
+    });
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'F11') {
         e.preventDefault();
-        void window.notepads.window.setFullScreen(!fullScreenRef.current).then((res) => {
-          if (res.ok) fullScreenRef.current = res.data.isFullScreen;
-        });
+        toggleFullScreen();
       } else if (e.key === 'F12' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
         // F12 → toggle the compact-overlay window (frameless always-on-top, the
         // 0.A sign-off #8 substitute). Bare F12 only, so a modified chord never
         // triggers it; MAIN owns the actual window state machine (window.ts).
         e.preventDefault();
-        onCompact();
+        toggleCompact();
       }
     };
-    const onCompact = (): void => {
-      void window.notepads.window.setCompactOverlay(!compactRef.current).then((res) => {
-        if (res.ok) compactRef.current = res.data.isCompactOverlay;
-      });
-    };
     window.addEventListener('keydown', onKey);
-    window.addEventListener('notepads:toggle-compact', onCompact);
+    window.addEventListener('notepads:toggle-compact', toggleCompact);
     return () => {
       window.removeEventListener('keydown', onKey);
-      window.removeEventListener('notepads:toggle-compact', onCompact);
+      window.removeEventListener('notepads:toggle-compact', toggleCompact);
     };
-  }, []);
+  }, [toggleFullScreen, toggleCompact]);
 
   // Print + Share (Workstream 6.B/C). Ctrl+P prints the current document and
   // Ctrl+Shift+P prints every open document (one per page); both route through the
   // print host + MAIN webContents.print(). A dispatched 'notepads:share' event
   // hands the active document to MAIN's share/clipboard path. PA-8 (typed bridge).
+  // Print actions (Workstream 6.B). Lifted to stable callbacks so the hamburger
+  // menu's Print / Print All items and the Ctrl+P / Ctrl+Shift+P accelerators
+  // drive the exact same path (print host → MAIN webContents.print()).
+  const doPrintCurrent = useCallback((): void => {
+    const id = store.activeEditorId;
+    const t = id ? store.get(id) : undefined;
+    if (id && t) {
+      void print.printCurrent({
+        title: tabTitle(t),
+        text: editorHandles.current.get(id)?.getShadowText() ?? '',
+      });
+    }
+  }, [print, store]);
+  const doPrintAll = useCallback((): void => {
+    void print.printAll(
+      store.tabs.map((t) => ({
+        title: tabTitle(t),
+        text: editorHandles.current.get(t.editorId)?.getShadowText() ?? '',
+      })),
+    );
+  }, [print, store]);
   useEffect(() => {
     const readText = (id: string): string => editorHandles.current.get(id)?.getShadowText() ?? '';
     const onKey = (e: KeyboardEvent): void => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
         e.preventDefault();
-        if (e.shiftKey) {
-          void print.printAll(
-            store.tabs.map((t) => ({ title: tabTitle(t), text: readText(t.editorId) })),
-          );
-        } else {
-          const id = store.activeEditorId;
-          const t = id ? store.get(id) : undefined;
-          if (id && t) void print.printCurrent({ title: tabTitle(t), text: readText(id) });
-        }
+        if (e.shiftKey) doPrintAll();
+        else doPrintCurrent();
       }
     };
     const onShare = (): void => {
@@ -439,7 +585,85 @@ export function App(): JSX.Element {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('notepads:share', onShare);
     };
-  }, [print, share, store]);
+  }, [doPrintCurrent, doPrintAll, share, store]);
+
+  // Save accelerators (Issue 3): Ctrl+S saves the active tab (untitled → picker),
+  // Ctrl+Shift+S always Save-As. Matches the existing F11 / Ctrl+P effect style.
+  // Re-binds when doSave/doSaveAll change identity (store-bound, so rarely).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        const id = store.activeEditorId;
+        if (!id) return;
+        if (e.shiftKey) void doSave(id, { saveAs: true });
+        else void doSave(id);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doSave, store]);
+
+  // Each entry reuses the SAME handler the keyboard accelerators already drive:
+  // New→store.newTab, Find/Replace→the find bar's openFindBar, Full Screen→F11,
+  // CompactOverlay→F12, Print/Print All→the print host (Ctrl+P / Ctrl+Shift+P),
+  // Settings→the settings surface. Commands with no renderer implementation yet
+  // (New Window, Open dialog, Save/Save As/Save All) are left undefined so
+  // TabStrip renders them disabled — keeping the menu structure 1:1 with the UWP
+  // MainMenuButton flyout. See the per-item TODOs.
+  const menuCommands = useMemo(
+    () => ({
+      onNew: () => store.newTab(),
+      onFind: () => find.keymapCallbacks.openFindBar(false),
+      onReplace: () => find.keymapCallbacks.openFindBar(true),
+      onFullScreen: toggleFullScreen,
+      onCompactOverlay: toggleCompact,
+      onPrint: doPrintCurrent,
+      onPrintAll: doPrintAll,
+      onSettings: () => setSettingsOpen(true),
+      // Save / Save As / Save All — drive the same doSave/doSaveAll the Ctrl+S /
+      // Ctrl+Shift+S accelerators use. Providing these auto-enables the matching
+      // disabled={!commands.onSave...} MenuItems in TabStrip (no TabStrip edit).
+      onSave: () => {
+        const id = store.activeEditorId;
+        if (id) void doSave(id);
+      },
+      onSaveAs: () => {
+        const id = store.activeEditorId;
+        if (id) void doSave(id, { saveAs: true });
+      },
+      onSaveAll: () => {
+        void doSaveAll();
+      },
+      // TODO: wire these once their renderer commands exist.
+      // onNewWindow / onOpen
+    }),
+    [
+      store,
+      find.keymapCallbacks,
+      toggleFullScreen,
+      toggleCompact,
+      doPrintCurrent,
+      doPrintAll,
+      doSave,
+      doSaveAll,
+    ],
+  );
+
+  // Map the MAIN-owned persisted Settings bag onto the editor-behavior facets
+  // CodeMirrorEditor consumes (Worker C wires consumption). Only the four fields
+  // EditorSettings exposes are forwarded; the rest of Settings is theme/IO state.
+  const editorBehaviorSettings = useMemo(
+    () => ({
+      tabAsSpaces: settings.tabIndents,
+      smartCopy: settings.smartCopy,
+      searchEngine: settings.searchEngine,
+      fontSize: settings.editorFontSize,
+    }),
+    [settings.tabIndents, settings.smartCopy, settings.searchEngine, settings.editorFontSize],
+  );
+  // word-wrap derives from the persisted TextWrapMode ('wrap' | 'noWrap').
+  const editorWordWrap = settings.textWrapping === 'wrap';
 
   return (
     <FluentProvider
@@ -461,6 +685,7 @@ export function App(): JSX.Element {
         onCloseTab={(id) => closeTab(id)}
         onBeginTransfer={(id) => beginTransfer(store, transferSource.current, id)}
         onVoidDrop={(id) => handleVoidDrop(store, id)}
+        menu={menuCommands}
       />
       <div id="app-shell" style={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
         {/* Edge-shadow elevation (Phase 7, Task #28): absolute, out-of-flow casters
@@ -480,19 +705,6 @@ export function App(): JSX.Element {
             style={edgeShadowStyle(resolvedTheme, 'up')}
           />
         ) : null}
-        <Button
-          appearance="subtle"
-          aria-label={t('MainMenu_Button_Settings.Text')}
-          data-testid="open-settings"
-          title={`${t('MainMenu_Button_Settings.Text')} (Ctrl+,)`}
-          onClick={() => setSettingsOpen(true)}
-          icon={
-            <span aria-hidden style={{ fontFamily: '"Segoe MDL2 Assets"', fontSize: 16 }}>
-              {String.fromCharCode(0xe713)}
-            </span>
-          }
-          style={{ position: 'absolute', top: 6, right: 8, zIndex: 5, minWidth: 0 }}
-        />
         {tabs.map((tab) => {
           const isActive = tab.editorId === activeEditorId;
           const paneOn = isActive && (tab.viewMode.preview || tab.viewMode.diff);
@@ -527,6 +739,18 @@ export function App(): JSX.Element {
                     else editorHandles.current.delete(tab.editorId);
                   }}
                   editorExtensions={paneEditorExtensions}
+                  onDocChanged={() => recomputeDirty(tab.editorId)}
+                  settings={editorBehaviorSettings}
+                  lineNumbers={settings.displayLineNumbers}
+                  lineHighlighter={settings.displayLineHighlighter}
+                  wordWrap={editorWordWrap}
+                  direction="ltr"
+                  fontFamily={settings.editorFontFamily}
+                  fontSize={settings.editorFontSize}
+                  fontStyle={settings.editorFontStyle}
+                  fontWeight={settings.editorFontWeight}
+                  accentColor={appTheme.accentHex}
+                  themeMode={appTheme.resolved}
                 />
               </div>
               {paneOn && tab.viewMode.preview && (
@@ -580,6 +804,12 @@ export function App(): JSX.Element {
         update={updateSettings}
         theme={appTheme.theme}
         resolvedTheme={resolvedTheme}
+      />
+      <CloseReminderDialog
+        pending={pendingClose}
+        onSave={onReminderSave}
+        onDontSave={onReminderDontSave}
+        onCancel={onReminderCancel}
       />
     </FluentProvider>
   );
