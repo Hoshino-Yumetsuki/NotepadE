@@ -6,7 +6,7 @@ import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEdit
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
 import { TabStrip } from './tabs/TabStrip';
-import { useTabsStore, tabsStore } from './tabs/useTabsStore';
+import { useTabsStore, tabsStore, setUntitledBaseName } from './tabs/useTabsStore';
 import { useTabKeyboard } from './tabs/useTabKeyboard';
 import { installTabsTestHook } from './tabs/tabsTestHook';
 import { StatusBar } from './statusbar/StatusBar';
@@ -35,6 +35,7 @@ import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
 import { CloseReminderDialog } from './CloseReminderDialog';
+import { useT } from './i18n';
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -73,6 +74,9 @@ export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
   const { tabs, activeEditorId, store } = useTabsStore(tabsStore);
+
+  // Live translator — drives the localized untitled new-file base name (below).
+  const { t } = useT();
 
   // One CM6 handle per editorId. The active editor's handle backs the test hook.
   const editorHandles = useRef<Map<string, CodeMirrorHandle | null>>(new Map());
@@ -156,7 +160,22 @@ export function App(): JSX.Element {
     },
   });
 
-  // Seed an initial untitled tab once.
+  // Localized untitled new-file base name (UWP TextEditor_DefaultNewFileName,
+  // e.g. en 'Untitled.txt' / zh '新建文本文档.txt' / ja '無題.txt'). The store
+  // appends a number ('{base} {N}'); we strip the trailing extension so the tab
+  // reads e.g. "新建文本文档 1", not "新建文本文档.txt 1". Re-applied whenever the
+  // resolved language changes so a switch in Settings affects the NEXT new tab.
+  const untitledBase = useMemo(() => {
+    const resource = t('TextEditor_DefaultNewFileName');
+    return resource.replace(/\.[^.]+$/, '') || resource;
+  }, [t]);
+  // This effect is defined BEFORE the seed effect so it runs first on mount —
+  // the initial seeded tab is already localized rather than English.
+  useEffect(() => {
+    setUntitledBaseName(untitledBase);
+  }, [untitledBase]);
+
+  // Seed an initial untitled tab once (after the base name is set above).
   useEffect(() => {
     if (store.count() === 0) store.newTab();
     // eslint-disable-next-line react-hooks/exhaustive-deps

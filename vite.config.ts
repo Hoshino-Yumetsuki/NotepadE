@@ -71,8 +71,11 @@ export default defineConfig(({ command }) => ({
         // (src/renderer), so Electron looks for the app there and fails with
         // "Cannot find module .../src/renderer". Launch the built main by its
         // absolute path instead (cwd-independent), mirroring the e2e launcher.
+        // NOTE: no --no-sandbox — the vite-plugin-electron starter ships it, but
+        // it contradicts webPreferences.sandbox:true and weakens the dev runtime
+        // for no reason. Removing it keeps dev's process model identical to prod.
         onstart: (args) => {
-          void args.startup([resolve(dirname, 'out/main/index.js'), '--no-sandbox']);
+          void args.startup([resolve(dirname, 'out/main/index.js')]);
         },
         vite: {
           build: {

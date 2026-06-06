@@ -39,6 +39,16 @@ import type { EncodingId, EolId } from '@shared/ipc-contract';
 let editorSeq = 0;
 let untitledSeq = 0;
 
+/**
+ * Base name for untitled buffers (Issue: localized new-file name). Defaults to
+ * the English 'Untitled' so the framework-agnostic store needs no i18n; the App
+ * overrides it from the localized TextEditor_DefaultNewFileName resource (e.g.
+ * '新建文本文档', '無題', 'Unbenannt') via setUntitledBaseName, so a new tab is
+ * named in the active UI language instead of always English. The numbered suffix
+ * ('{base} {N}') is preserved across locales.
+ */
+let untitledBaseName = 'Untitled';
+
 /** Mint a process-unique editor id. */
 function nextEditorId(): string {
   editorSeq += 1;
@@ -72,7 +82,7 @@ function makeTab(args: NewTabArgs): TabState {
   let untitledName = args.untitledName;
   if (filePath === null && untitledName === undefined) {
     untitledSeq += 1;
-    untitledName = `Untitled ${untitledSeq}`;
+    untitledName = `${untitledBaseName} ${untitledSeq}`;
   }
   return {
     editorId: args.editorId ?? nextEditorId(),
@@ -331,6 +341,19 @@ export class TabsStore {
 
 /** Process-wide singleton store (one window == one strip). */
 export const tabsStore = new TabsStore();
+
+/**
+ * Set the base name used for future untitled buffers (Issue: localized new-file
+ * name). The App calls this with the localized TextEditor_DefaultNewFileName stem
+ * whenever the UI language resolves/changes, so the NEXT `newTab()` is named in
+ * the active language. Existing tabs keep their names (UWP does not rename open
+ * untitled docs on a language switch). A blank/whitespace value is ignored so a
+ * missing resource never produces a nameless tab.
+ */
+export function setUntitledBaseName(base: string): void {
+  const trimmed = base.trim();
+  if (trimmed.length > 0) untitledBaseName = trimmed;
+}
 
 /**
  * React binding. Returns the live snapshot plus the bound action surface.

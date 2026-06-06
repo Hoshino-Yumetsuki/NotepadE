@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TabsStore } from './useTabsStore';
+import { TabsStore, setUntitledBaseName } from './useTabsStore';
 
 /**
  * Tab lifecycle semantics (Phase 2, stream B) — docs/plan/03 tasks #4/#5 and the
@@ -30,6 +30,21 @@ describe('TabsStore lifecycle', () => {
     expect(store.get(a)?.untitledName).toMatch(/^Untitled \d+$/);
     expect(store.get(b)?.untitledName).toMatch(/^Untitled \d+$/);
     expect(store.get(a)?.untitledName).not.toBe(store.get(b)?.untitledName);
+  });
+
+  it('setUntitledBaseName localizes the new-file base (numbered suffix kept)', () => {
+    // Module-level base name — restore the default afterward so it doesn't leak.
+    try {
+      setUntitledBaseName('新建文本文档');
+      const a = store.newTab();
+      expect(store.get(a)?.untitledName).toMatch(/^新建文本文档 \d+$/);
+      // Blank/whitespace is ignored (a missing resource must not blank the name).
+      setUntitledBaseName('   ');
+      const b = store.newTab();
+      expect(store.get(b)?.untitledName).toMatch(/^新建文本文档 \d+$/);
+    } finally {
+      setUntitledBaseName('Untitled');
+    }
   });
 
   it('newTab with activate:false keeps current selection', () => {

@@ -81,21 +81,47 @@ function applyE2eUserDataOverride(): void {
 applyE2eUserDataOverride();
 
 /**
- * GPU shared-context workaround (Win11 workstation GPUs). Some multi-GPU /
- * workstation configs fail with "Failed to create shared context for
- * virtualization" → "Exiting GPU process", which drops the window into the
- * software-compositing fallback and causes severe scroll/typing lag.
+ * GPU workaround (Win11 / workstation / virtualized GPUs) — ENV-CONFIGURABLE.
  *
- * Forcing the ANGLE backend to D3D11 (instead of the default GL/virtualized
- * path) makes the shared context creation succeed, and GPU rasterization keeps
- * compositing on-GPU. This preserves the acrylic blur (we do NOT disable
- * hardware acceleration, which would kill the backdrop material). Switches must
- * be appended before `app.whenReady()`; module top-level satisfies that.
+ * Symptom: "ContextResult::kFatalFailure: Failed to create shared context for
+ * virtualization." → "Exiting GPU process due to errors during initialization",
+ * dropping the window into software compositing (severe scroll/typing lag) or a
+ * blank window. This is a Chromium GPU-process failure creating its shared GL
+ * context, seen on specific Windows GPU/driver/virtualization stacks (multi-GPU,
+ * "Windows for Workstations", GPU-PV, RDP). It is hardware/driver-specific: it
+ * does NOT reproduce on every machine, so there is no single switch that is
+ * universally correct — the working combination must be found on the affected
+ * machine. `scripts/gpu-diag.mjs` sweeps the candidates and reports which are
+ * clean; set the winner via the env vars below (no rebuild needed).
+ *
+ *   NOTEPADS_ANGLE=<backend>   → --use-angle=<backend>  (d3d11 | d3d9 | gl |
+ *                                 vulkan | swiftshader). Trying a different ANGLE
+ *                                 backend is the most common fix for this error.
+ *   NOTEPADS_DISABLE_GPU_COMPOSITING=1 → --disable-gpu-compositing (keep GPU
+ *                                 raster, software-composite; keeps the app fast
+ *                                 while sidestepping the shared-context path).
+ *   NOTEPADS_DISABLE_GPU=1     → --disable-gpu (last resort; KILLS the acrylic
+ *                                 backdrop, but guarantees no GPU process).
+ *
+ * Default (no env set): apply nothing. The bare Electron default works on most
+ * machines (verified locally), and a blind switch can REGRESS a healthy machine
+ * (e.g. --in-process-gpu actively triggers this very error here). Win11 keeps
+ * GPU rasterization on by default, so we no longer force it.
+ *
+ * Switches must be appended before app.whenReady(); module top-level satisfies it.
  */
 function applyGpuWorkarounds(): void {
   if (process.platform !== 'win32') return;
-  app.commandLine.appendSwitch('use-angle', 'd3d11');
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  const angle = process.env['NOTEPADS_ANGLE'];
+  if (angle && angle.length > 0) {
+    app.commandLine.appendSwitch('use-angle', angle);
+  }
+  if (process.env['NOTEPADS_DISABLE_GPU_COMPOSITING'] === '1') {
+    app.commandLine.appendSwitch('disable-gpu-compositing');
+  }
+  if (process.env['NOTEPADS_DISABLE_GPU'] === '1') {
+    app.disableHardwareAcceleration();
+  }
 }
 
 applyGpuWorkarounds();
