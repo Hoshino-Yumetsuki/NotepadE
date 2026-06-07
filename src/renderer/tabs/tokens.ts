@@ -227,4 +227,10 @@ export const TabAnimation = {
    * or hovering a tab animates instead of reading "生硬" (stiff/abrupt).
    */
   brushFadeMs: 167,
+  /**
+   * New-tab entrance (UWP SetsView ItemContainerTransitions EntranceThemeTransition,
+   * IsStaggeringEnabled=False). A newly-inserted tab fades + slides in over ~160ms
+   * instead of snapping into existence.
+   */
+  enterMs: 160,
 } as const;

@@ -266,6 +266,7 @@ function ModificationStateColumn(props: {
   onReloadFromDisk: () => void;
 }): JSX.Element | null {
   const { tokens, state, onReloadFromDisk } = props;
+  const { t } = useT();
   // 'none' renders an empty Auto/MinWidth-4 column placeholder (UWP MinWidth=4).
   if (state === 'none') {
     return (
@@ -275,7 +276,9 @@ function ModificationStateColumn(props: {
   const glyph =
     state === 'modifiedOutside' ? StatusGlyph.fileModified : StatusGlyph.fileRenamedMovedDeleted;
   const label =
-    state === 'modifiedOutside' ? 'File modified outside' : 'File renamed, moved, or deleted';
+    state === 'modifiedOutside'
+      ? t('TextEditor_FileModifiedOutsideIndicator_ToolTip')
+      : t('TextEditor_FileRenamedMovedOrDeletedIndicator_ToolTip');
 
   // Modified-outside offers a one-item flyout to reload (E72C); renamed/moved/
   // deleted is informational (UWP shows the same reload affordance via the path
@@ -302,7 +305,7 @@ function ModificationStateColumn(props: {
             icon={<Glyph glyph={StatusGlyph.reload} />}
             onClick={onReloadFromDisk}
           >
-            Reload file from disk
+            {t('TextEditor_FileModifiedOutsideIndicator_MenuFlyoutItem_ReloadFileFromDisk.Text')}
           </MenuItem>
         </MenuList>
       </MenuPopover>
@@ -356,7 +359,7 @@ function PathColumn(props: {
             icon={<Glyph glyph={StatusGlyph.reload} />}
             onClick={props.onReloadFromDisk}
           >
-            Reload file from disk
+            {t('TextEditor_FileModifiedOutsideIndicator_MenuFlyoutItem_ReloadFileFromDisk.Text')}
           </MenuItem>
           <MenuItem
             data-testid="status-path-copy"
@@ -364,7 +367,7 @@ function PathColumn(props: {
             icon={<Glyph glyph={StatusGlyph.copyPath} />}
             onClick={props.onCopyFullPath}
           >
-            Copy full path
+            {t('Tab_ContextFlyout_CopyFullPathButtonDisplayText')}
           </MenuItem>
           <MenuItem
             data-testid="status-path-folder"
@@ -372,7 +375,7 @@ function PathColumn(props: {
             icon={<Glyph glyph={StatusGlyph.openFolder} />}
             onClick={props.onOpenContainingFolder}
           >
-            Open containing folder
+            {t('Tab_ContextFlyout_OpenContainingFolderButtonDisplayText')}
           </MenuItem>
           <MenuItem
             data-testid="status-path-rename"
@@ -380,7 +383,7 @@ function PathColumn(props: {
             icon={<Glyph glyph={StatusGlyph.rename} />}
             onClick={props.onRename}
           >
-            Rename
+            {t('Tab_ContextFlyout_RenameButtonDisplayText')}
           </MenuItem>
         </MenuList>
       </MenuPopover>
@@ -642,7 +645,14 @@ function EncodingColumn(props: {
           </MenuItem>
         </MenuTrigger>
         <MenuPopover>
-          <MenuList data-testid={`status-encoding-${keyPrefix}-more-list`}>
+          <MenuList
+            data-testid={`status-encoding-${keyPrefix}-more-list`}
+            // The ANSI table is long (dozens of code pages); cap the list height and
+            // scroll it (Fluent MenuList does not auto-scroll). Viewport-relative so
+            // it stays usable in a short window. The app's overlay scrollbar styling
+            // (chrome.css) applies automatically.
+            style={{ maxHeight: '50vh', overflowY: 'auto' }}
+          >
             {model.more.map((row) => (
               <MenuItem
                 key={row.encodingId}

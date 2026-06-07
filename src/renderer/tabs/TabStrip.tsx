@@ -9,11 +9,13 @@ import {
 } from '@fluentui/react-components';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
   closestCenter,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -174,6 +176,8 @@ interface SortableTabProps {
   onBeginRename(editorId: string): void;
   onCommitRename(editorId: string, value: string): void;
   onCancelRename(): void;
+  /** True when this tab was just inserted, so it should play the entrance animation. */
+  animateEnter?: boolean;
   /** Cross-window transfer hooks (optional; see TabStripProps). */
   onBeginTransfer?(editorId: string): Promise<string | null>;
   onVoidDrop?(editorId: string): void;
@@ -195,6 +199,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
     onBeginRename,
     onCommitRename,
     onCancelRename,
+    animateEnter,
     onBeginTransfer,
     onVoidDrop,
   } = props;
@@ -328,6 +333,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
         {...attributes}
         role="tab"
         aria-selected={active}
+        className={animateEnter ? 'np-tab-enter' : undefined}
         data-testid="tab"
         data-editor-id={tab.editorId}
         data-active={active ? 'true' : 'false'}
@@ -860,6 +866,70 @@ function TabElevation(props: {
 }
 
 /**
+ * Presentational clone of a tab for the dnd-kit DragOverlay. It carries NO
+ * useSortable / interactivity — it is the floating visual that follows the cursor
+ * outside the strip's overflow clip while the real (dimmed) tab stays in flow. It
+ * mirrors the SortableTab look closely enough to read as "the tab, lifted out":
+ * fill, modified dot, title, close-slot spacing.
+ */
+function TabOverlayCard(props: {
+  tab: TabState;
+  tokens: TabThemeTokens;
+  width: number;
+  active: boolean;
+}): JSX.Element {
+  const { tab, tokens, width, active } = props;
+  const fill = active ? tokens.headerSelected : tokens.headerHover;
+  const textColor = active ? tokens.textSelected : tokens.textDefault;
+  return (
+    <div
+      data-testid="tab-overlay"
+      style={{
+        width,
+        height: TabDimensions.height,
+        paddingLeft: TabDimensions.paddingLeft,
+        paddingRight: TabDimensions.paddingRight,
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        background: fill,
+        color: textColor,
+        fontSize: 14,
+        fontFamily: 'Segoe UI, system-ui, sans-serif',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        cursor: 'grabbing',
+        // Lifted look: a drop shadow so it reads as floating above the strip.
+        boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+        borderRadius: 2,
+      }}
+    >
+      {tab.isModified ? (
+        <span
+          aria-hidden
+          style={{
+            width: TabDimensions.iconSize,
+            marginRight: TabDimensions.iconMarginRight,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: SEGOE_MDL2_FONT_FAMILY,
+            fontSize: TabDimensions.modifiedDotSize,
+            color: 'var(--tab-accent, #0078D4)',
+            flex: '0 0 auto',
+          }}
+        >
+          {TabGlyph.modifiedDot}
+        </span>
+      ) : null}
+      <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {tabTitle(tab)}
+      </span>
+    </div>
+  );
+}
+
+/**
  * Add-tab (+) button (E710) — fixed to the right of the strip. SetsView chrome:
  * shows the reveal grey on hover plus the cursor-follow radial highlight (Phase 7,
  * Task #27). HC reveal tint is transparent (no material), matching UWP HC.
@@ -987,6 +1057,11 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // 时候会留下一个空出来的底"). Hiding the overlay during the drag and
   // remeasuring on drop removes it; the moving tab carries its own fill.
   const [dragging, setDragging] = useState(false);
+  // The id of the tab currently being dragged, so a DragOverlay can render a
+  // floating, UN-clipped clone of it (the in-strip original is clipped by the tab
+  // list's overflow; the overlay is portaled out so it lifts free of the strip for
+  // more reorder room — UWP lets the dragged set float out of the bar).
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   const closeTab = useCallback(
     (editorId: string) => {
@@ -1083,6 +1158,22 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // it to remeasure the moved tab's x. Also feeds the dnd-kit SortableContext.
   const ids = useMemo(() => tabs.map((t) => t.editorId), [tabs]);
 
+  // New-tab entrance gating (UWP EntranceThemeTransition only plays for items that
+  // ENTER, not for the set already present on first render). A tab whose id was not
+  // seen on a prior render is "new" and gets the entrance animation; the initial set
+  // is seeded as seen on the first render so a cold start doesn't animate everything
+  // at once. The ref is updated AFTER computing the new set for this render.
+  const seenIdsRef = useRef<Set<string> | null>(null);
+  const firstRender = seenIdsRef.current === null;
+  if (seenIdsRef.current === null) seenIdsRef.current = new Set(ids);
+  const seen = seenIdsRef.current;
+  const isNewTab = (id: string): boolean => !firstRender && !seen.has(id);
+  // Record current ids as seen for the next render (drop closed ids so a reused
+  // editorId — should one ever recur — would re-animate as genuinely new).
+  useEffect(() => {
+    seenIdsRef.current = new Set(ids);
+  }, [ids]);
+
   // Measure the active tab's box in STRIP-LOCAL coordinates so the unclipped
   // elevation overlay can hug it. Re-runs whenever anything that moves the active
   // tab changes (selection, per-tab width, scroll offset, tab count, strip width).
@@ -1144,14 +1235,16 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // dnd-kit: start dragging only after a small movement so clicks still register.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const onDragStart = (): void => {
+  const onDragStart = (e: DragStartEvent): void => {
     draggingRef.current = true;
     setDragging(true);
+    setActiveDragId(String(e.active.id));
   };
 
   const onDragEnd = (e: DragEndEvent): void => {
     draggingRef.current = false;
     setDragging(false);
+    setActiveDragId(null);
     const { active, over } = e;
     if (over && active.id !== over.id) {
       store.reorderById(String(active.id), String(over.id));
@@ -1161,6 +1254,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   const onDragCancel = (): void => {
     draggingRef.current = false;
     setDragging(false);
+    setActiveDragId(null);
   };
 
   // Build the context-menu action closures for a given tab.
@@ -1302,6 +1396,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
                 revealTheme={resolvedTheme}
                 width={tabWidth}
                 tabCount={tabs.length}
+                animateEnter={isNewTab(tab.editorId)}
                 renaming={renamingId === tab.editorId}
                 onActivate={activateTab}
                 onClose={closeTab}
@@ -1314,6 +1409,25 @@ export function TabStrip(props: TabStripProps): JSX.Element {
               />
             ))}
           </SortableContext>
+          {/* Floating clone of the dragged tab, portaled OUTSIDE the strip's overflow
+              clip so it lifts free of the bar for more reorder room. dropAnimation is
+              kept short; the in-flow original is dimmed (opacity 0.6) by SortableTab. */}
+          <DragOverlay dropAnimation={{ duration: TabAnimation.settleMs, easing: 'ease' }}>
+            {activeDragId
+              ? (() => {
+                  const t = tabs.find((x) => x.editorId === activeDragId);
+                  if (!t) return null;
+                  return (
+                    <TabOverlayCard
+                      tab={t}
+                      tokens={tokens}
+                      width={tabWidth}
+                      active={t.editorId === activeEditorId}
+                    />
+                  );
+                })()
+              : null}
+          </DragOverlay>
         </DndContext>
       </div>
 

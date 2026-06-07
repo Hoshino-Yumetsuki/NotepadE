@@ -63,3 +63,87 @@ body,
     background-color: rgba(138, 138, 138, 0.55);
   }
 }
+
+/*
+ * Focus indicator. Chromium's UA focus ring follows the Windows accent color, so
+ * on a machine with an orange OS accent every keyboard-focused control drew an
+ * orange box. We keep focus KEYBOARD-ONLY (the UA :focus-visible behavior the user
+ * already had) but recolor the ring to the app's THEME focus stroke (Fluent
+ * --colorStrokeFocus2, which re-themes light/dark/hc + tracks the accent). HC falls
+ * back to the system Highlight color.
+ *
+ * Fluent's own components (Button, Switch, Dropdown, Radio, …) set outline:none on
+ * themselves and draw their own focus indicator, so this recolor only reaches raw
+ * native controls (custom chrome <button>s, the color <input>, etc.) that would
+ * otherwise show the bare UA ring.
+ *
+ * The EDITOR is excluded entirely: UWP's RichEditBox shows no focus rectangle, and
+ * :focus-visible matches a contenteditable even on a MOUSE click (the user is about
+ * to type) — which is exactly the "mouse click now rings too" regression. Suppress
+ * both :focus and :focus-visible on .cm-content so clicking or tabbing into the
+ * editor draws nothing, matching UWP.
+ */
+:focus-visible {
+  outline: 2px solid var(--colorStrokeFocus2, Highlight);
+  outline-offset: -2px;
+}
+.cm-content:focus,
+.cm-content:focus-visible {
+  outline: none;
+}
+
+/*
+ * New-tab entrance (UWP SetsView EntranceThemeTransition). A newly-mounted tab
+ * fades in. This is OPACITY-ONLY on purpose: a translate/transform offset would
+ * move the tab's box during the 160ms animation, and the active-tab elevation
+ * overlay (side shadows + strip→editor merge) is measured once via rAF right after
+ * mount — reading an offset rect would pin the overlay ~8px off the tab's real
+ * edges, leaving a visible gap on the left/right ("缺一块"). Opacity does not affect
+ * getBoundingClientRect, so the tab sits at its final position from frame 0 and the
+ * overlay stays aligned. React keys tabs by editorId, so only a freshly created
+ * element runs this once; existing tabs keep their identity and never re-animate.
+ * Reduced-motion users get an instant show.
+ */
+@keyframes np-tab-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.np-tab-enter {
+  animation: np-tab-enter 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-tab-enter {
+    animation: none;
+  }
+}
+
+/*
+ * Settings pane slide-in (UWP RootSplitView Overlay, PanePlacement=Right). The
+ * slide is a CSS keyframe — NOT a React-state-driven inline transform — so the
+ * element's RESTING transform is translateX(0) (on-screen). A state-held
+ * translateX(100%) off-screen start (the prior approach) raced React re-renders:
+ * any reconcile while the pane was still "not entered" rewrote the inline
+ * transform back off-screen and clobbered the e2e capture pin, dropping nav
+ * clicks. With the keyframe, React never writes transform, so the resting box is
+ * always on-screen and the animation alone supplies the motion.
+ */
+@keyframes np-settings-enter {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.np-settings-enter {
+  animation: np-settings-enter 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-settings-enter {
+    animation: none;
+  }
+}

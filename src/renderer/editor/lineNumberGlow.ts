@@ -180,16 +180,16 @@ class LineNumberGlowPlugin implements PluginValue {
     scroller.addEventListener('pointerleave', this.onLeave, { passive: true });
   }
 
-  /** The gutter element, looked up lazily (it exists once lineNumbers() mounts). */
+  /** The line-number column element, looked up lazily (exists once it mounts). */
   private gutters(): HTMLElement | null {
-    return this.view.dom.querySelector<HTMLElement>('.cm-gutters');
+    return this.view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn');
   }
 
   private mountOverlay(): void {
     const gutters = this.gutters();
     if (!gutters) return; // retried on the next update()
-    // `.cm-gutters` is position: sticky, which establishes a containing block for
-    // this absolutely-positioned child, so inset:0 fills the visible gutter box.
+    // `.cm-lineNumberColumn` is position: absolute, which establishes a containing
+    // block for this absolutely-positioned child, so inset:0 fills the column box.
     const el = document.createElement('div');
     el.className = 'cm-lineNumberGlow';
     el.setAttribute('aria-hidden', 'true');
@@ -209,8 +209,8 @@ class LineNumberGlowPlugin implements PluginValue {
 
   update(_update: ViewUpdate): void {
     if (this.disabled) return;
-    // CM6 can rebuild the gutter DOM (e.g. when the line-count digit width
-    // changes), detaching our overlay. Re-attach it cheaply when that happens.
+    // The line-number column can rebuild its DOM (e.g. on a theme/font reconfigure),
+    // detaching our overlay. Re-attach it cheaply when that happens.
     if (!this.overlay || !this.overlay.isConnected) {
       this.overlay = null;
       this.mountOverlay();

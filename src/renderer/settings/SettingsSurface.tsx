@@ -106,28 +106,26 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   // FontSize 24, updated per ContentFrame navigation).
   const sectionTitle = SECTIONS.find((s) => s.id === section)?.labelKey ?? '';
 
-  // Slide-in perf gate: the pane animates transform: translateX over 160ms while
-  // wearing .np-acrylic (backdrop-filter: blur(30px)). Re-blurring the 30px kernel
-  // over the full 385px×full-height pane every frame as it moves over changing
-  // content behind it is what makes the open stutter. So we keep the blur OFF during
-  // the slide (data-acrylic-animating in acrylic.css suppresses backdrop-filter; the
-  // tint + luminosity still ride along) and only switch the heavy blur on once the
-  // pane is stationary — on animationend. `will-change: transform` hints the
-  // compositor during the slide and is dropped once settled so it costs nothing at
-  // rest. The settled look is identical to the always-on blur.
+  // Slide-in is a CSS keyframe (np-settings-enter, chrome.css) whose RESTING
+  // transform is translateX(0) — on-screen. The prior approach held the pane at a
+  // React-state translateX(100%) until a double-rAF flipped it; that raced React
+  // re-renders (any reconcile while not-yet-entered rewrote the inline transform
+  // back off-screen, clobbering the e2e capture pin and dropping nav clicks). With
+  // the keyframe, React never writes transform, so the box is always on-screen.
+  //
+  // `settled` is the perf gate for the heavy backdrop blur: the .np-acrylic
+  // backdrop-filter(blur 30px) is suppressed (via data-acrylic-animating) while the
+  // pane is in motion and switched on only once it stops (animationend), since
+  // re-blurring the full pane each frame as it travels is what stutters.
   const [settled, setSettled] = useState(false);
   useEffect(() => {
     if (!open) {
-      // Reset so the next open re-runs the slide cheap (the instance is kept mounted
-      // by the App across open/close, so state would otherwise persist).
       setSettled(false);
       return;
     }
-    // Fallback: guarantee the settled blur even if animationend never arrives — a
-    // stripped/instant keyframe (the inlined <style> degrades to an instant show if
-    // chrome.css is absent) or a reduced-motion engine may skip the event. Slightly
-    // longer than the 160ms slide so it only fires if the event was genuinely missed.
-    const id = window.setTimeout(() => setSettled(true), 220);
+    // Fallback: guarantee the settled blur even if animationend never arrives
+    // (reduced-motion engines skip the animation entirely). Longer than the slide.
+    const id = window.setTimeout(() => setSettled(true), 240);
     return () => window.clearTimeout(id);
   }, [open]);
 
@@ -163,25 +161,18 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
         justifyContent: 'flex-end',
       }}
     >
-      {/* Right-pane slide-in keyframes. Inlined here (chrome.css is another lane)
-          so the open transition works; degrades to an instant show if stripped. */}
-      <style>
-        {
-          '@keyframes np-settings-slide-in{from{transform:translateX(100%)}to{transform:translateX(0)}}'
-        }
-      </style>
       <FluentProvider
         theme={props.theme}
         data-testid="settings-surface"
-        className="np-acrylic"
+        className="np-acrylic np-settings-enter"
         // While the slide is in flight the heavy backdrop blur is suppressed (see
         // the `settled` gate above + acrylic.css). The attribute is omitted once
         // settled, so the expensive blur only kicks in on the stationary pane.
         data-acrylic-animating={settled ? undefined : ''}
-        // Switch the blur on the moment the slide finishes (the timeout above is the
-        // belt-and-braces fallback for a skipped/instant keyframe).
+        // Switch the blur on the moment the slide keyframe finishes (the timeout
+        // above is the belt-and-braces fallback for a skipped/instant animation).
         onAnimationEnd={(e) => {
-          if (e.animationName === 'np-settings-slide-in') setSettled(true);
+          if (e.animationName === 'np-settings-enter') setSettled(true);
         }}
         // Stop scrim-dismiss when the click lands inside the pane itself.
         onClick={(e) => e.stopPropagation()}
@@ -191,14 +182,9 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          // Slide-in from the right edge is the open transition; the e2e capture
-          // helper pins transform:none so the golden is timing-independent.
-          animationName: 'np-settings-slide-in',
-          animationDuration: '160ms',
-          animationTimingFunction: 'ease-out',
-          // Hint the compositor during the slide; drop it at rest so a stationary
-          // pane pays nothing for the promotion.
-          willChange: settled ? undefined : 'transform',
+          // The slide is owned by the np-settings-enter CSS keyframe (chrome.css);
+          // the resting transform is translateX(0), so React never writes an
+          // off-screen inline transform that could race a re-render.
           boxShadow: '-8px 0 24px rgba(0,0,0,0.35)',
           ...acrylicVars(resolvedTheme),
         }}

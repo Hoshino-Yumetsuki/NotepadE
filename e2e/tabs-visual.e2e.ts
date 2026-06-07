@@ -9,6 +9,7 @@ import {
   expectTabCount,
   resetToSingleTab,
 } from './helpers/tabs';
+import { driveOsTheme } from './helpers/settings';
 
 /**
  * VERIFICATION GATE 2 — Golden-image diff (docs/plan/03 §GATE 2).
@@ -85,9 +86,21 @@ async function arrangeDeterministicStrip(): Promise<void> {
 
 for (const tc of THEME_CASES) {
   test(`tab strip golden image — ${tc.name} theme <=0.1% delta @visual`, async () => {
-    const { page } = launched;
+    const { app, page } = launched;
 
+    // R10: the resolved light/dark bucket is owned by MAIN's nativeTheme (the
+    // renderer never reads prefers-color-scheme for it — PA-8), so emulateMedia
+    // alone is a false-green that only "works" after a prior test nudged
+    // nativeTheme. Drive the MAIN seam per-case so each is self-contained and
+    // passes IN ISOLATION (the first test no longer inherits the default bucket).
+    await driveOsTheme(app, tc.colorScheme);
     await page.emulateMedia({ colorScheme: tc.colorScheme, forcedColors: tc.forcedColors });
+    // HC: useAppTheme reads forced-colors AT MOUNT, so a fresh reload is needed for
+    // the renderer to re-resolve the 'hc' bucket from the live query (golden.ts flow).
+    if (tc.name === 'hc') {
+      await page.reload();
+      await page.waitForLoadState('domcontentloaded');
+    }
     await arrangeDeterministicStrip();
 
     const strip = page.locator(TAB_SELECTORS.strip);
@@ -96,34 +109,55 @@ for (const tc of THEME_CASES) {
     // R9 GUARD (docs/plan/11 risk R9): the visual e2e drives themes via
     // emulateMedia WITHOUT a page.reload(); a regression to mount-only theme
     // reading would silently re-introduce the all-light "false green" the
-    // baselines can't catch. Before the pixel diff, assert the strip's ACTUAL
-    // rendered surface matches the emulated theme so a theme-read regression
-    // fails LOUDLY here instead of diffing against the wrong baseline.
-    //   - light/dark: assert the computed background luminance band (light
-    //     #F0F0F0 ≈ 240, dark #2E2E2E ≈ 46).
-    //   - hc: forced-colors keywords resolve to the user palette (no fixed RGB),
-    //     so assert the strip actually entered its HC variant via emulateMedia
-    //     reactivity (forced-colors media query is active in the page).
-    const bgLuma = await strip.evaluate((el) => {
-      const m = getComputedStyle(el).backgroundColor.match(/\d+/g);
-      if (!m) return -1;
-      const [r, g, b] = m.map(Number);
-      return 0.299 * r + 0.587 * g + 0.114 * b;
-    });
-    if (tc.name === 'light') {
-      expect(bgLuma, `light strip surface luminance (got ${bgLuma})`).toBeGreaterThan(180);
-    } else if (tc.name === 'dark') {
-      expect(
-        bgLuma,
-        `dark strip surface luminance (got ${bgLuma}) — a value >180 means the theme read regressed to light`,
-      ).toBeLessThan(120);
-    } else {
+    // baselines can't catch. Before the pixel diff, assert the theme ACTUALLY
+    // resolved so a theme-read regression fails LOUDLY here instead of diffing
+    // against the wrong baseline. Two independent signals:
+    //   1. The strip's own data-theme attribute — the strongest signal that the
+    //      renderer genuinely resolved the bucket (a mount-only regression would
+    //      pin this to the wrong value). The strip's own BACKGROUND is no longer a
+    //      valid probe: post-acrylic (commit bcca234) the strip is intentionally
+    //      `transparent` in light/dark (the app acrylic shows through), so the
+    //      resolved surface color lives on the app-shell ancestor, not the strip.
+    //   2. light/dark: the painted app-shell root luminance band (light #F0F0F0
+    //      ≈ 240, dark #2E2E2E ≈ 46), read off the nearest non-transparent
+    //      ancestor; hc: forced-colors genuinely active (keywords resolve to the
+    //      user palette, so there is no fixed RGB to assert).
+    const expectedTheme = tc.name === 'hc' ? 'hc' : tc.name;
+    await expect(strip).toHaveAttribute('data-theme', expectedTheme);
+
+    if (tc.name === 'hc') {
       // HC: confirm forced-colors is genuinely active in the page (the reactivity
       // R9 protects). If this query is false the HC capture is meaningless.
       const forcedActive = await page.evaluate(
         () => window.matchMedia('(forced-colors: active)').matches,
       );
       expect(forcedActive, 'HC capture requires forced-colors: active to be live').toBe(true);
+    } else {
+      // light/dark: walk up from the (transparent) strip to the first ancestor
+      // with a non-transparent background and read its luminance — that is the
+      // app-shell surface the acrylic paints over.
+      const bgLuma = await strip.evaluate((el) => {
+        let node: Element | null = el;
+        while (node) {
+          // Match decimals too: an alpha of "0.5" must not split into [0,5] (which
+          // would misread the channel as transparent and skip a painted surface).
+          const m = getComputedStyle(node).backgroundColor.match(/[\d.]+/g);
+          if (m) {
+            const [r, g, b, a] = m.map(Number);
+            if (a === undefined || a > 0) return 0.299 * r + 0.587 * g + 0.114 * b;
+          }
+          node = node.parentElement;
+        }
+        return -1;
+      });
+      if (tc.name === 'light') {
+        expect(bgLuma, `light app surface luminance (got ${bgLuma})`).toBeGreaterThan(180);
+      } else {
+        expect(
+          bgLuma,
+          `dark app surface luminance (got ${bgLuma}) — a value >180 means the theme read regressed to light`,
+        ).toBeLessThan(120);
+      }
     }
 
     // Wait for fonts so glyph metrics are stable, then let dnd/resize settle.

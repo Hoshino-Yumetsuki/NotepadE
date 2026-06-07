@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { EditorState } from '@codemirror/state';
-import { EditorView, lineNumbers } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
+import { lineNumberColumn } from './lineNumberColumn';
 import {
   parseHexColor,
   glowColor,
@@ -84,15 +85,18 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
     return new EditorView({
       state: EditorState.create({
         doc: 'a\nb\nc',
-        extensions: [lineNumbers(), lineNumberGlow({ themeMode, accentColor: accent })],
+        extensions: [
+          lineNumberColumn({ themeMode, fontFamily: 'monospace', lineHighlighter: false }),
+          lineNumberGlow({ themeMode, accentColor: accent }),
+        ],
       }),
       parent,
     });
   }
 
-  it('attaches an inline-styled overlay inside .cm-gutters (no CM6 theme selector)', () => {
+  it('attaches an inline-styled overlay inside .cm-lineNumberColumn (no CM6 theme selector)', () => {
     const view = mount('dark');
-    const overlay = view.dom.querySelector<HTMLElement>('.cm-gutters .cm-lineNumberGlow');
+    const overlay = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn .cm-lineNumberGlow');
     expect(overlay).not.toBeNull();
     expect(overlay!.getAttribute('aria-hidden')).toBe('true');
     expect(overlay!.style.position).toBe('absolute');
@@ -125,8 +129,8 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
   it('drives glow opacity from pointer proximity (rAF-coalesced)', async () => {
     const view = mount('dark');
     const overlay = view.dom.querySelector<HTMLElement>('.cm-lineNumberGlow')!;
-    const gutters = view.dom.querySelector<HTMLElement>('.cm-gutters')!;
-    // Pin a deterministic gutter rect (jsdom returns zeros otherwise).
+    const gutters = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!;
+    // Pin a deterministic column rect (jsdom returns zeros otherwise).
     gutters.getBoundingClientRect = () =>
       ({ top: 0, right: 40, left: 0, bottom: 100, width: 40, height: 100 }) as DOMRect;
     const scroller = view.scrollDOM;

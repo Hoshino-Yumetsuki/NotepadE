@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import { Compartment, EditorState, Transaction, type Extension } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
+import { EditorView, keymap, highlightActiveLine } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL, normalizeToShadow } from './eol';
 import { editorSettings, type EditorSettings } from './editorSettings';
@@ -10,7 +10,7 @@ import { initZoomVar } from './commands/zoom';
 import type { TextDirection } from './commands/direction';
 import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/wordWrap';
 import { lineNumberGlow } from './lineNumberGlow';
-import { tokensForAppTheme } from '../theme/tokens';
+import { lineNumberColumn } from './lineNumberColumn';
 
 /**
  * Imperative handle the host (App) uses to drive the editor without owning the
@@ -127,13 +127,11 @@ interface EditorThemeOptions {
  */
 function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
   activeLine: string;
-  activeLineGutter: string;
   scrollbarThumbHover: string;
 } {
   if (themeMode === 'dark') {
     return {
       activeLine: 'rgba(255, 255, 255, 0.05)',
-      activeLineGutter: 'rgba(255, 255, 255, 0.07)',
       scrollbarThumbHover: 'rgba(138, 138, 138, 0.55)',
     };
   }
@@ -141,7 +139,6 @@ function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
   // anyway, so the faint wash is a no-op there).
   return {
     activeLine: 'rgba(127, 127, 127, 0.08)',
-    activeLineGutter: 'rgba(127, 127, 127, 0.10)',
     scrollbarThumbHover: 'rgba(137, 137, 137, 0.55)',
   };
 }
@@ -188,35 +185,18 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
       scrollbarWidth: 'thin',
       scrollbarColor: 'transparent transparent',
     },
-    // Active line + its gutter: the CM6 default highlight is invisible on our
-    // transparent surface, so paint an explicit subtle overlay (per-theme tint
-    // from themeOverlays). Gated on lineHighlighter so the "Highlight current
-    // line" toggle is honored.
-    ...(lineHighlighter
-      ? {
-          '.cm-activeLine': { backgroundColor: overlay.activeLine },
-          '.cm-activeLineGutter': { backgroundColor: overlay.activeLineGutter },
-        }
-      : {}),
-    // Gutter stays transparent (acrylic shows through). UWP rendered line numbers
-    // in the SAME font family/size as the editor body (TextEditorCore.LineNumbers
-    // RenderLineNumbersInternal uses the control's FontFamily/FontSize) at a muted
-    // ~0.6α foreground — #99000000 light / #99EEEEEE dark. Mirror both here so the
-    // numbers match the body text rather than CM6's default proportional UI font.
-    // The gutter is position:sticky inside the horizontal scroller. With a
-    // transparent background, content scrolled to the right slides LEFT under the
-    // gutter and shows through — line numbers and text overlap. Paint it with the
-    // app's OPAQUE base surface color so it fully occludes scrolled content (UWP
-    // sidesteps this entirely: its line numbers live in a separate, non-scrolling
-    // grid column). The base (#F0F0F0 / #2E2E2E / Canvas) matches the acrylic tint
-    // floor so the strip blends with the surrounding editor surface.
-    '.cm-gutters': { backgroundColor: tokensForAppTheme(themeMode).base, border: 'none' },
-    '.cm-lineNumbers .cm-gutterElement': {
-      fontFamily,
-      color: themeMode === 'dark' ? 'rgba(238, 238, 238, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-      padding: '0 8px 0 6px',
-    },
-    '.cm-lineNumbers .cm-activeLineGutter': { color: 'inherit' },
+    // Active line: the CM6 default highlight is invisible on our transparent
+    // surface, so paint an explicit subtle overlay (per-theme tint from
+    // themeOverlays). Gated on lineHighlighter so the "Highlight current line"
+    // toggle is honored. The active line's NUMBER is brightened by the external
+    // line-number column itself (see lineNumberColumn.ts), not a gutter rule.
+    ...(lineHighlighter ? { '.cm-activeLine': { backgroundColor: overlay.activeLine } } : {}),
+    // Line numbers are NOT a CM6 gutter here — they render in a separate external
+    // column (lineNumberColumn.ts) positioned OUTSIDE the horizontal scroller, so
+    // document text never travels behind them. That is the only structure where the
+    // column can be transparent (acrylic shows through) AND never overlap text; a
+    // sticky in-scroller gutter cannot be both. See lineNumberColumn.ts for the full
+    // rationale. Consequently there are no `.cm-gutters` / `.cm-lineNumbers` rules.
     // Selection = system accent (UWP painted selection with the accent, not a
     // muted grey). Color BOTH focused and unfocused selection layers so a blurred
     // editor (e.g. while a find box has focus) still shows it. The FOCUSED layer
@@ -398,8 +378,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           }),
         ),
         // Line numbers gated on the prop, in a compartment so toggling the setting
-        // mounts/unmounts the gutter live.
-        lineNumbersCompartment.current.of(showLineNumbers ? lineNumbers() : []),
+        // mounts/unmounts the external column live. NOT CM6's lineNumbers() — an
+        // out-of-scroller column so it stays transparent without text overlap.
+        lineNumbersCompartment.current.of(
+          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : [],
+        ),
         // Line-number reveal glow, mounted iff the gutter is shown. Empty when off
         // so there is no overlay/listeners without a gutter to light.
         lineNumberGlowCompartment.current.of(
@@ -463,14 +446,18 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       initZoomVar(view);
     }, [fontSize]);
 
-    // Line-number gutter mount/unmount.
+    // Line-number column mount/unmount + live rebuild. The external column bakes in
+    // themeMode/fontFamily/lineHighlighter (number color, font face, active-line
+    // emphasis), so a change to any of those rebuilds it — same lane as the glow.
     useEffect(() => {
       const view = viewRef.current;
       if (!view) return;
       view.dispatch({
-        effects: lineNumbersCompartment.current.reconfigure(showLineNumbers ? lineNumbers() : []),
+        effects: lineNumbersCompartment.current.reconfigure(
+          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : [],
+        ),
       });
-    }, [showLineNumbers]);
+    }, [showLineNumbers, themeMode, fontFamily, lineHighlighter]);
 
     // Line-number reveal glow: re-derive when the gutter is toggled OR the theme/
     // accent changes (the glow tint is baked in at build time to keep the
