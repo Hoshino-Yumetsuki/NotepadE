@@ -42,9 +42,9 @@ jobs:
       - name: Setup Corepack
         run: |
           corepack enable
+          corepack prepare
       - name: Setup Dependencies
         run: |
-          corepack prepare
           yarn install --immutable
       # `dist` runs `vite build` then `electron-builder --publish never`, emitting
       # the per-OS target(s) from electron-builder.yml into release/. The macOS dmg
