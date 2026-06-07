@@ -55,3 +55,22 @@ jobs:
           path: ${{ matrix.glob }}
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Create GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - name: Download built artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          path: release
+      - name: Create GitHub Release and upload assets
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: release/**
+          token: ${{ secrets.GITHUB_TOKEN }}
