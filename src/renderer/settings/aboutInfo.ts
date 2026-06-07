@@ -1,15 +1,18 @@
 /**
  * Build-time app constants for the About pane (Phase 5, Stream C).
  *
- * The version is a renderer-side constant (no IPC needed). Phase 6 may surface
- * the real package version via window.notepads.app; until then this single
- * source keeps the About pane and any future "about" command consistent.
+ * The version is inlined at build time from package.json via Vite's `define`
+ * (__APP_VERSION__) — UWP surfaced Package.Current.Id.Version. No IPC needed.
  *
  * PA-8: pure data — no fs/path/child_process, no IPC.
  */
 
-/** Display version for the About pane. Bump alongside package.json on release. */
-export const APP_VERSION = '0.0.0';
+/** Injected by Vite `define` from package.json at build time. */
+declare const __APP_VERSION__: string;
+
+/** Display version for the About pane (from package.json, inlined at build). */
+export const APP_VERSION =
+  typeof __APP_VERSION__ === 'string' && __APP_VERSION__.length > 0 ? __APP_VERSION__ : '0.0.0';
 
 /** Product name (matches the UWP About header). */
 export const APP_NAME = 'Notepads';

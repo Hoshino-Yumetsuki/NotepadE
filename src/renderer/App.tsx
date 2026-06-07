@@ -34,8 +34,10 @@ import { isMarkdownPath } from './markdown/renderMarkdown';
 import { DiffViewer } from './diff/DiffViewer';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
+import { useEditorContextMenu } from './editor/EditorContextMenu';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
 import { CloseReminderDialog } from './CloseReminderDialog';
+import { AppCloseReminderDialog } from './AppCloseReminderDialog';
 import { CaptionButtons } from './chrome/CaptionButtons';
 import { useT } from './i18n';
 
@@ -168,7 +170,38 @@ export function App(): JSX.Element {
     },
   });
 
-  // Localized untitled new-file base name (UWP TextEditor_DefaultNewFileName,
+  // Editor right-click context menu (UWP TextEditorContextFlyout). Mounts a CM6
+  // contextmenu seam into every editor (via paneEditorExtensions) and renders a
+  // positioned Fluent menu. Gives Share + RTL their UI entry points.
+  const editorContextMenu = useEditorContextMenu({
+    isPreviewEligible: isMarkdownPath(
+      (store.activeEditorId ? store.get(store.activeEditorId) : undefined)?.filePath ?? null,
+    ),
+    onTogglePreview: () => {
+      const id = store.activeEditorId;
+      const tb = id ? store.get(id) : undefined;
+      if (id && tb) store.setViewMode(id, { preview: !tb.viewMode.preview, diff: false });
+    },
+    onShare: (selectionOnly: boolean) => {
+      const id = store.activeEditorId;
+      const tb = id ? store.get(id) : undefined;
+      const view = getActiveView();
+      if (!tb || !view) return;
+      const sel = view.state.selection.main;
+      const text =
+        selectionOnly && !sel.empty
+          ? view.state.sliceDoc(sel.from, sel.to)
+          : view.state.doc.toString();
+      void share({ title: tabTitle(tb), text });
+    },
+  });
+
+  // Editor extensions including the contextmenu seam (find/preview-pulse + menu).
+  const editorExtensionsWithMenu = useMemo(
+    () => [paneEditorExtensions, editorContextMenu.extension],
+    [paneEditorExtensions, editorContextMenu.extension],
+  );
+
   // e.g. en 'Untitled.txt' / zh '新建文本文档.txt' / ja '無題.txt'). The store
   // appends a number ('{base} {N}'); we strip the trailing extension so the tab
   // reads e.g. "新建文本文档 1", not "新建文本文档.txt 1". Re-applied whenever the
@@ -598,6 +631,45 @@ export function App(): JSX.Element {
   }, [pendingClose, performClose]);
   const onReminderCancel = useCallback((): void => setPendingClose(null), []);
 
+  // App-level close reminder (UWP MainPage_CloseRequested → AppCloseSaveReminderDialog).
+  // MAIN intercepts the native window close (X / Alt+F4 / OS) and pushes
+  // onCloseRequested; we run the unsaved-changes flow, then call window.confirmClose()
+  // to let the real close proceed. `appClosePending` shows the dialog while the user
+  // decides. NOTE: UWP skips this prompt when session-snapshot is ON (it persists the
+  // session instead). Renderer session persistence is not yet wired, so we ALWAYS
+  // prompt on dirty tabs — prompting can never lose data; silently closing could.
+  const [appClosePending, setAppClosePending] = useState(false);
+
+  useEffect(() => {
+    return window.notepads.window.onCloseRequested(() => {
+      const anyDirty = store.tabs.some((t) => t.isModified);
+      if (!anyDirty) {
+        void window.notepads.window.confirmClose();
+        return;
+      }
+      setAppClosePending(true);
+    });
+  }, [store]);
+
+  // Save All & Exit: save every modified tab in turn (a cancelled Save-As picker or
+  // a write error aborts), then close the window only if everything is now clean.
+  const onAppCloseSaveAll = useCallback((): void => {
+    setAppClosePending(false);
+    void (async () => {
+      for (const t of store.tabs) {
+        if (t.isModified && !(await doSave(t.editorId))) return; // aborted — stay open.
+      }
+      void window.notepads.window.confirmClose();
+    })();
+  }, [store, doSave]);
+
+  const onAppCloseDiscard = useCallback((): void => {
+    setAppClosePending(false);
+    void window.notepads.window.confirmClose();
+  }, []);
+
+  const onAppCloseCancel = useCallback((): void => setAppClosePending(false), []);
+
   // App-level tab keyboard shortcuts.
   useTabKeyboard(store, {
     onNewTab: () => store.newTab(),
@@ -904,7 +976,7 @@ export function App(): JSX.Element {
                     if (h) editorHandles.current.set(tab.editorId, h);
                     else editorHandles.current.delete(tab.editorId);
                   }}
-                  editorExtensions={paneEditorExtensions}
+                  editorExtensions={editorExtensionsWithMenu}
                   onDocChanged={() => recomputeDirty(tab.editorId)}
                   settings={editorBehaviorSettings}
                   lineNumbers={settings.displayLineNumbers}
@@ -977,6 +1049,13 @@ export function App(): JSX.Element {
         onDontSave={onReminderDontSave}
         onCancel={onReminderCancel}
       />
+      <AppCloseReminderDialog
+        open={appClosePending}
+        onSaveAllAndExit={onAppCloseSaveAll}
+        onDiscardAndExit={onAppCloseDiscard}
+        onCancel={onAppCloseCancel}
+      />
+      {editorContextMenu.menu}
     </FluentProvider>
   );
 }

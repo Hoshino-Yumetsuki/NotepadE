@@ -13,6 +13,8 @@ import { BrowserWindow, nativeTheme } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { IpcChannels } from '../shared/ipc-channels.js';
+import { installCloseGuard } from './window.js';
+import { restoredWindowOptions, trackWindowBounds, DEFAULT_BOUNDS } from './window-bounds.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -29,8 +31,8 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
   const isDark = nativeTheme.shouldUseDarkColors;
 
   const win = new BrowserWindow({
-    width: 1100,
-    height: 720,
+    width: DEFAULT_BOUNDS.width,
+    height: DEFAULT_BOUNDS.height,
     minWidth: 480,
     minHeight: 320,
     show: false,
@@ -61,7 +63,23 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
   });
 
   win.once('ready-to-show', () => {
-    win.show();
+    // Restore the last session's window bounds + maximized state before first paint.
+    // Returns null under e2e / first run → keep the original show()-only path so the
+    // default-sized window stays pixel-identical (visual goldens depend on it).
+    void restoredWindowOptions()
+      .then((opts) => {
+        if (win.isDestroyed() || !opts) return;
+        if (typeof opts.x === 'number' && typeof opts.y === 'number') {
+          win.setBounds({ x: opts.x, y: opts.y, width: opts.width, height: opts.height });
+        } else {
+          win.setSize(opts.width, opts.height);
+          win.center();
+        }
+        if (opts.restoreMaximized) win.maximize();
+      })
+      .finally(() => {
+        if (!win.isDestroyed()) win.show();
+      });
   });
 
   // Push maximized-state changes to the renderer so the custom max/restore glyph
@@ -74,6 +92,14 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
   };
   win.on('maximize', sendMaxState);
   win.on('unmaximize', sendMaxState);
+
+  // Intercept native close (X / Alt+F4 / OS) so the renderer can run the
+  // unsaved-changes flow before the window actually closes (UWP CloseRequested).
+  installCloseGuard(win);
+
+  // Persist size/position/maximized across launches (UWP got this from the OS
+  // shell). No-op under e2e for deterministic fixed-size specs.
+  trackWindowBounds(win);
 
   return win;
 }

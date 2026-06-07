@@ -15,6 +15,7 @@
 
 import { app, BrowserWindow } from 'electron';
 import type { Result } from '../shared/ipc-contract.js';
+import { IpcChannels } from '../shared/ipc-channels.js';
 import { brokerRequest as brokerRequestImpl } from './broker.js';
 import {
   toggleCompact,
@@ -77,6 +78,69 @@ export function windowClose(event: Electron.IpcMainInvokeEvent): Result<void> {
   } catch (e) {
     return { ok: false, error: errMsg(e) };
   }
+}
+
+/**
+ * Windows whose close has been confirmed by the renderer's close-reminder flow.
+ * The 'close' guard in window-factory consults this set: a window NOT present is
+ * intercepted (preventDefault + EvtWindowCloseRequested push); a window present is
+ * allowed to close for real. Mirrors the UWP deferral: the dialog resolves, then
+ * `deferral.Complete()` lets the navigation proceed.
+ */
+const confirmedClose = new WeakSet<BrowserWindow>();
+
+/**
+ * Global "the app is quitting" flag. Set on `before-quit` so the close guard stops
+ * intercepting — an explicit app quit (exit-when-last-tab, window-all-closed, OS
+ * shutdown) must not be blocked per-window. The renderer's own quit path already
+ * ran the unsaved-changes flow before calling `window.quit()`.
+ */
+let appQuitting = false;
+
+/** Register the before-quit hook that disarms the per-window close guard. */
+export function initCloseGuardQuitBypass(): void {
+  app.on('before-quit', () => {
+    appQuitting = true;
+  });
+}
+
+/** True when this window's close has already been confirmed (window-factory guard). */
+export function isCloseConfirmed(win: BrowserWindow): boolean {
+  return confirmedClose.has(win);
+}
+
+/**
+ * The renderer finished its unsaved-changes flow and the window may now close.
+ * Mark it confirmed (so the factory's 'close' guard lets it through) and trigger
+ * the real close. 1:1 with UWP `deferral.Complete()` after the close dialog.
+ */
+export function windowConfirmClose(event: Electron.IpcMainInvokeEvent): Result<void> {
+  const win = windowFor(event);
+  if (!win) return { ok: false, error: 'No window for this renderer' };
+  try {
+    confirmedClose.add(win);
+    win.close();
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+/**
+ * Install the close guard on a freshly-created window. Until the renderer confirms
+ * (window.confirmClose → confirmedClose set), every native close attempt (X /
+ * Alt+F4 / OS) is intercepted and forwarded to the renderer as a close-request so
+ * it can run the unsaved-changes flow (UWP MainPage_CloseRequested). Called by the
+ * window factory.
+ */
+export function installCloseGuard(win: BrowserWindow): void {
+  win.on('close', (e) => {
+    if (appQuitting) return; // app-level quit — never block.
+    if (confirmedClose.has(win)) return; // confirmed — let it close.
+    if (win.webContents.isDestroyed()) return; // nothing to ask; allow.
+    e.preventDefault();
+    win.webContents.send(IpcChannels.EvtWindowCloseRequested);
+  });
 }
 
 /** Current maximized flag — seeds the renderer's restore glyph on mount. */

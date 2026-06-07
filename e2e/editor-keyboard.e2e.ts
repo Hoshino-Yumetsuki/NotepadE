@@ -204,17 +204,15 @@ test('Ctrl+H opens the find bar with the replace row', async () => {
   await expectFindBarHidden(page);
 });
 
-test('Ctrl+G opens the go-to-line prompt', async () => {
+test('Ctrl+G opens the go-to-line dialog and jumps to the entered line', async () => {
   const { page } = launched;
   await setEditorDoc(page, 'l1\nl2\nl3');
-  // useFindBar's openGoToLine reads the target line via window.prompt. Electron
-  // returns null from the native prompt (no UI), so override it to a fixed line.
-  // window.prompt is a plain window global (NOT the frozen contract), so this
-  // override is allowed.
-  await page.evaluate(() => {
-    window.prompt = () => '2';
-  });
+  // W4: openGoToLine now shows a themed Fluent dialog (replacing window.prompt).
   await page.keyboard.press('Control+g');
+  const input = page.getByTestId('goto-line-input');
+  await expect(input).toBeVisible();
+  await input.fill('2');
+  await page.getByTestId('goto-line-submit').click();
   // Caret landed on line 2 start (offset 3 = after "l1\n").
   await expect.poll(async () => (await getSelection(page)).from).toBe(3);
 });

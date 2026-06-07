@@ -85,6 +85,8 @@ const api: NotepadsApi = {
     isMaximized: () => invoke<{ isMaximized: boolean }>(IpcChannels.WindowIsMaximized),
     onMaximizeChanged: (cb) => subscribe<boolean>(IpcChannels.WindowMaximizeChanged, cb),
     quit: () => invoke<void>(IpcChannels.WindowQuit),
+    confirmClose: () => invoke<void>(IpcChannels.WindowConfirmClose),
+    onCloseRequested: (cb) => subscribe<undefined>(IpcChannels.EvtWindowCloseRequested, () => cb()),
   },
   dragOut: {
     begin: (envelope: DragEnvelope) =>

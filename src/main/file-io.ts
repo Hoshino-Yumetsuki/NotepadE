@@ -29,6 +29,49 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Node fs error codes that are typically TRANSIENT (file locked by AV / sync). */
+const TRANSIENT_WRITE_CODES = new Set(['EBUSY', 'EPERM', 'EACCES', 'EAGAIN']);
+
+function errCode(e: unknown): string | undefined {
+  return e != null && typeof e === 'object' && 'code' in e
+    ? String((e as { code: unknown }).code)
+    : undefined;
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Write bytes with bounded retries on transient locking errors. OneDrive sync,
+ * antivirus scanners, and search indexers briefly hold a write lock that surfaces
+ * as EBUSY/EPERM/EACCES; a short retry almost always succeeds (UWP did the same via
+ * ExecuteFileIOOperationWithRetries / CachedFileManager.DeferUpdates). A
+ * non-transient error (e.g. ENOENT, EISDIR) throws immediately. After the final
+ * attempt the last error propagates so the caller surfaces a real failure.
+ *
+ * `writeFn` is injectable for unit tests; production uses fs/promises writeFile.
+ */
+export async function writeFileWithRetry(
+  path: string,
+  bytes: Buffer,
+  attempts = 3,
+  backoffMs = 80,
+  writeFn: (p: string, b: Buffer) => Promise<void> = writeFile,
+): Promise<void> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await writeFn(path, bytes);
+      return;
+    } catch (e) {
+      lastErr = e;
+      const code = errCode(e);
+      if (code == null || !TRANSIENT_WRITE_CODES.has(code)) throw e; // not transient.
+      if (i < attempts - 1) await sleep(backoffMs * (i + 1)); // linear backoff.
+    }
+  }
+  throw lastErr;
+}
+
 export async function openFile(path: string): Promise<Result<OpenedFile>> {
   try {
     const bytes = await readFile(path);
@@ -189,7 +232,7 @@ async function writeShadowToPath(
 
   const withEol = applyEol(lfText, eolId);
   const bytes = encodeText(withEol, encodingId);
-  await writeFile(filePath, bytes);
+  await writeFileWithRetry(filePath, bytes);
 
   const stats = await stat(filePath);
   fileMeta.set(filePath, { encodingId, eolId });

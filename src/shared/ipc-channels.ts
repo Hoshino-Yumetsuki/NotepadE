@@ -47,6 +47,17 @@ export const IpcChannels = {
   /** MAIN→renderer push: window maximized state changed (drives the restore glyph). */
   WindowMaximizeChanged: 'notepads:window:maximizeChanged',
   WindowQuit: 'notepads:window:quit',
+  /**
+   * Renderer→MAIN: the renderer has resolved the close-reminder flow and the
+   * window may now actually close (UWP MainPage_CloseRequested deferral.Complete).
+   */
+  WindowConfirmClose: 'notepads:window:confirmClose',
+  /**
+   * MAIN→renderer push: the user tried to close the window (X / Alt+F4 / OS). The
+   * renderer runs the unsaved-changes flow, then calls WindowConfirmClose to let
+   * the real close proceed (1:1 with the UWP SystemNavigationCloseRequested guard).
+   */
+  EvtWindowCloseRequested: 'notepads:evt:window:closeRequested',
 
   // dragOut
   DragOutBegin: 'notepads:dragOut:begin',

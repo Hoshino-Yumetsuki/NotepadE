@@ -31,6 +31,7 @@ import { app, BrowserWindow, clipboard, shell } from 'electron';
 import type { Result } from '../shared/ipc-contract.js';
 import { getSettings } from './settings.js';
 import { resolveSearchUrl } from './searchUrl.js';
+import { PROTOCOL_SCHEME, NEW_INSTANCE_VERB } from './argv-parse.js';
 
 // Re-export the pure resolver so callers/tests can reach it via the shell module.
 export { resolveSearchUrl, templateForEngine } from './searchUrl.js';
@@ -147,5 +148,30 @@ export function addRecentDocument(path: string): void {
     if (path && path.length > 0) app.addRecentDocument(path);
   } catch {
     // Jump list is a nicety; never let it surface.
+  }
+}
+
+/**
+ * Register the Windows Jump List "New window" task (UWP JumpListService added a
+ * `notepads://newinstance` task alongside the Recents group). Launches this exe
+ * with the protocol newinstance URL, which the broker parses to spawn a fresh
+ * window. Best-effort + win32-only; failures are swallowed (the task is a nicety).
+ * Call once during MAIN init.
+ */
+export function initJumpListTasks(): void {
+  if (process.platform !== 'win32') return;
+  try {
+    app.setUserTasks([
+      {
+        program: process.execPath,
+        arguments: `${PROTOCOL_SCHEME}://${NEW_INSTANCE_VERB}`,
+        title: 'New window',
+        description: 'Open a new Notepads window',
+        iconPath: process.execPath,
+        iconIndex: 0,
+      },
+    ]);
+  } catch {
+    // User tasks are a nicety; never let a failure surface.
   }
 }

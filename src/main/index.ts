@@ -9,9 +9,11 @@ import { app, BrowserWindow } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createMainWindow } from './window-factory.js';
-import { installWindowTestSeam } from './window.js';
+import { installWindowTestSeam, initCloseGuardQuitBypass } from './window.js';
 import { registerIpcHandlers } from './ipc.js';
 import { initThemePush } from './theme.js';
+import { initJumpListTasks } from './shell.js';
+import { initSystemAnsiCodePage } from './system-codepage.js';
 import {
   acquireSingleInstance,
   registerProtocolClient,
@@ -50,6 +52,14 @@ function initOnce(): void {
   registerIpcHandlers();
   initThemePush();
   initBroker(spawnWindow);
+  // Disarm the per-window close guard during an app-level quit (exit-when-last-tab,
+  // window-all-closed, OS shutdown) so those paths are never blocked.
+  initCloseGuardQuitBypass();
+  // Windows Jump List "New window" task (UWP JumpListService). Best-effort, win32-only.
+  initJumpListTasks();
+  // Resolve the OS ANSI code page once (UWP Encoding.GetEncoding(0)) so the
+  // encoding engine's system-ANSI fallback matches the real locale. Best-effort.
+  initSystemAnsiCodePage();
   // e2e-only MAIN seam (broker internals via app.evaluate). No-op in production.
   installMainTestSeam();
   // e2e-only window-state reader on the same seam (Gate-7 compact matrix). No-op

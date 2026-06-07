@@ -19,6 +19,7 @@
 import iconv from 'iconv-lite';
 import jschardet from 'jschardet';
 import type { AnsiEncodingEntry, EncodingId } from '../shared/ipc-contract.js';
+import { systemAnsiCodePage } from './system-codepage.js';
 
 /**
  * Verbatim port of EncodingUtility.ANSIEncodings (codepage -> label), plus the
@@ -77,6 +78,7 @@ const ANSI_CODECS: AnsiCodec[] = [
 ];
 
 const ANSI_BY_LABEL = new Map(ANSI_CODECS.map((c) => [c.label.toLowerCase(), c]));
+const ANSI_BY_CODEPAGE = new Map(ANSI_CODECS.map((c) => [c.codePage, c]));
 
 /**
  * Maps a jschardet-reported encoding name to a Notepads label + iconv codec.
@@ -188,11 +190,13 @@ function codecForLabel(label: EncodingId): string {
   return label;
 }
 
-/** System ANSI codec substitute. On non-Windows there is no cp0; default to 1252. */
+/** System ANSI codec. Resolves the real OS ANSI code page (GetACP) and maps it to
+ * an iconv codec via the ANSI table; falls back to windows-1252 when the ACP is
+ * unknown to the table or unavailable (non-Windows). UWP used Encoding.GetEncoding(0). */
 function systemAnsiCodec(): string {
-  // UWP uses Encoding.GetEncoding(0). We approximate with windows-1252, the most
-  // common Western system ANSI page. Phase 4 may refine via OS query.
-  return 'windows-1252';
+  const cp = systemAnsiCodePage();
+  const entry = ANSI_BY_CODEPAGE.get(cp);
+  return entry ? entry.codec : 'windows-1252';
 }
 
 export interface DecodeResult {

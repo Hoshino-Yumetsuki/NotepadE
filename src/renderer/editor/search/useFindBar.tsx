@@ -36,6 +36,7 @@ import {
   searchExtension,
 } from './findController';
 import { findKeymap, type FindKeymapCallbacks } from './findKeymap';
+import { GoToLineDialog } from './GoToLineDialog';
 import { useT, type Translator } from '../../i18n';
 
 /** What the App must provide: a getter for the currently-active editor view. */
@@ -78,6 +79,12 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   // Re-mount key so re-opening the bar re-seeds focus/selection (FindBar_GotFocus).
   const [seedKey, setSeedKey] = useState<number>(0);
 
+  // Go-to-line dialog state (UWP GoToControl). Holds the current + total lines so
+  // the dialog can seed the input and validate the upper bound.
+  const [goToState, setGoToState] = useState<{ currentLine: number; lineCount: number } | null>(
+    null,
+  );
+
   // The last query/options the user searched with — what F3/Shift+F3 repeat.
   const activeQueryRef = useRef<FindQuery | null>(null);
 
@@ -106,14 +113,24 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   const openGoToLine = useCallback(() => {
     const view = getActiveView();
     if (!view) return;
-    const current = view.state.doc.lineAt(view.state.selection.main.head).number;
-    // Minimal native prompt for line number (UWP shows a small go-to dialog).
-    const input = window.prompt('Go to line:', String(current));
-    if (input == null) return;
-    const n = Number.parseInt(input.trim(), 10);
-    if (Number.isNaN(n)) return;
-    goToLine(view, n);
-    view.focus();
+    const currentLine = view.state.doc.lineAt(view.state.selection.main.head).number;
+    setGoToState({ currentLine, lineCount: view.state.doc.lines });
+  }, [getActiveView]);
+
+  const onGoToSubmit = useCallback(
+    (line: number) => {
+      setGoToState(null);
+      const view = getActiveView();
+      if (!view) return;
+      goToLine(view, line);
+      view.focus();
+    },
+    [getActiveView],
+  );
+
+  const onGoToCancel = useCallback(() => {
+    setGoToState(null);
+    getActiveView()?.focus();
   }, [getActiveView]);
 
   // --- Live query change (highlight refresh) ---------------------------------
@@ -185,21 +202,33 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   const keymap = useMemo(() => findKeymap(keymapCallbacks), [keymapCallbacks]);
   const editorExtensions = useMemo<Extension>(() => searchExtension(), []);
 
-  const findBar = open ? (
-    <FindBar
-      key={seedKey}
-      showReplace={showReplace}
-      onFind={onFind}
-      onReplaceOne={onReplaceOne}
-      onReplaceAll={onReplaceAll}
-      onQueryChange={onQueryChange}
-      onToggleReplace={setShowReplace}
-      onDismiss={() => {
-        dismissFindBar();
-      }}
-      status={status}
-    />
-  ) : null;
+  const findBar =
+    open || goToState ? (
+      <>
+        {open ? (
+          <FindBar
+            key={seedKey}
+            showReplace={showReplace}
+            onFind={onFind}
+            onReplaceOne={onReplaceOne}
+            onReplaceAll={onReplaceAll}
+            onQueryChange={onQueryChange}
+            onToggleReplace={setShowReplace}
+            onDismiss={() => {
+              dismissFindBar();
+            }}
+            status={status}
+          />
+        ) : null}
+        <GoToLineDialog
+          open={goToState !== null}
+          currentLine={goToState?.currentLine ?? 1}
+          lineCount={goToState?.lineCount ?? 1}
+          onSubmit={onGoToSubmit}
+          onCancel={onGoToCancel}
+        />
+      </>
+    ) : null;
 
   return { findBar, keymapCallbacks, editorExtensions, keymap };
 }

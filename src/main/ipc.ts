@@ -43,6 +43,7 @@ import {
   windowClose,
   windowIsMaximized,
   windowQuit,
+  windowConfirmClose,
 } from './window.js';
 import { dragOutBegin, dragOutComplete } from './dragout.js';
 import { openContainingFolder, copyPath, webSearch, print, share } from './shell.js';
@@ -99,6 +100,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.WindowClose, (e) => windowClose(e));
   ipcMain.handle(IpcChannels.WindowIsMaximized, (e) => windowIsMaximized(e));
   ipcMain.handle(IpcChannels.WindowQuit, () => windowQuit());
+  ipcMain.handle(IpcChannels.WindowConfirmClose, (e) => windowConfirmClose(e));
 
   // --- dragOut (Phase 6) ---
   ipcMain.handle(IpcChannels.DragOutBegin, (e, envelope: DragEnvelope) =>

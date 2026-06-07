@@ -372,6 +372,20 @@ export interface WindowApi {
    * app lifecycle — the renderer never calls `app.quit` directly (PA-8).
    */
   quit(): Promise<Result<void>>;
+  /**
+   * Confirm that the close-reminder flow is resolved and the owning window may now
+   * actually close. MAIN marks the window as confirmed and calls `win.close()`,
+   * which passes the 'close' guard installed in the window factory. 1:1 with the
+   * UWP `deferral.Complete()` after the AppCloseSaveReminderDialog resolves.
+   */
+  confirmClose(): Promise<Result<void>>;
+  /**
+   * Subscribe to "the user tried to close this window" pushes. MAIN fires this
+   * when the window's native close is intercepted (X button, Alt+F4, OS close).
+   * The renderer runs the unsaved-changes flow then calls `confirmClose()` to let
+   * the real close proceed. Returns an unsubscribe fn.
+   */
+  onCloseRequested(cb: () => void): Unsubscribe;
 }
 
 // ---------------------------------------------------------------------------

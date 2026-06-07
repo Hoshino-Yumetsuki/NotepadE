@@ -20,7 +20,10 @@ import electron from 'vite-plugin-electron/simple';
  */
 const dirname = import.meta.dirname;
 const require = createRequire(import.meta.url);
-const pkg = require('./package.json') as { dependencies?: Record<string, string> };
+const pkg = require('./package.json') as {
+  dependencies?: Record<string, string>;
+  version?: string;
+};
 
 /**
  * Externalize Electron, Node built-ins, and every runtime dependency from the
@@ -39,6 +42,11 @@ export default defineConfig(({ command }) => ({
   root: resolve(dirname, 'src/renderer'),
   // Relative base so the production build's asset URLs work under file://.
   base: './',
+  // Inline the real package version at build time so the About pane shows it
+  // (UWP surfaced Package.Current.Id.Version). No IPC needed — pure build constant.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0'),
+  },
   resolve: {
     alias: {
       '@shared': resolve(dirname, 'src/shared'),
