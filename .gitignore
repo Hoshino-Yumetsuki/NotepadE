@@ -16,6 +16,7 @@ Thumbs.db
 .env.*
 .idea
 .omc
+plan
 
 # dependencies
 /node_modules
