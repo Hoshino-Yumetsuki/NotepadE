@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Multi-platform installer build. electron-builder cannot cross-compile a mac
+  # dmg off macOS (codesign/hdiutil) nor reliably build deb off Linux, so each
+  # target builds on its native runner and uploads its artifact. Runs on push to
+  # main, on version tags (v*), and on manual dispatch — NOT on every PR/branch
+  # push (packaging is slow + resource-heavy).
+  package:
+    name: Package installer (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: [pa8-security-gate, unit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: windows-nsis
+            # NSIS installer .exe + its blockmap.
+            glob: |
+              release/*.exe
+              release/*.exe.blockmap
+          - os: ubuntu-latest
+            artifact: linux-deb-appimage
+            # .deb (Debian/Ubuntu) + .AppImage (portable, distro-agnostic).
+            glob: |
+              release/*.deb
+              release/*.AppImage
+          - os: macos-latest
+            artifact: macos-dmg
+            glob: |
+              release/*.dmg
+              release/*.dmg.blockmap
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      # `dist` runs `vite build` then `electron-builder --publish never`, emitting
+      # the per-OS target(s) from electron-builder.yml into release/. The macOS dmg
+      # and Windows nsis are unsigned here (no cert in CI) — release-infra follow-up.
+      - name: Build installer (electron-builder)
+        run: npm run dist
+        env:
+          # Skip electron-builder's attempt to discover/notarize with absent creds.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Upload installer artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.artifact }}
+          path: ${{ matrix.glob }}
+          if-no-files-found: error
+          retention-days: 14

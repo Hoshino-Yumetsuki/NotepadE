@@ -182,10 +182,26 @@ fileAssociations:
 win:
   target:
     - nsis
+  icon: build/icon.png
   # Registers the protocol + associations at install time.
 
 mac:
+  target:
+    - dmg
+  icon: build/icon.png
   category: public.app-category.developer-tools
+  # darwin has no custom frameless caption (native traffic lights draw it); the
+  # renderer omits CaptionButtons off-Windows, so the standard title bar is used.
 
 linux:
+  target:
+    - deb
+    - AppImage
+  icon: build/icon.png
   category: Utility
+  # `deb` requires a maintainer; AppImage is the distro-agnostic portable build.
+  maintainer: NotepadsE <noreply@notepads.example>
+  synopsis: Modern, lightweight text editor
+  description: >-
+    NotepadsE — a modern, lightweight text editor. Electron + Fluent UI v9
+    rewrite of the UWP Notepads app.
