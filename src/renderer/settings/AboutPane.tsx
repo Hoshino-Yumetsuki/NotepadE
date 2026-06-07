@@ -55,12 +55,20 @@ export function AboutPane(): JSX.Element {
         </div>
       </SettingGroup>
 
-      <Divider />
-      <div style={{ marginTop: 16 }}>
-        <Subtitle2>{t('AboutPage_Disclaimer_Title.Text')}</Subtitle2>
-        <Body1 as="p" style={{ marginTop: 6, opacity: 0.85 }}>
-          {ABOUT_DISCLAIMER}
-        </Body1>
+      {/* Divider + disclaimer are ONE unit: the negative top margin collapses the
+          "Built With" group's 28px bottom rhythm to a tight ~16px so the line hugs
+          the content above, and the fixed `gap` keeps the divider and the disclaimer
+          locked together as that unit shifts with the content length. The title here
+          is localized (e.g. Chinese "声明") and the body is English, so the body gets
+          a roomier top margin — at 6px the two scripts read as glued together. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: -12 }}>
+        <Divider />
+        <div>
+          <Subtitle2>{t('AboutPage_Disclaimer_Title.Text')}</Subtitle2>
+          <Body1 as="p" style={{ marginTop: 10, opacity: 0.85 }}>
+            {ABOUT_DISCLAIMER}
+          </Body1>
+        </div>
       </div>
     </SettingsPane>
   );

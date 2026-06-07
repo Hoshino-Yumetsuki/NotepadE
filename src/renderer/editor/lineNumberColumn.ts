@@ -159,6 +159,14 @@ class LineNumberColumnPlugin implements PluginValue {
     this.reserve(Math.ceil(digits * charPx) + COLUMN_PADDING);
 
     const scrollTop = this.view.scrollDOM.scrollTop;
+    // `block.top` is a DOCUMENT coordinate (0 = top of the content region). The
+    // editor body adds `padding-top` on `.cm-content` (UWP content inset, 6px),
+    // which sits between this column's origin (view.dom top, shared with the
+    // scroller) and where line 1 actually paints. Omitting it rode every number
+    // ~6px above its text row — a constant misalignment at any scroll offset.
+    // documentPadding.top is CM6's authoritative value for that inset, so the
+    // numbers track their lines even if the padding changes.
+    const padTop = this.view.documentPadding.top;
     const blocks = this.view.viewportLineBlocks;
     // Active (cursor) line, for the brightened number when lineHighlighter is on.
     const head = this.view.state.selection.main.head;
@@ -169,7 +177,7 @@ class LineNumberColumnPlugin implements PluginValue {
       const lineNo = doc.lineAt(block.from).number;
       const cell = this.cellAt(i++);
       cell.textContent = String(lineNo);
-      cell.style.top = `${block.top - scrollTop}px`;
+      cell.style.top = `${block.top - scrollTop + padTop}px`;
       cell.style.color =
         lineNo === activeLine
           ? activeNumberColor(this.opts.themeMode)

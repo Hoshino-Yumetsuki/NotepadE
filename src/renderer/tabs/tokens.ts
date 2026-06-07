@@ -129,12 +129,13 @@ export interface TabThemeTokens {
    */
   elevationShadowAlpha: number;
   /**
-   * Peak alpha for the strip→content boundary band (the soft up-shadow that
-   * flanks the active tab along the strip's bottom edge). MUCH fainter than the
-   * side-frame alpha: the UWP BottomEdgeShadow is a BlurRadius-10 shadow of a 1px
-   * line — a barely-there soft line, not a solid band. Using the full
-   * `elevationShadowAlpha` here painted a thick grey band across the whole strip
-   * ("阴影太大 / 发灰"); this dedicated, lower value keeps it to "a little bit". 0 in HC.
+   * @deprecated No longer consumed. Was the peak alpha for the strip→content
+   * boundary band (the soft up-shadow flanking the active tab along the strip's
+   * bottom edge). That band is gone: the selected-tab↔editor merge is now
+   * structural — a single continuous wash layer (App TabSurfaceWash) notches up
+   * under the active tab, so the tab and the editor are one painted sheet with no
+   * boundary shadow to draw. Retained in the contract (set per theme) to avoid a
+   * churny breaking change; safe to drop in a later token cleanup.
    */
   elevationBandAlpha: number;
   /** Accent color for the selection bar + modified dot (OS accent / Highlight). */

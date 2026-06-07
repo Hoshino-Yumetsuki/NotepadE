@@ -105,6 +105,19 @@ export interface TabStripProps {
    * titleBarOverlay so the buttons paint transparent over the acrylic.
    */
   captionSlot?: React.ReactNode;
+  /**
+   * Reports the active tab's box {left,width} in STRIP-LOCAL px (clamped to the
+   * visible tab-list viewport), or null when there is no measurable active tab —
+   * empty strip, the active tab scrolled fully out of view, or mid-drag. The App
+   * consumes this to drive the SINGLE continuous wash layer behind the strip +
+   * editor: the wash extends up under exactly this rect (an inverted-T notch) so
+   * the selected tab and the editor read as one connected sheet with NO seam at
+   * the strip→editor boundary (the boundary is internal to one painted layer
+   * instead of being the meeting line of two separate translucent washes). The
+   * same measured rect still feeds the in-strip TabElevation side-shadow frame.
+   * Optional so the Phase-2 tab tests (no wash host) are unaffected.
+   */
+  onActiveTabGeometry?(rect: { left: number; width: number } | null): void;
 }
 
 /** The label a tab shows: basename of filePath, else its untitled name. */
@@ -232,7 +245,14 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
 
   // Close button visible on hover OR selected (UWP CommonStates).
   const showClose = hovered || active;
-  const fill = active ? tokens.headerSelected : hovered ? tokens.headerHover : 'transparent';
+  // The SELECTED tab is transparent: its surface is painted by the single
+  // continuous wash layer behind the strip + editor (App #app-shell), which
+  // extends up under this tab as an inverted-T notch so the tab and the editor
+  // read as one sheet with no seam. Painting headerSelected here too would stack a
+  // SECOND translucent layer over the wash (alpha doubling → a darker block) and
+  // re-introduce a boundary. Hover still gets its own translucent fill (it sits
+  // over the wash only while pointer-over, an intentional lift). Unselected = bare.
+  const fill = active ? 'transparent' : hovered ? tokens.headerHover : 'transparent';
   const textColor = active ? tokens.textSelected : tokens.textDefault;
 
   const style: React.CSSProperties = {
@@ -768,22 +788,24 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
 }
 
 /**
- * Unclipped selected-tab elevation overlay (UWP SetsView DropShadowPanels). A
- * box-shadow on the tab element itself is clipped by the tab-list scroller and
- * the strip overflow, so it can never reach the neighbor tabs, the menu/add
- * buttons, or the editor below. This overlay is instead a direct child of the
- * (overflow:visible) strip, positioned over the active tab's measured rect, so
- * its shadow spills freely in every direction. It paints three things:
+ * Selected-tab elevation overlay (UWP SetsView side DropShadowPanels). A box-shadow
+ * on the tab element itself is clipped by the tab-list scroller and the strip
+ * overflow, so it can never reach the neighbor tabs or the menu/add buttons. This
+ * overlay is instead a direct child of the (overflow:visible) strip, positioned over
+ * the active tab's measured rect, so its LEFT+RIGHT side shadows spill freely onto
+ * the recessed neighbor tabs and the menu/add buttons.
  *
- *   1. A FRAME over the active tab carrying the left+right side shadow — casts
- *      onto the recessed neighbor tabs AND the menu/add buttons beside them.
- *   2. Two "up" shadow segments along the strip's BOTTOM edge, flanking the
- *      active tab — the RAISED editor sheet (selected tab + editor below it) casts
- *      a soft shadow UP onto the recessed strip controls beside it (not the other
- *      way round: the editor is the foreground, the flanking chrome is recessed).
- *   3. A GAP under the active tab (between the two segments): no shadow there, so
- *      the selected tab and the editor (which share the same wash, App #app-shell)
- *      read as ONE connected sheet — the seam disappears (the UWP merge).
+ * CRITICAL — the shadow is clipped at the BOTTOM edge. A CSS box-shadow with a blur
+ * radius casts on ALL FOUR sides, not just the two offset sides: even with 0 vertical
+ * offset, `blur 8` bleeds the shadow ~6px DOWNWARD past the element's bottom (the
+ * strip↔editor boundary) onto the editor surface — a dark gradient line directly
+ * under the selected tab. THAT was the seam ("接缝") the user kept seeing; the comment
+ * here previously claimed "left+right only (no bottom)", which is false for a blurred
+ * box-shadow. We clip with `inset(-16px -16px 0 -16px)`: the top/left/right insets are
+ * negative (expanded) so the side blur is preserved, while the BOTTOM inset is exactly
+ * 0 — the downward bleed is cut flush at the boundary. The selected-tab↔editor merge
+ * is then seamless: the shared wash (App TabSurfaceWash) carries the surface across
+ * the boundary, and no shadow crosses it.
  *
  * Pure presentation, pointer-events:none, aria-hidden. Renders nothing in HC
  * (alpha 0) or before the active tab is measured.
@@ -795,74 +817,31 @@ function TabElevation(props: {
   const { rect, tokens } = props;
   if (!rect || tokens.elevationShadowAlpha <= 0) return null;
   const stripH = TabDimensions.height + TabDimensions.topBorderThickness;
-  // The strip→content boundary band is a THIN, faint soft line — the UWP
-  // BottomEdgeShadow is a BlurRadius-10 shadow of a 1px line (opacity 0.55/0.7),
-  // i.e. a barely-there hairline, not a solid band. A previous 6px-tall gradient
-  // at the full side-frame alpha (0.30/0.45) painted a thick grey band across the
-  // whole strip — the "阴影太大 / 发灰" the user flagged. Use the dedicated low
-  // band alpha and a 3px feather instead.
-  const blur = 3;
-  const alpha = tokens.elevationBandAlpha;
-  // Darkest at the BOTTOM (the raised editor's top edge), fading UP into the
-  // recessed strip — the editor casts onto the chrome, not the chrome onto it.
-  const up = `linear-gradient(to top, rgba(0,0,0,${alpha}) 0%, transparent 100%)`;
-  // rect is already clamped to the true strip width in the measure effect, so the
-  // tab's right edge is in-bounds; the right segment runs from it to the strip's
-  // right edge via right:0 (no strip-width arithmetic needed).
-  const tabRight = rect.left + rect.width;
+  // Clip the downward blur flush at the bottom edge while preserving side blur.
+  // top/left/right are expanded (negative) past the box so the -3/+3px offset +
+  // 8px blur side shadows are not truncated; bottom is 0 so nothing bleeds onto
+  // the editor below. Must be ≥ the side blur reach (offset 3 + blur 8 ≈ 11).
+  const clip = 'inset(-16px -16px 0 -16px)';
+  // Side-shadow frame over the active tab — left+right spill onto the recessed
+  // neighbor chrome; the bottom is masked so the tab connects seamlessly to the
+  // editor via the shared wash. zIndex above the tabs/buttons so it lands ON them.
   return (
-    <>
-      {/* (1) Side-shadow frame over the active tab — left+right only (no bottom),
-          so the tab connects downward to the editor. zIndex above the tabs/buttons
-          so the shadow lands ON them. */}
-      <div
-        data-testid="tab-elevation"
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: rect.left,
-          width: rect.width,
-          height: stripH,
-          pointerEvents: 'none',
-          zIndex: 4,
-          boxShadow: tokens.elevationShadow,
-        }}
-      />
-      {/* (2a) Up shadow LEFT of the active tab — sits at the strip's bottom edge,
-          cast upward by the raised editor onto the recessed chrome. */}
-      {rect.left > 0 && (
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            top: stripH - blur,
-            left: 0,
-            width: rect.left,
-            height: blur,
-            pointerEvents: 'none',
-            zIndex: 4,
-            background: up,
-          }}
-        />
-      )}
-      {/* (2b) Up shadow RIGHT of the active tab (to the strip's right edge). */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: stripH - blur,
-          left: tabRight,
-          right: 0,
-          height: blur,
-          pointerEvents: 'none',
-          zIndex: 4,
-          background: up,
-        }}
-      />
-      {/* (3) The GAP under [rect.left, tabRight] is intentionally empty — the
-          merge: selected tab + editor share a wash and are joined by no shadow. */}
-    </>
+    <div
+      data-testid="tab-elevation"
+      aria-hidden
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: rect.left,
+        width: rect.width,
+        height: stripH,
+        pointerEvents: 'none',
+        zIndex: 4,
+        boxShadow: tokens.elevationShadow,
+        clipPath: clip,
+        WebkitClipPath: clip,
+      }}
+    />
   );
 }
 
@@ -1024,6 +1003,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     onVoidDrop,
     menu,
     captionSlot,
+    onActiveTabGeometry,
   } = props;
   const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
   const tokens = tokensForTheme(resolvedTheme);
@@ -1257,6 +1237,18 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     // and remeasures the active tab at its new resting position.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEditorId, tabWidth, scrollLeft, tabs.length, stripWidth, resolvedTheme, ids, dragging]);
+
+  // Report the active tab's geometry to the host (App) so the single continuous
+  // wash layer behind the strip + editor can notch up under exactly this rect.
+  // Mid-drag we report null so the notch retracts (the dragged tab is translated
+  // away from the measured rect; a stale notch would strand under the old x — the
+  // same "empty bottom" the elevation overlay avoids by hiding). On drop, dragging
+  // flips false, the measure effect above re-runs, activeRect updates, and this
+  // re-emits the resting rect.
+  useEffect(() => {
+    if (!onActiveTabGeometry) return;
+    onActiveTabGeometry(dragging ? null : activeRect);
+  }, [onActiveTabGeometry, activeRect, dragging]);
 
   const scrollableWidth = Math.max(0, scrollWidth - clientWidth);
   // Chevrons show only when scrollableWidth exceeds the threshold (UWP: 65px).

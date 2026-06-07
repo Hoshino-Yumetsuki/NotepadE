@@ -18,7 +18,7 @@ import { SettingsSurface } from './settings/SettingsSurface';
 import { installSettingsTestHook } from './settings/settingsTestHook';
 import { appBackgroundTint } from './theme/tokens';
 import { edgeShadowStyle } from './theme/shadow';
-import { tokensForTheme } from './tabs/tokens';
+import { tokensForTheme, TabDimensions } from './tabs/tokens';
 import {
   applyAdopt,
   applyRelease,
@@ -62,6 +62,68 @@ function tabTitle(tab: TabState): string {
   return tab.untitledName || 'Untitled';
 }
 
+/**
+ * The single continuous wash sheet behind the strip + editor (UWP SetsView:
+ * selected-tab brush == content brush). One absolutely-positioned layer mounted
+ * inside #app-shell that paints the editor band AND extends UP under the active
+ * tab — the two are joined into an inverted-T by `clip-path`, so the selected tab
+ * and the editor are ONE painted surface with no strip→editor seam (the boundary
+ * is internal to a single paint instead of being the meeting line of two separate
+ * translucent washes — the previous "接缝").
+ *
+ * It extends `TabDimensions.height` px ABOVE #app-shell's top so the notch reaches
+ * up over the active tab's body (the strip above is transparent, so the notch
+ * shows through under the active tab; the notch is clipped to only the active-tab
+ * column, so it can never bleed under the hamburger / scroll / add chrome). When
+ * there is no measurable active tab (empty strip, scrolled fully out, or mid-drag)
+ * it collapses to a plain full-width band — no stray notch stranded at an old x.
+ *
+ * Pure presentation: pointer-events:none, aria-hidden, zIndex 0 (below the editor
+ * hosts and the transparent strip). HC has no material — headerSelected resolves
+ * to the Highlight system color there, which would be wrong as a full content
+ * wash, so HC renders nothing (the editor stays flat Canvas like UWP HC).
+ */
+function TabSurfaceWash(props: {
+  rect: { left: number; width: number } | null;
+  theme: 'light' | 'dark' | 'hc';
+}): JSX.Element | null {
+  const { rect, theme } = props;
+  // HC: flat forced-colors chrome, no translucent merge wash (matches UWP HC).
+  if (theme === 'hc') return null;
+  const wash = tokensForTheme(theme).headerSelected;
+  // Notch band height = the active tab's body height (the strip's 1px top border
+  // is above it). The wash is lifted by this much so its top edge aligns with the
+  // tab body's top, and the top `H` px of the layer is the notch region.
+  const H = TabDimensions.height;
+  // Inverted-T: the active-tab notch (top H px, only under [left, left+width])
+  // sitting on the full-width editor band (below H). With no rect, just the band.
+  const clipPath = rect
+    ? `polygon(` +
+      `${rect.left}px 0, ${rect.left + rect.width}px 0, ` + // notch top edge
+      `${rect.left + rect.width}px ${H}px, 100% ${H}px, ` + // down + across to right
+      `100% 100%, 0 100%, ` + // right→bottom→left
+      `0 ${H}px, ${rect.left}px ${H}px)` // up + across back to notch
+    : `polygon(0 ${H}px, 100% ${H}px, 100% 100%, 0 100%)`;
+  return (
+    <div
+      data-testid="tab-surface-wash"
+      aria-hidden
+      style={{
+        position: 'absolute',
+        top: -H,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: wash,
+        clipPath,
+        WebkitClipPath: clipPath,
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    />
+  );
+}
+
 export function App(): JSX.Element {
   // Live app theme (Phase 5, Lane C): resolves themeMode + OS theme + accent into
   // a FluentProvider theme and the active 'light'|'dark'|'hc' bucket, recomputed
@@ -82,6 +144,12 @@ export function App(): JSX.Element {
 
   // Settings surface open/close state (entry point in the tab strip toolbar).
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+
+  // Active tab geometry {left,width} in strip-local px (or null when there is no
+  // measurable active tab — empty / scrolled out / mid-drag), reported by TabStrip.
+  // Drives the single continuous wash layer below: the wash notches UP under this
+  // rect so the selected tab + editor are one painted sheet (no strip→editor seam).
+  const [activeTabRect, setActiveTabRect] = useState<{ left: number; width: number } | null>(null);
 
   const { tabs, activeEditorId, store } = useTabsStore(tabsStore);
 
@@ -915,6 +983,7 @@ export function App(): JSX.Element {
         onVoidDrop={onVoidDrop}
         menu={menuCommands}
         captionSlot={isFramelessWin ? <CaptionButtons theme={resolvedTheme} /> : undefined}
+        onActiveTabGeometry={setActiveTabRect}
       />
       <div
         id="app-shell"
@@ -922,14 +991,25 @@ export function App(): JSX.Element {
           flex: '1 1 auto',
           minHeight: 0,
           position: 'relative',
-          // Merge with the selected tab: the editor area carries the SAME wash the
-          // selected tab does (tab tokens headerSelected), so the selected tab and
-          // the content read as one connected sheet — the seam disappears (UWP
-          // SetsView: selected-tab brush == content brush). Unselected tabs are
-          // transparent, so they sit visually recessed against this washed content.
-          background: tokensForTheme(resolvedTheme).headerSelected,
+          // The editor region itself is transparent — its surface is painted by the
+          // single continuous wash layer below (the inverted-T <TabSurfaceWash/>),
+          // NOT by a background here. Previously this carried the same headerSelected
+          // wash the selected tab did; two separate translucent layers meeting at the
+          // strip→editor line rounded to a 1px seam on fractional DPI (the "接缝" the
+          // user flagged). One shared layer makes that boundary internal to a single
+          // paint, so there is physically no seam at any scaling factor.
+          background: 'transparent',
         }}
       >
+        {/* Single continuous wash sheet (UWP SetsView selected-tab brush == content
+            brush). One absolutely-positioned layer that fills the editor band AND
+            extends UP under the active tab as a notch (clipped into an inverted-T),
+            so the selected tab and the editor are literally one painted surface —
+            no seam. Sits BELOW the editor hosts (zIndex 0; the CM6 surface is
+            transparent and shows it through) and below the transparent strip above
+            (which shows the notch through under the active tab). Retracts to a plain
+            band when no tab is measurable (empty / scrolled out / mid-drag). */}
+        <TabSurfaceWash rect={activeTabRect} theme={resolvedTheme} />
         {/* Status-bar elevation caster (status bar lifts onto the editor from
             below). The tab-strip 'down' caster was removed: it drew a full-width
             shadow line across the WHOLE strip→editor boundary, which separated the
@@ -960,6 +1040,10 @@ export function App(): JSX.Element {
                 position: 'absolute',
                 inset: 0,
                 display: isActive ? 'block' : 'none',
+                // Above the TabSurfaceWash (zIndex 0) so the editor content paints
+                // over the shared wash (the CM6 surface is transparent, so the wash
+                // still reads through as the editor background).
+                zIndex: 1,
               }}
             >
               <div
