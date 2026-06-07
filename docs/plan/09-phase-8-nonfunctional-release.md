@@ -21,5 +21,7 @@ If a target cannot be met, it is a red-flag divergence requiring user sign-off �
 
 ## VERIFICATION GATE 8
 
-- [ ] Cold start ≤ 2000 ms; idle RAM ≤ 250 MB; installer ≤ 150 MB; 1MB file open ≤ 300 ms.
-- [ ] PA-8 green; all prior `gate/*` tags present.
+- [x] Cold start ≤ 2000 ms (**492 ms**); idle RAM ≤ 250 MB (**164 MB**); 1 MB file open ≤ 300 ms (**27 ms**) — measured via `yarn measure` (`scripts/measure-nonfunctional.mjs`) on the built app, 2026-06-07.
+- [x] Installer ≤ 150 MB (**121 MB**) — NSIS installer `Notepads Setup 0.0.0.exe` built via `yarn dist` (electron-builder 26.15.0), 2026-06-07. Unsigned (no code-signing cert on this box) + default Electron icon; signing + branded icon remain release-infra follow-ups.
+- [x] PA-8 green (renderer fs-free, 186 files).
+- [ ] All prior `gate/*` tags present — release-tagging step (git tags), pending the commit/release decision.

@@ -16,6 +16,30 @@ appId: com.notepads.next
 productName: Notepads
 copyright: Copyright © Notepads-next
 
+# Packaged app layout. `yarn build` emits the 3-tier bundle to out/{main,preload,
+# renderer}; main loads ../preload/index.js + ../renderer/index.html by RELATIVE
+# path, so that sibling structure must ship intact. The tsc typecheck outputs
+# (out/types-node, out/types-web) are NOT runtime artifacts and are excluded.
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
+  - package.json
+  - '!out/types-node/**'
+  - '!out/types-web/**'
+
+# koffi (and other native addons) ship a prebuilt .node binary that cannot live
+# inside the asar archive — unpack it so require() resolves it at runtime. koffi
+# is only reached as a best-effort cosmetic (win-corners DWM); the app degrades
+# gracefully if it is absent, but unpacking keeps it functional.
+asarUnpack:
+  - '**/*.node'
+  - node_modules/@koromix/**
+
 # Custom URI scheme — `notepads://` (incl. the `newinstance` verb the broker
 # parses). Mirrors UWP NotepadsProtocolService.
 protocols:
