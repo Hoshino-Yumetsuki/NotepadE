@@ -77,7 +77,7 @@ export interface StatusBarTestHook {
  * (undoDepth/redoDepth). Read/arrange accessors the keyboard-conformance and
  * undo-granularity e2e suites assert on.
  *
- * MUST stay in sync with NotepadsEditorTestHook in e2e/types/notepads-global.d.ts.
+ * MUST stay in sync with NotepadEditorTestHook in e2e/types/notepads-global.d.ts.
  */
 export interface EditorTestHook {
   /** Active view doc as the '\n'-normalized shadow buffer (exact). */

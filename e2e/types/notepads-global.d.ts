@@ -70,7 +70,7 @@ export interface NotepadsTabsTestHook {
  *
  * MUST stay in sync with the editor seam in src/renderer/editor/test-hook.ts.
  */
-export interface NotepadsEditorTestHook {
+export interface NotepadEditorTestHook {
   /** Active view doc as the '\n'-normalized shadow buffer (exact). */
   getDocText(): string;
   /** Main selection [from, to) as document offsets. */
@@ -151,7 +151,7 @@ export interface NotepadsTestHook {
   /** Phase-2 tab-strip seam. Present once the tab store mounts (Lane C). */
   tabs?: NotepadsTabsTestHook;
   /** Phase-3 editor-surface seam. Present once the editor seam installs (lane-b). */
-  editor?: NotepadsEditorTestHook;
+  editor?: NotepadEditorTestHook;
   /** Phase-4 status-bar seam. Present once useStatusBarModel mounts (Lane C). */
   statusbar?: NotepadsStatusBarTestHook;
   /** Phase-5 settings seam. Present once the settings surface mounts (Lane C). */

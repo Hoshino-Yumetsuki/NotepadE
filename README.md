@@ -2,14 +2,14 @@
   <img width="128" align="center" src="docs/assets/icon.png">
 </p>
 <h1 align="center">
-  NotepadsE
+  NotepadE
 </h1>
 <p align="center">
   A modern, lightweight, cross-platform text editor with a minimalist design.
 </p>
 <p align="center">
-  <a style="text-decoration:none" href="https://github.com/Hoshino-Yumetsuki/NotepadsE/releases">
-    <img src="https://img.shields.io/github/release/Hoshino-Yumetsuki/NotepadsE.svg?label=latest%20version&style=flat-square" alt="Releases" />
+  <a style="text-decoration:none" href="https://github.com/Hoshino-Yumetsuki/NotepadE/releases">
+    <img src="https://img.shields.io/github/release/Hoshino-Yumetsuki/NotepadE.svg?label=latest%20version&style=flat-square" alt="Releases" />
   </a>
   <a style="text-decoration:none">
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-yellow.svg?style=flat-square" alt="Platform" />
@@ -19,9 +19,9 @@
   </a>
 </p>
 
-## What is NotepadsE and why do I care?
+## What is NotepadE and why do I care?
 
-[Notepads](https://github.com/0x7c13/Notepads) is a wonderful modern notepad app, but it is a UWP application and only runs on Windows. NotepadsE is a faithful, 1:1 rewrite of Notepads on top of web technology, so the same clean look and feel can run anywhere Electron does: Windows, macOS, and Linux.
+[Notepads](https://github.com/0x7c13/Notepads) is a wonderful modern notepad app, but it is a UWP application and only runs on Windows. NotepadE is a faithful, 1:1 rewrite of Notepads on top of web technology, so the same clean look and feel can run anywhere Electron does: Windows, macOS, and Linux.
 
 The goal is simple: keep everything that made Notepads pleasant to use — the Fluent design, the built-in tab system, the blazingly fast feel — while making it cross-platform and easy to extend. If you liked Notepads but wished it ran on your Mac or your Linux box, this is for you.
 
@@ -69,7 +69,7 @@ The preview scrolls in lock-step with the editor, so the rendered output always 
 
 ## Building from source:
 
-NotepadsE is built with Electron, React, Fluent UI v9, TypeScript, CodeMirror 6, and Vite. You will need Node.js 20+ and [Yarn](https://yarnpkg.com/) 4.
+NotepadE is built with Electron, React, Fluent UI v9, TypeScript, CodeMirror 6, and Vite. You will need Node.js 20+ and [Yarn](https://yarnpkg.com/) 4.
 
 ```bash
 # Install dependencies
@@ -89,24 +89,24 @@ yarn dist
 
 ## Platform notes:
 
-* NotepadsE runs on Windows, macOS, and Linux via Electron.
+* NotepadE runs on Windows, macOS, and Linux via Electron.
 * Some platform-specific niceties (jump lists, file associations) depend on the host OS and the packaged build.
 * Very large files may affect responsiveness; the editor is tuned for everyday note-taking and config editing.
 
 ## Changelog:
 
-* [NotepadsE Releases](https://github.com/Hoshino-Yumetsuki/NotepadsE/releases)
+* [NotepadE Releases](https://github.com/Hoshino-Yumetsuki/NotepadE/releases)
 
 ## Privacy statement:
 
 To be 100% transparent:
 
-* NotepadsE does not and will never collect your personal information.
+* NotepadE does not and will never collect your personal information.
 * It does not track your IP.
 * It does not record your typings or read any of your files, including file names and file paths.
 * No typings or files are sent to the authors or any third party.
 
-NotepadsE is 100% open source. Feel free to review the source code or build your own version.
+NotepadE is 100% open source. Feel free to review the source code or build your own version.
 
 ## Acknowledgments:
 

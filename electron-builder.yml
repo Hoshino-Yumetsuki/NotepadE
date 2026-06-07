@@ -13,8 +13,8 @@
 # verbatim from src/Notepads/Package.appxmanifest when packaging lands.
 
 appId: com.notepads.next
-productName: NotepadsE
-copyright: Copyright © NotepadsE
+productName: NotepadE
+copyright: Copyright © NotepadE
 
 # Packaged app layout. `yarn build` emits the 3-tier bundle to out/{main,preload,
 # renderer}; main loads ../preload/index.js + ../renderer/index.html by RELATIVE
@@ -193,7 +193,7 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
-  # Optional "Open with NotepadsE" context-menu entry. The checkbox on the last
+  # Optional "Open with NotepadE" context-menu entry. The checkbox on the last
   # wizard page lets the user opt in or out at install time.
   include: build/installer.nsh
 
@@ -212,8 +212,8 @@ linux:
   icon: build/icon.png
   category: Utility
   # `deb` requires a maintainer; AppImage is the distro-agnostic portable build.
-  maintainer: NotepadsE <noreply@notepads.example>
+  maintainer: NotepadE <noreply@notepads.example>
   synopsis: Modern, lightweight text editor
   description: >-
-    NotepadsE — a modern, lightweight text editor. Electron + Fluent UI v9
+    NotepadE — a modern, lightweight text editor. Electron + Fluent UI v9
     rewrite of the UWP Notepads app.

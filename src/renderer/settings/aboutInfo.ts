@@ -15,7 +15,7 @@ export const APP_VERSION =
   typeof __APP_VERSION__ === 'string' && __APP_VERSION__.length > 0 ? __APP_VERSION__ : '0.0.0';
 
 /** Product name (this Electron edition). */
-export const APP_NAME = 'NotepadsE';
+export const APP_NAME = 'NotepadE';
 
 /** Upstream + support links (verbatim from UWP AboutPage.xaml). */
 export const ABOUT_LINKS: readonly { label: string; url: string }[] = [
@@ -34,5 +34,5 @@ export const DEPENDENCY_CREDITS: readonly { label: string; url: string }[] = [
 
 /** License + disclaimer line. */
 export const ABOUT_DISCLAIMER =
-  ' NotepadsE is a free and open-source app distributed under the GPL-3.0 license. ' /* +
+  ' NotepadE is a free and open-source app distributed under the GPL-3.0 license. ' /* +
   'This Electron edition is a 1:1 rewrite of the original UWP app.'; */

@@ -290,8 +290,8 @@ export interface Settings {
   /** BCP-47 language tag, or '' = follow the OS UI language (29-locale set, Phase 6). */
   appLanguage: string;
   /**
-   * Whether the "Open with NotepadsE" entry appears in the Explorer right-click
-   * menu (Windows only). Writes/removes HKCU\Software\Classes\*\shell\NotepadsE.
+   * Whether the "Open with NotepadE" entry appears in the Explorer right-click
+   * menu (Windows only). Writes/removes HKCU\Software\Classes\*\shell\NotepadE.
    * No-op on non-Windows platforms.
    */
   openWithContextMenu: boolean;

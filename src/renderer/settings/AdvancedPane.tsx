@@ -96,8 +96,8 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
       <SettingGroup title="Shell Integration">
         <SettingRow
           id="openWithContextMenu"
-          label="Open with NotepadsE (Explorer context menu)"
-          description="Add 'Open with NotepadsE' to the Windows Explorer right-click menu."
+          label="Open with NotepadE (Explorer context menu)"
+          description="Add 'Open with NotepadE' to the Windows Explorer right-click menu."
         >
           <Switch
             checked={settings.openWithContextMenu}

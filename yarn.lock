@@ -6551,9 +6551,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"notepadse@workspace:.":
+"notepade@workspace:.":
   version: 0.0.0-use.local
-  resolution: "notepadse@workspace:."
+  resolution: "notepade@workspace:."
   dependencies:
     "@codemirror/commands": "npm:^6.10.3"
     "@codemirror/state": "npm:^6.6.0"
