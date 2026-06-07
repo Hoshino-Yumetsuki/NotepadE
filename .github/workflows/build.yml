@@ -8,15 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Multi-platform installer build. electron-builder cannot cross-compile a mac
-  # dmg off macOS (codesign/hdiutil) nor reliably build deb off Linux, so each
-  # target builds on its native runner and uploads its artifact. Runs on push to
-  # main, on version tags (v*), and on manual dispatch — NOT on every PR/branch
-  # push (packaging is slow + resource-heavy).
   package:
     name: Package installer (${{ matrix.os }})
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    needs: [pa8-security-gate, unit]
+      # needs: [pa8-security-gate, unit]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

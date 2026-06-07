@@ -6282,9 +6282,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"notepads-next@workspace:.":
+"notepadse@workspace:.":
   version: 0.0.0-use.local
-  resolution: "notepads-next@workspace:."
+  resolution: "notepadse@workspace:."
   dependencies:
     "@codemirror/commands": "npm:^6.10.3"
     "@codemirror/state": "npm:^6.6.0"
