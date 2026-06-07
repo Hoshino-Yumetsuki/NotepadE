@@ -25,6 +25,7 @@ export const TabGlyph = {
   scrollRight: '\uE76C',
   /** Modified/unsaved indicator dot — NotepadsCore.cs:408. */
   modifiedDot: '\uF127',
+  save: '\uE74E', // Segoe MDL2 "Save" glyph, shown on a dirty tab in place of the old dot
 } as const;
 
 /** The icon font the UWP control uses. */
@@ -51,11 +52,18 @@ export const TabDimensions = {
   /** Close glyph font-size — SetsView.xaml:794. */
   closeFontSize: 14,
   /** Icon slot (modified dot Viewbox) max size — SetsView.xaml. */
-  iconSize: 10,
+  iconSize: 5,
+  /** Unsaved-changes Save-glyph size — sized like the close glyph (14) so it is
+      clearly legible, unlike the tiny 5px dot slot it replaces. */
+  saveIconSize: 14,
   /** Icon margin "0,2,6,0" → right gap before the title. */
   iconMarginRight: 6,
   iconMarginTop: 2,
-  /** Modified dot rendered size (Width/Height 3) — NotepadsCore.cs:408. */
+  /**
+   * @deprecated The modified dot now renders at `iconSize` (10) to reproduce the
+   * UWP Viewbox upscale of the 3×3 FontIcon; the literal 3px size made it a
+   * near-invisible speck. Retained only to avoid a breaking token change.
+   */
   modifiedDotSize: 3,
   /** Selection indicator bar height (2) at the TOP edge — SetsView.xaml:391. */
   selectionBarHeight: 2,

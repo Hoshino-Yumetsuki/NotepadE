@@ -407,25 +407,28 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
           />
         )}
 
-        {/* Modified dot (F127) in the left icon slot — only when dirty. */}
+        {/* Unsaved-changes indicator in the left icon slot — only when dirty. A
+            Segoe MDL2 "Save" glyph (E74E) sized to the 10px icon slot, replacing
+            the old accent dot (F127) which was hard to read at its tiny size. */}
         <span
           aria-hidden={!tab.isModified}
           data-testid="tab-modified"
           style={{
             display: tab.isModified ? 'inline-flex' : 'none',
-            width: TabDimensions.iconSize,
+            width: TabDimensions.saveIconSize,
             marginRight: TabDimensions.iconMarginRight,
             alignItems: 'center',
             justifyContent: 'center',
             fontFamily: SEGOE_MDL2_FONT_FAMILY,
-            fontSize: TabDimensions.modifiedDotSize,
+            fontSize: TabDimensions.saveIconSize,
+            lineHeight: 1,
             color: 'var(--tab-accent, #0078D4)',
             flex: '0 0 auto',
             position: 'relative',
             zIndex: 1,
           }}
         >
-          {TabGlyph.modifiedDot}
+          {TabGlyph.save}
         </span>
 
         {/* Title or inline rename input. */}
@@ -888,18 +891,19 @@ function TabOverlayCard(props: {
         <span
           aria-hidden
           style={{
-            width: TabDimensions.iconSize,
+            width: TabDimensions.saveIconSize,
             marginRight: TabDimensions.iconMarginRight,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontFamily: SEGOE_MDL2_FONT_FAMILY,
-            fontSize: TabDimensions.modifiedDotSize,
+            fontSize: TabDimensions.saveIconSize,
+            lineHeight: 1,
             color: 'var(--tab-accent, #0078D4)',
             flex: '0 0 auto',
           }}
         >
-          {TabGlyph.modifiedDot}
+          {TabGlyph.save}
         </span>
       ) : null}
       <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>

@@ -32,9 +32,65 @@ import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import { undo, redo } from '@codemirror/commands';
 import { setLtr, setRtl } from './commands/direction';
-import { toggleWordWrap } from './commands/wordWrap';
+import { toggleWordWrap, wordWrapField } from './commands/wordWrap';
 import { webSearchSelection } from './commands/webSearch';
 import { useT } from '../i18n';
+
+/**
+ * Segoe MDL2 Assets codepoints for the editor flyout, verbatim from the UWP
+ * TextEditorContextFlyout.cs (Symbol enum + FontIcon glyphs):
+ *   Cut Symbol.Cut E8C6 · Copy Symbol.Copy E8C8 · Paste Symbol.Paste E77F ·
+ *   Undo Symbol.Undo E7A7 · Redo Symbol.Redo E7A6 · SelectAll Symbol.SelectAll
+ *   E8B3 · Search E721 · Preview E89F · Share Symbol.Share E72D.
+ * Word Wrap + RTL use a state CheckMark (rendered by MenuItemCheckbox), not a
+ * leading command glyph, exactly as UWP toggled Icon.Visibility on a CheckMark.
+ */
+const CtxGlyph = {
+  cut: '\uE8C6',
+  copy: '\uE8C8',
+  paste: '\uE77F',
+  undo: '\uE7A7',
+  redo: '\uE7A6',
+  selectAll: '\uE8B3',
+  webSearch: '\uE721',
+  preview: '\uE89F',
+  share: '\uE72D',
+  /** CheckMark E73E - shown in the icon slot of a toggle item when active. */
+  check: '\uE73E',
+} as const;
+
+const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
+
+/** A Segoe MDL2 glyph in a fixed 20px box, sized so the icon is clearly visible
+ *  and every menu row's icon slot is the same width (labels align in one column). */
+function Glyph({ glyph }: { glyph: string }): JSX.Element {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 20,
+        height: 20,
+        fontFamily: SEGOE_MDL2_FONT_FAMILY,
+        fontSize: 18,
+        lineHeight: 1,
+      }}
+    >
+      {glyph}
+    </span>
+  );
+}
+
+/** Icon slot for a checkmark-TOGGLE item (Word Wrap / RTL). When `on`, shows the
+ *  CheckMark in the SAME icon slot the command items use (UWP toggled a CheckMark's
+ *  visibility); when off, an empty box of the same width so the label still aligns
+ *  with every other row — and crucially there is NO separate checkbox-indicator
+ *  slot (that extra slot from MenuItemCheckbox was the misaligned "extra block"). */
+function ToggleIcon({ on }: { on: boolean }): JSX.Element {
+  return on ? <Glyph glyph={CtxGlyph.check} /> : <span aria-hidden style={{ width: 20 }} />;
+}
 
 /** A snapshot of the editor at right-click time, used to gate items. */
 interface MenuContext {
@@ -43,6 +99,10 @@ interface MenuContext {
   view: EditorView;
   hasSelection: boolean;
   hasText: boolean;
+  /** Live word-wrap state — drives the Word Wrap checkmark (UWP Icon.Visibility). */
+  wordWrap: boolean;
+  /** True when the editor is currently RTL — drives the RTL checkmark. */
+  rtl: boolean;
 }
 
 export interface EditorContextMenuHostProps {
@@ -112,6 +172,9 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
       view,
       hasSelection: !sel.empty,
       hasText: view.state.doc.length > 0,
+      wordWrap: view.state.field(wordWrapField, false) ?? false,
+      // CM6 Direction.RTL === 1 (derived from the content DOM `dir`).
+      rtl: view.textDirection === 1,
     });
   }, []);
 
@@ -152,6 +215,8 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
         <MenuList>
           <MenuItem
             data-testid="ctx-cut"
+            icon={<Glyph glyph={CtxGlyph.cut} />}
+            secondaryContent="Ctrl+X"
             disabled={!ctx.hasSelection}
             onClick={run((v) => void cutSelection(v))}
           >
@@ -159,43 +224,82 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           </MenuItem>
           <MenuItem
             data-testid="ctx-copy"
+            icon={<Glyph glyph={CtxGlyph.copy} />}
+            secondaryContent="Ctrl+C"
             disabled={!ctx.hasSelection}
             onClick={run((v) => void copySelection(v))}
           >
             {t('TextEditor_ContextFlyout_CopyButtonDisplayText')}
           </MenuItem>
-          <MenuItem data-testid="ctx-paste" onClick={run((v) => void pastePlainText(v))}>
+          <MenuItem
+            data-testid="ctx-paste"
+            icon={<Glyph glyph={CtxGlyph.paste} />}
+            secondaryContent="Ctrl+V"
+            onClick={run((v) => void pastePlainText(v))}
+          >
             {t('TextEditor_ContextFlyout_PasteButtonDisplayText')}
           </MenuItem>
-          <MenuItem data-testid="ctx-undo" onClick={run((v) => void undo(v))}>
+          <MenuItem
+            data-testid="ctx-undo"
+            icon={<Glyph glyph={CtxGlyph.undo} />}
+            secondaryContent="Ctrl+Z"
+            onClick={run((v) => void undo(v))}
+          >
             {t('TextEditor_ContextFlyout_UndoButtonDisplayText')}
           </MenuItem>
-          <MenuItem data-testid="ctx-redo" onClick={run((v) => void redo(v))}>
+          <MenuItem
+            data-testid="ctx-redo"
+            icon={<Glyph glyph={CtxGlyph.redo} />}
+            secondaryContent="Ctrl+Shift+Z"
+            onClick={run((v) => void redo(v))}
+          >
             {t('TextEditor_ContextFlyout_RedoButtonDisplayText')}
           </MenuItem>
           <MenuItem
             data-testid="ctx-selectall"
+            icon={<Glyph glyph={CtxGlyph.selectAll} />}
+            secondaryContent="Ctrl+A"
             onClick={run((v) => v.dispatch({ selection: { anchor: 0, head: v.state.doc.length } }))}
           >
             {t('TextEditor_ContextFlyout_SelectAllButtonDisplayText')}
           </MenuItem>
           <MenuDivider />
           {ctx.hasText ? (
-            <MenuItem data-testid="ctx-rtl" onClick={run((v) => void toggleReadingOrder(v))}>
+            <MenuItem
+              data-testid="ctx-rtl"
+              // Toggle items use the SAME single icon slot as the command items: a
+              // CheckMark when active, an empty spacer when not. This keeps every
+              // label in one aligned column and avoids the extra checkbox-indicator
+              // slot that MenuItemCheckbox added (the misaligned "extra block").
+              icon={<ToggleIcon on={ctx.rtl} />}
+              onClick={run((v) => void toggleReadingOrder(v))}
+            >
               {t('TextEditor_ContextFlyout_RightToLeftReadingOrderButtonDisplayText')}
             </MenuItem>
           ) : null}
-          <MenuItem data-testid="ctx-wordwrap" onClick={run((v) => void toggleWordWrap(v))}>
+          <MenuItem
+            data-testid="ctx-wordwrap"
+            icon={<ToggleIcon on={ctx.wordWrap} />}
+            secondaryContent="Alt+Z"
+            onClick={run((v) => void toggleWordWrap(v))}
+          >
             {t('TextEditor_ContextFlyout_WordWrapButtonDisplayText')}
           </MenuItem>
           {ctx.hasSelection ? (
-            <MenuItem data-testid="ctx-websearch" onClick={run((v) => void webSearchSelection(v))}>
+            <MenuItem
+              data-testid="ctx-websearch"
+              icon={<Glyph glyph={CtxGlyph.webSearch} />}
+              secondaryContent="Ctrl+E"
+              onClick={run((v) => void webSearchSelection(v))}
+            >
               {t('TextEditor_ContextFlyout_WebSearchButtonDisplayText')}
             </MenuItem>
           ) : null}
           {isPreviewEligible ? (
             <MenuItem
               data-testid="ctx-preview"
+              icon={<Glyph glyph={CtxGlyph.preview} />}
+              secondaryContent="Alt+P"
               onClick={() => {
                 onTogglePreview();
                 close();
@@ -206,6 +310,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           ) : null}
           <MenuItem
             data-testid="ctx-share"
+            icon={<Glyph glyph={CtxGlyph.share} />}
             onClick={() => {
               onShare(ctx.hasSelection);
               close();

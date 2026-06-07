@@ -33,6 +33,7 @@ export interface MarkdownPreviewProps {
 /** Scoped element styling for the rendered markdown (headings, code, quotes, etc.). */
 const PREVIEW_STYLES = `
 .np-md-preview { padding: 12px 18px; overflow: auto; height: 100%; box-sizing: border-box;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   line-height: 1.6; word-wrap: break-word; }
 .np-md-preview h1, .np-md-preview h2 { border-bottom: 1px solid rgba(128,128,128,0.35);
   padding-bottom: 0.2em; }

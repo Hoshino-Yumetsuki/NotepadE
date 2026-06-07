@@ -167,6 +167,15 @@ class LineNumberColumnPlugin implements PluginValue {
     // documentPadding.top is CM6's authoritative value for that inset, so the
     // numbers track their lines even if the padding changes.
     const padTop = this.view.documentPadding.top;
+    // CM6 advances each block by its MEASURED line height (read from a rendered
+    // line via getBoundingClientRect), which for most fonts is NOT exactly
+    // `1.2 × fontSize`. A naked cell (no height) draws its glyph in a CSS-ideal
+    // `1.2em` box, so its half-leading differs from the content's and every number
+    // sits a constant `(measured − 1.2·fontSize)/2` off its row. Giving each cell
+    // the measured line-height (and the block's full height as the box) reproduces
+    // the content's box exactly, so the number top-aligns to its first visual row —
+    // matching CM6's own gutter and the UWP per-number measured-height TextBlock.
+    const lineH = this.view.defaultLineHeight;
     const blocks = this.view.viewportLineBlocks;
     // Active (cursor) line, for the brightened number when lineHighlighter is on.
     const head = this.view.state.selection.main.head;
@@ -178,6 +187,11 @@ class LineNumberColumnPlugin implements PluginValue {
       const cell = this.cellAt(i++);
       cell.textContent = String(lineNo);
       cell.style.top = `${block.top - scrollTop + padTop}px`;
+      // Mirror the content's line box: a wrapped block is taller than one row, so
+      // use the block height as the cell box but pin line-height to one measured
+      // row — the single number then top-aligns to the block's first visual line.
+      cell.style.height = `${block.height}px`;
+      cell.style.lineHeight = `${lineH}px`;
       cell.style.color =
         lineNo === activeLine
           ? activeNumberColor(this.opts.themeMode)

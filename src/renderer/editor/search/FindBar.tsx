@@ -16,6 +16,8 @@ import {
   FindDimensions,
   SEGOE_MDL2_FONT_FAMILY,
   FindInputBackground,
+  FindPanelBackground,
+  FindPanelBorder,
 } from './findTokens';
 import { useT } from '../../i18n';
 import { useAppTheme } from '../../theme/useAppTheme';
@@ -246,12 +248,29 @@ export function FindBar(props: FindBarProps): JSX.Element {
       role="search"
       aria-label="Find and replace"
       style={{
+        // Float as a square panel in the editor's TOP-RIGHT corner (UWP
+        // FindAndReplacePlaceHolder: HorizontalAlignment=Right / VerticalAlignment=
+        // Top, VerticalOffset=10, ~22px inset from the right, Width=340, square
+        // corners, 1px border + drop shadow). Anchored absolutely to #app-shell
+        // (position:relative) so it overlays the editor rather than docking at the
+        // bottom. zIndex 100 sits above the editor host (1) but below the settings
+        // modal (1000).
+        position: 'absolute',
+        top: FindDimensions.overlayTop,
+        right: FindDimensions.overlayRight,
+        width: FindDimensions.panelWidth,
+        zIndex: 100,
+        boxSizing: 'border-box',
+        backgroundColor: FindPanelBackground[resolved],
+        border: `1px solid ${FindPanelBorder[resolved]}`,
+        borderRadius: 0,
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
         display: 'grid',
         gridTemplateColumns: 'auto 1fr auto',
         gridTemplateRows: showReplace ? 'auto auto' : 'auto',
         alignItems: 'center',
         gap: 2,
-        padding: 2,
+        padding: 4,
       }}
     >
       {/* Toggle-replace chevron (spans both rows when replace is shown). */}

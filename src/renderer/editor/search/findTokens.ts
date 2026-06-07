@@ -48,6 +48,26 @@ export const FindInputBackground: Record<'light' | 'dark' | 'hc', string> = {
   hc: 'Canvas',
 } as const;
 
+/**
+ * The find-bar PANEL surface — the opaque box behind the inputs. UWP hosts the
+ * control in a `FindAndReplacePlaceHolder` (DropShadowPanel → bordered Grid) that
+ * floats top-right OVER the editor; for that overlay to read as a solid panel it
+ * must be opaque (the translucent FindInputBackground above is only the inner
+ * input fill). These mirror the Fluent neutral-background-1 surface per theme.
+ */
+export const FindPanelBackground: Record<'light' | 'dark' | 'hc', string> = {
+  light: '#FFFFFF',
+  dark: '#2B2B2B',
+  hc: 'Canvas',
+} as const;
+
+/** The 1px panel border (UWP placeholder BorderThickness="1"). */
+export const FindPanelBorder: Record<'light' | 'dark' | 'hc', string> = {
+  light: 'rgba(0, 0, 0, 0.13)',
+  dark: 'rgba(255, 255, 255, 0.10)',
+  hc: 'CanvasText',
+} as const;
+
 /** Pixel dimensions from FindAndReplaceControl.xaml. */
 export const FindDimensions = {
   /** Each bar row height (XAML Height="36"). */
@@ -62,4 +82,9 @@ export const FindDimensions = {
   toggleGlyphFontSize: 12,
   /** Text box font-size (XAML FontSize="15"). */
   textFontSize: 15,
+  /** Panel width (UWP FindAndReplaceControl Width="340"). */
+  panelWidth: 340,
+  /** Top-right overlay offsets (UWP placeholder VerticalOffset=10 / inset 22). */
+  overlayTop: 10,
+  overlayRight: 22,
 } as const;

@@ -17,7 +17,7 @@ import { useAppTheme } from './theme/useAppTheme';
 import { SettingsSurface } from './settings/SettingsSurface';
 import { installSettingsTestHook } from './settings/settingsTestHook';
 import { appBackgroundTint } from './theme/tokens';
-import { edgeShadowStyle } from './theme/shadow';
+import { edgeShadowStyle, EDGE_SHADOW_BLUR } from './theme/shadow';
 import { tokensForTheme, TabDimensions } from './tabs/tokens';
 import {
   applyAdopt,
@@ -1052,7 +1052,14 @@ export function App(): JSX.Element {
                   top: 0,
                   bottom: 0,
                   left: 0,
-                  right: paneOn ? '50%' : 0,
+                  // Preview is a SIDE-BY-SIDE split (editor left 50%, preview right
+                  // 50%). Diff, by contrast, REPLACES the editor (UWP
+                  // OpenSideBySideDiffViewer zeroes the editor row + disables it):
+                  // the DiffViewer is itself two scroll-synced columns, so leaving
+                  // the editor visible beside it produced THREE columns. Hide the
+                  // editor for diff so the viewer's own two panes are the only split.
+                  right: tab.viewMode.preview ? '50%' : 0,
+                  display: tab.viewMode.diff ? 'none' : 'block',
                 }}
               >
                 <CodeMirrorEditor
@@ -1081,7 +1088,12 @@ export function App(): JSX.Element {
                   style={{
                     position: 'absolute',
                     top: 0,
-                    bottom: 0,
+                    // Clear the status-bar elevation caster (an absolute 6px
+                    // gradient at #app-shell's bottom, zIndex 2) so it never paints
+                    // over the preview's last text row. The editor's own scroller
+                    // tolerates scrolling under it, but the static preview needs the
+                    // inset or its bottom strip is unreadable.
+                    bottom: settings.showStatusBar ? EDGE_SHADOW_BLUR : 0,
                     right: 0,
                     left: '50%',
                     overflow: 'hidden',
@@ -1101,10 +1113,13 @@ export function App(): JSX.Element {
                   style={{
                     position: 'absolute',
                     top: 0,
-                    bottom: 0,
+                    bottom: settings.showStatusBar ? EDGE_SHADOW_BLUR : 0,
                     right: 0,
-                    left: '50%',
-                    borderLeft: '1px solid rgba(128,128,128,0.4)',
+                    // Diff REPLACES the editor (see the editor wrapper above): it
+                    // spans the full width so the DiffViewer's two internal columns
+                    // are the entire side-by-side view — not a third column beside a
+                    // still-visible editor.
+                    left: 0,
                   }}
                 >
                   <DiffViewer
@@ -1116,8 +1131,12 @@ export function App(): JSX.Element {
             </div>
           );
         })}
+        {/* Find/replace bar — floats top-right OVER the editor region (UWP
+            placeholder placement). Mounted INSIDE #app-shell (position:relative)
+            so its absolute top-right offsets anchor to the editor region, and it
+            overlays content instead of docking at the window bottom. */}
+        {find.findBar}
       </div>
-      {find.findBar}
       {settings.showStatusBar ? <StatusBar {...statusModel} /> : null}
       <SettingsSurface
         open={settingsOpen}
