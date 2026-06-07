@@ -106,7 +106,7 @@ export async function reloadFromDisk(path: string): Promise<Result<OpenedFile>> 
 
 /**
  * Prompt for files to open via the native open dialog (multi-select; filters:
- * Text .txt + All Files). Returns the chosen ABSOLUTE paths, or `[]` on cancel —
+ * any file type). Returns the chosen ABSOLUTE paths, or `[]` on cancel —
  * cancellation is a normal success (the renderer treats `[]` as a no-op), unlike
  * saveAs where a cancel is surfaced as an error. The renderer opens each returned
  * path via `file.open`. PA-8: the dialog lives in MAIN; the renderer never sees it.
@@ -117,10 +117,6 @@ export async function openFileDialog(): Promise<Result<string[]>> {
     const options: Electron.OpenDialogOptions = {
       title: 'Open',
       properties: ['openFile', 'multiSelections'],
-      filters: [
-        { name: 'Text Documents', extensions: ['txt'] },
-        { name: 'All Files', extensions: ['*'] },
-      ],
     };
     const picked = focused
       ? await dialog.showOpenDialog(focused, options)
