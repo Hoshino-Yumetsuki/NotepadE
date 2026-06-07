@@ -150,6 +150,12 @@ if (isPrimary) {
   registerProtocolClient();
 
   app.whenReady().then(() => {
+    // Windows taskbar identity: group windows + show the embedded exe icon under
+    // a stable AppUserModelID (must match electron-builder's appId). No-op
+    // elsewhere. Set before any window is created.
+    if (process.platform === 'win32') {
+      app.setAppUserModelId('com.notepads.next');
+    }
     bootstrap();
 
     app.on('activate', () => {

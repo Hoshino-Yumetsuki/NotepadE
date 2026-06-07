@@ -13,8 +13,8 @@
 # verbatim from src/Notepads/Package.appxmanifest when packaging lands.
 
 appId: com.notepads.next
-productName: Notepads
-copyright: Copyright © Notepads-next
+productName: NotepadsE
+copyright: Copyright © NotepadsE
 
 # Packaged app layout. `yarn build` emits the 3-tier bundle to out/{main,preload,
 # renderer}; main loads ../preload/index.js + ../renderer/index.html by RELATIVE

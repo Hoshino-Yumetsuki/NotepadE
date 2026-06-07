@@ -12,11 +12,22 @@
 import { BrowserWindow, nativeTheme } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { IpcChannels } from '../shared/ipc-channels.js';
 import { installCloseGuard } from './window.js';
 import { restoredWindowOptions, trackWindowBounds, DEFAULT_BOUNDS } from './window-bounds.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * App icon (the original Notepads "N_" logo, src/Notepads/Assets/appicon_b.png).
+ * Vite copies src/renderer/public/icon.png → out/renderer/icon.png, a sibling of
+ * out/main. Set explicitly so the dev window, the taskbar, and the Linux build
+ * carry it; the packaged Windows .exe also embeds it via electron-builder's
+ * build/icon.png. Resolved defensively (existsSync) so a missing asset never
+ * throws — Electron just falls back to its default icon.
+ */
+const APP_ICON_PATH = join(__dirname, '../renderer/icon.png');
 
 /** Base theme colors hardcoded per OS theme (docs/plan/02-phase-1 §5). */
 const BASE_BG_DARK = '#2E2E2E';
@@ -36,6 +47,7 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     minWidth: 480,
     minHeight: 320,
     show: false,
+    ...(existsSync(APP_ICON_PATH) ? { icon: APP_ICON_PATH } : {}),
     backgroundColor:
       process.platform === 'win32' ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
     // Acrylic material on Win11: matches the original Notepads' wallpaper-sampling

@@ -5,7 +5,8 @@ dist-electron/
 release/
 .vite/
 coverage/
-build/
+build/*
+!build/icon.png
 playwright-report/
 test-results/
 *.log

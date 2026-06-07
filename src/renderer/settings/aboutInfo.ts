@@ -14,8 +14,8 @@ declare const __APP_VERSION__: string;
 export const APP_VERSION =
   typeof __APP_VERSION__ === 'string' && __APP_VERSION__.length > 0 ? __APP_VERSION__ : '0.0.0';
 
-/** Product name (matches the UWP About header). */
-export const APP_NAME = 'Notepads';
+/** Product name (this Electron edition). */
+export const APP_NAME = 'NotepadsE';
 
 /** Upstream + support links (verbatim from UWP AboutPage.xaml). */
 export const ABOUT_LINKS: readonly { label: string; url: string }[] = [
@@ -39,5 +39,5 @@ export const DEPENDENCY_CREDITS: readonly { label: string; url: string }[] = [
 
 /** License + disclaimer line. */
 export const ABOUT_DISCLAIMER =
-  'Notepads is a free and open-source app distributed under the MIT License. ' +
+  'NotepadsE is a free and open-source app distributed under the MIT License. ' +
   'This Electron edition is a 1:1 rewrite of the original UWP app.';
