@@ -35,6 +35,7 @@ import {
   type TabThemeTokens,
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
+import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
 import { useT } from '../i18n';
 
 /**
@@ -1153,6 +1154,38 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     setClientWidth((prev) => (prev === cw ? prev : cw));
   };
 
+  // Keep the ACTIVE tab visible (UWP SetsView auto-scrolls the selected set into
+  // view). When selection changes — e.g. clicking (+) repeatedly past the strip's
+  // edge selects a new tab that lands outside the scroll viewport — nudge the list
+  // so the active tab is fully on-screen. Keyed on selection / count / width only,
+  // NOT scrollLeft, so a manual horizontal scroll is never fought (the bug:
+  // clicking + selected an off-screen tab but the scrollbar didn't follow it).
+  // Frozen mid-drag (dnd-kit owns scroll then) and a no-op when already visible.
+  useEffect(() => {
+    if (draggingRef.current) return;
+    if (activeEditorId === null) return;
+    const raf = requestAnimationFrame(() => {
+      const list = listRef.current;
+      if (!list) return;
+      const node = list.querySelector<HTMLElement>('[data-testid="tab"][data-active="true"]');
+      if (!node) return;
+      const next = scrollLeftToReveal(
+        list.scrollLeft,
+        list.getBoundingClientRect(),
+        node.getBoundingClientRect(),
+        list.scrollWidth,
+        list.clientWidth,
+      );
+      if (next !== list.scrollLeft) {
+        list.scrollLeft = next;
+        setScrollLeft(next);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+    // tabWidth/tabs.length/stripWidth are included so a relayout that moves the
+    // active tab (added/removed sibling, resized strip) re-checks visibility.
+  }, [activeEditorId, tabs.length, tabWidth, stripWidth]);
+
   // Joined editorId order — a reorder changes this (without changing
   // activeEditorId or length), so the active-tab measure effect below depends on
   // it to remeasure the moved tab's x. Also feeds the dnd-kit SortableContext.
@@ -1197,13 +1230,19 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       }
       const sb = strip.getBoundingClientRect();
       const tb = node.getBoundingClientRect();
-      // Clamp the tab box to the strip's own width (it may be scrolled past the
-      // menu/add buttons under overflow). If it's fully out of view, hide it.
-      const rawLeft = tb.left - sb.left;
-      const left = Math.max(0, rawLeft);
-      const right = Math.min(sb.width, rawLeft + tb.width);
-      const width = Math.max(0, right - left);
-      const next = width <= 0 ? null : { left, width };
+      // The visible window for tabs is the LIST's box, NOT the whole strip: the
+      // strip also holds the hamburger + scroll-left button (left of the list) and
+      // the add button + caption (right of it). getBoundingClientRect ignores the
+      // list's overflow clip, so a tab scrolled out the list's left edge still
+      // reports its true (off-list) geometry. Clamping to the strip [0, sb.width]
+      // then pinned the overlay's left to strip-x=0 — painting the selected-tab
+      // elevation OVER the hamburger/scroll chrome as a stray translucent block
+      // (the bug: "选中效果...其他组件会突出来一个透明的块"). clampOverlayToList
+      // clamps to the list's own edges instead, so the overlay tracks only the
+      // in-list visible portion and vanishes (null) once the tab is fully scrolled
+      // out of the list viewport.
+      const lb = listRef.current ? listRef.current.getBoundingClientRect() : sb;
+      const next = clampOverlayToList(sb, lb, tb);
       setActiveRect((prev) =>
         prev && next && prev.left === next.left && prev.width === next.width
           ? prev

@@ -16,6 +16,7 @@ import type { TabInfo } from '../types/notepads-global';
 
 export const TAB_SELECTORS = {
   strip: '[data-testid="tab-strip"]',
+  tabList: '[data-testid="tab-list"]',
   tab: '[data-testid="tab"]',
   tabTitle: '[data-testid="tab-title"]',
   tabClose: '[data-testid="tab-close"]',
