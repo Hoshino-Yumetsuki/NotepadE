@@ -1,11 +1,16 @@
+/**
+ * Markdown render parity (UWP MarkdownExtensionView / MarkdownTextBlock) PLUS the
+ * mdit-plugins extension surface. Asserts the GFM-equivalent base (headings,
+ * emphasis, lists, code, autolink, soft breaks) and the plugin features (task
+ * lists, footnotes, sub/sup, marks, inserts, alerts, emoji, …).
+ *
+ * NOTE: `renderMarkdown` now runs with html:true, so its output is UNTRUSTED raw
+ * HTML — the XSS gate moved to sanitizeHtml.ts (see sanitizeHtml.test.ts). These
+ * tests therefore assert the RAW render shape; they no longer assert escaping.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { renderMarkdown, isMarkdownPath } from './renderMarkdown';
-
-/**
- * Markdown render parity (UWP MarkdownExtensionView / MarkdownTextBlock). Asserts
- * the GFM-equivalent surface: headings, emphasis, lists, code, autolink, soft
- * breaks, and the XSS-safe html:false behavior. Pure text→HTML transform.
- */
 
 describe('isMarkdownPath', () => {
   it('recognizes the .md family case-insensitively', () => {
@@ -64,17 +69,11 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown('line one\nline two')).toContain('<br>');
   });
 
-  it('does NOT pass through raw HTML (html:false — XSS-safe)', () => {
-    const html = renderMarkdown('<script>alert(1)</script>');
-    expect(html).not.toContain('<script>');
-    // The angle brackets are escaped into entities instead.
-    expect(html).toContain('&lt;script&gt;');
-  });
-
-  it('escapes inline HTML in user text', () => {
+  it('passes raw HTML through (html:true — sanitization happens downstream)', () => {
+    // With html:true the parser no longer escapes; sanitizeMarkdownHtml is the
+    // gate that removes dangerous markup (asserted in sanitizeHtml.test.ts).
     const html = renderMarkdown('a <b>bold</b> tag');
-    expect(html).not.toContain('<b>bold</b>');
-    expect(html).toContain('&lt;b&gt;');
+    expect(html).toContain('<b>bold</b>');
   });
 
   it('renders blockquotes', () => {
@@ -83,5 +82,50 @@ describe('renderMarkdown', () => {
 
   it('returns an empty-ish string for empty input', () => {
     expect(renderMarkdown('')).toBe('');
+  });
+});
+
+describe('renderMarkdown — mdit-plugins extensions', () => {
+  it('renders task lists with checkboxes', () => {
+    const html = renderMarkdown('- [x] done\n- [ ] todo');
+    expect(html).toContain('task-list-item');
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain('checked');
+  });
+
+  it('renders footnotes', () => {
+    const html = renderMarkdown('text[^1]\n\n[^1]: note');
+    expect(html).toContain('footnote-ref');
+    expect(html).toContain('class="footnotes"');
+  });
+
+  it('renders subscript and superscript', () => {
+    expect(renderMarkdown('H~2~O')).toContain('<sub>2</sub>');
+    expect(renderMarkdown('x^2^')).toContain('<sup>2</sup>');
+  });
+
+  it('renders ==mark== and ++ins++', () => {
+    expect(renderMarkdown('==hi==')).toContain('<mark>hi</mark>');
+    expect(renderMarkdown('++new++')).toContain('<ins>new</ins>');
+  });
+
+  it('renders GitHub-style alert blocks', () => {
+    const html = renderMarkdown('> [!NOTE]\n> hello');
+    expect(html).toContain('markdown-alert');
+    expect(html).toContain('markdown-alert-note');
+  });
+
+  it('renders !!spoiler!! spans', () => {
+    expect(renderMarkdown('a !!secret!! b')).toContain('class="spoiler"');
+  });
+
+  it('renders emoji shortcodes', () => {
+    expect(renderMarkdown(':tada:')).toContain('🎉');
+  });
+
+  it('renders figures with captions from images', () => {
+    const html = renderMarkdown('![cap](https://x.test/a.png)');
+    expect(html).toContain('<figure>');
+    expect(html).toContain('<figcaption>cap</figcaption>');
   });
 });

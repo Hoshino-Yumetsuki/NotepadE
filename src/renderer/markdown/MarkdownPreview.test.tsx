@@ -26,10 +26,12 @@ describe('MarkdownPreview', () => {
     expect(screen.getByTestId('markdown-preview').className).toContain('np-md-light');
   });
 
-  it('does not inject raw HTML from user text (XSS-safe)', () => {
+  it('strips dangerous attributes from injected HTML (sanitized)', () => {
     render(<MarkdownPreview text={'<img src=x onerror=alert(1)>'} />);
     const host = screen.getByTestId('markdown-preview');
-    // No live <img> element is created from the escaped source.
-    expect(host.querySelector('img')).toBeNull();
+    // html:true means an <img> element CAN appear, but the sanitizer must have
+    // removed the inline event handler — that is the XSS gate.
+    const img = host.querySelector('img');
+    expect(img?.getAttribute('onerror')).toBeNull();
   });
 });

@@ -1104,6 +1104,7 @@ export function App(): JSX.Element {
                     text={shadow}
                     isDark={resolvedTheme === 'dark'}
                     fontSize={settings.editorFontSize}
+                    editorView={editorHandles.current.get(tab.editorId)?.getView() ?? null}
                   />
                 </div>
               )}

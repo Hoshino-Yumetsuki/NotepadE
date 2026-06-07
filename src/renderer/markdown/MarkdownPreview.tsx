@@ -1,24 +1,31 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import type { EditorView } from '@codemirror/view';
 import { renderMarkdown } from './renderMarkdown';
+import { sanitizeMarkdownHtml } from './sanitizeHtml';
 
 /**
- * MarkdownPreview — RENDERER, Lane B (Phase 6). Self-contained, pure-presentational
- * markdown preview pane. Ports the UWP MarkdownExtensionView: renders the editor's
- * live '\n' text as GFM-equivalent HTML (see renderMarkdown.ts) in a scrollable
- * pane meant to sit SIDE-BY-SIDE with the editor (Alt+P toggles it on for .md files).
+ * MarkdownPreview — RENDERER, Lane B (Phase 6). Self-contained markdown preview
+ * pane. Ports the UWP MarkdownExtensionView: renders the editor's live '\n' text as
+ * GFM-equivalent HTML (see renderMarkdown.ts) in a pane that sits SIDE-BY-SIDE with
+ * the editor (Alt+P toggles it on for .md files).
  *
- * Safety: `renderMarkdown` runs markdown-it with html:false, so the produced HTML
- * contains NO raw user HTML (every `<...>` in the source is escaped). The string is
- * therefore safe to inject via dangerouslySetInnerHTML — there is no XSS surface.
+ * Safety: `renderMarkdown` now runs markdown-it with html:true, so its output is
+ * UNTRUSTED. This component routes it through `sanitizeMarkdownHtml` (DOMPurify +
+ * an image-source policy) BEFORE dangerouslySetInnerHTML. The sanitized string is
+ * the only thing injected — that pass is the XSS gate, not html:false anymore.
  *
- * Styling follows the codebase convention (inline styles + a scoped <style> block,
- * no external .css imports). The scoped block targets only `.np-md-preview` element
- * descendants so it cannot leak into the rest of the app.
+ * Scroll sync (UWP-parity split behavior): the pane is NOT an independently
+ * scrolling view. It mirrors the EDITOR's vertical scroll position proportionally,
+ * so paging through the source pages the rendered output in lock-step. The editor
+ * stays the scroll master; we listen to its CM6 scrollDOM and map its scroll
+ * fraction onto our own scroller. (UWP synced the diff viewer's two panes the same
+ * way via ScrollViewerSynchronizer; here we sync editor -> preview.)
  *
- * MOUNT API (for the App.tsx integration pass — lane-a):
- *   <MarkdownPreview text={shadowText} isDark={resolvedTheme === 'dark'} />
- * Render it beside the editor host (50/50 split) when the active tab's
- * viewMode.preview is true. The component owns its own scroll + theming.
+ * Styling follows the codebase convention (inline styles + a scoped <style> block).
+ * The scoped block targets only `.np-md-preview` descendants so it cannot leak.
+ *
+ * MOUNT API (App.tsx integration):
+ *   <MarkdownPreview text={shadowText} isDark={...} editorView={view} />
  */
 
 export interface MarkdownPreviewProps {
@@ -28,6 +35,12 @@ export interface MarkdownPreviewProps {
   isDark?: boolean;
   /** Optional body font size in px (defaults to 14, the editor default). */
   fontSize?: number;
+  /**
+   * The editor's CM6 view whose vertical scroll this pane mirrors. When provided,
+   * the preview follows the editor's scroll fraction (the editor is the master).
+   * Null/undefined falls back to an independently scrollable pane.
+   */
+  editorView?: EditorView | null;
 }
 
 /** Scoped element styling for the rendered markdown (headings, code, quotes, etc.). */
@@ -47,6 +60,29 @@ const PREVIEW_STYLES = `
 .np-md-preview table { border-collapse: collapse; }
 .np-md-preview th, .np-md-preview td { border: 1px solid rgba(128,128,128,0.4); padding: 4px 8px; }
 .np-md-preview img { max-width: 100%; }
+.np-md-preview figure { margin: 1em 0; }
+.np-md-preview figcaption { font-size: 0.9em; opacity: 0.75; text-align: center; margin-top: 4px; }
+/* Task lists: drop the list bullet, align the checkbox with its label. */
+.np-md-preview .task-list-container { list-style: none; padding-left: 0.4em; }
+.np-md-preview .task-list-item { display: flex; align-items: flex-start; gap: 6px; }
+.np-md-preview .task-list-item-checkbox { margin-top: 0.35em; }
+/* Footnotes. */
+.np-md-preview .footnotes { font-size: 0.9em; opacity: 0.8; }
+.np-md-preview .footnotes-sep { border: none; border-top: 1px solid rgba(128,128,128,0.35); }
+/* Marks / inserts keep readable contrast in both themes. */
+.np-md-preview mark { background: rgba(255, 221, 87, 0.55); color: inherit; padding: 0 0.15em; }
+/* Spoiler: hidden until hovered/focused. */
+.np-md-preview .spoiler { background: currentColor; border-radius: 3px; transition: background 0.1s; }
+.np-md-preview .spoiler:hover, .np-md-preview .spoiler:focus { background: transparent; }
+/* GitHub-style alert blocks (NOTE / TIP / WARNING / …). */
+.np-md-preview .markdown-alert { border-left: 4px solid rgba(128,128,128,0.6);
+  padding: 6px 12px; margin: 1em 0; border-radius: 0 4px 4px 0; background: rgba(128,128,128,0.08); }
+.np-md-preview .markdown-alert-title { font-weight: 600; margin: 0 0 4px; }
+.np-md-preview .markdown-alert-note { border-left-color: #4493f8; }
+.np-md-preview .markdown-alert-tip { border-left-color: #3fb950; }
+.np-md-preview .markdown-alert-important { border-left-color: #ab7df8; }
+.np-md-preview .markdown-alert-warning { border-left-color: #d29922; }
+.np-md-preview .markdown-alert-caution { border-left-color: #f85149; }
 .np-md-dark { color: #E6E6E6; }
 .np-md-dark a { color: #4FA3FF; }
 .np-md-light { color: #1A1A1A; }
@@ -57,18 +93,47 @@ export function MarkdownPreview({
   text,
   isDark = false,
   fontSize = 14,
+  editorView = null,
 }: MarkdownPreviewProps): JSX.Element {
-  // Re-render only when the source text changes (markdown-it is the only cost).
-  const html = useMemo(() => renderMarkdown(text), [text]);
+  // Re-render only when the source text changes. Render (markdown-it) then
+  // sanitize (DOMPurify) — both are pure transforms keyed on the text.
+  const html = useMemo(() => sanitizeMarkdownHtml(renderMarkdown(text)), [text]);
+
+  const paneRef = useRef<HTMLDivElement>(null);
+
+  // Mirror the editor's vertical scroll fraction onto this pane. The editor is the
+  // scroll master; we are a follower. Re-applied whenever the editor view or the
+  // rendered html changes (new content can change our scrollHeight).
+  useEffect(() => {
+    const scroller = editorView?.scrollDOM;
+    const pane = paneRef.current;
+    if (!scroller || !pane) return;
+
+    const sync = (): void => {
+      const srcRange = scroller.scrollHeight - scroller.clientHeight;
+      const dstRange = pane.scrollHeight - pane.clientHeight;
+      if (srcRange <= 0 || dstRange <= 0) {
+        pane.scrollTop = 0;
+        return;
+      }
+      const fraction = scroller.scrollTop / srcRange;
+      pane.scrollTop = fraction * dstRange;
+    };
+
+    sync(); // align immediately on open / content change
+    scroller.addEventListener('scroll', sync, { passive: true });
+    return () => scroller.removeEventListener('scroll', sync);
+  }, [editorView, html]);
 
   return (
     <>
       <style>{PREVIEW_STYLES}</style>
       <div
+        ref={paneRef}
         data-testid="markdown-preview"
         className={isDark ? 'np-md-preview np-md-dark' : 'np-md-preview np-md-light'}
         style={{ fontSize }}
-        // Safe: renderMarkdown uses html:false, so no raw user HTML is present.
+        // Safe: html is the output of sanitizeMarkdownHtml (DOMPurify + image policy).
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </>

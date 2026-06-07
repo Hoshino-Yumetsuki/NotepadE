@@ -31,7 +31,8 @@ import { tableFor, SUPPORTED_LOCALES, type SupportedLocale } from '../src/render
  *
  * SELECTORS (verified against MarkdownPreview.tsx / DiffViewer.tsx):
  *   - markdown : [data-testid="preview-pane"] [data-testid="markdown-preview"] — the
- *     rendered markdown-it HTML (html:false), so '# Heading' becomes a real <h1>.
+ *     rendered markdown-it HTML (sanitized via DOMPurify), so '# Heading' becomes a
+ *     real <h1>.
  *   - diff     : [data-testid="diff-pane"] [data-testid="diff-viewer"] with two
  *     columns [data-testid="diff-column-left|right"]; each row carries
  *     data-row-kind (unchanged|inserted|deleted|modified|imaginary) and a modified

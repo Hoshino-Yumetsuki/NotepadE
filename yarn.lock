@@ -2734,6 +2734,249 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mdit/helper@npm:0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/helper@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/a589e34e9cf929a085d11144cc2ed8d36c121f504841afbdf905eab73fc7937e5e6ecc8767234150e37d5c4d3ccd92f86ab0b67deec27dd93f5c33924779c51a
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-abbr@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-abbr@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/95e934bc713b0bf74ba31707a42c000f26cb8b399cda68b9d9c848d09acf530c920ea8e9403e3edf698ed33a16a9eb50bc6e1671ec729b133c197049b9eda77d
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-alert@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-alert@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/a3ddd395a60841fa11c95276046e4290864d0a8d082d29938268cc1718272364fac421b94b1b5e9d6556882c7fc845eb19bf85615424a9b2ab934bd98afccf91
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-align@npm:^0.24.2":
+  version: 0.24.2
+  resolution: "@mdit/plugin-align@npm:0.24.2"
+  dependencies:
+    "@mdit/plugin-container": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/105cc18a7ff071eb53be173b185ca061f3e1ffe172bba7973bf66ad158c2cf53571adfad809a42a6b29356df31a7871e1fb0a12985be1832c9fcfafb42d99af2
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-attrs@npm:^0.25.2":
+  version: 0.25.2
+  resolution: "@mdit/plugin-attrs@npm:0.25.2"
+  dependencies:
+    "@mdit/helper": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/42a6bdf50cdf30a0934c205c979d792ce18b2e7360e88562933104a6fc7523b81b09a9290df817921e5da0dac224439bdc4c9d85f7f0dc9079cea1b37de28f91
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-container@npm:0.23.2, @mdit/plugin-container@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-container@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/116a86df42d3b7879a4bf23bcaa0c28340fcbb32c6298aba8fe942337b5c8f6a901139d72f32a611567bd3ce79c52674d3d57160a0985350701742f2a5b31def
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-dl@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-dl@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/15aa7d51b2a3c2deeceb1fecd068b13d277d46bbc2651658c48b493d8fb5162b4a96a3434c51a6639eecfde13a4632c539bdd25c814654a7b1517533540ff9c2
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-emoji@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@mdit/plugin-emoji@npm:0.2.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/9edb3be32ea97992fd04cfa85fbca17dadfe4dad681e88d11f9296626103b9fa32ce7042867f9cefec18154feee4c7da006c82e2022da01c7d270a18917f5945
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-figure@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-figure@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/bf4cede1fa539c5697db77aeeb65922bab30ae9aa13d56308328cfc6d30a017d01f57e5a6ecb49f83a5d856982f917a2ee994c6aa24746c5b4826840bc777bbc
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-footnote@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-footnote@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  checksum: 10c0/b23c00412ebbe489ecf1575e11fa4e2b837044e76b83cad7eb94d4baf1205ac9e5c4daf9a274e1b19c398fbdf1d135bc39209274ed1605a2934de616d373ca43
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-inline-rule@npm:0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-inline-rule@npm:0.23.2"
+  dependencies:
+    "@mdit/helper": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/b6421b66c824697efabd74ef0bc5d895d34fe5bea5f85b5b1cdecee6e175aa5eac91dc81abf8af581ea3c885d19d6d9442528bfe4a2857201a7a38042a0826d5
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-ins@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-ins@npm:0.23.2"
+  dependencies:
+    "@mdit/plugin-inline-rule": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/2505923a311fa89564e6e3f15d237d02b614a4cf1b5a6f49781dca15f44184c4010d58a70000f4f0cf8435a3679fe94cb82da853725e4de5bb482f16f82bb070
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-mark@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-mark@npm:0.23.2"
+  dependencies:
+    "@mdit/plugin-inline-rule": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/797034b51bb074d47cc834f64807cfbf1321693d4f0d1eca1e2ab72e9ecf8ac5ab856c7508ce2382069d3ff10334a8d0eb4bf832a698d656fe737e2ef877ff1f
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-spoiler@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-spoiler@npm:0.23.2"
+  dependencies:
+    "@mdit/plugin-inline-rule": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/3e8cbba0d746189e8b6ba6bcf0766049cfe4878d330cd20dd5e732a0572784a649ddc560e44af77b881b169b9d675cb9509219cb462383224d91d67b7d07c8f0
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-sub@npm:^0.24.2":
+  version: 0.24.2
+  resolution: "@mdit/plugin-sub@npm:0.24.2"
+  dependencies:
+    "@mdit/plugin-inline-rule": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/f12c9619313d17478655b97ed1f92379c2643b8b977530f94b79bae5fd474342a8d6578b212aec91a5ff30b2e310f0573b671b0f831cb9f04e8326c8964063e9
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-sup@npm:^0.24.2":
+  version: 0.24.2
+  resolution: "@mdit/plugin-sup@npm:0.24.2"
+  dependencies:
+    "@mdit/plugin-inline-rule": "npm:0.23.2"
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/ec051027746fb812cf4f56b1d717595517bfb71dc79255965c078816325c579f1b4280b2199e8684aa99aac0d437486c19cad378efe790d6c62eeafba17fbde7
+  languageName: node
+  linkType: hard
+
+"@mdit/plugin-tasklist@npm:^0.23.2":
+  version: 0.23.2
+  resolution: "@mdit/plugin-tasklist@npm:0.23.2"
+  dependencies:
+    "@types/markdown-it": "npm:^14.1.2"
+  peerDependencies:
+    markdown-it: ^14.1.0
+  peerDependenciesMeta:
+    markdown-it:
+      optional: true
+  checksum: 10c0/93960a16636f8b01e30aafe2b9ec7fe68a99c679eb601322700ed9590bc15330dd49f5158618168ab7116c01dbae5f2dfe2244805523ddeee10f4f3773e68b01
+  languageName: node
+  linkType: hard
+
 "@napi-rs/wasm-runtime@npm:^1.1.4":
   version: 1.1.4
   resolution: "@napi-rs/wasm-runtime@npm:1.1.4"
@@ -3514,6 +3757,13 @@ __metadata:
   dependencies:
     "@types/node": "npm:*"
   checksum: 10c0/a58ba341cb9e7d74f71810a88862da7b2a6fa42e2a1fc0ce40498f6ea1d44382f0640117057da779f74c47039f7166bf48fad02dc876f94e005c7afa50f5e129
+  languageName: node
+  linkType: hard
+
+"@types/trusted-types@npm:^2.0.7":
+  version: 2.0.7
+  resolution: "@types/trusted-types@npm:2.0.7"
+  checksum: 10c0/4c4855f10de7c6c135e0d32ce462419d8abbbc33713b31d294596c0cc34ae1fa6112a2f9da729c8f7a20707782b0d69da3b1f8df6645b0366d08825ca1522e0c
   languageName: node
   linkType: hard
 
@@ -4456,6 +4706,18 @@ __metadata:
   version: 0.6.3
   resolution: "dom-accessibility-api@npm:0.6.3"
   checksum: 10c0/10bee5aa514b2a9a37c87cd81268db607a2e933a050074abc2f6fa3da9080ebed206a320cbc123567f2c3087d22292853bdfdceaffdd4334ffe2af9510b29360
+  languageName: node
+  linkType: hard
+
+"dompurify@npm:^3.4.8":
+  version: 3.4.8
+  resolution: "dompurify@npm:3.4.8"
+  dependencies:
+    "@types/trusted-types": "npm:^2.0.7"
+  dependenciesMeta:
+    "@types/trusted-types":
+      optional: true
+  checksum: 10c0/8f56a53d0ac80c76068772c9b72721f31fad68cac64a528e2420699ce2bd26b3516e29a5a7bd2205c2732d7114b9859998bf922d20cdb9361c4a05dab8352570
   languageName: node
   linkType: hard
 
@@ -6294,6 +6556,21 @@ __metadata:
     "@dnd-kit/sortable": "npm:^10.0.0"
     "@dnd-kit/utilities": "npm:^3.2.2"
     "@fluentui/react-components": "npm:^9.74.1"
+    "@mdit/plugin-abbr": "npm:^0.23.2"
+    "@mdit/plugin-alert": "npm:^0.23.2"
+    "@mdit/plugin-align": "npm:^0.24.2"
+    "@mdit/plugin-attrs": "npm:^0.25.2"
+    "@mdit/plugin-container": "npm:^0.23.2"
+    "@mdit/plugin-dl": "npm:^0.23.2"
+    "@mdit/plugin-emoji": "npm:^0.2.2"
+    "@mdit/plugin-figure": "npm:^0.23.2"
+    "@mdit/plugin-footnote": "npm:^0.23.2"
+    "@mdit/plugin-ins": "npm:^0.23.2"
+    "@mdit/plugin-mark": "npm:^0.23.2"
+    "@mdit/plugin-spoiler": "npm:^0.23.2"
+    "@mdit/plugin-sub": "npm:^0.24.2"
+    "@mdit/plugin-sup": "npm:^0.24.2"
+    "@mdit/plugin-tasklist": "npm:^0.23.2"
     "@playwright/test": "npm:^1.60.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"
@@ -6308,6 +6585,7 @@ __metadata:
     codemirror: "npm:^6.0.2"
     cross-env: "npm:^10.1.0"
     diff: "npm:^9.0.0"
+    dompurify: "npm:^3.4.8"
     electron: "npm:^42.3.3"
     electron-builder: "npm:^26.15.0"
     iconv-lite: "npm:^0.7.2"

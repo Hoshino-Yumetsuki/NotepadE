@@ -2,27 +2,55 @@
  * Markdown rendering — RENDERER, Lane B (Phase 6). PURE (no DOM, no IPC).
  *
  * Ports the UWP Markdown preview extension (MarkdownExtensionView + the bundled
- * MarkdownTextBlock) to a markdown-it pipeline. The UWP control renders GitHub-
- * flavored-ish markdown from the editor's live text; we mirror that with
- * markdown-it configured for a GFM-equivalent surface.
+ * MarkdownTextBlock) to a markdown-it pipeline, then EXTENDS it with a curated set
+ * of plugins from the mdit-plugins collection (https://mdit-plugins.github.io/) so
+ * the preview renders GitHub-flavored notes (task lists, footnotes, alerts, marks,
+ * sub/sup, figures, containers, emoji, …) the way authors expect.
  *
- * markdown-it is pure JS (no Node built-ins) so it is PA-8-safe in the renderer.
+ * SAFETY MODEL — read before changing `html`:
+ *   This module now runs markdown-it with `html: true`, so raw HTML in the source
+ *   AND the HTML emitted by the plugins flows through verbatim. That means the
+ *   string returned here is UNTRUSTED and MUST NOT be injected into the DOM as-is.
+ *   Sanitization is a SEPARATE, MANDATORY step that lives in the DOM layer
+ *   (`sanitizeMarkdownHtml` in ./sanitizeHtml, applied by MarkdownPreview before
+ *   dangerouslySetInnerHTML). Keeping the transform pure here lets it stay
+ *   unit-testable; keeping DOMPurify out of here keeps this module DOM-free.
+ *
+ *   renderMarkdown(text)            -> raw, UNSAFE html (this file)
+ *   sanitizeMarkdownHtml(rawHtml)   -> safe html for the DOM (./sanitizeHtml)
+ *   MarkdownPreview                 -> composes the two, injects the safe result
  *
  * Configuration rationale:
- *   - `html: false`  — the editor's text is untrusted user content; we never pass
- *     raw HTML through to the preview DOM (XSS-safe by construction). The UWP
- *     MarkdownTextBlock likewise renders markdown structure, not arbitrary HTML.
- *   - `linkify: true` — bare URLs become links (GFM autolink parity; UWP autolinks).
- *   - `breaks: true`  — a single newline becomes a <br>, matching the UWP preview's
+ *   - `html: true`   — raw HTML is allowed through the parser so notes can embed
+ *     markup; the DOMPurify pass downstream is what makes it safe. (Previously
+ *     `html:false` made this file XSS-safe by construction; that guarantee now
+ *     lives in sanitizeMarkdownHtml instead.)
+ *   - `linkify: true`— bare URLs become links (GFM autolink parity; UWP autolinks).
+ *   - `breaks: true` — a single newline becomes a <br>, matching the UWP preview's
  *     soft-break rendering of plain notes.
  *   - `typographer: false` — no smartquote/dash substitution; the preview shows the
  *     author's exact punctuation.
  *
- * The caller (MarkdownPreview component) owns turning the returned HTML string into
- * DOM and theming it; this module is a pure text→HTML transform so it is unit-testable.
+ * Every plugin is pure JS (no Node built-ins) so the pipeline stays PA-8-safe in
+ * the renderer. Node-only mdit-plugins (include, snippet) are deliberately excluded.
  */
 
 import MarkdownIt from 'markdown-it';
+import { tasklist } from '@mdit/plugin-tasklist';
+import { footnote } from '@mdit/plugin-footnote';
+import { sub } from '@mdit/plugin-sub';
+import { sup } from '@mdit/plugin-sup';
+import { mark } from '@mdit/plugin-mark';
+import { ins } from '@mdit/plugin-ins';
+import { abbr } from '@mdit/plugin-abbr';
+import { dl } from '@mdit/plugin-dl';
+import { alert } from '@mdit/plugin-alert';
+import { attrs } from '@mdit/plugin-attrs';
+import { figure } from '@mdit/plugin-figure';
+import { spoiler } from '@mdit/plugin-spoiler';
+import { align } from '@mdit/plugin-align';
+import { container } from '@mdit/plugin-container';
+import { fullEmoji } from '@mdit/plugin-emoji';
 
 /**
  * The `.md` family — file extensions for which the preview toggle (Alt+P) is
@@ -37,11 +65,32 @@ let md: MarkdownIt | null = null;
 function getRenderer(): MarkdownIt {
   if (md === null) {
     md = new MarkdownIt({
-      html: false,
+      html: true,
       linkify: true,
       breaks: true,
       typographer: false,
     });
+    // Inline / span extensions (GFM-ish): ==mark==, ++ins++, ~sub~, ^sup^,
+    // >!spoiler!<, abbreviations, and :emoji: shortcodes.
+    md.use(mark)
+      .use(ins)
+      .use(sub)
+      .use(sup)
+      .use(spoiler)
+      .use(abbr)
+      .use(fullEmoji);
+    // Block extensions: task lists, footnotes, definition lists, GitHub-style
+    // alert/admonition blocks, figures-with-captions, custom ::: containers, and
+    // alignment blocks. attrs is registered LAST so `{.class #id}` annotations can
+    // attach to tokens produced by the other block rules.
+    md.use(tasklist, { disabled: false })
+      .use(footnote)
+      .use(dl)
+      .use(alert)
+      .use(figure)
+      .use(container, { name: 'info' })
+      .use(align)
+      .use(attrs);
   }
   return md;
 }
@@ -61,8 +110,8 @@ export function isMarkdownPath(filePath: string | null): boolean {
 
 /**
  * Render '\n'-normalized shadow-buffer markdown text to an HTML string. Pure and
- * deterministic. The input is the editor's exact text; output is safe HTML
- * (html:false means no raw-HTML passthrough).
+ * deterministic. The output is UNTRUSTED raw HTML (html:true + plugin output) and
+ * MUST be passed through `sanitizeMarkdownHtml` before it touches the DOM.
  */
 export function renderMarkdown(text: string): string {
   return getRenderer().render(text);
