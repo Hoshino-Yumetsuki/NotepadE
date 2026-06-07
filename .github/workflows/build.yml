@@ -18,13 +18,11 @@ jobs:
         include:
           - os: windows-latest
             artifact: windows-nsis
-            # NSIS installer .exe + its blockmap.
             glob: |
               release/*.exe
               release/*.exe.blockmap
           - os: ubuntu-latest
             artifact: linux-deb-appimage
-            # .deb (Debian/Ubuntu) + .AppImage (portable, distro-agnostic).
             glob: |
               release/*.deb
               release/*.AppImage
@@ -38,7 +36,6 @@ jobs:
       - uses: actions/setup-node@v6.1.0
         with:
           node-version: "lts/*"
-          cache: 'yarn'
       - name: Setup Corepack
         run: |
           corepack enable
@@ -46,13 +43,9 @@ jobs:
       - name: Setup Dependencies
         run: |
           yarn install --immutable
-      # `dist` runs `vite build` then `electron-builder --publish never`, emitting
-      # the per-OS target(s) from electron-builder.yml into release/. The macOS dmg
-      # and Windows nsis are unsigned here (no cert in CI) — release-infra follow-up.
       - name: Build installer (electron-builder)
         run: yarn dist
         env:
-          # Skip electron-builder's attempt to discover/notarize with absent creds.
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - name: Upload installer artifact
         if: ${{ !cancelled() }}
