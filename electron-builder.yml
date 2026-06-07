@@ -195,7 +195,7 @@ nsis:
   perMachine: false
   # Optional "Open with NotepadE" context-menu entry. The checkbox on the last
   # wizard page lets the user opt in or out at install time.
-  include: build/installer.nsh
+  include: installer.nsh
 
 mac:
   target:
