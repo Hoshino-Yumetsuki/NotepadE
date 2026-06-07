@@ -185,6 +185,18 @@ win:
   icon: build/icon.png
   # Registers the protocol + associations at install time.
 
+nsis:
+  # Let the user choose the installation directory (one-click:false shows the full
+  # wizard including a destination page). perMachine defaults to false so a user
+  # install under AppData works without elevation; the user can switch to per-machine
+  # (Program Files) from the directory page if they want.
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  # Optional "Open with NotepadsE" context-menu entry. The checkbox on the last
+  # wizard page lets the user opt in or out at install time.
+  include: build/installer.nsh
+
 mac:
   target:
     - dmg

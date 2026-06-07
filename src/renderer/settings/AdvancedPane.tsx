@@ -93,6 +93,19 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
         </SettingRow>
       </SettingGroup>
 
+      <SettingGroup title="Shell Integration">
+        <SettingRow
+          id="openWithContextMenu"
+          label="Open with NotepadsE (Explorer context menu)"
+          description="Add 'Open with NotepadsE' to the Windows Explorer right-click menu."
+        >
+          <Switch
+            checked={settings.openWithContextMenu}
+            onChange={(_e, d) => update({ openWithContextMenu: d.checked })}
+          />
+        </SettingRow>
+      </SettingGroup>
+
       <SettingGroup title={t('AdvancedPage_LanguagePreferenceSettings_Title.Text')}>
         <SettingRow
           id="appLanguage"

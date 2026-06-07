@@ -36,6 +36,7 @@
  */
 
 import MarkdownIt from 'markdown-it';
+import hljs from 'highlight.js';
 import { tasklist } from '@mdit/plugin-tasklist';
 import { footnote } from '@mdit/plugin-footnote';
 import { sub } from '@mdit/plugin-sub';
@@ -69,6 +70,16 @@ function getRenderer(): MarkdownIt {
       linkify: true,
       breaks: true,
       typographer: false,
+      highlight(code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+          try {
+            return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+          } catch {
+            // fall through to plain
+          }
+        }
+        return hljs.highlightAuto(code).value;
+      },
     });
     // Inline / span extensions (GFM-ish): ==mark==, ++ins++, ~sub~, ^sup^,
     // >!spoiler!<, abbreviations, and :emoji: shortcodes.

@@ -53,7 +53,11 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown('`code`')).toContain('<code>code</code>');
     const fenced = renderMarkdown('```\nconst x = 1;\n```');
     expect(fenced).toContain('<pre>');
-    expect(fenced).toContain('const x = 1;');
+    // highlight.js tokenizes fenced code into hljs spans, so the source text is
+    // split across markup. Assert the structural wrapper and the tokenized pieces.
+    expect(fenced).toContain('<code');
+    expect(fenced).toContain('const x');
+    expect(fenced).toContain('hljs');
   });
 
   it('autolinks bare URLs (linkify / GFM autolink parity)', () => {

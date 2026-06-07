@@ -289,6 +289,12 @@ export interface Settings {
   exitWhenLastTabClosed: boolean;
   /** BCP-47 language tag, or '' = follow the OS UI language (29-locale set, Phase 6). */
   appLanguage: string;
+  /**
+   * Whether the "Open with NotepadsE" entry appears in the Explorer right-click
+   * menu (Windows only). Writes/removes HKCU\Software\Classes\*\shell\NotepadsE.
+   * No-op on non-Windows platforms.
+   */
+  openWithContextMenu: boolean;
 }
 
 /**
@@ -324,6 +330,7 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOpenNewWindow: false,
   exitWhenLastTabClosed: false,
   appLanguage: '',
+  openWithContextMenu: false,
 };
 
 export interface SettingsApi {

@@ -25,6 +25,7 @@ import { app, BrowserWindow } from 'electron';
 import type { Result, Settings } from '../shared/ipc-contract.js';
 import { DEFAULT_SETTINGS } from '../shared/ipc-contract.js';
 import { IpcChannels } from '../shared/ipc-channels.js';
+import { applyContextMenu } from './contextMenu.js';
 
 /** Single persisted settings file (UWP used the app-data settings container). */
 const SETTINGS_FILE_NAME = 'Settings.json';
@@ -136,6 +137,7 @@ export async function setSettings(patch: Partial<Settings>): Promise<Result<Sett
     const merged = clampSettings(deepMerge(base, patch));
     await writeAtomic(settingsFilePath(), JSON.stringify(merged, null, 2));
     broadcastSettingsChanged(merged);
+    if ('openWithContextMenu' in patch) applyContextMenu(merged.openWithContextMenu);
     return { ok: true, data: merged };
   } catch (e) {
     return { ok: false, error: errMsg(e) };

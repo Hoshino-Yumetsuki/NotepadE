@@ -87,6 +87,20 @@ const PREVIEW_STYLES = `
 .np-md-dark a { color: #4FA3FF; }
 .np-md-light { color: #1A1A1A; }
 .np-md-light a { color: #0067C0; }
+/* highlight.js token colors — light theme (GitHub-style). */
+.np-md-light .hljs-keyword, .np-md-light .hljs-selector-tag, .np-md-light .hljs-built_in { color: #d73a49; }
+.np-md-light .hljs-string, .np-md-light .hljs-attr { color: #032f62; }
+.np-md-light .hljs-comment, .np-md-light .hljs-meta { color: #6a737d; font-style: italic; }
+.np-md-light .hljs-number, .np-md-light .hljs-literal { color: #005cc5; }
+.np-md-light .hljs-title, .np-md-light .hljs-function { color: #6f42c1; }
+.np-md-light .hljs-type, .np-md-light .hljs-class, .np-md-light .hljs-variable { color: #e36209; }
+/* highlight.js token colors — dark theme (VS Code-ish). */
+.np-md-dark .hljs-keyword, .np-md-dark .hljs-selector-tag, .np-md-dark .hljs-built_in { color: #f97583; }
+.np-md-dark .hljs-string, .np-md-dark .hljs-attr { color: #9ecbff; }
+.np-md-dark .hljs-comment, .np-md-dark .hljs-meta { color: #6a737d; font-style: italic; }
+.np-md-dark .hljs-number, .np-md-dark .hljs-literal { color: #79b8ff; }
+.np-md-dark .hljs-title, .np-md-dark .hljs-function { color: #b392f0; }
+.np-md-dark .hljs-type, .np-md-dark .hljs-class, .np-md-dark .hljs-variable { color: #ffab70; }
 `;
 
 export function MarkdownPreview({
@@ -109,20 +123,33 @@ export function MarkdownPreview({
     const pane = paneRef.current;
     if (!scroller || !pane) return;
 
-    const sync = (): void => {
+    let driving: 'editor' | 'preview' | null = null;
+
+    const syncEditorToPreview = (): void => {
+      if (driving === 'preview') return;
+      driving = 'editor';
       const srcRange = scroller.scrollHeight - scroller.clientHeight;
       const dstRange = pane.scrollHeight - pane.clientHeight;
-      if (srcRange <= 0 || dstRange <= 0) {
-        pane.scrollTop = 0;
-        return;
-      }
-      const fraction = scroller.scrollTop / srcRange;
-      pane.scrollTop = fraction * dstRange;
+      pane.scrollTop = srcRange > 0 && dstRange > 0 ? (scroller.scrollTop / srcRange) * dstRange : 0;
+      requestAnimationFrame(() => { driving = null; });
     };
 
-    sync(); // align immediately on open / content change
-    scroller.addEventListener('scroll', sync, { passive: true });
-    return () => scroller.removeEventListener('scroll', sync);
+    const syncPreviewToEditor = (): void => {
+      if (driving === 'editor') return;
+      driving = 'preview';
+      const srcRange = pane.scrollHeight - pane.clientHeight;
+      const dstRange = scroller.scrollHeight - scroller.clientHeight;
+      scroller.scrollTop = srcRange > 0 && dstRange > 0 ? (pane.scrollTop / srcRange) * dstRange : 0;
+      requestAnimationFrame(() => { driving = null; });
+    };
+
+    syncEditorToPreview();
+    scroller.addEventListener('scroll', syncEditorToPreview, { passive: true });
+    pane.addEventListener('scroll', syncPreviewToEditor, { passive: true });
+    return () => {
+      scroller.removeEventListener('scroll', syncEditorToPreview);
+      pane.removeEventListener('scroll', syncPreviewToEditor);
+    };
   }, [editorView, html]);
 
   return (

@@ -32,32 +32,23 @@ const purify = createDOMPurify(window);
 /** Schemes allowed on <a href>. http(s)/mailto only — no javascript:/data: links. */
 const SAFE_LINK_SCHEME = /^(?:https?:|mailto:)/i;
 
-/** Raster/vector image extensions we recognize on a remote image URL. */
-const IMAGE_EXT = /\.(?:png|jpe?g|gif|webp|avif|bmp|ico|svg)$/i;
-
 /**
- * Decide whether an <img src> may be kept. Allows data:image/* and https: URLs
- * (with an image extension or no extension), rejects everything else. Exported for
- * unit testing the policy in isolation.
+ * Decide whether an <img src> may be kept.
+ * - https: any URL (all remote sources allowed; CSP enforces the scheme boundary)
+ * - data:image/* inline images
+ * - Rejects file:, blob:, javascript:, http:, and other unsafe schemes.
+ * Exported for unit testing the policy in isolation.
  */
 export function isAllowedImageSrc(src: string): boolean {
   const value = src.trim();
   if (value === '') return false;
-  // Inline images: only the image/* media type.
   if (/^data:image\//i.test(value)) return true;
-  let url: URL;
   try {
-    url = new URL(value, 'https://invalid.local/');
+    const { protocol } = new URL(value);
+    return protocol === 'https:';
   } catch {
     return false;
   }
-  // Only https for remote fetches (no http:, file:, blob:, javascript:, …).
-  if (url.protocol !== 'https:') return false;
-  const path = url.pathname;
-  const lastDot = path.lastIndexOf('.');
-  // No extension is fine (CDN-style URLs); if there IS one, it must be an image.
-  if (lastDot === -1 || lastDot < path.lastIndexOf('/')) return true;
-  return IMAGE_EXT.test(path);
 }
 
 let hooksInstalled = false;

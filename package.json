@@ -56,6 +56,7 @@
     "codemirror": "^6.0.2",
     "diff": "^9.0.0",
     "dompurify": "^3.4.8",
+    "highlight.js": "^11.11.1",
     "iconv-lite": "^0.7.2",
     "jschardet": "^3.1.4",
     "koffi": "^3.0.2",

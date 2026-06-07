@@ -53,29 +53,22 @@ describe('sanitizeMarkdownHtml — XSS gate', () => {
 });
 
 describe('isAllowedImageSrc — image-source policy', () => {
-  it('allows https images with an image extension', () => {
+  it('allows any https URL', () => {
     expect(isAllowedImageSrc('https://cdn.test/pic.png')).toBe(true);
-    expect(isAllowedImageSrc('https://cdn.test/a/b.JPEG')).toBe(true);
-  });
-
-  it('allows https URLs with no extension (CDN style)', () => {
     expect(isAllowedImageSrc('https://cdn.test/image/12345')).toBe(true);
+    expect(isAllowedImageSrc('https://x.com/a/b/c/noop')).toBe(true);
+    expect(isAllowedImageSrc('https://cdn.test/script.js')).toBe(true); // extension irrelevant
   });
 
   it('allows data:image URIs', () => {
     expect(isAllowedImageSrc('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
   });
 
-  it('rejects http (insecure), file, blob, and javascript schemes', () => {
+  it('rejects http, file, blob, javascript', () => {
     expect(isAllowedImageSrc('http://cdn.test/pic.png')).toBe(false);
     expect(isAllowedImageSrc('file:///etc/passwd')).toBe(false);
     expect(isAllowedImageSrc('blob:https://x/abc')).toBe(false);
     expect(isAllowedImageSrc('javascript:alert(1)')).toBe(false);
-  });
-
-  it('rejects https URLs whose extension is not an image', () => {
-    expect(isAllowedImageSrc('https://cdn.test/evil.svgz.exe')).toBe(false);
-    expect(isAllowedImageSrc('https://cdn.test/script.js')).toBe(false);
   });
 
   it('rejects non-image data URIs', () => {
