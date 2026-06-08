@@ -50,12 +50,7 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     minHeight: 320,
     show: false,
     ...(existsSync(APP_ICON_PATH) ? { icon: APP_ICON_PATH } : {}),
-    backgroundColor:
-      isWindows || isMac
-        ? '#00000000'
-        : isDark
-          ? BASE_BG_DARK
-          : BASE_BG_LIGHT,
+    backgroundColor: isWindows || isMac ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
     // Windows: Acrylic material on Win11 — matches the original Notepads'
     // wallpaper-sampling translucency. backgroundColor is transparent so the
     // material shows through. MUST NOT set transparent:true on Win11 — that loses

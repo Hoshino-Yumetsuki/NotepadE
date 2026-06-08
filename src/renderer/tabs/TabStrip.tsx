@@ -972,7 +972,9 @@ function AddTabButton(props: {
           zIndex: 0,
         }}
       />
-      <span style={{ position: 'relative', zIndex: 1 }}><TabGlyph.add /></span>
+      <span style={{ position: 'relative', zIndex: 1 }}>
+        <TabGlyph.add />
+      </span>
     </button>
   );
 }

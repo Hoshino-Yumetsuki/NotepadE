@@ -29,10 +29,10 @@ export const ABOUT_LINKS: readonly { label: string; url: string }[] = [
 /** Third-party dependency credits (verbatim from UWP AboutPage.xaml). */
 export const DEPENDENCY_CREDITS: readonly { label: string; url: string }[] = [
   { label: 'Fluent UI', url: 'https://github.com/microsoft/fluentui' },
-  { label: 'React', url: 'https://github.com/facebook/react' }
+  { label: 'React', url: 'https://github.com/facebook/react' },
 ];
 
 /** License + disclaimer line. */
 export const ABOUT_DISCLAIMER =
-  ' NotepadE is a free and open-source app distributed under the GPL-3.0 license. ' /* +
+  ' NotepadE is a free and open-source app distributed under the GPL-3.0 license. '; /* +
   'This Electron edition is a 1:1 rewrite of the original UWP app.'; */

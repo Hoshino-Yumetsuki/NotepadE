@@ -83,13 +83,7 @@ function getRenderer(): MarkdownIt {
     });
     // Inline / span extensions (GFM-ish): ==mark==, ++ins++, ~sub~, ^sup^,
     // >!spoiler!<, abbreviations, and :emoji: shortcodes.
-    md.use(mark)
-      .use(ins)
-      .use(sub)
-      .use(sup)
-      .use(spoiler)
-      .use(abbr)
-      .use(fullEmoji);
+    md.use(mark).use(ins).use(sub).use(sup).use(spoiler).use(abbr).use(fullEmoji);
     // Block extensions: task lists, footnotes, definition lists, GitHub-style
     // alert/admonition blocks, figures-with-captions, custom ::: containers, and
     // alignment blocks. attrs is registered LAST so `{.class #id}` annotations can

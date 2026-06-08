@@ -130,8 +130,11 @@ export function MarkdownPreview({
       driving = 'editor';
       const srcRange = scroller.scrollHeight - scroller.clientHeight;
       const dstRange = pane.scrollHeight - pane.clientHeight;
-      pane.scrollTop = srcRange > 0 && dstRange > 0 ? (scroller.scrollTop / srcRange) * dstRange : 0;
-      requestAnimationFrame(() => { driving = null; });
+      pane.scrollTop =
+        srcRange > 0 && dstRange > 0 ? (scroller.scrollTop / srcRange) * dstRange : 0;
+      requestAnimationFrame(() => {
+        driving = null;
+      });
     };
 
     const syncPreviewToEditor = (): void => {
@@ -139,8 +142,11 @@ export function MarkdownPreview({
       driving = 'preview';
       const srcRange = pane.scrollHeight - pane.clientHeight;
       const dstRange = scroller.scrollHeight - scroller.clientHeight;
-      scroller.scrollTop = srcRange > 0 && dstRange > 0 ? (pane.scrollTop / srcRange) * dstRange : 0;
-      requestAnimationFrame(() => { driving = null; });
+      scroller.scrollTop =
+        srcRange > 0 && dstRange > 0 ? (pane.scrollTop / srcRange) * dstRange : 0;
+      requestAnimationFrame(() => {
+        driving = null;
+      });
     };
 
     syncEditorToPreview();
