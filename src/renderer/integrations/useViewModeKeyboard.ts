@@ -1,70 +1,67 @@
 /**
  * View-mode keyboard controller — RENDERER, Lane B (Phase 6).
  *
- * Owns the Alt+P (preview) / Alt+D (diff) accelerators that toggle the active
- * tab's content view mode (SessionTab.viewMode.{preview,diff} in the frozen
- * contract). Ports the UWP markdown-preview + side-by-side-diff toggle commands.
+ * Owns the Alt+P (preview) / Alt+D (diff) accelerators. The hook does NOT own
+ * tab state (lane-a owns the store + App.tsx).
  *
- * This hook does NOT own tab state (lane-a owns the store + App.tsx). It is a pure
- * keybinding installer: the host passes callbacks that flip the active tab's
- * viewMode flags, plus a predicate for whether the active tab is markdown-eligible
- * (Alt+P is offered only for the .md family — UWP parity). Preview and diff are
- * mutually exclusive in the UI; the host's toggle callbacks should clear the other
- * flag (documented in the wiring note).
+ * macOS requires THREE layers of prevention because Option+letter composition
+ * can leak through CM6's keymap pipeline even at Prec.highest:
+ *   1. Window capture-phase keydown → stopPropagation() kills the event before
+ *      it reaches CM6's DOM element at all.
+ *   2. Window capture-phase keypress → backup prevention for browsers that
+ *      fire keypress after a prevented keydown.
+ *   3. CM6 viewModeCommandExtension (Prec.highest any handler) → belt-and-suspenders
+ *      if layer 1/2 miss, matching Alt+Z's proven pattern.
  *
- * PA-8: pure renderer (window keyboard events + callbacks). No IPC, no fs.
- *
- * WIRING (App.tsx integration pass — lane-a):
- *   useViewModeKeyboard({
- *     isPreviewEligible: () => isMarkdownPath(activeTab?.filePath ?? null),
- *     togglePreview: () => store.setViewMode(activeId, { preview: !cur.preview, diff: false }),
- *     toggleDiff:    () => store.setViewMode(activeId, { diff: !cur.diff, preview: false }),
- *   });
- * (import isMarkdownPath from '../markdown/renderMarkdown'.)
+ * PA-8: pure renderer. No IPC, no fs.
  */
 
 import { useEffect } from 'react';
+import { viewModeCallbacksRef, type ViewModeCallbacks } from '../editor/commands/keymap';
 
-export interface ViewModeKeyboardCallbacks {
-  /** True when the active tab may show the markdown preview (Alt+P gate). */
-  isPreviewEligible: () => boolean;
-  /** Toggle the active tab's preview mode (and clear diff). */
-  togglePreview: () => void;
-  /** Toggle the active tab's diff mode (and clear preview). */
-  toggleDiff: () => void;
-}
+export type { ViewModeCallbacks };
 
-/**
- * Install the Alt+P / Alt+D view-mode accelerators on the window for the lifetime
- * of the host component. Bindings require Alt WITHOUT Ctrl/Meta so they never
- * collide with the editor/find/tab shortcuts. Alt+P is ignored when the active tab
- * is not preview-eligible (non-markdown).
- *
- * Listens on the CAPTURE phase so the handler runs BEFORE CodeMirror processes the
- * keydown. On macOS, Option+letter is a composed character (Option+P → "π") that
- * CM6 commits through its own input pipeline during the editor's keydown handling;
- * a bubble-phase preventDefault then comes too late and the "π" leaks into the
- * document. Capturing at the window lets us preventDefault first, so the accelerator
- * fires and no character is inserted.
- */
-export function useViewModeKeyboard(callbacks: ViewModeKeyboardCallbacks): void {
+export function useViewModeKeyboard(callbacks: ViewModeCallbacks): void {
   const { isPreviewEligible, togglePreview, toggleDiff } = callbacks;
 
+  // Layer 1+2: window capture-phase prevention (stops event BEFORE CM6 sees it).
   useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      // e.code is layout-independent ('KeyP' / 'KeyD'); e.key under Alt can be an
-      // OS-composed character on some layouts, so match the physical key.
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       if (e.code === 'KeyP') {
         if (!isPreviewEligible()) return;
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         togglePreview();
       } else if (e.code === 'KeyD') {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         toggleDiff();
       }
     };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    const onKeyPress = (e: KeyboardEvent): void => {
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        if (e.code === 'KeyP' || e.code === 'KeyD') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keypress', onKeyPress, true);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('keypress', onKeyPress, true);
+    };
   }, [isPreviewEligible, togglePreview, toggleDiff]);
+
+  // Layer 3: CM6 ref bridge (belt-and-suspenders, same pattern as Alt+Z).
+  useEffect(() => {
+    viewModeCallbacksRef.current = callbacks;
+    return () => {
+      viewModeCallbacksRef.current = null;
+    };
+  }, [callbacks]);
 }

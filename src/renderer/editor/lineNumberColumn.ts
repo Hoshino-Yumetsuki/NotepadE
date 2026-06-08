@@ -44,7 +44,7 @@ import { ViewPlugin, type PluginValue, type ViewUpdate, EditorView } from '@code
 import type { Extension } from '@codemirror/state';
 
 /** Horizontal padding inside the column (px): gap before the separator + left inset. */
-const COLUMN_PADDING_RIGHT = 8;
+const COLUMN_PADDING_RIGHT = 12;
 const COLUMN_PADDING_LEFT = 6;
 /** Minimum digit slots so single-digit docs still get a comfortable column. */
 const MIN_DIGITS = 2;
@@ -218,13 +218,10 @@ class LineNumberColumnPlugin implements PluginValue {
     return cell;
   }
 
-  /** Width of one digit in the column's current font (cached per layout pass). */
   private measureCharWidth(): number {
-    // Use the editor's measured default character width when available (accounts
-    // for the live zoom font-size); fall back to a coarse ratio of the line height.
     const cw = this.view.defaultCharacterWidth;
-    if (cw && cw > 0) return cw;
-    return this.view.defaultLineHeight * 0.5;
+    if (cw && cw > 0) return cw * 1.15;
+    return this.view.defaultLineHeight * 0.55;
   }
 
   update(u: ViewUpdate): void {

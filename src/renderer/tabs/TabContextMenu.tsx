@@ -8,6 +8,7 @@ import {
 } from '@fluentui/react-components';
 import type { ReactElement } from 'react';
 import { useT } from '../i18n';
+import { modKey } from '@shared/platform';
 
 /**
  * ============================================================================
@@ -77,7 +78,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
       <MenuTrigger disableButtonEnhancement>{children}</MenuTrigger>
       <MenuPopover>
         <MenuList data-testid="tab-menu">
-          <MenuItem data-testid="tab-menu-close" secondaryContent="Ctrl+W" onClick={onClose}>
+          <MenuItem data-testid="tab-menu-close" secondaryContent={`${modKey}+W`} onClick={onClose}>
             {t('Tab_ContextFlyout_CloseButtonDisplayText')}
           </MenuItem>
           <MenuItem

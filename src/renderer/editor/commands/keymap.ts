@@ -167,6 +167,56 @@ export const altCommandExtension = Prec.highest(
   ]),
 );
 
+/** Callbacks that the Alt+P / Alt+D view-mode extension calls into. */
+export interface ViewModeCallbacks {
+  isPreviewEligible: () => boolean;
+  togglePreview: () => void;
+  toggleDiff: () => void;
+}
+
+/**
+ * Mutable ref that bridges React state into the pure CM6 `any` handler below.
+ * `useViewModeKeyboard` writes this ref; the extension reads it on every keydown.
+ */
+export const viewModeCallbacksRef: { current: ViewModeCallbacks | null } = { current: null };
+
+/**
+ * macOS-safe Alt+P (markdown preview) / Alt+D (diff viewer), following the same
+ * `any`-handler + event.code pattern as altCommandExtension above.
+ *
+ * Previously implemented as a window-level capture-phase listener in
+ * useViewModeKeyboard.ts. That approach calls preventDefault() during capture but
+ * on macOS the IME composition pipeline can still leak π / ∂ into the editor
+ * because the handler runs outside CM6's own event pipeline. Moving into CM6's
+ * `any` handler at Prec.highest matches the proven Alt+Z pattern — CM6 sees the
+ * prevented event before its Option-as-character fallback fires, and no composed
+ * character reaches the document.
+ */
+export const viewModeCommandExtension = Prec.highest(
+  keymap.of([
+    {
+      any(_view: EditorView, event: KeyboardEvent): boolean {
+        if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+          const cb = viewModeCallbacksRef.current;
+          if (event.code === 'KeyP') {
+            if (cb && cb.isPreviewEligible()) {
+              event.preventDefault();
+              cb.togglePreview();
+              return true;
+            }
+          }
+          if (event.code === 'KeyD') {
+            event.preventDefault();
+            cb?.toggleDiff();
+            return true;
+          }
+        }
+        return false;
+      },
+    },
+  ]),
+);
+
 
 export interface EditorCommandOptions {
   /** Initial editor settings (host-provided; falls back to UWP defaults). */
@@ -205,6 +255,10 @@ export function editorCommandExtensions(options: EditorCommandOptions = {}): Ext
     // macOS-safe Alt+letter commands (word wrap), routed by event.code so they
     // survive CM6's Option-as-character handling (see altCommandExtension).
     altCommandExtension,
+    // macOS-safe view-mode accelerators (Alt+P preview / Alt+D diff), routed by
+    // event.code in an `any` handler so they survive CM6's Option-as-character
+    // handling. See viewModeCommandExtension.
+    viewModeCommandExtension,
     // High precedence so our Tab / Enter / Mod-* bindings beat CM6 defaults.
     Prec.high(keymap.of([...editorCommandKeymap, ...swallowKeymap])),
   ];

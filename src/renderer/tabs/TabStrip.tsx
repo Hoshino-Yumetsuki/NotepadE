@@ -37,6 +37,7 @@ import {
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
 import { useT } from '../i18n';
+import { modKey } from '@shared/platform';
 
 /**
  * ============================================================================
@@ -672,15 +673,15 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
       </MenuTrigger>
       <MenuPopover data-testid="main-menu-popover">
         <MenuList>
-          <MenuItem secondaryContent="Ctrl+N" onClick={commands.onNew}>
+          <MenuItem secondaryContent={`${modKey}+N`} onClick={commands.onNew}>
             {t('MainMenu_Button_New.Text')}
           </MenuItem>
           {/* TODO: multi-window support (Ctrl+Shift+N) — disabled until wired. */}
-          <MenuItem secondaryContent="Ctrl+Shift+N" disabled={!commands.onNewWindow}>
+          <MenuItem secondaryContent={`${modKey}+Shift+N`} disabled={!commands.onNewWindow}>
             {t('MainMenu_Button_New_Window.Text')}
           </MenuItem>
           {/* TODO: file-open dialog (Ctrl+O) — no renderer picker yet. */}
-          <MenuItem secondaryContent="Ctrl+O" disabled={!commands.onOpen} onClick={commands.onOpen}>
+          <MenuItem secondaryContent={`${modKey}+O`} disabled={!commands.onOpen} onClick={commands.onOpen}>
             {t('MainMenu_Button_Open.Text')}
           </MenuItem>
           {/* Open Recent (UWP MenuOpenRecentlyUsedFileButton) — nested submenu of
@@ -729,12 +730,12 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           )}
           <MenuDivider />
           {/* TODO: save active tab (Ctrl+S) — no renderer save handler yet. */}
-          <MenuItem secondaryContent="Ctrl+S" disabled={!commands.onSave} onClick={commands.onSave}>
+          <MenuItem secondaryContent={`${modKey}+S`} disabled={!commands.onSave} onClick={commands.onSave}>
             {t('MainMenu_Button_Save.Text')}
           </MenuItem>
           {/* TODO: save-as (Ctrl+Shift+S) — no renderer save-as handler yet. */}
           <MenuItem
-            secondaryContent="Ctrl+Shift+S"
+             secondaryContent={`${modKey}+Shift+S`}
             disabled={!commands.onSaveAs}
             onClick={commands.onSaveAs}
           >
@@ -744,10 +745,10 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
             {t('MainMenu_Button_SaveAll.Text')}
           </MenuItem>
           <MenuDivider />
-          <MenuItem secondaryContent="Ctrl+F" onClick={commands.onFind}>
+          <MenuItem secondaryContent={`${modKey}+F`} onClick={commands.onFind}>
             {t('MainMenu_Button_Find.Text')}
           </MenuItem>
-          <MenuItem secondaryContent="Ctrl+Shift+F" onClick={commands.onReplace}>
+          <MenuItem secondaryContent={`${modKey}+Shift+F`} onClick={commands.onReplace}>
             {t('MainMenu_Button_Replace.Text')}
           </MenuItem>
           <MenuDivider />
@@ -758,15 +759,15 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
             {t('App_EnterCompactOverlayMode_Text')}
           </MenuItem>
           <MenuDivider />
-          <MenuItem secondaryContent="Ctrl+P" onClick={commands.onPrint}>
+          <MenuItem secondaryContent={`${modKey}+P`} onClick={commands.onPrint}>
             {t('MainMenu_Button_Print.Text')}
           </MenuItem>
-          <MenuItem secondaryContent="Ctrl+Shift+P" onClick={commands.onPrintAll}>
+          <MenuItem secondaryContent={`${modKey}+Shift+P`} onClick={commands.onPrintAll}>
             {t('MainMenu_Button_PrintAll.Text')}
           </MenuItem>
           <MenuDivider />
           <MenuItem
-            secondaryContent="Ctrl+,"
+            secondaryContent={`${modKey}+,`}
             data-testid="open-settings"
             onClick={commands.onSettings}
           >

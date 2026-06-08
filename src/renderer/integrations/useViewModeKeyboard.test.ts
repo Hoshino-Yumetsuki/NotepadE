@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useViewModeKeyboard } from './useViewModeKeyboard';
+import { viewModeCallbacksRef } from '../editor/commands/keymap';
 
-/**
- * View-mode keyboard controller test (Lane B, Phase 6). Asserts Alt+P toggles
- * preview (only when eligible), Alt+D toggles diff, and modifier combos with
- * Ctrl/Meta are ignored so they never collide with editor/find/tab shortcuts.
- */
+afterEach(() => {
+  vi.restoreAllMocks();
+  viewModeCallbacksRef.current = null;
+});
 
 function dispatchKey(code: string, opts: Partial<KeyboardEventInit> = {}): boolean {
   const e = new KeyboardEvent('keydown', {
@@ -20,12 +20,8 @@ function dispatchKey(code: string, opts: Partial<KeyboardEventInit> = {}): boole
   return e.defaultPrevented;
 }
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
 describe('useViewModeKeyboard', () => {
-  it('Alt+P toggles preview when eligible', () => {
+  it('Alt+P toggles preview and prevents default when eligible', () => {
     const togglePreview = vi.fn();
     renderHook(() =>
       useViewModeKeyboard({
@@ -39,7 +35,7 @@ describe('useViewModeKeyboard', () => {
     expect(prevented).toBe(true);
   });
 
-  it('Alt+P is ignored when the tab is not preview-eligible', () => {
+  it('Alt+P is ignored when not preview-eligible', () => {
     const togglePreview = vi.fn();
     renderHook(() =>
       useViewModeKeyboard({
@@ -53,7 +49,7 @@ describe('useViewModeKeyboard', () => {
     expect(prevented).toBe(false);
   });
 
-  it('Alt+D toggles diff', () => {
+  it('Alt+D toggles diff and prevents default', () => {
     const toggleDiff = vi.fn();
     renderHook(() =>
       useViewModeKeyboard({
@@ -67,7 +63,7 @@ describe('useViewModeKeyboard', () => {
     expect(prevented).toBe(true);
   });
 
-  it('ignores Ctrl+Alt+P / Meta+Alt+D (modifier collisions)', () => {
+  it('ignores Ctrl+Alt+P / Meta+Alt+D', () => {
     const togglePreview = vi.fn();
     const toggleDiff = vi.fn();
     renderHook(() =>
@@ -83,7 +79,7 @@ describe('useViewModeKeyboard', () => {
     expect(toggleDiff).not.toHaveBeenCalled();
   });
 
-  it('removes its listener on unmount', () => {
+  it('removes listeners on unmount', () => {
     const togglePreview = vi.fn();
     const { unmount } = renderHook(() =>
       useViewModeKeyboard({
@@ -95,5 +91,21 @@ describe('useViewModeKeyboard', () => {
     unmount();
     dispatchKey('KeyP');
     expect(togglePreview).not.toHaveBeenCalled();
+  });
+
+  it('writes callbacks into shared ref for CM6 belt-and-suspenders', () => {
+    const togglePreview = vi.fn();
+    const toggleDiff = vi.fn();
+    renderHook(() =>
+      useViewModeKeyboard({
+        isPreviewEligible: () => false,
+        togglePreview,
+        toggleDiff,
+      }),
+    );
+    expect(viewModeCallbacksRef.current).toBeDefined();
+    expect(viewModeCallbacksRef.current!.isPreviewEligible()).toBe(false);
+    viewModeCallbacksRef.current!.togglePreview();
+    expect(togglePreview).toHaveBeenCalledTimes(1);
   });
 });

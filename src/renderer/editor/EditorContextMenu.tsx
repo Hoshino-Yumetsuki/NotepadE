@@ -48,6 +48,7 @@ import { setLtr, setRtl } from './commands/direction';
 import { toggleWordWrap, wordWrapField } from './commands/wordWrap';
 import { webSearchSelection } from './commands/webSearch';
 import { useT } from '../i18n';
+import { modKey } from '@shared/platform';
 
 const CtxGlyph = {
   cut: CutRegular as FC,
@@ -210,7 +211,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           <MenuItem
             data-testid="ctx-cut"
             icon={<Glyph icon={CtxGlyph.cut} />}
-            secondaryContent="Ctrl+X"
+            secondaryContent={`${modKey}+X`}
             disabled={!ctx.hasSelection}
             onClick={run((v) => void cutSelection(v))}
           >
@@ -219,7 +220,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           <MenuItem
             data-testid="ctx-copy"
             icon={<Glyph icon={CtxGlyph.copy} />}
-            secondaryContent="Ctrl+C"
+            secondaryContent={`${modKey}+C`}
             disabled={!ctx.hasSelection}
             onClick={run((v) => void copySelection(v))}
           >
@@ -228,7 +229,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           <MenuItem
             data-testid="ctx-paste"
             icon={<Glyph icon={CtxGlyph.paste} />}
-            secondaryContent="Ctrl+V"
+            secondaryContent={`${modKey}+V`}
             onClick={run((v) => void pastePlainText(v))}
           >
             {t('TextEditor_ContextFlyout_PasteButtonDisplayText')}
@@ -236,7 +237,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           <MenuItem
             data-testid="ctx-undo"
             icon={<Glyph icon={CtxGlyph.undo} />}
-            secondaryContent="Ctrl+Z"
+            secondaryContent={`${modKey}+Z`}
             onClick={run((v) => void undo(v))}
           >
             {t('TextEditor_ContextFlyout_UndoButtonDisplayText')}
@@ -244,7 +245,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           <MenuItem
             data-testid="ctx-redo"
             icon={<Glyph icon={CtxGlyph.redo} />}
-            secondaryContent="Ctrl+Shift+Z"
+            secondaryContent={`${modKey}+Shift+Z`}
             onClick={run((v) => void redo(v))}
           >
             {t('TextEditor_ContextFlyout_RedoButtonDisplayText')}
@@ -252,7 +253,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           <MenuItem
             data-testid="ctx-selectall"
             icon={<Glyph icon={CtxGlyph.selectAll} />}
-            secondaryContent="Ctrl+A"
+            secondaryContent={`${modKey}+A`}
             onClick={run((v) => v.dispatch({ selection: { anchor: 0, head: v.state.doc.length } }))}
           >
             {t('TextEditor_ContextFlyout_SelectAllButtonDisplayText')}
@@ -283,7 +284,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
             <MenuItem
               data-testid="ctx-websearch"
               icon={<Glyph icon={CtxGlyph.webSearch} />}
-              secondaryContent="Ctrl+E"
+              secondaryContent={`${modKey}+E`}
               onClick={run((v) => void webSearchSelection(v))}
             >
               {t('TextEditor_ContextFlyout_WebSearchButtonDisplayText')}
