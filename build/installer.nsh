@@ -16,6 +16,17 @@
 ; macros (${If}, ${NSD_*}) may only be used INSIDE macros — those bodies are
 ; expanded later, after MUI2 is loaded. Plain `Var` declarations are fine here.
 
+; The desktop-shortcut machinery (the Var + the three installer-side macros that
+; read/write it) is installer-only. electron-builder compiles this file twice: a
+; BUILD_UNINSTALLER pass (for the embedded uninstaller) and the main installer
+; pass. In the uninstaller pass electron-builder's !ifmacrodef guards skip
+; customInit/customPageAfterChangeDir/customInstall, so an unconditional
+; `Var CreateDesktopShortcut` would be declared-but-never-referenced and trip
+; NSIS warning 6001 — which electron-builder escalates to a fatal error. Guarding
+; the block keeps the var (and its references) paired in the only pass that uses
+; them. customUninstall stays outside the guard so it still builds.
+!ifndef BUILD_UNINSTALLER
+
 Var CreateDesktopShortcut
 Var CreateDesktopShortcutCheckbox
 
@@ -66,6 +77,8 @@ Var CreateDesktopShortcutCheckbox
     System::Call 'Shell32::SHChangeNotify(i 0x8000000, i 0, i 0, i 0)'
   ${EndIf}
 !macroend
+
+!endif ; !BUILD_UNINSTALLER
 
 !macro customUninstall
   DeleteRegKey HKCU "Software\Classes\*\shell\NotepadsE"
