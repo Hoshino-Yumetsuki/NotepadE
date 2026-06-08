@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { EditorSelection } from '@codemirror/state';
 import { history, redoDepth, undoDepth } from '@codemirror/commands';
-import { undoRedoExtension } from './keymap';
+import { undoRedoExtension, altCommandExtension } from './keymap';
+import { wordWrapField } from './wordWrap';
 import { mountView } from './testUtils';
 
 /**
@@ -80,6 +81,63 @@ describe('undoRedoExtension', () => {
       view.contentDOM.dispatchEvent(event);
       // Alt held → handler returns false, doc unchanged by the redo/undo path.
       expect(view.state.doc.toString()).toBe('q');
+    } finally {
+      view.destroy();
+    }
+  });
+});
+
+describe('altCommandExtension (macOS-safe Alt+letter)', () => {
+  it('toggles word wrap on Option+Z where event.key is the composed char "Ω"', () => {
+    const view = mountView('', EditorSelection.cursor(0), [wordWrapField, altCommandExtension]);
+    try {
+      expect(view.state.field(wordWrapField)).toBe(false);
+
+      // macOS delivers Option+Z as key:"Ω" (composed) but code:"KeyZ" (physical).
+      // A CM6 'Alt-z' KeyBinding can't match this; altCommandExtension routes on
+      // event.code so the toggle still fires.
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Ω',
+          code: 'KeyZ',
+          altKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      expect(view.state.field(wordWrapField)).toBe(true);
+
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Ω',
+          code: 'KeyZ',
+          altKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      expect(view.state.field(wordWrapField)).toBe(false);
+    } finally {
+      view.destroy();
+    }
+  });
+
+  it('does not toggle when Ctrl/Meta/Shift are also held', () => {
+    const view = mountView('', EditorSelection.cursor(0), [wordWrapField, altCommandExtension]);
+    try {
+      for (const mods of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }]) {
+        view.contentDOM.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'z',
+            code: 'KeyZ',
+            altKey: true,
+            ...mods,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+      expect(view.state.field(wordWrapField)).toBe(false);
     } finally {
       view.destroy();
     }

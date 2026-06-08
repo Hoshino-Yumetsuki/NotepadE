@@ -39,6 +39,13 @@ export interface ViewModeKeyboardCallbacks {
  * of the host component. Bindings require Alt WITHOUT Ctrl/Meta so they never
  * collide with the editor/find/tab shortcuts. Alt+P is ignored when the active tab
  * is not preview-eligible (non-markdown).
+ *
+ * Listens on the CAPTURE phase so the handler runs BEFORE CodeMirror processes the
+ * keydown. On macOS, Option+letter is a composed character (Option+P → "π") that
+ * CM6 commits through its own input pipeline during the editor's keydown handling;
+ * a bubble-phase preventDefault then comes too late and the "π" leaks into the
+ * document. Capturing at the window lets us preventDefault first, so the accelerator
+ * fires and no character is inserted.
  */
 export function useViewModeKeyboard(callbacks: ViewModeKeyboardCallbacks): void {
   const { isPreviewEligible, togglePreview, toggleDiff } = callbacks;
@@ -57,7 +64,7 @@ export function useViewModeKeyboard(callbacks: ViewModeKeyboardCallbacks): void 
         toggleDiff();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [isPreviewEligible, togglePreview, toggleDiff]);
 }

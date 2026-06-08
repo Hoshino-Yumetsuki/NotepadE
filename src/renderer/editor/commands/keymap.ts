@@ -88,8 +88,9 @@ export const editorCommandKeymap: readonly KeyBinding[] = [
   { key: 'Mod-l', run: setLtr, preventDefault: true },
   { key: 'Mod-r', run: setRtl, preventDefault: true },
 
-  // Word wrap.
-  { key: 'Alt-z', run: toggleWordWrap, preventDefault: true },
+  // Word wrap (Alt+Z) is routed through altCommandExtension by physical
+  // event.code, NOT a CM6 'Alt-z' KeyBinding — see that extension for why a
+  // keyed binding is unreachable on macOS.
 
   // Auto-indent on Enter / Shift+Enter.
   { key: 'Enter', run: enterWithAutoIndent, preventDefault: true },
@@ -135,6 +136,38 @@ export const undoRedoExtension = Prec.highest(
   ]),
 );
 
+/**
+ * macOS-safe Alt+letter commands, routed by physical `event.code`.
+ *
+ * CM6 deliberately skips its keyCode fallback for bare Alt (Option) combos on
+ * macOS — see @codemirror/view's keymap source: "Alt-combinations on macOS tend
+ * to be typed characters". Option+letter produces a composed character
+ * (Option+Z → "Ω"), so `event.key` is "Ω" and a `{ key: 'Alt-z' }` KeyBinding
+ * can NEVER match on a Mac. Alt+Arrow bindings are unaffected (arrows aren't
+ * composed) and stay in editorCommandKeymap.
+ *
+ * Mirroring undoRedoExtension, we route the Alt+letter commands through an `any`
+ * handler that matches the layout-independent `event.code`, so word wrap toggles
+ * on every platform. Mounted at highest precedence so it wins before CM6's
+ * Option-as-character handling can swallow the event.
+ */
+export const altCommandExtension = Prec.highest(
+  keymap.of([
+    {
+      any(view: EditorView, event: KeyboardEvent): boolean {
+        if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+          if (event.code === 'KeyZ') {
+            event.preventDefault();
+            return toggleWordWrap(view);
+          }
+        }
+        return false;
+      },
+    },
+  ]),
+);
+
+
 export interface EditorCommandOptions {
   /** Initial editor settings (host-provided; falls back to UWP defaults). */
   settings?: Partial<EditorSettings>;
@@ -169,6 +202,9 @@ export function editorCommandExtensions(options: EditorCommandOptions = {}): Ext
     // Cross-platform undo/redo ABOVE everything else, as an `any` handler so it
     // beats CM6's Ctrl+CHAR shift-strip (see undoRedoExtension).
     undoRedoExtension,
+    // macOS-safe Alt+letter commands (word wrap), routed by event.code so they
+    // survive CM6's Option-as-character handling (see altCommandExtension).
+    altCommandExtension,
     // High precedence so our Tab / Enter / Mod-* bindings beat CM6 defaults.
     Prec.high(keymap.of([...editorCommandKeymap, ...swallowKeymap])),
   ];
