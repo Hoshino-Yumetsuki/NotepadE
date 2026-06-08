@@ -247,6 +247,12 @@ export function FindBar(props: FindBarProps): JSX.Element {
       data-testid="find-bar"
       role="search"
       aria-label="Find and replace"
+      // Mount entrance (opacity + translateY slide-down). The bar is conditionally
+      // rendered by the host, so it mounts fresh each open and the np-findbar-enter
+      // keyframe plays once. translateY is allowed here (no geometry-measurement
+      // constraint, unlike the tab strip). Reduced motion is handled by the CSS
+      // @media guard on the keyframe (instant show).
+      className="np-findbar-enter"
       style={{
         // Float as a square panel in the editor's TOP-RIGHT corner (UWP
         // FindAndReplacePlaceHolder: HorizontalAlignment=Right / VerticalAlignment=

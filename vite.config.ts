@@ -57,6 +57,13 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     rollupOptions: {
       input: resolve(dirname, 'src/renderer/index.html')
+      // NOTE: no manualChunks. Splitting the critical-path vendor groups
+      // (react/fluentui/codemirror/dnd) into separate chunks was measured to
+      // REGRESS cold start by ~850ms — under file:// in a single-window app
+      // there is no cross-page cache benefit, only an ESM chunk-load/parse
+      // waterfall. Code that is genuinely off the first-paint path (markdown,
+      // diff, settings panes) is already deferred via React.lazy in App.tsx,
+      // and the 28 non-default locales are dynamic chunks (i18n/locales).
     }
   },
   plugins: [

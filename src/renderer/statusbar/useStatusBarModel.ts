@@ -4,7 +4,7 @@ import type { CodeMirrorHandle } from '../editor/CodeMirrorEditor';
 import type { NotepadsTestHook, StatusBarTestHook } from '../editor/test-hook';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { StatusTheme } from './tokens';
-import { computeLineColumn, type LineColumn } from './statusModel';
+import { type LineColumn } from './statusModel';
 import type { FileModificationState, StatusBarProps } from './StatusBar';
 import { recordLastSaved, getLastSaved, deriveModificationState } from './fileStatusTracker';
 
@@ -45,13 +45,23 @@ export function useStatusBarModel(args: {
   // Column-0 external-modification state machine (Gate-4 line 3).
   const [fileModificationState, setFileModificationState] = useState<FileModificationState>('none');
 
-  // Recompute Ln/Col from the active editor's '\n' doc + main selection.
+  // Recompute Ln/Col from the active editor's main selection. Uses CM6's
+  // doc.lineAt (O(log n) line-tree lookup) on the selection START offset instead
+  // of serializing the whole document (view.state.doc.toString()) + scanning it
+  // char-by-char — the displayed Ln/Col is identical (the editor pins its line
+  // separator to the '\n' shadow buffer, so offset/line/column arithmetic matches
+  // computeLineColumn exactly), but the per-tick cost no longer scales with doc
+  // length. `from`/`to` are the already-sorted main range; START is `from`.
   const refreshCaret = useCallback(() => {
     const view = getActiveHandle()?.getView();
     if (!view) return;
-    const doc = view.state.doc.toString();
     const { from, to } = view.state.selection.main;
-    const next = computeLineColumn(doc, { from, to });
+    const startLine = view.state.doc.lineAt(from);
+    const next: LineColumn = {
+      line: startLine.number,
+      column: from - startLine.from + 1,
+      selectedCount: to - from
+    };
     // Bail when unchanged so the 250ms poll doesn't re-render every tick (and so
     // an unstable getActiveHandle can never drive a setState→render→setState loop).
     setLineColumn((prev) =>
@@ -63,6 +73,12 @@ export function useStatusBarModel(args: {
     );
   }, [getActiveHandle]);
 
+  // Drive Ln/Col from caret/selection movement. The 250ms poll is retained as the
+  // settle mechanism the e2e statusbar driver waits on (it seeds a doc + selection
+  // then waits ~250ms before asserting "Ln x, Col y"); the editor view is owned by
+  // CodeMirrorEditor, so the status bar cannot mount its own CM6 updateListener
+  // without remounting that view. The expensive part — full-doc serialization — is
+  // gone (see refreshCaret above), so the remaining poll is a cheap O(log n) read.
   useEffect(() => {
     refreshCaret();
     const id = window.setInterval(refreshCaret, 250);

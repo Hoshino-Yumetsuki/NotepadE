@@ -36,6 +36,7 @@ import {
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
+import { usePrefersReducedMotion } from '../theme/usePrefersReducedMotion';
 import { useT } from '../i18n';
 import { modKey } from '@shared/platform';
 
@@ -908,6 +909,78 @@ function TabOverlayCard(props: {
 }
 
 /**
+ * Exit (close) ghost for a tab that was just removed from the store. TabStrip keeps
+ * a closed tab on screen for one short animation by rendering this in the tab's old
+ * slot; the `np-tab-exit` keyframe collapses it with `opacity + max-width →0` (NO
+ * transform — the active-tab elevation overlay is measured by getBoundingClientRect
+ * and a translate would mis-place it, see chrome.css np-tab-enter/np-tab-exit). The
+ * width collapse lets the surviving neighbours slide in to fill the gap. It is inert
+ * (pointer-events:none, never active, not sortable, no data-testid="tab") so it is
+ * excluded from the measured/interactive set, then dropped on animationend (TabStrip
+ * has a timer fallback for the reduced-motion / no-animation case).
+ */
+function ExitingTab(props: {
+  tab: TabState;
+  tokens: TabThemeTokens;
+  width: number;
+  onDone(editorId: string): void;
+}): JSX.Element {
+  const { tab, tokens, width, onDone } = props;
+  return (
+    <div
+      aria-hidden
+      data-testid="tab-exiting"
+      data-editor-id={tab.editorId}
+      className="np-tab-exit"
+      onAnimationEnd={() => onDone(tab.editorId)}
+      style={
+        {
+          // Starting width feeds the keyframe's from-state so the collapse begins at
+          // the tab's real rendered width instead of the 210px CSS fallback.
+          ['--np-tab-exit-width' as string]: `${width}px`,
+          width,
+          maxWidth: width,
+          minWidth: 0,
+          height: TabDimensions.height,
+          paddingLeft: TabDimensions.paddingLeft,
+          paddingRight: TabDimensions.paddingRight,
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          flex: '0 0 auto',
+          background: tokens.headerHover,
+          color: tokens.textDefault,
+          fontSize: 14,
+          fontFamily: 'Segoe UI, system-ui, sans-serif',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden'
+        } as React.CSSProperties
+      }
+    >
+      {tab.isModified ? (
+        <span
+          aria-hidden
+          style={{
+            width: TabDimensions.saveIconSize,
+            marginRight: TabDimensions.iconMarginRight,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--tab-accent, #0078D4)',
+            flex: '0 0 auto'
+          }}
+        >
+          <TabGlyph.save />
+        </span>
+      ) : null}
+      <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {tabTitle(tab)}
+      </span>
+    </div>
+  );
+}
+
+/**
  * Add-tab (+) button (E710) — fixed to the right of the strip. SetsView chrome:
  * shows the reveal grey on hover plus the cursor-follow radial highlight (Phase 7,
  * Task #27). HC reveal tint is transparent (no material), matching UWP HC.
@@ -1041,6 +1114,45 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // list's overflow; the overlay is portaled out so it lifts free of the strip for
   // more reorder room — UWP lets the dragged set float out of the bar).
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Reduced-motion gate (reactive: re-renders if the OS setting flips mid-session).
+  // When reduced, the close-exit ghost is skipped entirely (instant removal — the
+  // historical synchronous behaviour) and the entrance keyframe is a no-op via CSS.
+  const reducedMotion = usePrefersReducedMotion();
+
+  // Closing-tab exit animation (C1). A tab removed from the store (close button,
+  // middle-click, context-menu close, dirty-dialog confirm — ANY path) is kept on
+  // screen as a collapsing ghost for one short keyframe so neighbours slide in
+  // instead of snapping. We DON'T intercept the close handler (it still fires +
+  // mutates the store synchronously — the strip just animates the now-absent tab on
+  // its way out by diffing the tabs prop), so the close contract is unchanged.
+  //   key   = editorId
+  // We record the tab snapshot + the width it had + its index at removal so the
+  // ghost renders in the right slot at its real size. Rapid closes accumulate
+  // independent ghosts; each clears itself on animationend or the timer fallback.
+  const [exiting, setExiting] = useState<
+    ReadonlyArray<{ tab: TabState; width: number; index: number }>
+  >([]);
+  // Timer fallback ids per exiting editorId — fires if animationend never arrives
+  // (jsdom / a skipped animation), guaranteeing eventual cleanup.
+  const exitTimersRef = useRef<Map<string, number>>(new Map());
+  const dropExiting = useCallback((editorId: string): void => {
+    const timers = exitTimersRef.current;
+    const tid = timers.get(editorId);
+    if (tid !== undefined) {
+      window.clearTimeout(tid);
+      timers.delete(editorId);
+    }
+    setExiting((cur) => cur.filter((e) => e.tab.editorId !== editorId));
+  }, []);
+  // Clear every pending fallback timer on unmount.
+  useEffect(() => {
+    const timers = exitTimersRef.current;
+    return () => {
+      for (const tid of timers.values()) window.clearTimeout(tid);
+      timers.clear();
+    };
+  }, []);
 
   const closeTab = useCallback(
     (editorId: string) => {
@@ -1184,6 +1296,59 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   useEffect(() => {
     seenIdsRef.current = new Set(ids);
   }, [ids]);
+
+  // Detect tabs that LEFT the store since the last render and turn each into an
+  // exit ghost (C1). We diff the previous tabs array against the current one: any
+  // id present last render but gone now was closed/removed, so we capture its last
+  // snapshot + width + index and hand it to the ghost layer to animate out. This
+  // runs for EVERY removal path (close button, middle-click, context menu, dirty
+  // dialog, closeAll) without intercepting any handler — the store mutation already
+  // happened synchronously, we only soften the visual departure. Under reduced
+  // motion we skip ghosting (instant removal, the historical behaviour). A reorder
+  // keeps every id present, so it never produces a ghost.
+  const prevTabsRef = useRef<readonly TabState[]>(tabs);
+  useEffect(() => {
+    const prev = prevTabsRef.current;
+    prevTabsRef.current = tabs;
+    if (reducedMotion) return;
+    const liveIds = new Set(tabs.map((t) => t.editorId));
+    const removed = prev.filter((t) => !liveIds.has(t.editorId));
+    if (removed.length === 0) return;
+    const additions = removed.map((tab) => ({
+      tab,
+      width: tabWidth,
+      index: prev.findIndex((t) => t.editorId === tab.editorId)
+    }));
+    setExiting((cur) => {
+      // Guard against double-adding (e.g. a re-entrant render): skip ids already
+      // ghosting. Schedule a fallback removal timer for each genuinely-new ghost.
+      const known = new Set(cur.map((e) => e.tab.editorId));
+      const fresh = additions.filter((a) => !known.has(a.tab.editorId));
+      if (fresh.length === 0) return cur;
+      const timers = exitTimersRef.current;
+      for (const a of fresh) {
+        if (timers.has(a.tab.editorId)) continue;
+        const id = a.tab.editorId;
+        // Slightly longer than the 167ms keyframe; the animationend handler clears
+        // this first in the common case.
+        const tid = window.setTimeout(() => dropExiting(id), TabAnimation.brushFadeMs + 120);
+        timers.set(id, tid);
+      }
+      return [...cur, ...fresh];
+    });
+    // tabWidth is read for the ghost's collapse-from width; including it keeps the
+    // captured width fresh, and removals are driven by the tabs identity change.
+  }, [tabs, reducedMotion, tabWidth, dropExiting]);
+
+  // If a ghost's id is somehow re-created (a reused editorId reopened before its
+  // ghost finished), drop the stale ghost so the live tab isn't shadowed by it.
+  useEffect(() => {
+    if (exiting.length === 0) return;
+    const liveIds = new Set(tabs.map((t) => t.editorId));
+    for (const e of exiting) {
+      if (liveIds.has(e.tab.editorId)) dropExiting(e.tab.editorId);
+    }
+  }, [tabs, exiting, dropExiting]);
 
   // Measure the active tab's box in STRIP-LOCAL coordinates so the unclipped
   // elevation overlay can hug it. Re-runs whenever anything that moves the active
@@ -1336,6 +1501,27 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     return () => window.removeEventListener('notepads:begin-rename', onBeginRename);
   }, []);
 
+  // Interleave live tabs with their exit ghosts so a closing tab collapses in the
+  // slot it left behind and the neighbours slide in. Each ghost was captured with
+  // the index it held in the PRE-removal array; we re-insert it at that index among
+  // the current live tabs (clamped to the end). Ghosts are inert, non-sortable DOM
+  // (SortableContext.items still lists only the live ids), so dnd-kit is unaffected.
+  type RenderItem =
+    | { type: 'tab'; tab: TabState; index: number }
+    | { type: 'ghost'; entry: { tab: TabState; width: number; index: number } };
+  const renderItems = useMemo<RenderItem[]>(() => {
+    const live: RenderItem[] = tabs.map((tab, index) => ({ type: 'tab', tab, index }));
+    if (exiting.length === 0) return live;
+    const items = live.slice();
+    // Insert in ascending captured-index order so multiple simultaneous closes keep
+    // their relative positions; clamp each to the current length.
+    for (const entry of [...exiting].sort((a, b) => a.index - b.index)) {
+      const at = Math.max(0, Math.min(entry.index, items.length));
+      items.splice(at, 0, { type: 'ghost', entry });
+    }
+    return items;
+  }, [tabs, exiting]);
+
   return (
     <div
       ref={stripRef}
@@ -1415,28 +1601,38 @@ export function TabStrip(props: TabStripProps): JSX.Element {
           onDragCancel={onDragCancel}
         >
           <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
-            {tabs.map((tab, index) => (
-              <SortableTab
-                key={tab.editorId}
-                tab={tab}
-                index={index}
-                active={tab.editorId === activeEditorId}
-                tokens={tokens}
-                revealTheme={resolvedTheme}
-                width={tabWidth}
-                tabCount={tabs.length}
-                animateEnter={isNewTab(tab.editorId)}
-                renaming={renamingId === tab.editorId}
-                onActivate={activateTab}
-                onClose={closeTab}
-                onContextActions={onContextActions}
-                onBeginRename={beginRename}
-                onCommitRename={commitRename}
-                onCancelRename={cancelRename}
-                onBeginTransfer={onBeginTransfer}
-                onVoidDrop={onVoidDrop}
-              />
-            ))}
+            {renderItems.map((item) =>
+              item.type === 'tab' ? (
+                <SortableTab
+                  key={item.tab.editorId}
+                  tab={item.tab}
+                  index={item.index}
+                  active={item.tab.editorId === activeEditorId}
+                  tokens={tokens}
+                  revealTheme={resolvedTheme}
+                  width={tabWidth}
+                  tabCount={tabs.length}
+                  animateEnter={isNewTab(item.tab.editorId)}
+                  renaming={renamingId === item.tab.editorId}
+                  onActivate={activateTab}
+                  onClose={closeTab}
+                  onContextActions={onContextActions}
+                  onBeginRename={beginRename}
+                  onCommitRename={commitRename}
+                  onCancelRename={cancelRename}
+                  onBeginTransfer={onBeginTransfer}
+                  onVoidDrop={onVoidDrop}
+                />
+              ) : (
+                <ExitingTab
+                  key={`exiting-${item.entry.tab.editorId}`}
+                  tab={item.entry.tab}
+                  tokens={tokens}
+                  width={item.entry.width}
+                  onDone={dropExiting}
+                />
+              )
+            )}
           </SortableContext>
           {/* Floating clone of the dragged tab, portaled OUTSIDE the strip's overflow
               clip so it lifts free of the bar for more reorder room. dropAnimation is

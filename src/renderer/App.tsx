@@ -1,5 +1,6 @@
 import { FluentProvider } from '@fluentui/react-components';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { keymap, EditorView } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
 import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
@@ -14,11 +15,10 @@ import { useStatusBarModel } from './statusbar/useStatusBarModel';
 import { recordLastSaved, forgetEditor } from './statusbar/fileStatusTracker';
 import { useSettings } from './settings/useSettings';
 import { useAppTheme } from './theme/useAppTheme';
-import { SettingsSurface } from './settings/SettingsSurface';
 import { installSettingsTestHook } from './settings/settingsTestHook';
 import { appBackgroundTint } from './theme/tokens';
 import { edgeShadowStyle, EDGE_SHADOW_BLUR } from './theme/shadow';
-import { tokensForTheme, TabDimensions } from './tabs/tokens';
+import { tokensForTheme, TabDimensions, TabAnimation } from './tabs/tokens';
 import {
   applyAdopt,
   applyRelease,
@@ -29,9 +29,7 @@ import {
 } from './tabs/transferWiring';
 import type { TabState } from './tabs/types';
 import { normalizeToShadow } from './editor/eol';
-import { MarkdownPreview } from './markdown/MarkdownPreview';
 import { isMarkdownPath } from './markdown/renderMarkdown';
-import { DiffViewer } from './diff/DiffViewer';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useEditorContextMenu } from './editor/EditorContextMenu';
@@ -40,6 +38,25 @@ import { CloseReminderDialog } from './CloseReminderDialog';
 import { AppCloseReminderDialog } from './AppCloseReminderDialog';
 import { CaptionButtons } from './chrome/CaptionButtons';
 import { useT } from './i18n';
+import { usePrefersReducedMotion } from './theme/usePrefersReducedMotion';
+
+/**
+ * Heavy secondary panes loaded LAZILY (cold-start win, visually transparent):
+ * none are visible at first paint — they mount only on a user action (Alt+P /
+ * Alt+D / Ctrl+,). Splitting them out pulls markdown-it + its @mdit plugins +
+ * highlight.js + dompurify (MarkdownPreview), the diff package (DiffViewer), and
+ * the four settings panes (SettingsSurface) out of the first-paint chunk. Each is
+ * a NAMED export, so React.lazy gets a synthesized default. Their mount sites are
+ * wrapped in <Suspense fallback={null}> — a one-frame async on a user-triggered
+ * mount is imperceptible, so there is zero visible change.
+ */
+const MarkdownPreview = lazy(() =>
+  import('./markdown/MarkdownPreview').then((m) => ({ default: m.MarkdownPreview }))
+);
+const DiffViewer = lazy(() => import('./diff/DiffViewer').then((m) => ({ default: m.DiffViewer })));
+const SettingsSurface = lazy(() =>
+  import('./settings/SettingsSurface').then((m) => ({ default: m.SettingsSurface }))
+);
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -124,6 +141,49 @@ function TabSurfaceWash(props: {
   );
 }
 
+/**
+ * C5 — secondary-pane mount transition. Wraps the preview/diff pane content so it
+ * fades in (opacity 0→1) and slides a few px from the right (translateX, a
+ * compositor-only transform) when it MOUNTS, matching the existing ~160ms motion
+ * tokens (TabAnimation.enterMs / brushFadeMs). Only the appearing secondary pane
+ * animates — never the editor pane itself. Fully gated by `reduced`: when the user
+ * prefers reduced motion the children render at their final state with no
+ * transition, so motion-sensitive users see the same instant pane the app always
+ * showed. The one-tick state flip (entered) starts from the pre-animation state on
+ * the first commit and transitions to the resting state on the next frame.
+ */
+function PaneMount(props: { reduced: boolean; children: ReactNode }): JSX.Element {
+  const { reduced, children } = props;
+  const [entered, setEntered] = useState(reduced);
+  useEffect(() => {
+    if (reduced) {
+      setEntered(true);
+      return;
+    }
+    // rAF (not setTimeout): we only need the style to transition AFTER the initial
+    // opacity:0 paint commits; a single frame is enough and never starves here
+    // because a freshly-mounted, user-triggered pane is on a compositing window.
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, [reduced]);
+  // Reduced motion: render children directly, no wrapper transform/transition.
+  if (reduced) return <>{children}</>;
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        opacity: entered ? 1 : 0,
+        transform: entered ? 'translateX(0)' : 'translateX(8px)',
+        transition: `opacity ${TabAnimation.enterMs}ms ease-out, transform ${TabAnimation.enterMs}ms ease-out`,
+        willChange: entered ? 'auto' : 'opacity, transform'
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function App(): JSX.Element {
   // Live app theme (Phase 5, Lane C): resolves themeMode + OS theme + accent into
   // a FluentProvider theme and the active 'light'|'dark'|'hc' bucket, recomputed
@@ -131,6 +191,10 @@ export function App(): JSX.Element {
   // NO reload. Replaces the Phase-2 hardcoded web{Light,Dark}Theme selection.
   const appTheme = useAppTheme();
   const resolvedTheme = appTheme.resolved;
+
+  // Reduced-motion gate for the secondary-pane mount transition (C5). When the
+  // user prefers reduced motion the pane renders with no animation at all.
+  const reducedMotion = usePrefersReducedMotion();
 
   const isFrameless = useMemo(
     () => navigator.userAgent.includes('Windows') || navigator.userAgent.includes('Mac'),
@@ -143,6 +207,13 @@ export function App(): JSX.Element {
 
   // Settings surface open/close state (entry point in the tab strip toolbar).
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  // Latches true the first time settings is opened. The lazy SettingsSurface is
+  // only mounted once opened (so its chunk never loads at boot); we keep it mounted
+  // thereafter so its own open→close slide-out animation can still play.
+  const [settingsEverOpened, setSettingsEverOpened] = useState(false);
+  useEffect(() => {
+    if (settingsOpen) setSettingsEverOpened(true);
+  }, [settingsOpen]);
 
   // Active tab geometry {left,width} in strip-local px (or null when there is no
   // measurable active tab — empty / scrolled out / mid-drag), reported by TabStrip.
@@ -167,8 +238,14 @@ export function App(): JSX.Element {
   const lastSavedTextRef = useRef<Map<string, string>>(new Map());
   // A no-value re-render pulse: while a content pane (preview/diff) is open we bump
   // this on every doc change so the pane re-reads the live shadow text (CM6 owns
-  // the doc, so App otherwise doesn't re-render on keystrokes).
+  // the doc, so App otherwise doesn't re-render on keystrokes). The bump is
+  // DEBOUNCED (B1) — see paneEditorExtensions below — so a burst of keystrokes
+  // collapses to ~one re-render after typing settles instead of one per keystroke
+  // (the markdown + diff recompute were the two HIGH jank hotspots). This timer
+  // holds the pending trailing pulse; it is cleared on each new change and on
+  // unmount so no stray bump fires into a torn-down tree.
   const [, bumpDocVersion] = useState(0);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Find/replace host (Lane B). Reads the ACTIVE editor's live EditorView so
   // Ctrl+F/H/G + F3/Shift+F3 drive the same CM6 instance the host owns, and the
@@ -202,6 +279,11 @@ export function App(): JSX.Element {
   // Compose the editor extensions actually mounted: the find seam PLUS a doc-change
   // pulse that re-renders App while a content pane is open, so MarkdownPreview /
   // DiffViewer reflect live typing. The listener is a no-op when no pane is open.
+  // The pulse is TRAILING-DEBOUNCED ~150ms (B1): every doc change reschedules the
+  // single pending timer, so a run of keystrokes fires at most one bump ~150ms
+  // after typing settles. The final rendered output is identical to the per-
+  // keystroke version (it always re-reads the live shadow text) — only the cadence
+  // changes, which is what removes the per-keystroke markdown + diff recompute.
   const paneEditorExtensions = useMemo(
     () => [
       ...findEditorExtensions,
@@ -209,11 +291,26 @@ export function App(): JSX.Element {
         if (!u.docChanged) return;
         const id = tabsStore.activeEditorId;
         const vm = id ? tabsStore.get(id)?.viewMode : undefined;
-        if (vm && (vm.preview || vm.diff)) bumpDocVersion((v) => v + 1);
+        // Preserve the existing gating: only pulse while a preview/diff pane is open.
+        if (!vm || !(vm.preview || vm.diff)) return;
+        if (pulseTimerRef.current !== null) clearTimeout(pulseTimerRef.current);
+        pulseTimerRef.current = setTimeout(() => {
+          pulseTimerRef.current = null;
+          bumpDocVersion((v) => v + 1);
+        }, 150);
       })
     ],
     [findEditorExtensions]
   );
+
+  // Clear any pending debounced pulse on unmount so it never fires into a torn-down
+  // tree (setState-after-unmount). The timer ref persists across renders, so this
+  // single mount/unmount-scoped cleanup is sufficient.
+  useEffect(() => {
+    return () => {
+      if (pulseTimerRef.current !== null) clearTimeout(pulseTimerRef.current);
+    };
+  }, []);
 
   // Content integrations (Phase 6, Lane B): print (Ctrl+P / Ctrl+Shift+P), share,
   // and the Alt+P (markdown preview) / Alt+D (diff) view-mode accelerators. The
@@ -1125,12 +1222,16 @@ export function App(): JSX.Element {
                     borderLeft: '1px solid rgba(128,128,128,0.4)'
                   }}
                 >
-                  <MarkdownPreview
-                    text={shadow}
-                    isDark={resolvedTheme === 'dark'}
-                    fontSize={settings.editorFontSize}
-                    editorView={editorHandles.current.get(tab.editorId)?.getView() ?? null}
-                  />
+                  <Suspense fallback={null}>
+                    <PaneMount reduced={reducedMotion}>
+                      <MarkdownPreview
+                        text={shadow}
+                        isDark={resolvedTheme === 'dark'}
+                        fontSize={settings.editorFontSize}
+                        editorView={editorHandles.current.get(tab.editorId)?.getView() ?? null}
+                      />
+                    </PaneMount>
+                  </Suspense>
                 </div>
               )}
               {paneOn && tab.viewMode.diff && (
@@ -1148,10 +1249,16 @@ export function App(): JSX.Element {
                     left: 0
                   }}
                 >
-                  <DiffViewer
-                    original={normalizeToShadow(lastSavedTextRef.current.get(tab.editorId) ?? '')}
-                    modified={shadow}
-                  />
+                  <Suspense fallback={null}>
+                    <PaneMount reduced={reducedMotion}>
+                      <DiffViewer
+                        original={normalizeToShadow(
+                          lastSavedTextRef.current.get(tab.editorId) ?? ''
+                        )}
+                        modified={shadow}
+                      />
+                    </PaneMount>
+                  </Suspense>
                 </div>
               )}
             </div>
@@ -1164,14 +1271,24 @@ export function App(): JSX.Element {
         {find.findBar}
       </div>
       {settings.showStatusBar ? <StatusBar {...statusModel} /> : null}
-      <SettingsSurface
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        update={updateSettings}
-        theme={appTheme.theme}
-        resolvedTheme={resolvedTheme}
-      />
+      {/* Settings surface is lazy-loaded; only MOUNT it once the user has opened
+          it, so its chunk (4 panes) never loads on a cold start. SettingsSurface
+          internally renders null while closed, so gating on settingsOpen is
+          behavior-preserving — the only difference is the chunk loads on first
+          open instead of at boot. Kept mounted after the first open so its own
+          open→close slide-out animation still plays. */}
+      {settingsOpen || settingsEverOpened ? (
+        <Suspense fallback={null}>
+          <SettingsSurface
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            settings={settings}
+            update={updateSettings}
+            theme={appTheme.theme}
+            resolvedTheme={resolvedTheme}
+          />
+        </Suspense>
+      ) : null}
       <CloseReminderDialog
         pending={pendingClose}
         onSave={onReminderSave}

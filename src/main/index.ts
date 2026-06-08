@@ -57,16 +57,22 @@ function initOnce(): void {
   // Disarm the per-window close guard during an app-level quit (exit-when-last-tab,
   // window-all-closed, OS shutdown) so those paths are never blocked.
   initCloseGuardQuitBypass();
-  // Windows Jump List "New window" task (UWP JumpListService). Best-effort, win32-only.
-  initJumpListTasks();
-  // Resolve the OS ANSI code page once (UWP Encoding.GetEncoding(0)) so the
-  // encoding engine's system-ANSI fallback matches the real locale. Best-effort.
-  initSystemAnsiCodePage();
   // e2e-only MAIN seam (broker internals via app.evaluate). No-op in production.
   installMainTestSeam();
   // e2e-only window-state reader on the same seam (Gate-7 compact matrix). No-op
   // in production; installed after the broker seam so it augments the base object.
   installWindowTestSeam();
+  // Best-effort, non-critical init deferred OFF the first-paint path (cold-start
+  // win): neither is needed before the window shows. setImmediate runs them after
+  // the current boot tick (post-first-paint) so they never delay the visible window.
+  //  - initJumpListTasks: Windows Jump List "New window" task (win32-only).
+  //  - initSystemAnsiCodePage: resolve the OS ANSI code page once for the encoding
+  //    engine's system-ANSI fallback. systemAnsiCodePage() self-initializes lazily
+  //    with a 1252 fallback, so an early file-open before this fires is still safe.
+  setImmediate(() => {
+    initJumpListTasks();
+    initSystemAnsiCodePage();
+  });
 }
 
 function bootstrap(): void {

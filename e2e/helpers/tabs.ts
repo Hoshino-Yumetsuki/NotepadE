@@ -188,6 +188,12 @@ export async function resetToSingleTab(page: Page): Promise<void> {
     if (t.count() === 0) t.newTab();
   });
   await expectTabCount(page, 1);
+  // The store count drops synchronously, but a closed tab plays an exit animation
+  // (opacity + max-width collapse) and lingers in the DOM as a non-interactive
+  // ghost ([data-testid="tab-exiting"]) until animationend. Wait for those ghosts
+  // to clear so the strip is VISUALLY settled before any capture/assert — otherwise
+  // a ghost mid-collapse can bleed into a later golden image (non-deterministic).
+  await expect(page.locator('[data-testid="tab-exiting"]')).toHaveCount(0);
 }
 
 /**

@@ -126,6 +126,40 @@ body,
 }
 
 /*
+ * Tab EXIT (close) animation. Mirror of np-tab-enter and bound by the SAME hard
+ * constraint: NO transform. The selected-tab elevation overlay is measured via
+ * getBoundingClientRect right after a tab mounts (see the np-tab-enter note above
+ * and TabStrip's measure effect), and a translate offset would mis-place it. So a
+ * closing tab collapses with `opacity 1→0 + max-width →0` ONLY: the width collapse
+ * lets the surviving neighbours slide in smoothly to fill the gap, while opacity
+ * fades the closing tab out. The closing tab is a non-interactive ghost (TabStrip
+ * keeps it mounted past store-removal just long enough to play this, then drops it)
+ * and is never the measured active tab, so the overlay is unaffected. Reduced-motion
+ * users skip the ghost entirely (instant removal). Duration matches the brush fade
+ * (167ms) so close motion reads native against the rest of the strip.
+ */
+@keyframes np-tab-exit {
+  from {
+    opacity: 1;
+    max-width: var(--np-tab-exit-width, 210px);
+  }
+  to {
+    opacity: 0;
+    max-width: 0;
+  }
+}
+.np-tab-exit {
+  animation: np-tab-exit 167ms ease-out forwards;
+  overflow: hidden;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-tab-exit {
+    animation: none;
+  }
+}
+
+/*
  * Settings pane slide-in (UWP RootSplitView Overlay, PanePlacement=Right). The
  * slide is a CSS keyframe — NOT a React-state-driven inline transform — so the
  * element's RESTING transform is translateX(0) (on-screen). A state-held
@@ -148,6 +182,113 @@ body,
 }
 @media (prefers-reduced-motion: reduce) {
   .np-settings-enter {
+    animation: none;
+  }
+}
+
+/*
+ * Settings pane EXIT (close) slide-out — symmetric reverse of np-settings-enter.
+ * The settings pane has NO geometry-measurement constraint (unlike the tab strip),
+ * so transform translateX is allowed and is the cheap compositor-only way to slide.
+ * SettingsSurface keeps the pane mounted while this plays, then unmounts on
+ * animationend (with a timer fallback). Reduced-motion users unmount instantly.
+ */
+@keyframes np-settings-exit {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.np-settings-exit {
+  animation: np-settings-exit 160ms ease-in forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-settings-exit {
+    animation: none;
+  }
+}
+
+/*
+ * Settings scrim fade. The dim backdrop currently appears/vanishes instantly; a
+ * short opacity fade (in on open, out while the pane slides away) softens the
+ * transition. Opacity-only — compositor-cheap, no layout. Gated for reduced motion.
+ */
+@keyframes np-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes np-scrim-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.np-scrim-in {
+  animation: np-scrim-in 160ms ease-out;
+}
+.np-scrim-out {
+  animation: np-scrim-out 160ms ease-in forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-scrim-in,
+  .np-scrim-out {
+    animation: none;
+  }
+}
+
+/*
+ * Settings section cross-fade. Switching the active settings section (TextEditor /
+ * Personalization / Advanced / About) previously swapped panes with no transition.
+ * A short OPACITY-ONLY fade-in on the incoming pane (keyed on the section id so
+ * React remounts and replays this) reads as a gentle cross-fade. Opacity-only =
+ * zero layout cost, compositor-cheap. Gated for reduced motion.
+ */
+@keyframes np-settings-section {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.np-settings-section {
+  animation: np-settings-section 140ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-settings-section {
+    animation: none;
+  }
+}
+
+/*
+ * Find/Replace bar entrance. The bar floats into the editor's top-right corner; a
+ * brief opacity + translateY(-6px → 0) slide-down/fade-in softens its appearance.
+ * The find bar has NO geometry-measurement constraint, so translateY is allowed.
+ * Gated for reduced motion (instant show).
+ */
+@keyframes np-findbar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.np-findbar-enter {
+  animation: np-findbar-enter 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-findbar-enter {
     animation: none;
   }
 }

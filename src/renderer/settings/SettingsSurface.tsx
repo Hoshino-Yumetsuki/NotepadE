@@ -22,7 +22,7 @@
  * lives in useSettings/useAppTheme). No fs/path/child_process here.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FC } from 'react';
 import { Button, FluentProvider, type Theme } from '@fluentui/react-components';
 import {
@@ -40,6 +40,7 @@ import { AdvancedPane } from './AdvancedPane';
 import { AboutPane } from './AboutPane';
 import { acrylicVars, type AppTheme } from '../theme/tokens';
 import { useT } from '../i18n/I18nProvider';
+import { usePrefersReducedMotion } from '../theme/usePrefersReducedMotion';
 
 /** The four settings sections (UWP SettingsPage NavigationViewItem tags). */
 type SectionId = 'textEditor' | 'personalization' | 'advanced' | 'about';
@@ -115,6 +116,40 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
     return () => window.clearTimeout(id);
   }, [open]);
 
+  // Close exit animation (C2). When `open` flips to false we DON'T unmount
+  // immediately — we keep the surface rendered and play the reverse slide
+  // (np-settings-exit) + scrim fade-out, then unmount on animationend (with a timer
+  // fallback for skipped/instant animations). Under reduced motion we unmount at
+  // once (no `closing` phase), preserving the historical instant close. `closing`
+  // is the gate: render continues while it is true even though `open` is false.
+  const reducedMotion = usePrefersReducedMotion();
+  const [closing, setClosing] = useState(false);
+  // Tracks the previous `open` so we only START a close on a true→false edge (not
+  // on the initial false, and not while already closing).
+  const wasOpenRef = useRef(open);
+  useEffect(() => {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (wasOpen && !open) {
+      // Just requested a close.
+      if (reducedMotion) {
+        setClosing(false);
+      } else {
+        setClosing(true);
+      }
+    } else if (open) {
+      // Re-opened (possibly mid-close): cancel any pending close phase.
+      setClosing(false);
+    }
+  }, [open, reducedMotion]);
+
+  // Fallback unmount timer for the close slide (animationend is the common path).
+  useEffect(() => {
+    if (!closing) return;
+    const id = window.setTimeout(() => setClosing(false), 240);
+    return () => window.clearTimeout(id);
+  }, [closing]);
+
   // Esc closes the pane (UWP SettingsPage back/close). Bound only while open so it
   // never competes with the editor's own Esc handling (find-bar dismiss etc.).
   useEffect(() => {
@@ -131,13 +166,14 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
     return () => window.removeEventListener('keydown', onKey, true);
   }, [open, onOpenChange]);
 
-  if (!open) return null;
+  if (!open && !closing) return null;
 
   return (
     <div
       data-testid="settings-overlay"
       // Dim scrim over the whole app; a click on it (outside the pane) closes.
       onClick={() => onOpenChange(false)}
+      className={closing ? 'np-scrim-out' : 'np-scrim-in'}
       style={{
         position: 'fixed',
         inset: 0,
@@ -150,15 +186,17 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
       <FluentProvider
         theme={props.theme}
         data-testid="settings-surface"
-        className="np-acrylic np-settings-enter"
+        className={`np-acrylic ${closing ? 'np-settings-exit' : 'np-settings-enter'}`}
         // While the slide is in flight the heavy backdrop blur is suppressed (see
         // the `settled` gate above + acrylic.css). The attribute is omitted once
         // settled, so the expensive blur only kicks in on the stationary pane.
-        data-acrylic-animating={settled ? undefined : ''}
+        data-acrylic-animating={settled && !closing ? undefined : ''}
         // Switch the blur on the moment the slide keyframe finishes (the timeout
         // above is the belt-and-braces fallback for a skipped/instant animation).
+        // The exit keyframe finishing unmounts the pane (close C2).
         onAnimationEnd={(e) => {
           if (e.animationName === 'np-settings-enter') setSettled(true);
+          else if (e.animationName === 'np-settings-exit') setClosing(false);
         }}
         // Stop scrim-dismiss when the click lands inside the pane itself.
         onClick={(e) => e.stopPropagation()}
@@ -294,14 +332,22 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
               {t(sectionTitle)}
             </div>
             <div style={{ flex: '1 1 auto', minWidth: 0, minHeight: 0, overflowY: 'auto' }}>
-              {section === 'textEditor' ? (
-                <TextEditorPane settings={settings} update={update} />
-              ) : null}
-              {section === 'personalization' ? (
-                <PersonalizationPane settings={settings} update={update} />
-              ) : null}
-              {section === 'advanced' ? <AdvancedPane settings={settings} update={update} /> : null}
-              {section === 'about' ? <AboutPane /> : null}
+              {/* Opacity-only cross-fade on section switch (C3). Keying on the
+                  section id remounts this wrapper so the np-settings-section
+                  keyframe replays for the incoming pane. Compositor-cheap (no
+                  layout), and a no-op under reduced motion (CSS @media guard). */}
+              <div key={section} className="np-settings-section">
+                {section === 'textEditor' ? (
+                  <TextEditorPane settings={settings} update={update} />
+                ) : null}
+                {section === 'personalization' ? (
+                  <PersonalizationPane settings={settings} update={update} />
+                ) : null}
+                {section === 'advanced' ? (
+                  <AdvancedPane settings={settings} update={update} />
+                ) : null}
+                {section === 'about' ? <AboutPane /> : null}
+              </div>
             </div>
           </div>
         </div>

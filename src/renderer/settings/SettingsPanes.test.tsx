@@ -149,7 +149,7 @@ describe('AboutPane', () => {
     expect(screen.getByTestId('about-version')).toHaveTextContent('Version');
     expect(screen.getByRole('link', { name: 'Source code' })).toHaveAttribute(
       'href',
-      'https://github.com/0x7c13/Notepads'
+      'https://github.com/Hoshino-Yumetsuki/NotepadE'
     );
   });
 });
