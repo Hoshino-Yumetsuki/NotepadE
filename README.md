@@ -21,6 +21,9 @@
 
 English | [简体中文](./README.zh-CN.md)
 
+![dark](./docs/assets/image.png)
+![light](./docs/assets/image2.png)
+
 ## What is NotepadE and why do I care?
 
 [Notepads](https://github.com/0x7c13/Notepads) is a wonderful modern notepad app, but it is a UWP application and only runs on Windows. NotepadE is a faithful, 1:1 rewrite of Notepads on top of web technology, so the same clean look and feel can run anywhere Electron does: Windows, macOS, and Linux.

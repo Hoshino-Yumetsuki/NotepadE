@@ -21,6 +21,9 @@
 
 [English](./README.md) | 简体中文
 
+![dark](./docs/assets/image.png)
+![light](./docs/assets/image2.png)
+
 ## 什么是 NotepadE？
 
 [Notepads](https://github.com/0x7c13/Notepads) 是一款出色的现代记事本应用，但它是基于 UWP 的，仅在 Windows 上运行。NotepadE 是在 Web 技术之上对 Notepads 的忠实 1:1 重写，因此相同的简洁外观和使用体验可以在任何支持 Electron 的平台上运行：Windows、macOS 和 Linux。
