@@ -193,8 +193,9 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
-  # Optional "Open with NotepadE" context-menu entry. The checkbox on the last
-  # wizard page lets the user opt in or out at install time.
+  # Custom NSIS hooks. Adds a "Create a desktop shortcut" checkbox page (checked
+  # by default) so the user can opt out at install time, and cleans up the
+  # runtime "Open with NotepadsE" context-menu key on uninstall.
   include: installer.nsh
 
 mac:
