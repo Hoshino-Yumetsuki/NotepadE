@@ -80,3 +80,4 @@ jobs:
           name: Release ${{ github.ref_name }}
           artifacts: release/*
           token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
