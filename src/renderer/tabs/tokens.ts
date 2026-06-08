@@ -38,9 +38,6 @@ export const TabGlyph = {
   save: SaveRegular as FC,
 } as const;
 
-/** @deprecated Replaced by Fluent UI icons. Retained for migration-compat only. */
-export const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
-
 /**
  * Pixel dimensions — the SHIPPING values (app-level overrides win over control
  * defaults). See NotepadsMainPage.xaml:59-61 and SetsView.xaml.

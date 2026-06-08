@@ -2,10 +2,10 @@
  * Find/Replace bar tokens — 1:1 with the UWP FindAndReplaceControl.
  *
  * Sourced from:
- *   - Notepads.Controls.FindAndReplace/FindAndReplaceControl.xaml (glyphs, sizes)
+ *   - Notepads.Controls.FindAndReplace/FindAndReplaceControl.xaml (sizes)
  *   - Notepads.Controls.FindAndReplace/FindAndReplaceControl.xaml.cs (behavior)
  *
- * Glyphs are Segoe MDL2 Assets codepoints, preserved verbatim for fidelity.
+ * Icons are Fluent UI v9 React icon components — cross-platform SVG rendering.
  */
 
 import {
@@ -19,9 +19,6 @@ import {
   ArrowSyncRegular,
 } from '@fluentui/react-icons';
 import type { FC } from 'react';
-
-/** @deprecated Replaced by Fluent UI icons. Retained for migration-compat only. */
-export const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
 
 export const FindGlyph = {
   toggleReplaceExpand: ChevronDownRegular as FC,

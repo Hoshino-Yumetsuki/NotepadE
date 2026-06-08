@@ -23,7 +23,16 @@
  */
 
 import { useEffect, useState } from 'react';
+import type { FC } from 'react';
 import { Button, FluentProvider, type Theme } from '@fluentui/react-components';
+import {
+  DismissRegular,
+  NavigationRegular,
+  TextEditStyleRegular,
+  DarkThemeRegular,
+  WrenchRegular,
+  InfoRegular,
+} from '@fluentui/react-icons';
 import type { Settings } from '@shared/ipc-contract';
 import { TextEditorPane } from './TextEditorPane';
 import { PersonalizationPane } from './PersonalizationPane';
@@ -38,29 +47,15 @@ type SectionId = 'textEditor' | 'personalization' | 'advanced' | 'about';
 /**
  * Section nav metadata. `labelKey` is the ported UWP NavigationViewItem.Content
  * resource (verified present in all 29 locale tables) so the rail re-localizes
- * live on a language switch; `glyph` is the Segoe MDL2 icon verbatim from
- * SettingsPage.xaml.
+ * live on a language switch; `Icon` is the Fluent UI SVG icon component replacing
+ * the Windows-only Segoe MDL2 font glyphs for cross-platform rendering.
  */
-const SECTIONS: readonly { id: SectionId; labelKey: string; glyph: string }[] = [
-  {
-    id: 'textEditor',
-    labelKey: 'TextAndEditorPage_Title.Content',
-    glyph: String.fromCharCode(0xf17f),
-  },
-  {
-    id: 'personalization',
-    labelKey: 'PersonalizationPage_Title.Content',
-    glyph: String.fromCharCode(0xe771),
-  },
-  { id: 'advanced', labelKey: 'AdvancedPage_Title.Content', glyph: String.fromCharCode(0xe9e9) },
-  { id: 'about', labelKey: 'AboutPage_Title.Content', glyph: String.fromCharCode(0xe946) },
+const SECTIONS: readonly { id: SectionId; labelKey: string; Icon: FC }[] = [
+  { id: 'textEditor', labelKey: 'TextAndEditorPage_Title.Content', Icon: TextEditStyleRegular },
+  { id: 'personalization', labelKey: 'PersonalizationPage_Title.Content', Icon: DarkThemeRegular },
+  { id: 'advanced', labelKey: 'AdvancedPage_Title.Content', Icon: WrenchRegular },
+  { id: 'about', labelKey: 'AboutPage_Title.Content', Icon: InfoRegular },
 ];
-
-/** Segoe MDL2 ChromeClose (E711) for the pane close button. */
-const CLOSE_GLYPH = String.fromCharCode(0xe711);
-
-/** Segoe MDL2 GlobalNavigationButton (E700) — the hamburger rail toggle. */
-const HAMBURGER_GLYPH = String.fromCharCode(0xe700);
 
 /** UWP RootSplitView.OpenPaneLength — the right pane is 385px wide. */
 const PANE_WIDTH = 385;
@@ -82,15 +77,6 @@ export interface SettingsSurfaceProps {
    * so existing call sites/tests are unaffected.
    */
   resolvedTheme?: AppTheme;
-}
-
-/** Segoe MDL2 glyph used as a Nav item icon. */
-function NavGlyph({ glyph }: { glyph: string }): JSX.Element {
-  return (
-    <span aria-hidden style={{ fontFamily: '"Segoe MDL2 Assets"', fontSize: 16 }}>
-      {glyph}
-    </span>
-  );
 }
 
 export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null {
@@ -206,7 +192,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
             appearance="subtle"
             aria-label={t('SettingsShell_Close.AutomationProperties.Name')}
             data-testid="settings-close"
-            icon={<NavGlyph glyph={CLOSE_GLYPH} />}
+            icon={<DismissRegular />}
             onClick={() => onOpenChange(false)}
           />
         </div>
@@ -244,7 +230,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
               aria-label={t('SettingsNav_Expand.AutomationProperties.Name')}
               aria-expanded={expanded}
               data-testid="settings-nav-toggle"
-              icon={<NavGlyph glyph={HAMBURGER_GLYPH} />}
+              icon={<NavigationRegular />}
               onClick={() => setExpanded((v) => !v)}
               style={{
                 minWidth: 0,
@@ -263,7 +249,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 aria-label={t(s.labelKey)}
                 title={t(s.labelKey)}
                 appearance={section === s.id ? 'secondary' : 'subtle'}
-                icon={<NavGlyph glyph={s.glyph} />}
+                icon={<s.Icon />}
                 data-testid={`settings-nav-${s.id}`}
                 onClick={() => setSection(s.id)}
                 style={{
