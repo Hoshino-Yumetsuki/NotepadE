@@ -27,17 +27,16 @@ body,
 }
 
 /*
- * Win11 "conscious-scroll" overlay scrollbars, app-wide. Thin transparent rail,
- * a ~6px rounded thumb that only paints on hover (auto-hide when idle), and a
- * transparent track so nothing reserves layout gutter. Thumb tints mirror the
- * UWP OS default: #898989 light / #8A8A8A dark, semi-transparent. The editor's
- * own .cm-scroller repeats these via EditorView.theme so the same look applies
- * inside CodeMirror's internal scroller; this block covers every other surface
- * (settings pane, flyouts, etc.).
+ * Thin always-visible scrollbar, app-wide. Narrow 6px thumb with a subtle
+ * semi-transparent tint that darkens on hover, and a transparent track so
+ * nothing reserves layout gutter. Thumb tints mirror the UWP OS default:
+ * #898989 light / #8A8A8A dark. The editor's own .cm-scroller repeats these
+ * via EditorView.theme so the same look applies inside CodeMirror's internal
+ * scroller; this block covers every other surface (settings pane, flyouts, etc.).
  */
 * {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: rgba(137, 137, 137, 0.35) transparent;
 }
 ::-webkit-scrollbar {
   width: 12px;
@@ -47,22 +46,25 @@ body,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: transparent;
+  background-color: rgba(137, 137, 137, 0.35);
   border-radius: 6px;
   /* The 3px transparent border + content-box clip yields a ~6px visible thumb. */
   border: 3px solid transparent;
   background-clip: content-box;
 }
 :hover::-webkit-scrollbar-thumb {
-  background-color: rgba(137, 137, 137, 0.55);
+  background-color: rgba(137, 137, 137, 0.6);
 }
 .cm-scroller::-webkit-scrollbar-corner,
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
 @media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(138, 138, 138, 0.35);
+  }
   :hover::-webkit-scrollbar-thumb {
-    background-color: rgba(138, 138, 138, 0.55);
+    background-color: rgba(138, 138, 138, 0.6);
   }
 }
 

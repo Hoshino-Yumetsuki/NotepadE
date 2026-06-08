@@ -127,19 +127,22 @@ interface EditorThemeOptions {
  */
 function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
   activeLine: string;
+  scrollbarThumb: string;
   scrollbarThumbHover: string;
 } {
   if (themeMode === 'dark') {
     return {
       activeLine: 'rgba(255, 255, 255, 0.05)',
-      scrollbarThumbHover: 'rgba(138, 138, 138, 0.55)',
+      scrollbarThumb: 'rgba(138, 138, 138, 0.35)',
+      scrollbarThumbHover: 'rgba(138, 138, 138, 0.6)',
     };
   }
   // light + hc share the grey-on-light overlay (HC paints opaque system colors
   // anyway, so the faint wash is a no-op there).
   return {
     activeLine: 'rgba(127, 127, 127, 0.08)',
-    scrollbarThumbHover: 'rgba(137, 137, 137, 0.55)',
+    scrollbarThumb: 'rgba(137, 137, 137, 0.35)',
+    scrollbarThumbHover: 'rgba(137, 137, 137, 0.6)',
   };
 }
 
@@ -179,11 +182,11 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
     '.cm-scroller': {
       overflow: 'auto',
       lineHeight: '1.2',
-      // Win11 conscious-scroll: overlay (do NOT reserve a gutter), thin rail, a
-      // ~6px thumb that appears on hover and auto-hides. Webkit overlay
-      // scrollbars float above content rather than shrinking the viewport.
+      // Thin always-visible scrollbar: ~6px thumb, transparent track that
+      // reserves no layout gutter. Thumb tints mirror the UWP OS default:
+      // #898989 light / #8A8A8A dark, semi-transparent.
       scrollbarWidth: 'thin',
-      scrollbarColor: 'transparent transparent',
+      scrollbarColor: `${overlay.scrollbarThumb} transparent`,
     },
     // Active line: the CM6 default highlight is invisible on our transparent
     // surface, so paint an explicit subtle overlay (per-theme tint from
@@ -206,12 +209,12 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
     '.cm-selectionBackground, .cm-content ::selection': { backgroundColor: accentColor },
     '&.cm-focused .cm-selectionBackground': { backgroundColor: accentColor, opacity: 0.4 },
     '&:not(.cm-focused) .cm-selectionBackground': { backgroundColor: accentColor, opacity: 0.3 },
-    // Win11 overlay scrollbar thumb (webkit). Transparent track, ~6px thumb on
-    // hover, auto-hide when idle. Per-theme thumb tint from themeOverlays.
+    // Thin always-visible scrollbar thumb (webkit). Transparent track, ~6px
+    // visible thumb that darkens on hover.
     '.cm-scroller::-webkit-scrollbar': { width: '12px', height: '12px' },
     '.cm-scroller::-webkit-scrollbar-track': { background: 'transparent' },
     '.cm-scroller::-webkit-scrollbar-thumb': {
-      backgroundColor: 'transparent',
+      backgroundColor: overlay.scrollbarThumb,
       borderRadius: '6px',
       border: '3px solid transparent',
       backgroundClip: 'content-box',
