@@ -39,11 +39,6 @@ The goal is simple: keep everything that made Notepads pleasant to use — the F
 - Find & replace with a top-right search panel.
 - Light, dark, and high-contrast themes.
 
-![Screenshot Dark](docs/screenshots/dark.png?raw=true 'Dark')
-![Screenshot Markdown](docs/screenshots/markdown.png?raw=true 'Markdown')
-![Screenshot DiffViewer](docs/screenshots/diff.png?raw=true 'DiffViewer')
-![Screenshot Light](docs/screenshots/light.png?raw=true 'Light')
-
 ## Shortcuts:
 
 - Ctrl+N/T to create a new tab.

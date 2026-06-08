@@ -39,11 +39,6 @@
 - 顶部右侧的搜索面板支持查找与替换功能。
 - 提供浅色、深色和高对比度主题。
 
-![屏幕截图 暗色主题](docs/screenshots/dark.png?raw=true 'Dark')
-![屏幕截图 Markdown 预览](docs/screenshots/markdown.png?raw=true 'Markdown')
-![屏幕截图 差异查看器](docs/screenshots/diff.png?raw=true 'DiffViewer')
-![屏幕截图 浅色主题](docs/screenshots/light.png?raw=true 'Light')
-
 ## 快捷键：
 
 - `Ctrl+N` / `Ctrl+T`：新建标签页。
