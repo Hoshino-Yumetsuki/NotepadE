@@ -40,6 +40,8 @@ export interface CreateWindowOptions {
 
 export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWindow {
   const isDark = nativeTheme.shouldUseDarkColors;
+  const isMac = process.platform === 'darwin';
+  const isWindows = process.platform === 'win32';
 
   const win = new BrowserWindow({
     width: DEFAULT_BOUNDS.width,
@@ -49,22 +51,42 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     show: false,
     ...(existsSync(APP_ICON_PATH) ? { icon: APP_ICON_PATH } : {}),
     backgroundColor:
-      process.platform === 'win32' ? '#00000000' : isDark ? BASE_BG_DARK : BASE_BG_LIGHT,
-    // Acrylic material on Win11: matches the original Notepads' wallpaper-sampling
-    // translucency (acrylic samples the desktop wallpaper behind the window, unlike
-    // mica which is composited from it). backgroundColor is the transparent
-    // '#00000000' so the material shows through; on Win10 the renderer's tinted
-    // base fills it. We must NOT set transparent:true — Win11 keeps the rounded
-    // corners when only backgroundMaterial is set, but a transparent window loses
-    // the DWM frame and its corner rounding. backgroundMaterial drives the blur.
-    ...(process.platform === 'win32' ? { backgroundMaterial: 'acrylic' as const } : {}),
+      isWindows || isMac
+        ? '#00000000'
+        : isDark
+          ? BASE_BG_DARK
+          : BASE_BG_LIGHT,
+    // Windows: Acrylic material on Win11 — matches the original Notepads'
+    // wallpaper-sampling translucency. backgroundColor is transparent so the
+    // material shows through. MUST NOT set transparent:true on Win11 — that loses
+    // the DWM frame and its rounded corners. backgroundMaterial alone drives blur.
+    ...(isWindows ? { backgroundMaterial: 'acrylic' as const } : {}),
+    // macOS: Vibrancy for native "frosted glass" translucency. Combines with
+    // transparent:true + backgroundColor:'#00000000' so the desktop wallpaper
+    // samples through the NSVisualEffectView. visualEffectState:'active' keeps
+    // the blur consistent regardless of window focus.
+    ...(isMac
+      ? {
+          transparent: true,
+          vibrancy: 'under-window' as const,
+          visualEffectState: 'active' as const,
+          hasShadow: false, // transparent windows lose the macOS shadow
+        }
+      : {}),
     autoHideMenuBar: true,
-    // Frameless on Windows: hide the OS title bar (and its caption-button overlay)
-    // so our custom transparent CaptionButtons own the top-right. Aero Snap (drag
-    // to edge) + Win+Arrow still work; only the Win11 snap-assist hover flyout is
-    // unavailable without the OS maximize button — an accepted tradeoff for the
-    // transparent-button fidelity (matches the UWP look).
-    titleBarStyle: process.platform === 'win32' ? 'hidden' : 'default',
+    // Platform-aware title bar:
+    //   Windows: 'hidden' (frameless, custom CaptionButtons)
+    //   macOS: 'hidden' (frameless, traffic lights pushed off-screen, custom CaptionButtons)
+    //   Linux: 'default' (native title bar)
+    ...(isMac
+      ? {
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: -80, y: -20 } as const,
+          titleBarOverlay: true,
+        }
+      : {
+          titleBarStyle: isWindows ? ('hidden' as const) : ('default' as const),
+        }),
     webPreferences: {
       // PA-8 HARD RULE — do not weaken.
       contextIsolation: true,

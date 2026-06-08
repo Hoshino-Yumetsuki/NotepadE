@@ -8,11 +8,11 @@ import {
   Slider,
 } from '@fluentui/react-components';
 import { useState, createContext, useContext, type CSSProperties, type ReactNode } from 'react';
+import type { FC } from 'react';
 import type { AnsiEncodingEntry, EncodingId, EolId } from '@shared/ipc-contract';
 import {
   StatusGlyph,
   StatusDimensions,
-  SEGOE_MDL2_FONT_FAMILY,
   tokensForStatusTheme,
   type StatusTheme,
   type StatusThemeTokens,
@@ -239,19 +239,18 @@ function Cell(props: CellProps): JSX.Element {
   );
 }
 
-/** A Segoe MDL2 glyph rendered at the pinned status-bar icon size. */
-function Glyph(props: { glyph: string; color?: string }): JSX.Element {
+function Glyph(props: { icon: FC; color?: string }): JSX.Element {
+  const Icon = props.icon;
   return (
     <span
       aria-hidden
       style={{
-        fontFamily: SEGOE_MDL2_FONT_FAMILY,
         fontSize: StatusDimensions.iconSize,
         lineHeight: 1,
         color: props.color,
       }}
     >
-      {props.glyph}
+      <Icon />
     </span>
   );
 }
@@ -294,7 +293,7 @@ function ModificationStateColumn(props: {
             title={label}
             padLeft={StatusDimensions.modStatePadLeft}
           >
-            <Glyph glyph={glyph} color={tokens.accent} />
+            <Glyph icon={glyph} color={tokens.accent} />
           </Cell>
         </div>
       </MenuTrigger>
@@ -302,7 +301,7 @@ function ModificationStateColumn(props: {
         <MenuList data-testid="status-mod-state-menu">
           <MenuItem
             data-testid="status-mod-state-reload"
-            icon={<Glyph glyph={StatusGlyph.reload} />}
+            icon={<Glyph icon={StatusGlyph.reload} />}
             onClick={onReloadFromDisk}
           >
             {t('TextEditor_FileModifiedOutsideIndicator_MenuFlyoutItem_ReloadFileFromDisk.Text')}
@@ -356,7 +355,7 @@ function PathColumn(props: {
           <MenuItem
             data-testid="status-path-reload"
             disabled={!hasFile}
-            icon={<Glyph glyph={StatusGlyph.reload} />}
+            icon={<Glyph icon={StatusGlyph.reload} />}
             onClick={props.onReloadFromDisk}
           >
             {t('TextEditor_FileModifiedOutsideIndicator_MenuFlyoutItem_ReloadFileFromDisk.Text')}
@@ -364,7 +363,7 @@ function PathColumn(props: {
           <MenuItem
             data-testid="status-path-copy"
             disabled={!hasFile}
-            icon={<Glyph glyph={StatusGlyph.copyPath} />}
+            icon={<Glyph icon={StatusGlyph.copyPath} />}
             onClick={props.onCopyFullPath}
           >
             {t('Tab_ContextFlyout_CopyFullPathButtonDisplayText')}
@@ -372,7 +371,7 @@ function PathColumn(props: {
           <MenuItem
             data-testid="status-path-folder"
             disabled={!hasFile}
-            icon={<Glyph glyph={StatusGlyph.openFolder} />}
+            icon={<Glyph icon={StatusGlyph.openFolder} />}
             onClick={props.onOpenContainingFolder}
           >
             {t('Tab_ContextFlyout_OpenContainingFolderButtonDisplayText')}
@@ -380,7 +379,7 @@ function PathColumn(props: {
           <MenuItem
             data-testid="status-path-rename"
             disabled={!hasFile}
-            icon={<Glyph glyph={StatusGlyph.rename} />}
+            icon={<Glyph icon={StatusGlyph.rename} />}
             onClick={props.onRename}
           >
             {t('Tab_ContextFlyout_RenameButtonDisplayText')}
@@ -428,14 +427,14 @@ function ModificationColumn(props: {
         <MenuList data-testid="status-modification-menu">
           <MenuItem
             data-testid="status-modification-preview"
-            icon={<Glyph glyph={StatusGlyph.previewChanges} />}
+            icon={<Glyph icon={StatusGlyph.previewChanges} />}
             onClick={props.onPreviewChanges}
           >
             {t('TextEditor_ModificationIndicator_MenuFlyoutItem_PreviewTextChanges.Text')}
           </MenuItem>
           <MenuItem
             data-testid="status-modification-revert"
-            icon={<Glyph glyph={StatusGlyph.revert} />}
+            icon={<Glyph icon={StatusGlyph.revert} />}
             onClick={props.onRevertAllChanges}
           >
             {t('TextEditor_ModificationIndicator_MenuFlyoutItem_RevertAllChanges.Text')}
@@ -509,7 +508,7 @@ function ZoomColumn(props: {
             onClick={() => onSetZoom(Math.max(ZOOM_MIN, clamped - 10))}
             style={zoomButtonStyle(tokens)}
           >
-            {StatusGlyph.zoomOut}
+            <StatusGlyph.zoomOut />
           </button>
           <Slider
             data-testid="status-zoom-slider"
@@ -527,7 +526,7 @@ function ZoomColumn(props: {
             onClick={() => onSetZoom(Math.min(ZOOM_MAX, clamped + 10))}
             style={zoomButtonStyle(tokens)}
           >
-            {StatusGlyph.zoomIn}
+            <StatusGlyph.zoomIn />
           </button>
           <button
             type="button"
@@ -557,9 +556,6 @@ function zoomButtonStyle(tokens: StatusThemeTokens): CSSProperties {
     background: 'transparent',
     color: tokens.text,
     cursor: 'default',
-    fontFamily: SEGOE_MDL2_FONT_FAMILY,
-    fontSize: StatusDimensions.iconSize,
-    lineHeight: 1,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -725,7 +721,7 @@ function ShadowWindowColumn(props: {
       title={t('StatusBar_ShadowWindowHint')}
       padLeft={StatusDimensions.shadowPad}
     >
-      <Glyph glyph={StatusGlyph.shadowWindow} color={tokens.text} />
+      <Glyph icon={StatusGlyph.shadowWindow} color={tokens.text} />
     </Cell>
   );
 }

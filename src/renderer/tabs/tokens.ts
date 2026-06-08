@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  Tab strip glyphs + visual tokens — 1:1 with UWP SetsView (Phase 2, stream C)
+ *  Tab strip icons + visual tokens — 1:1 with UWP SetsView (Phase 2, stream C)
  * ============================================================================
  *
  * Sourced from the UWP control + the app-level overrides that actually ship:
@@ -8,27 +8,37 @@
  *   - Notepads/Views/MainPage/NotepadsMainPage.xaml (overrides 38-68)
  *   - Notepads/Core/NotepadsCore.cs (modified-dot glyph F127)
  *
- * Glyphs are Segoe MDL2 Assets codepoints. We preserve the exact codepoints for
- * fidelity; the font is applied via SEGOE_MDL2_FONT_FAMILY so a machine with the
- * font renders the identical iconography.
+ * Icons are Fluent UI v9 React icon components — cross-platform SVG rendering
+ * (replaces the Windows-only Segoe MDL2 Assets font codepoints).
  */
 
-/** Segoe MDL2 Assets codepoints used by the tab strip (verbatim from source). */
+import {
+  DismissRegular,
+  AddRegular,
+  ChevronLeftRegular,
+  ChevronRightRegular,
+  CircleSmallRegular,
+  SaveRegular,
+} from '@fluentui/react-icons';
+import type { FC } from 'react';
+
+/** Fluent UI icon components used by the tab strip. */
 export const TabGlyph = {
-  /** Tab close button "✕" — SetsView.xaml:459. */
-  close: '\uE711',
-  /** Add-tab / New Set button "+" — NotepadsMainPage.xaml:224. */
-  add: '\uE710',
-  /** Scroll-left (back) chevron — SetsView.xaml:1002. */
-  scrollLeft: '\uE76B',
-  /** Scroll-right (forward) chevron — SetsView.xaml:1055. */
-  scrollRight: '\uE76C',
-  /** Modified/unsaved indicator dot — NotepadsCore.cs:408. */
-  modifiedDot: '\uF127',
-  save: '\uE74E', // Segoe MDL2 "Save" glyph, shown on a dirty tab in place of the old dot
+  /** Tab close button. */
+  close: DismissRegular as FC,
+  /** Add-tab / New Set button. */
+  add: AddRegular as FC,
+  /** Scroll-left (back) chevron. */
+  scrollLeft: ChevronLeftRegular as FC,
+  /** Scroll-right (forward) chevron. */
+  scrollRight: ChevronRightRegular as FC,
+  /** Modified/unsaved indicator dot. */
+  modifiedDot: CircleSmallRegular as FC,
+  /** Save glyph, shown on a dirty tab in place of the old dot. */
+  save: SaveRegular as FC,
 } as const;
 
-/** The icon font the UWP control uses. */
+/** @deprecated Replaced by Fluent UI icons. Retained for migration-compat only. */
 export const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
 
 /**

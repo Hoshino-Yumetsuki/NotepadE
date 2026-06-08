@@ -132,11 +132,10 @@ export function App(): JSX.Element {
   const appTheme = useAppTheme();
   const resolvedTheme = appTheme.resolved;
 
-  // The window is frameless only on Windows (window-factory titleBarStyle:'hidden'
-  // with NO OS titleBarOverlay); there we render our own transparent caption
-  // controls. On macOS/Linux the native frame draws them, so the slot is omitted.
-  // Computed once (the platform never changes); PA-8: read navigator, not process.
-  const isFramelessWin = useMemo(() => navigator.userAgent.includes('Windows'), []);
+  const isFrameless = useMemo(
+    () => navigator.userAgent.includes('Windows') || navigator.userAgent.includes('Mac'),
+    [],
+  );
 
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
   // status-bar visibility (showStatusBar), and the theme resolution above.
@@ -1003,7 +1002,7 @@ export function App(): JSX.Element {
         onBeginTransfer={onBeginTransfer}
         onVoidDrop={onVoidDrop}
         menu={menuCommands}
-        captionSlot={isFramelessWin ? <CaptionButtons theme={resolvedTheme} /> : undefined}
+        captionSlot={isFrameless ? <CaptionButtons theme={resolvedTheme} /> : undefined}
         onActiveTabGeometry={setActiveTabRect}
       />
       <div

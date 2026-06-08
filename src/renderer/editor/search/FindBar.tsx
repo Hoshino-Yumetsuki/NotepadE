@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { FC } from 'react';
 import {
   Button,
   Input,
@@ -14,7 +15,6 @@ import type { SearchOptions } from './searchEngine';
 import {
   FindGlyph,
   FindDimensions,
-  SEGOE_MDL2_FONT_FAMILY,
   FindInputBackground,
   FindPanelBackground,
   FindPanelBorder,
@@ -72,11 +72,11 @@ export interface FindBarProps {
   status?: string;
 }
 
-/** A small Segoe MDL2 glyph rendered as an icon button face. */
-function Glyph({ code, size }: { code: string; size: number }): JSX.Element {
+function Glyph({ icon, size }: { icon: FC; size: number }): JSX.Element {
+  const Icon = icon;
   return (
-    <span style={{ fontFamily: SEGOE_MDL2_FONT_FAMILY, fontSize: size, lineHeight: 1 }}>
-      {code}
+    <span style={{ fontSize: size, lineHeight: 1 }}>
+      <Icon />
     </span>
   );
 }
@@ -292,7 +292,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
           }}
           icon={
             <Glyph
-              code={showReplace ? FindGlyph.toggleReplaceCollapse : FindGlyph.toggleReplaceExpand}
+              icon={showReplace ? FindGlyph.toggleReplaceCollapse : FindGlyph.toggleReplaceExpand}
               size={FindDimensions.toggleGlyphFontSize}
             />
           }
@@ -326,7 +326,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 aria-label={t('FindAndReplace_SearchOptionButton.ToolTipService.ToolTip')}
                 data-testid="find-options"
                 style={iconBtnStyle}
-                icon={<Glyph code={FindGlyph.options} size={FindDimensions.glyphFontSize} />}
+                icon={<Glyph icon={FindGlyph.options} size={FindDimensions.glyphFontSize} />}
               />
             </Tooltip>
           </MenuTrigger>
@@ -381,7 +381,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
             disabled={!hasQuery}
             onClick={() => doFind('previous')}
             style={iconBtnStyle}
-            icon={<Glyph code={FindGlyph.searchBackward} size={FindDimensions.glyphFontSize} />}
+            icon={<Glyph icon={FindGlyph.searchBackward} size={FindDimensions.glyphFontSize} />}
           />
         </Tooltip>
         <Tooltip
@@ -395,7 +395,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
             disabled={!hasQuery}
             onClick={() => doFind('next')}
             style={iconBtnStyle}
-            icon={<Glyph code={FindGlyph.searchForward} size={FindDimensions.glyphFontSize} />}
+            icon={<Glyph icon={FindGlyph.searchForward} size={FindDimensions.glyphFontSize} />}
           />
         </Tooltip>
         <Tooltip
@@ -408,7 +408,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
             data-testid="find-dismiss"
             onClick={onDismiss}
             style={iconBtnStyle}
-            icon={<Glyph code={FindGlyph.dismiss} size={FindDimensions.glyphFontSize} />}
+            icon={<Glyph icon={FindGlyph.dismiss} size={FindDimensions.glyphFontSize} />}
           />
         </Tooltip>
       </div>
@@ -442,7 +442,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 disabled={!hasQuery}
                 onClick={() => doReplaceOne('next')}
                 style={iconBtnStyle}
-                icon={<Glyph code={FindGlyph.replace} size={FindDimensions.glyphFontSize} />}
+                icon={<Glyph icon={FindGlyph.replace} size={FindDimensions.glyphFontSize} />}
               />
             </Tooltip>
             <Tooltip
@@ -456,7 +456,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 disabled={!hasQuery}
                 onClick={doReplaceAll}
                 style={iconBtnStyle}
-                icon={<Glyph code={FindGlyph.replaceAll} size={FindDimensions.glyphFontSize} />}
+                icon={<Glyph icon={FindGlyph.replaceAll} size={FindDimensions.glyphFontSize} />}
               />
             </Tooltip>
           </div>

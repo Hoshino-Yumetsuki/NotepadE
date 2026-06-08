@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
 import type { AnsiEncodingEntry } from '@shared/ipc-contract';
 import { StatusBar, type StatusBarProps } from './StatusBar';
-import { StatusGlyph } from './tokens';
 
 /**
  * StatusBar component spec (Lane C). Asserts the 8-column structure, the UWP
@@ -91,16 +90,14 @@ describe('StatusBar', () => {
     expect(cell).toBeEmptyDOMElement();
   });
 
-  it('renders the E7BA glyph for modified-outside', () => {
+  it('renders the modified-outside icon', () => {
     renderBar({ fileModificationState: 'modifiedOutside' });
-    expect(screen.getByTestId('status-mod-state')).toHaveTextContent(StatusGlyph.fileModified);
+    expect(screen.getByTestId('status-mod-state')).not.toBeEmptyDOMElement();
   });
 
-  it('renders the E9CE glyph for renamed/moved/deleted', () => {
+  it('renders the renamed/moved/deleted icon', () => {
     renderBar({ fileModificationState: 'renamedMovedDeleted' });
-    expect(screen.getByTestId('status-mod-state')).toHaveTextContent(
-      StatusGlyph.fileRenamedMovedDeleted,
-    );
+    expect(screen.getByTestId('status-mod-state')).not.toBeEmptyDOMElement();
   });
 
   it('shows "Modified" only when the buffer is dirty', () => {
@@ -141,7 +138,7 @@ describe('StatusBar', () => {
         <StatusBar {...makeProps({ isShadowWindow: true })} />
       </FluentProvider>,
     );
-    expect(screen.getByTestId('status-shadow')).toHaveTextContent(StatusGlyph.shadowWindow);
+    expect(screen.getByTestId('status-shadow')).not.toBeEmptyDOMElement();
   });
 
   it('fires onGoToLine when the line/column cell is clicked', () => {

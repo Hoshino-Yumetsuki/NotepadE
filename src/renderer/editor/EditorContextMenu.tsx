@@ -28,6 +28,19 @@ import {
   MenuTrigger,
   MenuDivider,
 } from '@fluentui/react-components';
+import {
+  CutRegular,
+  CopyRegular,
+  ClipboardPasteRegular,
+  ArrowUndoRegular,
+  ArrowRedoRegular,
+  SelectAllOnRegular,
+  GlobeRegular,
+  EyeRegular,
+  ShareRegular,
+  CheckmarkRegular,
+} from '@fluentui/react-icons';
+import type { FC } from 'react';
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import { undo, redo } from '@codemirror/commands';
@@ -36,34 +49,22 @@ import { toggleWordWrap, wordWrapField } from './commands/wordWrap';
 import { webSearchSelection } from './commands/webSearch';
 import { useT } from '../i18n';
 
-/**
- * Segoe MDL2 Assets codepoints for the editor flyout, verbatim from the UWP
- * TextEditorContextFlyout.cs (Symbol enum + FontIcon glyphs):
- *   Cut Symbol.Cut E8C6 · Copy Symbol.Copy E8C8 · Paste Symbol.Paste E77F ·
- *   Undo Symbol.Undo E7A7 · Redo Symbol.Redo E7A6 · SelectAll Symbol.SelectAll
- *   E8B3 · Search E721 · Preview E89F · Share Symbol.Share E72D.
- * Word Wrap + RTL use a state CheckMark (rendered by MenuItemCheckbox), not a
- * leading command glyph, exactly as UWP toggled Icon.Visibility on a CheckMark.
- */
 const CtxGlyph = {
-  cut: '\uE8C6',
-  copy: '\uE8C8',
-  paste: '\uE77F',
-  undo: '\uE7A7',
-  redo: '\uE7A6',
-  selectAll: '\uE8B3',
-  webSearch: '\uE721',
-  preview: '\uE89F',
-  share: '\uE72D',
-  /** CheckMark E73E - shown in the icon slot of a toggle item when active. */
-  check: '\uE73E',
+  cut: CutRegular as FC,
+  copy: CopyRegular as FC,
+  paste: ClipboardPasteRegular as FC,
+  undo: ArrowUndoRegular as FC,
+  redo: ArrowRedoRegular as FC,
+  selectAll: SelectAllOnRegular as FC,
+  webSearch: GlobeRegular as FC,
+  preview: EyeRegular as FC,
+  share: ShareRegular as FC,
+  check: CheckmarkRegular as FC,
 } as const;
 
-const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
-
-/** A Segoe MDL2 glyph in a fixed 20px box, sized so the icon is clearly visible
- *  and every menu row's icon slot is the same width (labels align in one column). */
-function Glyph({ glyph }: { glyph: string }): JSX.Element {
+/** Render a Fluent UI icon in the menu icon slot. */
+function Glyph(props: { icon: FC }): JSX.Element {
+  const Icon = props.icon;
   return (
     <span
       aria-hidden
@@ -73,23 +74,16 @@ function Glyph({ glyph }: { glyph: string }): JSX.Element {
         justifyContent: 'center',
         width: 20,
         height: 20,
-        fontFamily: SEGOE_MDL2_FONT_FAMILY,
-        fontSize: 18,
-        lineHeight: 1,
       }}
     >
-      {glyph}
+      <Icon />
     </span>
   );
 }
 
-/** Icon slot for a checkmark-TOGGLE item (Word Wrap / RTL). When `on`, shows the
- *  CheckMark in the SAME icon slot the command items use (UWP toggled a CheckMark's
- *  visibility); when off, an empty box of the same width so the label still aligns
- *  with every other row — and crucially there is NO separate checkbox-indicator
- *  slot (that extra slot from MenuItemCheckbox was the misaligned "extra block"). */
+/** Icon slot for a checkmark-TOGGLE item. */
 function ToggleIcon({ on }: { on: boolean }): JSX.Element {
-  return on ? <Glyph glyph={CtxGlyph.check} /> : <span aria-hidden style={{ width: 20 }} />;
+  return on ? <Glyph icon={CtxGlyph.check} /> : <span aria-hidden style={{ width: 20 }} />;
 }
 
 /** A snapshot of the editor at right-click time, used to gate items. */
@@ -215,7 +209,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
         <MenuList>
           <MenuItem
             data-testid="ctx-cut"
-            icon={<Glyph glyph={CtxGlyph.cut} />}
+            icon={<Glyph icon={CtxGlyph.cut} />}
             secondaryContent="Ctrl+X"
             disabled={!ctx.hasSelection}
             onClick={run((v) => void cutSelection(v))}
@@ -224,7 +218,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           </MenuItem>
           <MenuItem
             data-testid="ctx-copy"
-            icon={<Glyph glyph={CtxGlyph.copy} />}
+            icon={<Glyph icon={CtxGlyph.copy} />}
             secondaryContent="Ctrl+C"
             disabled={!ctx.hasSelection}
             onClick={run((v) => void copySelection(v))}
@@ -233,7 +227,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           </MenuItem>
           <MenuItem
             data-testid="ctx-paste"
-            icon={<Glyph glyph={CtxGlyph.paste} />}
+            icon={<Glyph icon={CtxGlyph.paste} />}
             secondaryContent="Ctrl+V"
             onClick={run((v) => void pastePlainText(v))}
           >
@@ -241,7 +235,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           </MenuItem>
           <MenuItem
             data-testid="ctx-undo"
-            icon={<Glyph glyph={CtxGlyph.undo} />}
+            icon={<Glyph icon={CtxGlyph.undo} />}
             secondaryContent="Ctrl+Z"
             onClick={run((v) => void undo(v))}
           >
@@ -249,7 +243,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           </MenuItem>
           <MenuItem
             data-testid="ctx-redo"
-            icon={<Glyph glyph={CtxGlyph.redo} />}
+            icon={<Glyph icon={CtxGlyph.redo} />}
             secondaryContent="Ctrl+Shift+Z"
             onClick={run((v) => void redo(v))}
           >
@@ -257,7 +251,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           </MenuItem>
           <MenuItem
             data-testid="ctx-selectall"
-            icon={<Glyph glyph={CtxGlyph.selectAll} />}
+            icon={<Glyph icon={CtxGlyph.selectAll} />}
             secondaryContent="Ctrl+A"
             onClick={run((v) => v.dispatch({ selection: { anchor: 0, head: v.state.doc.length } }))}
           >
@@ -288,7 +282,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           {ctx.hasSelection ? (
             <MenuItem
               data-testid="ctx-websearch"
-              icon={<Glyph glyph={CtxGlyph.webSearch} />}
+              icon={<Glyph icon={CtxGlyph.webSearch} />}
               secondaryContent="Ctrl+E"
               onClick={run((v) => void webSearchSelection(v))}
             >
@@ -298,7 +292,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           {isPreviewEligible ? (
             <MenuItem
               data-testid="ctx-preview"
-              icon={<Glyph glyph={CtxGlyph.preview} />}
+              icon={<Glyph icon={CtxGlyph.preview} />}
               secondaryContent="Alt+P"
               onClick={() => {
                 onTogglePreview();
@@ -310,7 +304,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           ) : null}
           <MenuItem
             data-testid="ctx-share"
-            icon={<Glyph glyph={CtxGlyph.share} />}
+            icon={<Glyph icon={CtxGlyph.share} />}
             onClick={() => {
               onShare(ctx.hasSelection);
               close();

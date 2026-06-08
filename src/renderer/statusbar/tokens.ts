@@ -17,36 +17,36 @@
  * `SystemRevealListLowColor` overlay the XAML PointerEntered triggers paint.
  */
 
-/** The icon font the UWP status bar uses. */
+import {
+  WarningRegular,
+  QuestionCircleRegular,
+  ArrowSyncRegular,
+  CopyRegular,
+  FolderOpenRegular,
+  RenameRegular,
+  EyeRegular,
+  ArrowUndoRegular,
+  ZoomOutRegular,
+  ZoomInRegular,
+  WindowMultipleRegular,
+} from '@fluentui/react-icons';
+import type { FC } from 'react';
+
+/** @deprecated Replaced by Fluent UI icons. Retained for migration-compat only. */
 export const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
 
-/**
- * Segoe MDL2 Assets codepoints used by the status bar (verbatim from source).
- * Comments cite the exact XAML/code-behind line the glyph comes from.
- */
 export const StatusGlyph = {
-  /** File modified outside (Warning) — StatusBar.cs:89. */
-  fileModified: '\uE7BA',
-  /** File renamed/moved/deleted (Unknown) — StatusBar.cs:95. */
-  fileRenamedMovedDeleted: '\uE9CE',
-  /** Reload file from disk — NotepadsMainPage.xaml:326/372. */
-  reload: '\uE72C',
-  /** Copy full path — NotepadsMainPage.xaml:383. */
-  copyPath: '\uE8C8',
-  /** Open containing folder — NotepadsMainPage.xaml:390. */
-  openFolder: '\uED25',
-  /** Rename — NotepadsMainPage.xaml:398. */
-  rename: '\uE8AC',
-  /** Preview text changes (diff) — NotepadsMainPage.xaml:444. */
-  previewChanges: '\uE89A',
-  /** Revert all changes — NotepadsMainPage.xaml:454. */
-  revert: '\uE7A7',
-  /** Zoom out — NotepadsMainPage.xaml:527. */
-  zoomOut: '\uE108',
-  /** Zoom in — NotepadsMainPage.xaml:548. */
-  zoomIn: '\uE109',
-  /** Shadow (non-primary) window indicator — NotepadsMainPage.xaml:680. */
-  shadowWindow: '\uE737',
+  fileModified: WarningRegular as FC,
+  fileRenamedMovedDeleted: QuestionCircleRegular as FC,
+  reload: ArrowSyncRegular as FC,
+  copyPath: CopyRegular as FC,
+  openFolder: FolderOpenRegular as FC,
+  rename: RenameRegular as FC,
+  previewChanges: EyeRegular as FC,
+  revert: ArrowUndoRegular as FC,
+  zoomOut: ZoomOutRegular as FC,
+  zoomIn: ZoomInRegular as FC,
+  shadowWindow: WindowMultipleRegular as FC,
 } as const;
 
 /**

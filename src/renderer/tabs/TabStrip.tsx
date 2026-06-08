@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { NavigationRegular } from '@fluentui/react-icons';
 import {
   Menu,
   MenuTrigger,
@@ -29,7 +30,6 @@ import {
   TabDimensions,
   TabScroll,
   TabAnimation,
-  SEGOE_MDL2_FONT_FAMILY,
   tokensForTheme,
   type TabTheme,
   type TabThemeTokens,
@@ -419,16 +419,13 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             marginRight: TabDimensions.iconMarginRight,
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: SEGOE_MDL2_FONT_FAMILY,
-            fontSize: TabDimensions.saveIconSize,
-            lineHeight: 1,
             color: 'var(--tab-accent, #0078D4)',
             flex: '0 0 auto',
             position: 'relative',
             zIndex: 1,
           }}
         >
-          {TabGlyph.save}
+          <TabGlyph.save />
         </span>
 
         {/* Title or inline rename input. */}
@@ -496,7 +493,6 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             color: 'inherit',
             cursor: 'default',
             visibility: showClose ? 'visible' : 'hidden',
-            fontFamily: SEGOE_MDL2_FONT_FAMILY,
             fontSize: TabDimensions.closeFontSize,
             lineHeight: 1,
             padding: 0,
@@ -507,7 +503,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             zIndex: 1,
           }}
         >
-          {TabGlyph.close}
+          <TabGlyph.close />
         </button>
       </div>
     </TabContextMenu>
@@ -554,12 +550,12 @@ const SortableTab = memo(SortableTabImpl, (prev, next): boolean => {
 });
 function ScrollButton(props: {
   testid: string;
-  glyph: string;
+  icon: React.FC;
   ariaLabel: string;
   disabled: boolean;
   onScroll(): void;
 }): JSX.Element {
-  const { testid, glyph, ariaLabel, disabled, onScroll } = props;
+  const { testid, icon: Icon, ariaLabel, disabled, onScroll } = props;
   const timerRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
 
@@ -600,14 +596,12 @@ function ScrollButton(props: {
         color: 'inherit',
         cursor: 'default',
         opacity: disabled ? 0.4 : 1,
-        fontFamily: SEGOE_MDL2_FONT_FAMILY,
-        fontSize: 12,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      {glyph}
+      <Icon />
     </button>
   );
 }
@@ -641,10 +635,6 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
       })
       .catch(() => setRecent([]));
   }, []);
-  // Segoe MDL2 GlobalNavigationButton (E700) — the UWP MainMenuButton glyph.
-  // Defined locally (not in TabGlyph) because tokens.ts is owned by another lane.
-  const MENU_GLYPH = String.fromCharCode(0xe700);
-
   return (
     <Menu
       onOpenChange={(_e, data) => {
@@ -672,14 +662,12 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
             background: hovered ? tokens.headerHover : 'transparent',
             color: tokens.textDefault,
             cursor: 'default',
-            fontFamily: SEGOE_MDL2_FONT_FAMILY,
-            fontSize: 16,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          {MENU_GLYPH}
+          <NavigationRegular />
         </button>
       </MenuTrigger>
       <MenuPopover data-testid="main-menu-popover">
@@ -896,14 +884,11 @@ function TabOverlayCard(props: {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: SEGOE_MDL2_FONT_FAMILY,
-            fontSize: TabDimensions.saveIconSize,
-            lineHeight: 1,
             color: 'var(--tab-accent, #0078D4)',
             flex: '0 0 auto',
           }}
         >
-          {TabGlyph.save}
+          <TabGlyph.save />
         </span>
       ) : null}
       <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -967,8 +952,6 @@ function AddTabButton(props: {
         // is legible at rest — the previous dim color is what made it "disappear".
         color: tokens.textSelected,
         cursor: 'default',
-        fontFamily: SEGOE_MDL2_FONT_FAMILY,
-        fontSize: TabDimensions.addGlyphSize,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -989,7 +972,7 @@ function AddTabButton(props: {
           zIndex: 0,
         }}
       />
-      <span style={{ position: 'relative', zIndex: 1 }}>{TabGlyph.add}</span>
+      <span style={{ position: 'relative', zIndex: 1 }}><TabGlyph.add /></span>
     </button>
   );
 }
@@ -1383,7 +1366,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       {showScrollButtons && (
         <ScrollButton
           testid="tab-scroll-left"
-          glyph={TabGlyph.scrollLeft}
+          icon={TabGlyph.scrollLeft}
           ariaLabel="Scroll tabs left"
           disabled={atStart}
           onScroll={() => scrollBy(-TabScroll.amount)}
@@ -1469,7 +1452,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       {showScrollButtons && (
         <ScrollButton
           testid="tab-scroll-right"
-          glyph={TabGlyph.scrollRight}
+          icon={TabGlyph.scrollRight}
           ariaLabel="Scroll tabs right"
           disabled={atEnd}
           onScroll={() => scrollBy(TabScroll.amount)}

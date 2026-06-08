@@ -11,6 +11,8 @@ body,
   padding: 0;
   height: 100%;
   overflow: hidden;
+  /* Let the macOS vibrancy / Windows acrylic backdrop show through. */
+  background: transparent;
 }
 
 /* Frameless drag region: the tab strip background drags the window; interactive

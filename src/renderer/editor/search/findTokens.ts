@@ -8,28 +8,31 @@
  * Glyphs are Segoe MDL2 Assets codepoints, preserved verbatim for fidelity.
  */
 
-/** Segoe MDL2 Assets codepoints used by the find/replace bar (verbatim). */
-export const FindGlyph = {
-  /** Toggle replace mode (collapsed → expand) "ChevronDownSmall" E00F. */
-  toggleReplaceExpand: '\uE00F',
-  /** Toggle replace mode (expanded → collapse) "ChevronUpSmall" E011. */
-  toggleReplaceCollapse: '\uE011',
-  /** Search options gear "Setting" E712. */
-  options: '\uE712',
-  /** Find previous "Up" / ChevronUp — UWP uses E110 (Back). */
-  searchBackward: '\uE110',
-  /** Find next — UWP uses E74B (FontDecrease? no: "ScrollChevronDownLegacy"). */
-  searchForward: '\uE74B',
-  /** Dismiss / close "Cancel" E894. */
-  dismiss: '\uE894',
-  /** Replace one "Replace" E8AB. */
-  replace: '\uE8AB',
-  /** Replace all "ReplaceAll" E7FD. */
-  replaceAll: '\uE7FD',
-} as const;
+import {
+  ChevronDownRegular,
+  ChevronUpRegular,
+  SettingsRegular,
+  ArrowUpRegular,
+  ArrowDownRegular,
+  DismissRegular,
+  ArrowSwapRegular,
+  ArrowSyncRegular,
+} from '@fluentui/react-icons';
+import type { FC } from 'react';
 
-/** The icon font the UWP control uses. */
+/** @deprecated Replaced by Fluent UI icons. Retained for migration-compat only. */
 export const SEGOE_MDL2_FONT_FAMILY = '"Segoe MDL2 Assets"';
+
+export const FindGlyph = {
+  toggleReplaceExpand: ChevronDownRegular as FC,
+  toggleReplaceCollapse: ChevronUpRegular as FC,
+  options: SettingsRegular as FC,
+  searchBackward: ArrowUpRegular as FC,
+  searchForward: ArrowDownRegular as FC,
+  dismiss: DismissRegular as FC,
+  replace: ArrowSwapRegular as FC,
+  replaceAll: ArrowSyncRegular as FC,
+} as const;
 
 /**
  * Find/Replace input background — 1:1 with the UWP TransparentTextBoxStyle
