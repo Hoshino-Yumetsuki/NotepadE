@@ -17,6 +17,7 @@ Thumbs.db
 .env.*
 .idea
 .omc
+.omo
 plan
 
 # dependencies

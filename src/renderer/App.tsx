@@ -435,6 +435,27 @@ export function App(): JSX.Element {
           // on error — App.tsx); reporting is tracked separately by the lead.
           return;
         }
+        // When the only tab is a pristine untitled seed buffer (created on
+        // mount), reuse it for the file instead of opening a new tab. This
+        // prevents a leftover empty "Untitled N" tab when the app is launched
+        // as a file handler (Open with / double-click in explorer). Re-checked
+        // inside .then() so races between multiple simultaneous opens are safe.
+        const s = store.tabs;
+        const seedTab = s.length === 1 && s[0].filePath === null && !s[0].isModified ? s[0] : null;
+        if (seedTab) {
+          const id = seedTab.editorId;
+          const seedOpened = (): void => {
+            const handle = editorHandles.current.get(id);
+            if (handle) handle.setDoc(res.data.decodedText);
+            else setTimeout(seedOpened, 0);
+          };
+          lastSavedTextRef.current.set(id, res.data.decodedText);
+          seedOpened();
+          store.setLabels(id, res.data.encodingId, res.data.eolId);
+          store.setFilePath(id, res.data.filePath);
+          if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
+          return;
+        }
         const id = store.newTab({
           filePath: res.data.filePath,
           encodingId: res.data.encodingId,
