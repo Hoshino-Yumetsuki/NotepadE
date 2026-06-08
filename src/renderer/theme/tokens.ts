@@ -48,7 +48,7 @@ export const LIGHT_APP_TOKENS: AppThemeTokens = {
   titlebar: '#D2D2D2',
   captionHover: '#B4B4B4',
   captionPressed: '#969696',
-  tabEdgeShadowOpacity: 0.1,
+  tabEdgeShadowOpacity: 0.06,
 };
 
 /** Dark theme — base #2E2E2E (UWP darkModeBaseColor). */
@@ -57,7 +57,7 @@ export const DARK_APP_TOKENS: AppThemeTokens = {
   titlebar: '#2D2D2D',
   captionHover: '#5A5A5A',
   captionPressed: '#787878',
-  tabEdgeShadowOpacity: 0.16,
+  tabEdgeShadowOpacity: 0.1,
 };
 
 /**

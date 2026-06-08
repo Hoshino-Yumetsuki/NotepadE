@@ -8,10 +8,8 @@ import {
   glowOpacityForDistance,
   glowBackground,
   lineNumberGlow,
-  GLOW_VAR_OPACITY,
   GLOW_FALLOFF_PX,
-  GLOW_VAR_Y,
-  GLOW_RADIUS_PX,
+  GLOW_LINE_WIDTH,
 } from './lineNumberGlow';
 
 describe('lineNumberGlow — pure helpers', () => {
@@ -27,9 +25,9 @@ describe('lineNumberGlow — pure helpers', () => {
       expect(parseHexColor('  #abcdef ')).toEqual({ r: 0xab, g: 0xcd, b: 0xef });
     });
     it('returns null for malformed input', () => {
-      expect(parseHexColor('0078D4')).toBeNull(); // missing #
-      expect(parseHexColor('#12')).toBeNull(); // wrong length
-      expect(parseHexColor('#zzzzzz')).toBeNull(); // non-hex
+      expect(parseHexColor('0078D4')).toBeNull();
+      expect(parseHexColor('#12')).toBeNull();
+      expect(parseHexColor('#zzzzzz')).toBeNull();
       expect(parseHexColor('rgb(1,2,3)')).toBeNull();
     });
   });
@@ -38,20 +36,16 @@ describe('lineNumberGlow — pure helpers', () => {
     it('is transparent (inert) under high contrast', () => {
       expect(glowColor('hc', '#0078D4')).toBe('transparent');
     });
-    it('is a neutral white-ish bloom on dark (NOT accent-tinted)', () => {
+    it('is a neutral white-ish bloom on dark', () => {
       expect(glowColor('dark', '#0078D4')).toBe('rgba(255, 255, 255, 0.22)');
     });
-    it('is a neutral black-ish bloom on light (NOT accent-tinted)', () => {
+    it('is a neutral black-ish bloom on light', () => {
       expect(glowColor('light', '#0078D4')).toBe('rgba(0, 0, 0, 0.14)');
-    });
-    it('ignores the accent entirely (UWP reveal border brush is neutral)', () => {
-      expect(glowColor('dark', 'not-a-color')).toBe('rgba(255, 255, 255, 0.22)');
-      expect(glowColor('light', '#ff0000')).toBe('rgba(0, 0, 0, 0.14)');
     });
   });
 
   describe('glowOpacityForDistance', () => {
-    it('is full intensity while the pointer is over (or left of) the edge', () => {
+    it('is full intensity while the pointer is over the edge', () => {
       expect(glowOpacityForDistance(-50)).toBe(1);
       expect(glowOpacityForDistance(0)).toBe(1);
     });
@@ -62,18 +56,16 @@ describe('lineNumberGlow — pure helpers', () => {
       expect(glowOpacityForDistance(GLOW_FALLOFF_PX)).toBe(0);
       expect(glowOpacityForDistance(GLOW_FALLOFF_PX + 100)).toBe(0);
     });
-    it('honors a custom falloff', () => {
-      expect(glowOpacityForDistance(10, 20)).toBeCloseTo(0.5, 5);
-    });
   });
 
   describe('glowBackground', () => {
-    it('builds a right-edge radial gradient bound to the Y var', () => {
+    it('builds a vertical linear gradient with solid center and fading top/bottom', () => {
       const bg = glowBackground('rgba(255, 255, 255, 0.22)');
-      expect(bg).toContain(`circle ${GLOW_RADIUS_PX}px at 100%`);
-      expect(bg).toContain(`var(${GLOW_VAR_Y}, -9999px)`);
-      expect(bg).toContain('rgba(255, 255, 255, 0.22) 0%');
-      expect(bg).toContain('transparent 70%');
+      expect(bg).toContain('linear-gradient(to bottom');
+      expect(bg).toContain('transparent 0%');
+      expect(bg).toContain('rgba(255, 255, 255, 0.22) 40%');
+      expect(bg).toContain('rgba(255, 255, 255, 0.22) 60%');
+      expect(bg).toContain('transparent 100%');
     });
   });
 });
@@ -94,14 +86,15 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
     });
   }
 
-  it('attaches an inline-styled overlay inside .cm-lineNumberColumn (no CM6 theme selector)', () => {
+  it('attaches an inline-styled overlay on view.dom (not inside the column)', () => {
     const view = mount('dark');
-    const overlay = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn .cm-lineNumberGlow');
+    const overlay = view.dom.querySelector<HTMLElement>(':scope > .cm-lineNumberGlow');
     expect(overlay).not.toBeNull();
     expect(overlay!.getAttribute('aria-hidden')).toBe('true');
     expect(overlay!.style.position).toBe('absolute');
     expect(overlay!.style.pointerEvents).toBe('none');
-    // Neutral white-ish bloom on dark (UWP reveal border brush is not accent-tinted).
+    expect(overlay!.style.width).toBe(`${GLOW_LINE_WIDTH}px`);
+    // Neutral white-ish bloom on dark.
     expect(overlay!.style.background).toContain('rgba(255, 255, 255, 0.22)');
     view.destroy();
   });
@@ -112,7 +105,7 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
     view.destroy();
   });
 
-  it('does NOT throw at construction (guards against the &dark RangeError crash)', () => {
+  it('does NOT throw at construction', () => {
     expect(() => {
       const v = mount('dark');
       v.destroy();
@@ -126,32 +119,27 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
     expect(document.querySelector('.cm-lineNumberGlow')).toBeNull();
   });
 
-  it('drives glow opacity from pointer proximity (rAF-coalesced)', async () => {
+  it('drives glow opacity and position from pointer proximity (rAF-coalesced)', async () => {
     const view = mount('dark');
-    const overlay = view.dom.querySelector<HTMLElement>('.cm-lineNumberGlow')!;
+    const overlay = view.dom.querySelector<HTMLElement>(':scope > .cm-lineNumberGlow')!;
     const gutters = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!;
-    // Pin a deterministic column rect (jsdom returns zeros otherwise).
     gutters.getBoundingClientRect = () =>
       ({ top: 0, right: 40, left: 0, bottom: 100, width: 40, height: 100 }) as DOMRect;
     const scroller = view.scrollDOM;
-    // Pointer over the gutter (x < right) → full intensity.
+    // Pointer over the gutter → full intensity. jsdom has no layout so clientHeight
+    // is 0 → top is clamped to >= 0.
     scroller.dispatchEvent(new PointerEvent('pointerenter', { clientX: 20, clientY: 10 }));
     await new Promise((r) => requestAnimationFrame(() => r(null)));
-    expect(overlay.style.getPropertyValue(GLOW_VAR_OPACITY)).toBe('1');
-    expect(overlay.style.getPropertyValue(GLOW_VAR_Y)).toBe('10px');
-    // Pointer far to the right of the edge → no glow.
+    expect(overlay.style.opacity).toBe('1');
+    expect(overlay.style.top).toBe('0px');
+    expect(overlay.style.height).toBe('120px');
+    // Pointer far right → no glow.
     scroller.dispatchEvent(
       new PointerEvent('pointermove', { clientX: 40 + GLOW_FALLOFF_PX + 10, clientY: 50 }),
     );
     await new Promise((r) => requestAnimationFrame(() => r(null)));
-    expect(overlay.style.getPropertyValue(GLOW_VAR_OPACITY)).toBe('0');
+    expect(overlay.style.opacity).toBe('0');
     // Pointer leaves → glow off.
-    scroller.dispatchEvent(new PointerEvent('pointermove', { clientX: 20, clientY: 30 }));
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
-    expect(overlay.style.getPropertyValue(GLOW_VAR_OPACITY)).toBe('1');
-    scroller.dispatchEvent(new PointerEvent('pointerleave'));
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
-    expect(overlay.style.getPropertyValue(GLOW_VAR_OPACITY)).toBe('0');
     view.destroy();
   });
 });

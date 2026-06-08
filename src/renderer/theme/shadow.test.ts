@@ -9,8 +9,8 @@ import { edgeShadowOpacity, edgeShadowStyle, EDGE_SHADOW_BLUR } from './shadow';
  */
 describe('edgeShadowOpacity', () => {
   it('matches the UWP per-theme ramp', () => {
-    expect(edgeShadowOpacity('light')).toBeCloseTo(0.1);
-    expect(edgeShadowOpacity('dark')).toBeCloseTo(0.16);
+    expect(edgeShadowOpacity('light')).toBeCloseTo(0.06);
+    expect(edgeShadowOpacity('dark')).toBeCloseTo(0.1);
     expect(edgeShadowOpacity('hc')).toBe(0);
   });
 
@@ -45,8 +45,8 @@ describe('edgeShadowStyle', () => {
   });
 
   it('carries the theme opacity in the gradient color', () => {
-    expect(String(edgeShadowStyle('dark', 'down').background)).toContain('0.16');
-    expect(String(edgeShadowStyle('light', 'up').background)).toContain('0.1');
+    expect(String(edgeShadowStyle('dark', 'down').background)).toContain('0.1');
+    expect(String(edgeShadowStyle('light', 'up').background)).toContain('0.06');
   });
 
   it('fades to transparent', () => {

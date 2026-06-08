@@ -44,7 +44,7 @@ import { ViewPlugin, type PluginValue, type ViewUpdate, EditorView } from '@code
 import type { Extension } from '@codemirror/state';
 
 /** Horizontal padding inside the column (px): gap before the separator + left inset. */
-const COLUMN_PADDING_RIGHT = 12;
+const COLUMN_PADDING_RIGHT = 8;
 const COLUMN_PADDING_LEFT = 6;
 /** Minimum digit slots so single-digit docs still get a comfortable column. */
 const MIN_DIGITS = 2;
@@ -211,7 +211,6 @@ class LineNumberColumnPlugin implements PluginValue {
       cell.style.right = `${COLUMN_PADDING_RIGHT}px`;
       cell.style.left = `${COLUMN_PADDING_LEFT}px`;
       cell.style.textAlign = 'right';
-      cell.style.overflow = 'hidden';
       this.column!.appendChild(cell);
       this.cells[i] = cell;
     }
@@ -220,8 +219,8 @@ class LineNumberColumnPlugin implements PluginValue {
 
   private measureCharWidth(): number {
     const cw = this.view.defaultCharacterWidth;
-    if (cw && cw > 0) return cw * 1.15;
-    return this.view.defaultLineHeight * 0.55;
+    if (cw && cw > 0) return cw * 1.12;
+    return this.view.defaultLineHeight * 0.5;
   }
 
   update(u: ViewUpdate): void {
