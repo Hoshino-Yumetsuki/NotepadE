@@ -18,8 +18,10 @@ import {
   acquireSingleInstance,
   registerProtocolClient,
   initBroker,
+  registerEarlyOpenHandlers,
   processInitialActivation,
   flushPendingActivation,
+  flushColdStartActivations,
   installMainTestSeam,
 } from './broker.js';
 
@@ -70,7 +72,9 @@ function initOnce(): void {
 function bootstrap(): void {
   initOnce();
   spawnWindow();
-  // Deliver any cold-start file/protocol activation once the first window exists.
+  // Flush any macOS cold-start file/protocol activations into the first window
+  // BEFORE processing argv (so argv-based paths, if any, are the final set).
+  flushColdStartActivations();
   processInitialActivation();
   flushPendingActivation();
 }
@@ -148,6 +152,10 @@ const isPrimary = isE2e ? true : acquireSingleInstance();
 
 if (isPrimary) {
   registerProtocolClient();
+  // macOS open-file/open-url must be registered BEFORE app.whenReady() because
+  // those events can fire before the ready event on cold start. Paths that
+  // arrive pre-bootstrap are queued and flushed after the first window exists.
+  registerEarlyOpenHandlers();
 
   app.whenReady().then(() => {
     // Windows taskbar identity: group windows + show the embedded exe icon under
@@ -157,17 +165,9 @@ if (isPrimary) {
       app.setAppUserModelId('com.notepads.next');
     }
     bootstrap();
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        spawnWindow();
-      }
-    });
   });
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
+    app.quit();
   });
 }

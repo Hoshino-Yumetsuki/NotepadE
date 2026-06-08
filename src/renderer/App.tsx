@@ -228,7 +228,10 @@ export function App(): JSX.Element {
     togglePreview: () => {
       const id = store.activeEditorId;
       const t = id ? store.get(id) : undefined;
-      if (id && t) store.setViewMode(id, { preview: !t.viewMode.preview, diff: false });
+      if (!id || !t) return;
+      // Hard guard: only toggle preview for markdown-eligible files.
+      if (!isMarkdownPath(t.filePath)) return;
+      store.setViewMode(id, { preview: !t.viewMode.preview, diff: false });
     },
     toggleDiff: () => {
       const id = store.activeEditorId;
@@ -247,7 +250,9 @@ export function App(): JSX.Element {
     onTogglePreview: () => {
       const id = store.activeEditorId;
       const tb = id ? store.get(id) : undefined;
-      if (id && tb) store.setViewMode(id, { preview: !tb.viewMode.preview, diff: false });
+      if (!id || !tb) return;
+      if (!isMarkdownPath(tb.filePath)) return;
+      store.setViewMode(id, { preview: !tb.viewMode.preview, diff: false });
     },
     onShare: (selectionOnly: boolean) => {
       const id = store.activeEditorId;

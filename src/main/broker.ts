@@ -50,6 +50,63 @@ let lastFocusedWindow: BrowserWindow | null = null;
  */
 let pendingActivation: ActivationEvent | null = null;
 
+/**
+ * macOS `open-file` / `open-url` events that fired BEFORE the window factory was
+ * ready (pre-bootstrap). Flushed into the first window after `spawnWindow()`.
+ */
+const coldStartActivations: ActivationEvent[] = [];
+
+/**
+ * Register the macOS `open-file` / `open-url` handlers AT MODULE SCOPE so they
+ * are live before `app.whenReady()` — on macOS these events can fire before the
+ * `ready` event, and if we wait until `initBroker()` (which runs inside
+ * `whenReady().then(bootstrap)`), the cold-start file opening creates a second
+ * window instead of routing into the first.
+ *
+ * When `spawnWindow` is not yet set, paths are queued in `coldStartActivations`
+ * and flushed by `flushColdStartActivations()` after bootstrap creates the first
+ * window. Once the factory is available, activations go through the normal
+ * `routeActivation` path.
+ */
+export function registerEarlyOpenHandlers(): void {
+  app.on('open-file', (event, filePath) => {
+    event.preventDefault();
+    if (spawnWindow) {
+      void routeActivation({ paths: [filePath], cwd: process.cwd(), protocolUrl: null });
+    } else {
+      coldStartActivations.push({ paths: [filePath], cwd: process.cwd(), protocolUrl: null });
+    }
+  });
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    if (spawnWindow) {
+      void routeActivation({ paths: [], cwd: process.cwd(), protocolUrl: url });
+    } else {
+      coldStartActivations.push({ paths: [], cwd: process.cwd(), protocolUrl: url });
+    }
+  });
+}
+
+/**
+ * Deliver any cold-start file/protocol activations into the existing (first)
+ * window. Call AFTER `spawnWindow()` in `bootstrap()`, before
+ * `processInitialActivation()`.
+ */
+export function flushColdStartActivations(): void {
+  if (coldStartActivations.length === 0) return;
+  const target = redirectTarget();
+  if (!target) return;
+  // Merge all cold-start paths into a single activation event.
+  const allPaths: string[] = [];
+  let protocolUrl: string | null = null;
+  for (const ev of coldStartActivations) {
+    allPaths.push(...ev.paths);
+    if (ev.protocolUrl) protocolUrl = ev.protocolUrl;
+  }
+  coldStartActivations.length = 0;
+  void routeActivation({ paths: allPaths, cwd: process.cwd(), protocolUrl });
+}
+
 /** Track focus so redirect targets the window the user last used. */
 function trackFocus(): void {
   app.on('browser-window-focus', (_e, win) => {
@@ -161,16 +218,9 @@ export function registerProtocolClient(): void {
 export function initBroker(spawn: SpawnWindow): void {
   spawnWindow = spawn;
   trackFocus();
-
-  // macOS-only activation channels (no-ops on win32/linux).
-  app.on('open-file', (event, filePath) => {
-    event.preventDefault();
-    void routeActivation({ paths: [filePath], cwd: process.cwd(), protocolUrl: null });
-  });
-  app.on('open-url', (event, url) => {
-    event.preventDefault();
-    void routeActivation({ paths: [], cwd: process.cwd(), protocolUrl: url });
-  });
+  // macOS open-file/open-url handlers are registered early by
+  // registerEarlyOpenHandlers() (called at top-level in index.ts, before
+  // app.whenReady()), so they are NOT re-registered here.
 }
 
 /**
