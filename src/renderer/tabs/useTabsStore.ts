@@ -7,7 +7,7 @@ import {
   DEFAULT_EOL_ID,
   DEFAULT_VIEW_MODE,
   ZERO_CARET,
-  ZERO_SCROLL,
+  ZERO_SCROLL
 } from './types';
 import type { EncodingId, EolId } from '@shared/ipc-contract';
 
@@ -93,7 +93,7 @@ function makeTab(args: NewTabArgs): TabState {
     viewMode: { ...DEFAULT_VIEW_MODE },
     caret: { ...ZERO_CARET },
     scroll: { ...ZERO_SCROLL },
-    untitledName: untitledName ?? '',
+    untitledName: untitledName ?? ''
   };
 }
 
@@ -173,7 +173,7 @@ export class TabsStore {
     const activate = args.activate ?? true;
     this.commit({
       tabs,
-      activeEditorId: activate ? tab.editorId : this.state.activeEditorId,
+      activeEditorId: activate ? tab.editorId : this.state.activeEditorId
     });
     return tab.editorId;
   }
@@ -367,6 +367,6 @@ export function useTabsStore(store: TabsStore = tabsStore): TabsApi {
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   return useMemo(
     () => ({ tabs: snapshot.tabs, activeEditorId: snapshot.activeEditorId, store }),
-    [snapshot, store],
+    [snapshot, store]
   );
 }

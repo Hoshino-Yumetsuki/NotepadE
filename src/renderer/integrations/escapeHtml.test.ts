@@ -5,7 +5,7 @@ import { escapeHtml } from './escapeHtml';
 describe('escapeHtml', () => {
   it('escapes all five metacharacters', () => {
     expect(escapeHtml(`<a href="x" class='y'>&</a>`)).toBe(
-      '&lt;a href=&quot;x&quot; class=&#39;y&#39;&gt;&amp;&lt;/a&gt;',
+      '&lt;a href=&quot;x&quot; class=&#39;y&#39;&gt;&amp;&lt;/a&gt;'
     );
   });
 

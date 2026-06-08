@@ -52,7 +52,7 @@ test.afterAll(async () => {
 
 /** Center of the first tab's bounding box, in viewport px (for trusted moves). */
 async function firstTabCenter(
-  page: Page,
+  page: Page
 ): Promise<{ x: number; y: number; box: { x: number; y: number; width: number; height: number } }> {
   const tab = page.locator(TAB_SELECTORS.tab).first();
   await expect(tab).toBeVisible();
@@ -78,7 +78,7 @@ async function trustedMoveTo(page: Page, x: number, y: number): Promise<void> {
 /** Read a --reveal-* custom property as written on the reveal host (the tab div). */
 async function revealVar(
   page: Page,
-  name: '--reveal-x' | '--reveal-y' | '--reveal-opacity',
+  name: '--reveal-x' | '--reveal-y' | '--reveal-opacity'
 ): Promise<string> {
   return page
     .locator(TAB_SELECTORS.tab)
@@ -105,7 +105,7 @@ test.describe('reveal brush — live behavioral contract @reveal', () => {
     await trustedMoveTo(page, x, y);
     await expect
       .poll(async () => revealVar(page, '--reveal-opacity'), {
-        message: 'pointer inside the tab should set --reveal-opacity to 1',
+        message: 'pointer inside the tab should set --reveal-opacity to 1'
       })
       .toBe('1');
 
@@ -114,12 +114,12 @@ test.describe('reveal brush — live behavioral contract @reveal', () => {
     const rx = Number.parseFloat(await revealVar(page, '--reveal-x'));
     const ry = Number.parseFloat(await revealVar(page, '--reveal-y'));
     expect(rx, `--reveal-x should be inside the host width (${box.width})`).toBeGreaterThanOrEqual(
-      0,
+      0
     );
     expect(rx).toBeLessThanOrEqual(Math.ceil(box.width));
     expect(
       ry,
-      `--reveal-y should be inside the host height (${box.height})`,
+      `--reveal-y should be inside the host height (${box.height})`
     ).toBeGreaterThanOrEqual(0);
     expect(ry).toBeLessThanOrEqual(Math.ceil(box.height));
     // Drove to the center, so the recorded offset should be ~half the box.
@@ -130,7 +130,7 @@ test.describe('reveal brush — live behavioral contract @reveal', () => {
     await trustedMoveTo(page, x, y + box.height * 6);
     await expect
       .poll(async () => revealVar(page, '--reveal-opacity'), {
-        message: 'leaving the tab should reset --reveal-opacity to 0',
+        message: 'leaving the tab should reset --reveal-opacity to 0'
       })
       .toBe('0');
     // x/y are also zeroed on leave (write(0,0,0)), parking the gradient center.
@@ -151,7 +151,7 @@ test.describe('reveal brush — live behavioral contract @reveal', () => {
 
     // Confirm HC is genuinely live, else the assertion below is meaningless.
     const forcedActive = await page.evaluate(
-      () => window.matchMedia('(forced-colors: active)').matches,
+      () => window.matchMedia('(forced-colors: active)').matches
     );
     expect(forcedActive, 'HC reveal check requires forced-colors: active to be live').toBe(true);
 

@@ -60,7 +60,7 @@ export interface RevalidateOutcome {
 export function deriveModificationState(
   filePath: string | null,
   outcome: RevalidateOutcome | null,
-  baseline: FileStatusEntry | undefined,
+  baseline: FileStatusEntry | undefined
 ): FileModificationState {
   if (filePath === null || outcome === null) return 'none';
   if (!outcome.exists) return 'renamedMovedDeleted';

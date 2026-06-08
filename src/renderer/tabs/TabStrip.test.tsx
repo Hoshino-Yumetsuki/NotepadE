@@ -18,7 +18,7 @@ function pointerDown(el: Element, button: number, opts: PointerEventInit = {}): 
     bubbles: true,
     cancelable: true,
     button,
-    ...opts,
+    ...opts
   });
   fireEvent(el, ev);
 }
@@ -33,7 +33,7 @@ function pointerDown(el: Element, button: number, opts: PointerEventInit = {}): 
 
 function renderStrip(
   store: TabsStore,
-  isDark = false,
+  isDark = false
 ): {
   onNewTab: ReturnType<typeof vi.fn>;
   onCloseTab: ReturnType<typeof vi.fn>;
@@ -197,12 +197,12 @@ describe('TabStrip context menu', () => {
     expect(within(menu).getByTestId('tab-menu-close')).toHaveTextContent('Close');
     expect(within(menu).getByTestId('tab-menu-close-others')).toHaveTextContent('Close Others');
     expect(within(menu).getByTestId('tab-menu-close-right')).toHaveTextContent(
-      'Close to the Right',
+      'Close to the Right'
     );
     expect(within(menu).getByTestId('tab-menu-close-saved')).toHaveTextContent('Close Saved');
     expect(within(menu).getByTestId('tab-menu-copy-path')).toHaveTextContent('Copy Full Path');
     expect(within(menu).getByTestId('tab-menu-open-folder')).toHaveTextContent(
-      'Open Containing Folder',
+      'Open Containing Folder'
     );
     expect(within(menu).getByTestId('tab-menu-rename')).toHaveTextContent('Rename');
   });
@@ -236,7 +236,7 @@ describe('TabStrip context-menu actions', () => {
     openContainingFolder = vi.fn().mockResolvedValue({ ok: true, data: undefined });
     // Minimal window.notepads.shell stub — the only contract the menu touches.
     (window as unknown as { notepads: { shell: unknown } }).notepads = {
-      shell: { copyPath, openContainingFolder },
+      shell: { copyPath, openContainingFolder }
     };
   });
 
@@ -309,7 +309,7 @@ describe('TabStrip theme override', () => {
           onNewTab={vi.fn()}
           onCloseTab={vi.fn()}
         />
-      </FluentProvider>,
+      </FluentProvider>
     );
   }
 
@@ -338,7 +338,7 @@ describe('TabStrip theme override', () => {
           onNewTab={vi.fn()}
           onCloseTab={vi.fn()}
         />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('tab-strip')).toHaveAttribute('data-theme', 'dark');
   });
@@ -354,7 +354,7 @@ describe('TabStrip theme override', () => {
           onNewTab={vi.fn()}
           onCloseTab={vi.fn()}
         />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('tab-strip')).toHaveAttribute('data-theme', 'dark');
   });

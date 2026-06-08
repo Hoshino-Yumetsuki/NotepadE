@@ -7,7 +7,7 @@ import {
   selectPane,
   getSetting,
   expectSetting,
-  patchSettings,
+  patchSettings
 } from './helpers/settings';
 import type { Settings } from '../src/shared/ipc-contract';
 
@@ -48,7 +48,7 @@ const MATRIX: Partial<Settings> = {
   defaultLineEnding: 'lf', // default 'crlf'
   themeMode: 'dark', // default 'system'
   tintOpacity: 0.4, // default 0.75
-  alwaysOpenNewWindow: true, // default false
+  alwaysOpenNewWindow: true // default false
 };
 
 test.describe('Gate 5 — settings persistence + live-affect across restart', () => {

@@ -53,7 +53,7 @@ export interface SettingsTestHook {
   getActiveTheme(): 'light' | 'dark' | 'hc';
   /** Read one persisted setting value by key (from the live MAIN-owned bag). */
   getSetting<K extends keyof import('@shared/ipc-contract').Settings>(
-    key: K,
+    key: K
   ): import('@shared/ipc-contract').Settings[K];
 }
 
@@ -129,7 +129,7 @@ export interface OpenLabels {
 export function installTestHook(
   getEditor: () => CodeMirrorHandle | null,
   getLabels: () => OpenLabels,
-  onOpened: (file: OpenedFile) => void,
+  onOpened: (file: OpenedFile) => void
 ): () => void {
   if (typeof window === 'undefined') return () => {};
 
@@ -149,9 +149,9 @@ export function installTestHook(
         filePath: path,
         shadowText,
         ...(labels.encodingId ? { encodingId: labels.encodingId } : {}),
-        ...(labels.eolId ? { eolId: labels.eolId } : {}),
+        ...(labels.eolId ? { eolId: labels.eolId } : {})
       });
-    },
+    }
   };
 
   window.__notepadsTest = hook;
@@ -230,9 +230,9 @@ export function installEditorTestHook(getView: () => EditorView | null): () => v
       const view = getView();
       if (!view) return;
       view.dispatch(
-        view.state.update(view.state.replaceSelection(text), { userEvent: 'input.paste' }),
+        view.state.update(view.state.replaceSelection(text), { userEvent: 'input.paste' })
       );
-    },
+    }
   };
 
   const existing = window.__notepadsTest;

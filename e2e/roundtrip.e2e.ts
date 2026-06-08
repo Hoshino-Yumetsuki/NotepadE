@@ -26,7 +26,7 @@ const EXPECTED_DECODED = [
   'Round-trip fixture — UTF-8.',
   'Unicode sample: café — naïve — 日本語 — Ωmega — 🚀',
   'Line four with trailing spaces.   ',
-  'Final line, no newline after this.',
+  'Final line, no newline after this.'
 ].join('\n');
 
 let launched: LaunchedApp;
@@ -50,7 +50,7 @@ test('UTF-8 file open → content matches → save → bytes match', async () =>
   // --- OPEN via the REAL renderer flow (not the raw bridge) ---
   const openResult = await page.evaluate(
     (path) => window.__notepadsTest.openFileIntoEditor(path),
-    workFile,
+    workFile
   );
   expect(openResult.ok, `openFileIntoEditor failed: ${JSON.stringify(openResult)}`).toBe(true);
   if (openResult.ok) {
@@ -68,7 +68,7 @@ test('UTF-8 file open → content matches → save → bytes match', async () =>
   // --- SAVE via the REAL renderer flow (reads CM6 doc → file.save) ---
   const saveResult = await page.evaluate(
     (path) => window.__notepadsTest.saveEditorToPath(path),
-    workFile,
+    workFile
   );
   expect(saveResult.ok, `saveEditorToPath failed: ${JSON.stringify(saveResult)}`).toBe(true);
 
@@ -77,6 +77,6 @@ test('UTF-8 file open → content matches → save → bytes match', async () =>
   const originalBytes = readFileSync(FIXTURE_SRC);
   expect(
     writtenBytes.equals(originalBytes),
-    `byte mismatch: wrote ${writtenBytes.length}B, expected ${originalBytes.length}B`,
+    `byte mismatch: wrote ${writtenBytes.length}B, expected ${originalBytes.length}B`
   ).toBe(true);
 });

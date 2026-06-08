@@ -33,7 +33,7 @@ import {
   goToLine,
   refreshHighlights,
   clearHighlights,
-  searchExtension,
+  searchExtension
 } from './findController';
 import { findKeymap, type FindKeymapCallbacks } from './findKeymap';
 import { GoToLineDialog } from './GoToLineDialog';
@@ -61,7 +61,7 @@ export interface FindBarHost {
 function formatStatus(
   outcome: FindOutcome | null,
   hasQuery: boolean,
-  t: Translator['t'],
+  t: Translator['t']
 ): string | undefined {
   if (!hasQuery) return undefined;
   if (!outcome || !outcome.match) return t('FindAndReplace_NotificationMsg_NotFound');
@@ -82,7 +82,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   // Go-to-line dialog state (UWP GoToControl). Holds the current + total lines so
   // the dialog can seed the input and validate the upper bound.
   const [goToState, setGoToState] = useState<{ currentLine: number; lineCount: number } | null>(
-    null,
+    null
   );
 
   // The last query/options the user searched with — what F3/Shift+F3 repeat.
@@ -125,7 +125,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       goToLine(view, line);
       view.focus();
     },
-    [getActiveView],
+    [getActiveView]
   );
 
   const onGoToCancel = useCallback(() => {
@@ -144,7 +144,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       refreshHighlights(view, q);
       if (query.length === 0) setStatus(undefined);
     },
-    [getActiveView],
+    [getActiveView]
   );
 
   // --- Find / replace actions ------------------------------------------------
@@ -158,7 +158,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       const outcome = direction === 'next' ? findNextInView(view, q) : findPreviousInView(view, q);
       setStatus(formatStatus(outcome, query.length > 0, t));
     },
-    [getActiveView, t],
+    [getActiveView, t]
   );
 
   const onReplaceOne = useCallback(
@@ -171,7 +171,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       setStatus(did ? undefined : t('FindAndReplace_NotificationMsg_NotFound'));
       refreshHighlights(view, q);
     },
-    [getActiveView, t],
+    [getActiveView, t]
   );
 
   const onReplaceAll = useCallback(
@@ -184,7 +184,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       setStatus(count > 0 ? `Replaced ${count}` : t('FindAndReplace_NotificationMsg_NotFound'));
       refreshHighlights(view, q);
     },
-    [getActiveView, t],
+    [getActiveView, t]
   );
 
   // --- Editor seam (keymap + extensions) -------------------------------------
@@ -194,9 +194,9 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       openFindBar,
       dismissFindBar,
       openGoToLine,
-      getActiveQuery: () => activeQueryRef.current,
+      getActiveQuery: () => activeQueryRef.current
     }),
-    [openFindBar, dismissFindBar, openGoToLine],
+    [openFindBar, dismissFindBar, openGoToLine]
   );
 
   const keymap = useMemo(() => findKeymap(keymapCallbacks), [keymapCallbacks]);

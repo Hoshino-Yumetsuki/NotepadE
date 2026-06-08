@@ -5,7 +5,7 @@ import {
   formatLogTimestamp,
   makeInsertDateTime,
   tryInsertLogEntry,
-  logEntryGuard,
+  logEntryGuard
 } from './datetime';
 import { runStateCommand, mountView } from './testUtils';
 

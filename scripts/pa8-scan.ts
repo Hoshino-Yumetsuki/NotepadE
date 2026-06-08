@@ -84,16 +84,16 @@ function isRendererFile(file: string, rendererRoots: string[]): boolean {
 const WEBPREF_RULES: { rule: string; re: RegExp }[] = [
   {
     rule: 'nodeIntegration:true',
-    re: /\bnodeIntegration\s*:\s*true\b/,
+    re: /\bnodeIntegration\s*:\s*true\b/
   },
   {
     rule: 'contextIsolation:false',
-    re: /\bcontextIsolation\s*:\s*false\b/,
+    re: /\bcontextIsolation\s*:\s*false\b/
   },
   {
     rule: 'sandbox:false',
-    re: /\bsandbox\s*:\s*false\b/,
-  },
+    re: /\bsandbox\s*:\s*false\b/
+  }
 ];
 
 const ELECTRON_REMOTE_RE = /@electron\/remote/;
@@ -112,13 +112,13 @@ function buildRendererImportRule(mod: string): RegExp {
       String.raw`|` +
       // dynamic import('fs')
       String.raw`\bimport\s*\(\s*['"]${m}['"]\s*\)` +
-      String.raw`)`,
+      String.raw`)`
   );
 }
 
 const RENDERER_IMPORT_RULES = NODE_BUILTINS_FORBIDDEN_IN_RENDERER.map((mod) => ({
   rule: `renderer-import:${mod}`,
-  re: buildRendererImportRule(mod),
+  re: buildRendererImportRule(mod)
 }));
 
 // raw ipcRenderer leaking into renderer surface (defense-in-depth)
@@ -143,7 +143,7 @@ function scanFile(file: string, isRenderer: boolean, violations: Violation[]): v
         rule: '@electron/remote',
         file: rel,
         line: lineNo,
-        text: text.trim(),
+        text: text.trim()
       });
     }
 
@@ -158,7 +158,7 @@ function scanFile(file: string, isRenderer: boolean, violations: Violation[]): v
           rule: 'renderer-raw-ipcRenderer',
           file: rel,
           line: lineNo,
-          text: text.trim(),
+          text: text.trim()
         });
       }
     }
@@ -224,12 +224,12 @@ function main(): void {
     }
     console.error(
       '\nForbidden: nodeIntegration:true, contextIsolation:false, sandbox:false,\n' +
-        'fs|child_process|path import in renderer, @electron/remote, raw ipcRenderer in renderer.\n',
+        'fs|child_process|path import in renderer, @electron/remote, raw ipcRenderer in renderer.\n'
     );
   } else {
     console.log('PA-8 SECURITY GATE: PASS — no violations found.');
     console.log(
-      `Scanned ${files.size} file(s) under: ${roots.join(', ')} (renderer: ${rendererRoots.join(', ')}).`,
+      `Scanned ${files.size} file(s) under: ${roots.join(', ')} (renderer: ${rendererRoots.join(', ')}).`
     );
   }
 
@@ -238,12 +238,12 @@ function main(): void {
     // a passing scan over the bad fixture is itself a failure of the harness.
     if (failed) {
       console.log(
-        '\n[--expect-fail] Violations detected as expected; fixture proves the gate bites.',
+        '\n[--expect-fail] Violations detected as expected; fixture proves the gate bites.'
       );
       process.exit(0);
     } else {
       console.error(
-        '\n[--expect-fail] No violations found, but the bad fixture MUST trip the gate. Harness broken.',
+        '\n[--expect-fail] No violations found, but the bad fixture MUST trip the gate. Harness broken.'
       );
       process.exit(1);
     }

@@ -75,7 +75,7 @@ const STATUS = {
   encoding: '[data-testid="status-encoding"]',
   encodingMenu: '[data-testid="status-encoding-menu"]',
   encodingReopen: '[data-testid="status-encoding-reopen"]',
-  encodingSave: '[data-testid="status-encoding-save"]',
+  encodingSave: '[data-testid="status-encoding-save"]'
 } as const;
 
 let launched: LaunchedApp;
@@ -114,7 +114,7 @@ interface ThemeCase {
 const THEME_CASES: ThemeCase[] = [
   { name: 'light', colorScheme: 'light', forcedColors: 'none' },
   { name: 'dark', colorScheme: 'dark', forcedColors: 'none' },
-  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' },
+  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' }
 ];
 
 for (const tc of THEME_CASES) {
@@ -151,7 +151,7 @@ for (const tc of THEME_CASES) {
     if (tc.name === 'hc') {
       await expect(bar).toHaveAttribute('data-theme', 'hc');
       const forcedActive = await page.evaluate(
-        () => window.matchMedia('(forced-colors: active)').matches,
+        () => window.matchMedia('(forced-colors: active)').matches
       );
       expect(forcedActive, 'HC capture requires forced-colors: active to be live').toBe(true);
     } else {
@@ -172,18 +172,18 @@ for (const tc of THEME_CASES) {
         x: Math.round(box.x),
         y: Math.round(box.y),
         width: Math.round(box.width),
-        height: Math.round(box.height),
-      },
+        height: Math.round(box.height)
+      }
     });
     const baselinePath = join(BASELINE_DIR, `status-bar-${tc.name}.png`);
     const result = await compareToBaseline(actual, baselinePath, `status-bar-${tc.name}`, {
-      createMissingBaseline: UPDATE_BASELINES,
+      createMissingBaseline: UPDATE_BASELINES
     });
 
     if (result.baselineCreated) {
       test.info().annotations.push({
         type: 'baseline-created',
-        description: `Wrote new baseline ${baselinePath} (REQUIRES_UWP_REFERENCE for 1:1 sign-off).`,
+        description: `Wrote new baseline ${baselinePath} (REQUIRES_UWP_REFERENCE for 1:1 sign-off).`
       });
     }
 
@@ -257,7 +257,7 @@ test.describe('Gate 4 — status bar flyout action matrix', () => {
           window.addEventListener('notepads:go-to-line', onGo);
           (document.querySelector('[data-testid="status-linecol"]') as HTMLElement)?.click();
           setTimeout(() => resolve(false), 1000);
-        }),
+        })
     );
     expect(fired, 'clicking line/col must dispatch notepads:go-to-line').toBe(true);
   });
@@ -305,10 +305,10 @@ test.describe('Gate 4 — status bar flyout action matrix', () => {
     await expect(page.locator('[data-testid="status-encoding-reopen-UTF-8"]')).toBeVisible();
     await expect(page.locator('[data-testid="status-encoding-reopen-UTF-8-BOM"]')).toBeVisible();
     await expect(
-      page.locator('[data-testid="status-encoding-reopen-UTF-16 LE BOM"]'),
+      page.locator('[data-testid="status-encoding-reopen-UTF-16 LE BOM"]')
     ).toBeVisible();
     await expect(
-      page.locator('[data-testid="status-encoding-reopen-UTF-16 BE BOM"]'),
+      page.locator('[data-testid="status-encoding-reopen-UTF-16 BE BOM"]')
     ).toBeVisible();
     // The "More encodings" submenu trigger is present (ANSI rows fetched from MAIN).
     await expect(page.locator('[data-testid="status-encoding-reopen-more"]')).toBeVisible();

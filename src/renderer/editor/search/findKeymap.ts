@@ -65,7 +65,7 @@ export function findKeymap(cb: FindKeymapCallbacks): KeyBinding[] {
       run: () => {
         cb.openFindBar(false);
         return true;
-      },
+      }
     },
     {
       key: 'Mod-h',
@@ -73,7 +73,7 @@ export function findKeymap(cb: FindKeymapCallbacks): KeyBinding[] {
       run: () => {
         cb.openFindBar(true);
         return true;
-      },
+      }
     },
     {
       key: 'Mod-Shift-f',
@@ -81,7 +81,7 @@ export function findKeymap(cb: FindKeymapCallbacks): KeyBinding[] {
       run: () => {
         cb.openFindBar(true);
         return true;
-      },
+      }
     },
     {
       key: 'Mod-g',
@@ -89,23 +89,23 @@ export function findKeymap(cb: FindKeymapCallbacks): KeyBinding[] {
       run: () => {
         cb.openGoToLine();
         return true;
-      },
+      }
     },
     {
       key: 'F3',
       preventDefault: true,
-      run: (view) => repeatFind(view, 'next'),
+      run: (view) => repeatFind(view, 'next')
     },
     {
       key: 'Shift-F3',
       preventDefault: true,
-      run: (view) => repeatFind(view, 'previous'),
+      run: (view) => repeatFind(view, 'previous')
     },
     {
       key: 'Escape',
       // Only consume Escape when the find bar is actually open; otherwise let it
       // fall through to other handlers (CM6 returns false → not handled).
-      run: () => cb.dismissFindBar(),
-    },
+      run: () => cb.dismissFindBar()
+    }
   ];
 }

@@ -23,7 +23,7 @@ function press(view: { contentDOM: HTMLElement }, key: string, shift = false): v
     ctrlKey: true,
     shiftKey: shift,
     bubbles: true,
-    cancelable: true,
+    cancelable: true
   });
   view.contentDOM.dispatchEvent(event);
 }
@@ -33,7 +33,7 @@ describe('undoRedoExtension', () => {
     const view = mountView('', EditorSelection.cursor(0), [history(), undoRedoExtension]);
     try {
       view.dispatch(
-        view.state.update({ changes: { from: 0, insert: 'abc' }, userEvent: 'input.type' }),
+        view.state.update({ changes: { from: 0, insert: 'abc' }, userEvent: 'input.type' })
       );
       expect(view.state.doc.toString()).toBe('abc');
 
@@ -54,7 +54,7 @@ describe('undoRedoExtension', () => {
     const view = mountView('', EditorSelection.cursor(0), [history(), undoRedoExtension]);
     try {
       view.dispatch(
-        view.state.update({ changes: { from: 0, insert: 'xy' }, userEvent: 'input.type' }),
+        view.state.update({ changes: { from: 0, insert: 'xy' }, userEvent: 'input.type' })
       );
       press(view, 'z'); // undo
       expect(view.state.doc.toString()).toBe('');
@@ -69,14 +69,14 @@ describe('undoRedoExtension', () => {
     const view = mountView('', EditorSelection.cursor(0), [history(), undoRedoExtension]);
     try {
       view.dispatch(
-        view.state.update({ changes: { from: 0, insert: 'q' }, userEvent: 'input.type' }),
+        view.state.update({ changes: { from: 0, insert: 'q' }, userEvent: 'input.type' })
       );
       const event = new KeyboardEvent('keydown', {
         key: 'z',
         ctrlKey: true,
         altKey: true,
         bubbles: true,
-        cancelable: true,
+        cancelable: true
       });
       view.contentDOM.dispatchEvent(event);
       // Alt held → handler returns false, doc unchanged by the redo/undo path.
@@ -102,8 +102,8 @@ describe('altCommandExtension (macOS-safe Alt+letter)', () => {
           code: 'KeyZ',
           altKey: true,
           bubbles: true,
-          cancelable: true,
-        }),
+          cancelable: true
+        })
       );
       expect(view.state.field(wordWrapField)).toBe(true);
 
@@ -113,8 +113,8 @@ describe('altCommandExtension (macOS-safe Alt+letter)', () => {
           code: 'KeyZ',
           altKey: true,
           bubbles: true,
-          cancelable: true,
-        }),
+          cancelable: true
+        })
       );
       expect(view.state.field(wordWrapField)).toBe(false);
     } finally {
@@ -133,8 +133,8 @@ describe('altCommandExtension (macOS-safe Alt+letter)', () => {
             altKey: true,
             ...mods,
             bubbles: true,
-            cancelable: true,
-          }),
+            cancelable: true
+          })
         );
       }
       expect(view.state.field(wordWrapField)).toBe(false);

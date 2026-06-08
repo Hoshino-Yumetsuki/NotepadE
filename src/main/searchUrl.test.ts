@@ -27,7 +27,7 @@ describe('resolveSearchUrl', () => {
 
   it('launches an absolute http/https URL directly (no engine formatting)', () => {
     expect(resolveSearchUrl('https://example.com/path?x=1', 'bing', '')).toBe(
-      'https://example.com/path?x=1',
+      'https://example.com/path?x=1'
     );
     expect(resolveSearchUrl('http://example.com', 'google', '')).toBe('http://example.com');
   });
@@ -41,25 +41,25 @@ describe('resolveSearchUrl', () => {
 
   it('formats a plain query with the Bing template, +-joining whitespace', () => {
     expect(resolveSearchUrl('hello world', 'bing', '')).toBe(
-      'https://www.bing.com/search?q=hello+world&form=NPCTXT',
+      'https://www.bing.com/search?q=hello+world&form=NPCTXT'
     );
   });
 
   it('collapses runs of mixed whitespace to a single + (NET Split(null) parity)', () => {
     expect(resolveSearchUrl('a  b\t c\nd', 'duckDuckGo', '')).toBe(
-      'https://duckduckgo.com/?q=a+b+c+d&ia=web',
+      'https://duckduckgo.com/?q=a+b+c+d&ia=web'
     );
   });
 
   it('substitutes the query into BOTH {0} placeholders for Google', () => {
     expect(resolveSearchUrl('foo bar', 'google', '')).toBe(
-      'https://www.google.com/search?q=foo+bar&oq=foo+bar',
+      'https://www.google.com/search?q=foo+bar&oq=foo+bar'
     );
   });
 
   it('uses the custom template when the engine is custom', () => {
     expect(resolveSearchUrl('cats', 'custom', 'https://s.test/?query={0}')).toBe(
-      'https://s.test/?query=cats',
+      'https://s.test/?query=cats'
     );
   });
 
@@ -74,7 +74,7 @@ describe('resolveSearchUrl', () => {
   it('trims the query before deciding (leading/trailing whitespace ignored)', () => {
     expect(resolveSearchUrl('  https://example.com  ', 'bing', '')).toBe('https://example.com');
     expect(resolveSearchUrl('  spaced query  ', 'bing', '')).toBe(
-      'https://www.bing.com/search?q=spaced+query&form=NPCTXT',
+      'https://www.bing.com/search?q=spaced+query&form=NPCTXT'
     );
   });
 });

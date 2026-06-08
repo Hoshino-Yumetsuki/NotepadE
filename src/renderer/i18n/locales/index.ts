@@ -68,7 +68,7 @@ export const SUPPORTED_LOCALES = [
   'uk-UA',
   'vi-VN',
   'zh-CN',
-  'zh-TW',
+  'zh-TW'
 ] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -103,7 +103,7 @@ export const LOCALE_TABLES: Record<SupportedLocale, import('./types').LocaleTabl
   'uk-UA': l25,
   'vi-VN': l26,
   'zh-CN': l27,
-  'zh-TW': l28,
+  'zh-TW': l28
 };
 
 /** The base locale every other table falls back to for missing keys. */

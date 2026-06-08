@@ -81,7 +81,7 @@ function isFiniteRect(b: Partial<PersistedBounds> | null | undefined): b is Pers
  */
 export function resolveBounds(
   saved: Partial<PersistedBounds> | null | undefined,
-  workAreas: WorkArea[],
+  workAreas: WorkArea[]
 ): PersistedBounds | null {
   if (!isFiniteRect(saved)) return null;
   const width = Math.max(MIN_WIDTH, Math.floor(saved.width));
@@ -92,7 +92,7 @@ export function resolveBounds(
 
   // On-screen test: the top-left corner must lie within some display's work area.
   const onScreen = workAreas.some(
-    (wa) => x >= wa.x && x < wa.x + wa.width && y >= wa.y && y < wa.y + wa.height,
+    (wa) => x >= wa.x && x < wa.x + wa.width && y >= wa.y && y < wa.y + wa.height
   );
   if (onScreen || workAreas.length === 0) {
     return { x, y, width, height, isMaximized };
@@ -121,7 +121,7 @@ async function readSavedBounds(): Promise<PersistedBounds | null> {
           y: parsed.y,
           width: parsed.width,
           height: parsed.height,
-          isMaximized: parsed.isMaximized === true,
+          isMaximized: parsed.isMaximized === true
         }
       : null;
   } catch {
@@ -136,7 +136,7 @@ function currentWorkAreas(): WorkArea[] {
       x: d.workArea.x,
       y: d.workArea.y,
       width: d.workArea.width,
-      height: d.workArea.height,
+      height: d.workArea.height
     }));
   } catch {
     return [];
@@ -190,7 +190,7 @@ async function persistBounds(win: BrowserWindow): Promise<void> {
     const b = isMaximized || win.isFullScreen() ? win.getNormalBounds() : win.getBounds();
     await writeAtomic(
       boundsFilePath(),
-      serializeBounds({ x: b.x, y: b.y, width: b.width, height: b.height, isMaximized }),
+      serializeBounds({ x: b.x, y: b.y, width: b.width, height: b.height, isMaximized })
     );
   } catch {
     // Bounds persistence is best-effort; never surface.

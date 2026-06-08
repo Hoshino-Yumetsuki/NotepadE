@@ -60,8 +60,8 @@ export function getThemeState(): Result<ThemeState> {
       data: {
         osTheme: resolveOsTheme(),
         accentColor: readAccentColor(),
-        highContrast: nativeTheme.shouldUseHighContrastColors,
-      },
+        highContrast: nativeTheme.shouldUseHighContrastColors
+      }
     };
   } catch (e) {
     return { ok: false, error: errMsg(e) };

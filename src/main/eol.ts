@@ -24,7 +24,7 @@ export function detectEol(text: string): EolId {
 const EOL_STRING: Record<EolId, string> = {
   crlf: '\r\n',
   cr: '\r',
-  lf: '\n',
+  lf: '\n'
 };
 
 /**

@@ -39,7 +39,7 @@ async function spawnSecondWindow(app: LaunchedApp): Promise<Page> {
   await app.page.evaluate(() => window.notepads.settings.set({ alwaysOpenNewWindow: true }));
   const pending = app.app.waitForEvent('window', { timeout: 10_000 });
   await app.page.evaluate(() =>
-    window.notepads.window.brokerRequest({ paths: [], forceNewWindow: true }),
+    window.notepads.window.brokerRequest({ paths: [], forceNewWindow: true })
   );
   const win = await pending;
   await win.waitForLoadState('domcontentloaded');
@@ -65,7 +65,7 @@ async function seedDirtyBackedTab(page: Page, filePath: string, edit: string): P
       seam.setModified(id, true);
       return id;
     },
-    [filePath, edit] as const,
+    [filePath, edit] as const
   );
 }
 
@@ -78,7 +78,7 @@ async function tabCount(page: Page): Promise<number> {
 async function hasTab(page: Page, editorId: string): Promise<boolean> {
   return page.evaluate(
     (id) => !!window.__notepadsTest.tabs?.list().some((t) => t.editorId === id),
-    editorId,
+    editorId
   );
 }
 
@@ -87,7 +87,7 @@ async function transfer(
   source: Page,
   target: Page,
   editorId: string,
-  dropIndex: number,
+  dropIndex: number
 ): Promise<void> {
   const token = await source.evaluate(async (id) => {
     const t = await window.__notepadsTest.transfer!.begin(id);
@@ -97,7 +97,7 @@ async function transfer(
     throw new Error('transfer.begin returned null (envelope build / dragOut.begin failed)');
   const ok = await target.evaluate(
     async ([tok, idx]) => window.__notepadsTest.transfer!.complete(tok as string, idx as number),
-    [token, dropIndex] as const,
+    [token, dropIndex] as const
   );
   if (!ok) throw new Error('transfer.complete returned false (dragOut.complete failed)');
 }
@@ -129,11 +129,11 @@ test.describe('Gate 6 — cross-window tab transfer', () => {
           () =>
             w2.evaluate(
               (fp) => window.__notepadsTest.tabs?.list().some((t) => t.filePath === fp),
-              file,
+              file
             ),
           {
-            timeout: 10_000,
-          },
+            timeout: 10_000
+          }
         )
         .toBe(true);
       const adoptedId = await w2.evaluate(() => window.__notepadsTest.tabs?.activeId() ?? null);
@@ -142,13 +142,13 @@ test.describe('Gate 6 — cross-window tab transfer', () => {
       expect(adoptedText).toContain('DIRTY EDIT');
       const adoptedDirty = await w2.evaluate(
         (id) => !!window.__notepadsTest.tabs?.list().find((t) => t.editorId === id)?.isModified,
-        adoptedId,
+        adoptedId
       );
       expect(adoptedDirty, 'adopted tab keeps its dirty flag').toBe(true);
       // The adopted tab carries the source file path (full-state adopt).
       const adoptedPath = await w2.evaluate(
         (id) => window.__notepadsTest.tabs?.list().find((t) => t.editorId === id)?.filePath ?? null,
-        adoptedId,
+        adoptedId
       );
       expect(adoptedPath, 'adopted tab carries the source file path').toBe(file);
 
@@ -182,7 +182,7 @@ test.describe('Gate 6 — cross-window tab transfer', () => {
       // The seam returns false (no-op) and the tab stays put.
       const acted = await w1.evaluate(
         (id) => window.__notepadsTest.transfer!.voidDrop(id),
-        editorId,
+        editorId
       );
       expect(acted, 'void-drop on a titled/dirty tab is a no-op').toBe(false);
       expect(await hasTab(w1, editorId)).toBe(true);
@@ -211,7 +211,7 @@ test.describe('Gate 6 — cross-window tab transfer', () => {
       const pending = app.app.waitForEvent('window', { timeout: 10_000 });
       const acted = await w1.evaluate(
         (id) => window.__notepadsTest.transfer!.voidDrop(id),
-        editorId,
+        editorId
       );
       expect(acted, 'void-drop on an untitled/clean non-last tab spawns').toBe(true);
       const spawned = await pending;

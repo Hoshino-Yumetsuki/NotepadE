@@ -5,7 +5,7 @@ import {
   COMPACT_WIDTH,
   COMPACT_HEIGHT,
   type WindowFlags,
-  type CompactSnapshot,
+  type CompactSnapshot
 } from './compact-overlay';
 
 /**
@@ -28,7 +28,7 @@ describe('planCompactEnter', () => {
       bounds: RECT,
       alwaysOnTop: true,
       wasMaximized: true,
-      wasFullScreen: false,
+      wasFullScreen: false
     });
   });
 
@@ -36,7 +36,7 @@ describe('planCompactEnter', () => {
     const { actions } = planCompactEnter(flags());
     expect(actions).toEqual([
       { type: 'setAlwaysOnTop', value: true },
-      { type: 'setSize', width: COMPACT_WIDTH, height: COMPACT_HEIGHT },
+      { type: 'setSize', width: COMPACT_WIDTH, height: COMPACT_HEIGHT }
     ]);
   });
 
@@ -46,7 +46,7 @@ describe('planCompactEnter', () => {
       { type: 'setFullScreen', value: false },
       { type: 'unmaximize' },
       { type: 'setAlwaysOnTop', value: true },
-      { type: 'setSize', width: COMPACT_WIDTH, height: COMPACT_HEIGHT },
+      { type: 'setSize', width: COMPACT_WIDTH, height: COMPACT_HEIGHT }
     ]);
   });
 
@@ -61,13 +61,13 @@ describe('planCompactLeave', () => {
     bounds: RECT,
     alwaysOnTop: false,
     wasMaximized: false,
-    wasFullScreen: false,
+    wasFullScreen: false
   };
 
   it('restores always-on-top then bounds for a plain window', () => {
     expect(planCompactLeave(base)).toEqual([
       { type: 'setAlwaysOnTop', value: false },
-      { type: 'setBounds', bounds: RECT },
+      { type: 'setBounds', bounds: RECT }
     ]);
   });
 
@@ -82,7 +82,7 @@ describe('planCompactLeave', () => {
       'setAlwaysOnTop',
       'setBounds',
       'maximize',
-      'setFullScreen',
+      'setFullScreen'
     ]);
     expect(out[3]).toEqual({ type: 'setFullScreen', value: true });
   });

@@ -16,7 +16,7 @@ import {
   ArrowDownRegular,
   DismissRegular,
   ArrowSwapRegular,
-  ArrowSyncRegular,
+  ArrowSyncRegular
 } from '@fluentui/react-icons';
 import type { FC } from 'react';
 
@@ -28,7 +28,7 @@ export const FindGlyph = {
   searchForward: ArrowDownRegular as FC,
   dismiss: DismissRegular as FC,
   replace: ArrowSwapRegular as FC,
-  replaceAll: ArrowSyncRegular as FC,
+  replaceAll: ArrowSyncRegular as FC
 } as const;
 
 /**
@@ -45,7 +45,7 @@ export const FindGlyph = {
 export const FindInputBackground: Record<'light' | 'dark' | 'hc', string> = {
   light: 'rgba(224, 224, 224, 0.7)',
   dark: 'rgba(30, 30, 30, 0.7)',
-  hc: 'Canvas',
+  hc: 'Canvas'
 } as const;
 
 /**
@@ -58,14 +58,14 @@ export const FindInputBackground: Record<'light' | 'dark' | 'hc', string> = {
 export const FindPanelBackground: Record<'light' | 'dark' | 'hc', string> = {
   light: '#FFFFFF',
   dark: '#2B2B2B',
-  hc: 'Canvas',
+  hc: 'Canvas'
 } as const;
 
 /** The 1px panel border (UWP placeholder BorderThickness="1"). */
 export const FindPanelBorder: Record<'light' | 'dark' | 'hc', string> = {
   light: 'rgba(0, 0, 0, 0.13)',
   dark: 'rgba(255, 255, 255, 0.10)',
-  hc: 'CanvasText',
+  hc: 'CanvasText'
 } as const;
 
 /** Pixel dimensions from FindAndReplaceControl.xaml. */
@@ -86,5 +86,5 @@ export const FindDimensions = {
   panelWidth: 340,
   /** Top-right overlay offsets (UWP placeholder VerticalOffset=10 / inset 22). */
   overlayTop: 10,
-  overlayRight: 22,
+  overlayRight: 22
 } as const;

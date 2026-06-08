@@ -14,7 +14,7 @@ function dispatchKey(code: string, opts: Partial<KeyboardEventInit> = {}): boole
     altKey: true,
     bubbles: true,
     cancelable: true,
-    ...opts,
+    ...opts
   });
   window.dispatchEvent(e);
   return e.defaultPrevented;
@@ -27,8 +27,8 @@ describe('useViewModeKeyboard', () => {
       useViewModeKeyboard({
         isPreviewEligible: () => true,
         togglePreview,
-        toggleDiff: vi.fn(),
-      }),
+        toggleDiff: vi.fn()
+      })
     );
     const prevented = dispatchKey('KeyP');
     expect(togglePreview).toHaveBeenCalledTimes(1);
@@ -41,8 +41,8 @@ describe('useViewModeKeyboard', () => {
       useViewModeKeyboard({
         isPreviewEligible: () => false,
         togglePreview,
-        toggleDiff: vi.fn(),
-      }),
+        toggleDiff: vi.fn()
+      })
     );
     const prevented = dispatchKey('KeyP');
     expect(togglePreview).not.toHaveBeenCalled();
@@ -55,8 +55,8 @@ describe('useViewModeKeyboard', () => {
       useViewModeKeyboard({
         isPreviewEligible: () => true,
         togglePreview: vi.fn(),
-        toggleDiff,
-      }),
+        toggleDiff
+      })
     );
     const prevented = dispatchKey('KeyD');
     expect(toggleDiff).toHaveBeenCalledTimes(1);
@@ -70,8 +70,8 @@ describe('useViewModeKeyboard', () => {
       useViewModeKeyboard({
         isPreviewEligible: () => true,
         togglePreview,
-        toggleDiff,
-      }),
+        toggleDiff
+      })
     );
     dispatchKey('KeyP', { ctrlKey: true });
     dispatchKey('KeyD', { metaKey: true });
@@ -85,8 +85,8 @@ describe('useViewModeKeyboard', () => {
       useViewModeKeyboard({
         isPreviewEligible: () => true,
         togglePreview,
-        toggleDiff: vi.fn(),
-      }),
+        toggleDiff: vi.fn()
+      })
     );
     unmount();
     dispatchKey('KeyP');
@@ -100,8 +100,8 @@ describe('useViewModeKeyboard', () => {
       useViewModeKeyboard({
         isPreviewEligible: () => false,
         togglePreview,
-        toggleDiff,
-      }),
+        toggleDiff
+      })
     );
     expect(viewModeCallbacksRef.current).toBeDefined();
     expect(viewModeCallbacksRef.current!.isPreviewEligible()).toBe(false);

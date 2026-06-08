@@ -4,7 +4,7 @@ import {
   serializeBounds,
   DEFAULT_BOUNDS,
   type WorkArea,
-  type PersistedBounds,
+  type PersistedBounds
 } from './window-bounds';
 
 /**
@@ -31,7 +31,7 @@ describe('resolveBounds', () => {
       y: 50.2,
       width: 200, // below MIN_WIDTH 480
       height: 1000.9,
-      isMaximized: false,
+      isMaximized: false
     };
     const r = resolveBounds(saved, [PRIMARY]);
     expect(r).toEqual({ x: 100, y: 50, width: 480, height: 1000, isMaximized: false });
@@ -39,7 +39,7 @@ describe('resolveBounds', () => {
 
   it('preserves the maximized flag', () => {
     const r = resolveBounds({ x: 10, y: 10, width: 800, height: 600, isMaximized: true }, [
-      PRIMARY,
+      PRIMARY
     ]);
     expect(r?.isMaximized).toBe(true);
   });
@@ -47,7 +47,7 @@ describe('resolveBounds', () => {
   it('drops a stale off-screen position (NaN x/y) but keeps the size', () => {
     // Saved on a now-disconnected monitor at x=3000; only the primary remains.
     const r = resolveBounds({ x: 3000, y: 200, width: 900, height: 700, isMaximized: false }, [
-      PRIMARY,
+      PRIMARY
     ]);
     expect(Number.isNaN(r?.x as number)).toBe(true);
     expect(Number.isNaN(r?.y as number)).toBe(true);
@@ -59,7 +59,7 @@ describe('resolveBounds', () => {
     const secondary: WorkArea = { x: 1920, y: 0, width: 1920, height: 1040 };
     const r = resolveBounds({ x: 2000, y: 100, width: 900, height: 700, isMaximized: false }, [
       PRIMARY,
-      secondary,
+      secondary
     ]);
     expect(r?.x).toBe(2000);
     expect(r?.y).toBe(100);

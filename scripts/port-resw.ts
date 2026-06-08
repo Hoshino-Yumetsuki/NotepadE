@@ -180,7 +180,7 @@ function main(): void {
   const indexTarget = join(out, 'index.ts');
   for (const [tgt, body] of [
     [typesTarget, typesTs],
-    [indexTarget, indexTs],
+    [indexTarget, indexTs]
   ] as const) {
     if (check) {
       const prev = existsSync(tgt) ? readFileSync(tgt, 'utf8') : '';
@@ -194,7 +194,7 @@ function main(): void {
   }
 
   console.log(
-    `[port-resw] ${check ? 'verified' : 'ported'} ${locales.length} locales, ${totalKeys} total keys`,
+    `[port-resw] ${check ? 'verified' : 'ported'} ${locales.length} locales, ${totalKeys} total keys`
   );
   for (const s of summary) console.log(`  ${s.locale.padEnd(10)} ${s.keys}`);
 }

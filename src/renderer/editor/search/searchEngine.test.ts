@@ -6,7 +6,7 @@ import {
   findPrevious,
   applyEscapeSequenceFix,
   replaceAll,
-  type SearchOptions,
+  type SearchOptions
 } from './searchEngine';
 
 /**
@@ -176,7 +176,7 @@ describe('findAllRegexMatches', () => {
     expect(findAllRegexMatches('a1 b2 c3', '[a-z]\\d', REGEX)).toEqual([
       { from: 0, to: 2 },
       { from: 3, to: 5 },
-      { from: 6, to: 8 },
+      { from: 6, to: 8 }
     ]);
   });
 

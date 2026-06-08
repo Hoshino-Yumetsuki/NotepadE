@@ -29,7 +29,7 @@ describe('TextEditorPane', () => {
   it('reflects word-wrap from the bag and writes the patch on toggle', () => {
     const update = vi.fn();
     renderPane(
-      <TextEditorPane settings={makeSettings({ textWrapping: 'noWrap' })} update={update} />,
+      <TextEditorPane settings={makeSettings({ textWrapping: 'noWrap' })} update={update} />
     );
     const row = screen.getByTestId('setting-textWrapping');
     const sw = within(row).getByRole('switch');
@@ -42,13 +42,13 @@ describe('TextEditorPane', () => {
     const { rerender } = render(
       <FluentProvider theme={webLightTheme}>
         <TextEditorPane settings={makeSettings({ searchEngine: 'bing' })} update={vi.fn()} />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.queryByTestId('setting-customSearchUrl')).toBeNull();
     rerender(
       <FluentProvider theme={webLightTheme}>
         <TextEditorPane settings={makeSettings({ searchEngine: 'custom' })} update={vi.fn()} />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('setting-customSearchUrl')).toBeInTheDocument();
   });
@@ -74,7 +74,7 @@ describe('TextEditorPane', () => {
   it('writes defaultLineEnding when a line-ending radio is chosen', () => {
     const update = vi.fn();
     renderPane(
-      <TextEditorPane settings={makeSettings({ defaultLineEnding: 'crlf' })} update={update} />,
+      <TextEditorPane settings={makeSettings({ defaultLineEnding: 'crlf' })} update={update} />
     );
     const row = screen.getByTestId('setting-defaultLineEnding');
     fireEvent.click(within(row).getByRole('radio', { name: 'Unix (LF)' }));
@@ -84,7 +84,7 @@ describe('TextEditorPane', () => {
   it('writes defaultEncoding when an encoding radio is chosen (was free-text input)', () => {
     const update = vi.fn();
     renderPane(
-      <TextEditorPane settings={makeSettings({ defaultEncoding: 'UTF-8' })} update={update} />,
+      <TextEditorPane settings={makeSettings({ defaultEncoding: 'UTF-8' })} update={update} />
     );
     const row = screen.getByTestId('setting-defaultEncoding');
     fireEvent.click(within(row).getByRole('radio', { name: 'UTF-8-BOM' }));
@@ -96,7 +96,7 @@ describe('PersonalizationPane', () => {
   it('reflects themeMode and writes on radio change', () => {
     const update = vi.fn();
     renderPane(
-      <PersonalizationPane settings={makeSettings({ themeMode: 'system' })} update={update} />,
+      <PersonalizationPane settings={makeSettings({ themeMode: 'system' })} update={update} />
     );
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
     expect(update).toHaveBeenCalledWith({ themeMode: 'dark' });
@@ -107,7 +107,7 @@ describe('PersonalizationPane', () => {
       <PersonalizationPane
         settings={makeSettings({ useWindowsAccentColor: true })}
         update={vi.fn()}
-      />,
+      />
     );
     expect(screen.queryByTestId('setting-customAccentColor')).toBeNull();
   });
@@ -118,7 +118,7 @@ describe('PersonalizationPane', () => {
       <PersonalizationPane
         settings={makeSettings({ useWindowsAccentColor: false, customAccentColor: '#0078D4' })}
         update={update}
-      />,
+      />
     );
     const input = screen.getByTestId('setting-customAccentColor-input');
     fireEvent.change(input, { target: { value: '#FF0000' } });
@@ -149,7 +149,7 @@ describe('AboutPane', () => {
     expect(screen.getByTestId('about-version')).toHaveTextContent('Version');
     expect(screen.getByRole('link', { name: 'Source code' })).toHaveAttribute(
       'href',
-      'https://github.com/0x7c13/Notepads',
+      'https://github.com/0x7c13/Notepads'
     );
   });
 });

@@ -16,7 +16,7 @@ import {
   resetWebSearchSpy,
   lastWebSearchQuery,
   expectFindBarVisible,
-  expectFindBarHidden,
+  expectFindBarHidden
 } from './helpers/editor';
 /**
  * VERIFICATION GATE 3 — Keyboard conformance (docs/plan/04 §GATE 3, appendix §10).

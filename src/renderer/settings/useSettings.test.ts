@@ -19,7 +19,7 @@ function installMock(initial: Partial<Settings> = {}): { set: ReturnType<typeof 
   const bag = { ...DEFAULT_SETTINGS, ...initial };
   const set = vi.fn(async (patch: Partial<Settings>) => ({
     ok: true as const,
-    data: { ...bag, ...patch },
+    data: { ...bag, ...patch }
   }));
   (globalThis as unknown as { window: Window }).window.notepads = {
     settings: {
@@ -30,8 +30,8 @@ function installMock(initial: Partial<Settings> = {}): { set: ReturnType<typeof 
         return () => {
           changedCb = null;
         };
-      },
-    },
+      }
+    }
   } as unknown as typeof window.notepads;
   return { set };
 }

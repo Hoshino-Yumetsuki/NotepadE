@@ -23,8 +23,8 @@ const THEME_MODES: readonly { id: ThemeMode; labelKey: string }[] = [
   { id: 'dark', labelKey: 'PersonalizationPage_ThemeModeSettings_DarkModeRadioButton.Content' },
   {
     id: 'system',
-    labelKey: 'PersonalizationPage_ThemeModeSettings_WindowsModeRadioButton.Content',
-  },
+    labelKey: 'PersonalizationPage_ThemeModeSettings_WindowsModeRadioButton.Content'
+  }
 ];
 
 export function PersonalizationPane({ settings, update }: PaneProps): JSX.Element {
@@ -72,7 +72,7 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
         <SettingRow
           id="useWindowsAccentColor"
           label={t(
-            'PersonalizationPage_AccentColorSettings_UseWindowsAccentColorToggleSwitch.OnContent',
+            'PersonalizationPage_AccentColorSettings_UseWindowsAccentColorToggleSwitch.OnContent'
           )}
           description={t('PersonalizationPage_AccentColorSettings_Description')}
         >

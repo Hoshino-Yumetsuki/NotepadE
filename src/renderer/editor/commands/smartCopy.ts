@@ -70,5 +70,5 @@ export const smartCopyHandler = EditorView.domEventHandlers({
     event.clipboardData?.setData('text/plain', trimmed);
     event.preventDefault();
     return true;
-  },
+  }
 });

@@ -21,6 +21,6 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   use: {
-    trace: 'retain-on-failure',
-  },
+    trace: 'retain-on-failure'
+  }
 });

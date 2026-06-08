@@ -24,7 +24,7 @@ import {
   SubtractRegular,
   SquareRegular,
   SquareMultipleRegular,
-  DismissRegular,
+  DismissRegular
 } from '@fluentui/react-icons';
 import type { TabTheme } from '../tabs/tokens';
 import { useT } from '../i18n';
@@ -33,7 +33,7 @@ const CaptionGlyph = {
   minimize: SubtractRegular as FC,
   maximize: SquareRegular as FC,
   restore: SquareMultipleRegular as FC,
-  close: DismissRegular as FC,
+  close: DismissRegular as FC
 } as const;
 
 const BTN_WIDTH = 46;
@@ -96,7 +96,7 @@ function CaptionButton(props: CaptionButtonProps): JSX.Element {
         transition: 'background-color 90ms linear',
         display: 'inline-flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'center'
       }}
     >
       <Icon />

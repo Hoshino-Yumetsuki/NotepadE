@@ -6,7 +6,7 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
-  MenuDivider,
+  MenuDivider
 } from '@fluentui/react-components';
 import {
   DndContext,
@@ -16,7 +16,7 @@ import {
   useSensors,
   closestCenter,
   type DragEndEvent,
-  type DragStartEvent,
+  type DragStartEvent
 } from '@dnd-kit/core';
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -32,7 +32,7 @@ import {
   TabAnimation,
   tokensForTheme,
   type TabTheme,
-  type TabThemeTokens,
+  type TabThemeTokens
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
@@ -216,11 +216,11 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
     onCancelRename,
     animateEnter,
     onBeginTransfer,
-    onVoidDrop,
+    onVoidDrop
   } = props;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: tab.editorId,
+    id: tab.editorId
   });
   const [hovered, setHovered] = useState(false);
   const renameRef = useRef<HTMLInputElement | null>(null);
@@ -293,7 +293,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
     fontSize: 14,
     fontFamily: 'Segoe UI, system-ui, sans-serif',
     whiteSpace: 'nowrap',
-    overflow: 'hidden',
+    overflow: 'hidden'
   };
 
   // Middle-click closes; suppress Ctrl+click selection toggle (UWP SetsViewItem).
@@ -389,7 +389,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             background: revealBackground,
             opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
             transition: 'opacity 120ms ease-out',
-            zIndex: 0,
+            zIndex: 0
           }}
         />
         {/* Top selection indicator bar (accent), only when active. */}
@@ -403,7 +403,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
               right: 0,
               height: TabDimensions.selectionBarHeight,
               background: 'var(--tab-accent, #0078D4)',
-              zIndex: 1,
+              zIndex: 1
             }}
           />
         )}
@@ -423,7 +423,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             color: 'var(--tab-accent, #0078D4)',
             flex: '0 0 auto',
             position: 'relative',
-            zIndex: 1,
+            zIndex: 1
           }}
         >
           <TabGlyph.save />
@@ -453,7 +453,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
               outline: 'none',
               padding: '0 2px',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 1
             }}
           />
         ) : (
@@ -467,7 +467,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 1
             }}
           >
             {tabTitle(tab)}
@@ -501,7 +501,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            zIndex: 1,
+            zIndex: 1
           }}
         >
           <TabGlyph.close />
@@ -599,7 +599,7 @@ function ScrollButton(props: {
         opacity: disabled ? 0.4 : 1,
         display: 'inline-flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'center'
       }}
     >
       <Icon />
@@ -665,7 +665,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
             cursor: 'default',
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'center'
           }}
         >
           <NavigationRegular />
@@ -839,7 +839,7 @@ function TabElevation(props: {
         zIndex: 4,
         boxShadow: tokens.elevationShadow,
         clipPath: clip,
-        WebkitClipPath: clip,
+        WebkitClipPath: clip
       }}
     />
   );
@@ -881,7 +881,7 @@ function TabOverlayCard(props: {
         cursor: 'grabbing',
         // Lifted look: a drop shadow so it reads as floating above the strip.
         boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
-        borderRadius: 2,
+        borderRadius: 2
       }}
     >
       {tab.isModified ? (
@@ -894,7 +894,7 @@ function TabOverlayCard(props: {
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--tab-accent, #0078D4)',
-            flex: '0 0 auto',
+            flex: '0 0 auto'
           }}
         >
           <TabGlyph.save />
@@ -965,7 +965,7 @@ function AddTabButton(props: {
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'hidden'
       }}
     >
       <span
@@ -978,7 +978,7 @@ function AddTabButton(props: {
           background: revealBackground,
           opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
           transition: 'opacity 120ms ease-out',
-          zIndex: 0,
+          zIndex: 0
         }}
       />
       <span style={{ position: 'relative', zIndex: 1 }}>
@@ -1001,7 +1001,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     onVoidDrop,
     menu,
     captionSlot,
-    onActiveTabGeometry,
+    onActiveTabGeometry
   } = props;
   const resolvedTheme: TabTheme = theme ?? (isDark ? 'dark' : 'light');
   const tokens = tokensForTheme(resolvedTheme);
@@ -1047,7 +1047,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       if (onCloseTab) onCloseTab(editorId);
       else store.close(editorId);
     },
-    [onCloseTab, store],
+    [onCloseTab, store]
   );
 
   // Equal-width algorithm (UWP ProvideEqualWidth, Equal mode):
@@ -1152,7 +1152,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
         list.getBoundingClientRect(),
         node.getBoundingClientRect(),
         list.scrollWidth,
-        list.clientWidth,
+        list.clientWidth
       );
       if (next !== list.scrollLeft) {
         list.scrollLeft = next;
@@ -1224,7 +1224,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       setActiveRect((prev) =>
         prev && next && prev.left === next.left && prev.width === next.width
           ? prev
-          : (next ?? (prev === null ? prev : null)),
+          : (next ?? (prev === null ? prev : null))
       );
     };
     raf = requestAnimationFrame(measure);
@@ -1299,9 +1299,9 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       onOpenContainingFolder: () => {
         if (tab.filePath) void window.notepads.shell.openContainingFolder(tab.filePath);
       },
-      onRename: () => setRenamingId(tab.editorId),
+      onRename: () => setRenamingId(tab.editorId)
     }),
-    [closeTab, store],
+    [closeTab, store]
   );
 
   const commitRename = useCallback(
@@ -1314,7 +1314,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       }
       setRenamingId(null);
     },
-    [store],
+    [store]
   );
 
   // Stable per-tab callbacks so the memoized SortableTab isn't forced to
@@ -1367,7 +1367,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
           zIndex: 3,
           // Expose the accent so the selection bar + modified dot inherit it
           // (HC maps this to the Highlight system color).
-          ['--tab-accent' as string]: tokens.accent,
+          ['--tab-accent' as string]: tokens.accent
         } as React.CSSProperties
       }
     >
@@ -1403,7 +1403,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
           maxWidth: stripWidth > 0 ? stripWidth : undefined,
           overflowX: 'auto',
           overflowY: 'hidden',
-          scrollbarWidth: 'none',
+          scrollbarWidth: 'none'
         }}
       >
         <DndContext
@@ -1492,7 +1492,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
             flex: '0 0 auto',
             display: 'flex',
             alignItems: 'stretch',
-            marginTop: -TabDimensions.topBorderThickness,
+            marginTop: -TabDimensions.topBorderThickness
           }}
         >
           {captionSlot}

@@ -13,5 +13,5 @@ export {
   SUPPORTED_LOCALES,
   BASE_LOCALE,
   type SupportedLocale,
-  type LocaleTable,
+  type LocaleTable
 } from './resolve';

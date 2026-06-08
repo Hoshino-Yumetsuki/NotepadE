@@ -34,5 +34,5 @@ export const swallowKeymap: readonly KeyBinding[] = [
   { key: 'Mod-Shift-b', run: swallow, preventDefault: true },
   { key: 'Mod-Shift-i', run: swallow, preventDefault: true },
   { key: 'Mod-Shift-u', run: swallow, preventDefault: true },
-  { key: 'Mod-Shift-l', run: swallow, preventDefault: true },
+  { key: 'Mod-Shift-l', run: swallow, preventDefault: true }
 ];

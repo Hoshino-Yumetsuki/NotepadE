@@ -52,8 +52,8 @@ function makeClipboardEvent(type: 'copy' | 'cut'): {
     value: {
       setData: (_mime: string, data: string) => {
         written.value = data;
-      },
-    },
+      }
+    }
   });
   const origPrevent = event.preventDefault.bind(event);
   event.preventDefault = () => {
@@ -67,7 +67,7 @@ describe('smartCopyHandler (DOM copy interception)', () => {
   it('does NOT trim on copy when Smart Copy is OFF (default)', () => {
     const view = mountView('  abc  ', EditorSelection.range(0, 7), [
       editorSettings.of({ smartCopy: false }),
-      smartCopyHandler,
+      smartCopyHandler
     ]);
     try {
       const { event, written } = makeClipboardEvent('copy');
@@ -82,7 +82,7 @@ describe('smartCopyHandler (DOM copy interception)', () => {
   it('trims on copy when Smart Copy is ON', () => {
     const view = mountView('  abc  ', EditorSelection.range(0, 7), [
       editorSettings.of({ smartCopy: true }),
-      smartCopyHandler,
+      smartCopyHandler
     ]);
     try {
       const { event, written, prevented } = makeClipboardEvent('copy');
@@ -98,7 +98,7 @@ describe('smartCopyHandler (DOM copy interception)', () => {
   it('never trims on cut even when Smart Copy is ON', () => {
     const view = mountView('  abc  ', EditorSelection.range(0, 7), [
       editorSettings.of({ smartCopy: true }),
-      smartCopyHandler,
+      smartCopyHandler
     ]);
     try {
       const { event, written } = makeClipboardEvent('cut');
@@ -113,7 +113,7 @@ describe('smartCopyHandler (DOM copy interception)', () => {
   it('does not modify the document or push an undo step when trimming on copy', () => {
     const view = mountView('  abc  ', EditorSelection.range(0, 7), [
       editorSettings.of({ smartCopy: true }),
-      smartCopyHandler,
+      smartCopyHandler
     ]);
     try {
       const before = view.state.doc.toString();

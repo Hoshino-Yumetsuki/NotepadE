@@ -64,7 +64,7 @@ async function openAutoDetect(path: string): Promise<Result<OpenedFile>> {
 async function reopenWith(path: string, encodingId: string): Promise<Result<OpenedFile>> {
   return launched.page.evaluate(([p, id]) => window.notepads.encoding.decodeWith(p, id), [
     path,
-    encodingId,
+    encodingId
   ] as const);
 }
 
@@ -73,7 +73,7 @@ async function saveWith(
   path: string,
   shadowText: string,
   encodingId: string,
-  eolId: EolId,
+  eolId: EolId
 ): Promise<Result<SaveResult>> {
   return launched.page.evaluate(
     ([p, text, id, eol]) =>
@@ -81,9 +81,9 @@ async function saveWith(
         filePath: p,
         shadowText: text,
         encodingId: id,
-        eolId: eol as 'crlf' | 'cr' | 'lf',
+        eolId: eol as 'crlf' | 'cr' | 'lf'
       }),
-    [path, shadowText, encodingId, eolId] as const,
+    [path, shadowText, encodingId, eolId] as const
   );
 }
 
@@ -95,7 +95,7 @@ test('corpus materializes the full Gate-3 set (>=150 files incl. large/empty/.LO
   expect(manifest.filter((e) => e.family === 'empty').length).toBe(1);
   expect(manifest.filter((e) => e.isLog).length).toBeGreaterThanOrEqual(1);
   expect(manifest.filter((e) => e.roundTripClass === 'normalizing').length).toBeGreaterThanOrEqual(
-    1,
+    1
   );
 });
 
@@ -128,7 +128,7 @@ test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the cor
       if (auto.data.encodingId !== entry.expectedEncodingId) {
         detectionMisses++;
         missDetail.push(
-          `${entry.fileName}: expected "${entry.expectedEncodingId}", detected "${auto.data.encodingId}"`,
+          `${entry.fileName}: expected "${entry.expectedEncodingId}", detected "${auto.data.encodingId}"`
         );
       }
     }
@@ -143,14 +143,14 @@ test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the cor
       const shadow = normalizeToLf(reopened.data.decodedText);
       const saved = await saveWith(path, shadow, entry.reopenEncodingId, entry.expectedEol);
       expect(saved.ok, `file.save failed for ${entry.fileName}: ${JSON.stringify(saved)}`).toBe(
-        true,
+        true
       );
 
       const writtenBytes = readFileSync(path);
       if (sha256(writtenBytes) !== sha256(originalBytes)) {
         byteMismatches.push(
           `${entry.fileName} [${entry.family}]: wrote ${writtenBytes.length}B, ` +
-            `expected ${originalBytes.length}B (sha mismatch)`,
+            `expected ${originalBytes.length}B (sha mismatch)`
         );
       }
     } else {
@@ -159,7 +159,7 @@ test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the cor
       // to the mixed original (the editor normalizes EOL by design, UWP parity).
       if (auto.data.eolId !== entry.expectedEol) {
         normalizingFailures.push(
-          `${entry.fileName}: detected eol "${auto.data.eolId}", expected "${entry.expectedEol}"`,
+          `${entry.fileName}: detected eol "${auto.data.eolId}", expected "${entry.expectedEol}"`
         );
       }
       const reopened = await reopenWith(path, entry.reopenEncodingId);
@@ -186,18 +186,18 @@ test('encoding round-trip: 0% byte mismatch + <=2% detection miss across the cor
 
   // --- Assertions (zero tolerance on bytes; <=2% detection miss). ---
   expect(byteMismatches.length, `BYTE MISMATCHES (must be 0):\n${byteMismatches.join('\n')}`).toBe(
-    0,
+    0
   );
 
   expect(
     normalizingFailures.length,
-    `NORMALIZING-CLASS FAILURES (must be 0):\n${normalizingFailures.join('\n')}`,
+    `NORMALIZING-CLASS FAILURES (must be 0):\n${normalizingFailures.join('\n')}`
   ).toBe(0);
 
   expect(
     missRate,
     `Detection miss rate ${(missRate * 100).toFixed(2)}% over ${detectionScored} scored rows ` +
-      `(${detectionMisses} misses) exceeds 2% budget:\n${missDetail.join('\n')}`,
+      `(${detectionMisses} misses) exceeds 2% budget:\n${missDetail.join('\n')}`
   ).toBeLessThanOrEqual(0.02);
 });
 
@@ -210,14 +210,14 @@ test('no file-size cap (#10): the >1,024,000-byte file opens, edits, and saves 0
   const originalBytes = readFileSync(path);
   expect(
     originalBytes.length,
-    `large fixture must exceed the old 1,024,000-byte cap (got ${originalBytes.length}B)`,
+    `large fixture must exceed the old 1,024,000-byte cap (got ${originalBytes.length}B)`
   ).toBeGreaterThan(1_024_000);
 
   // OPEN — the old UWP hard refusal must NOT be reproduced.
   const opened = await openAutoDetect(path);
   expect(
     opened.ok,
-    `large file failed to open (cap must be dropped): ${JSON.stringify(opened)}`,
+    `large file failed to open (cap must be dropped): ${JSON.stringify(opened)}`
   ).toBe(true);
   if (!opened.ok) return;
 
@@ -229,7 +229,7 @@ test('no file-size cap (#10): the >1,024,000-byte file opens, edits, and saves 0
   const editedShadow = normalizeToLf(reopened.data.decodedText) + '\nappended by gate-harness';
   const savedEdit = await saveWith(path, editedShadow, large.reopenEncodingId, large.expectedEol);
   expect(savedEdit.ok, `large file failed to save after edit: ${JSON.stringify(savedEdit)}`).toBe(
-    true,
+    true
   );
 
   // The edited bytes must be exactly the re-encoded edited text (0% mismatch vs
@@ -239,6 +239,6 @@ test('no file-size cap (#10): the >1,024,000-byte file opens, edits, and saves 0
   expect(resave.ok).toBe(true);
   const resavedBytes = readFileSync(path);
   expect(sha256(editedBytes), 'large-file edit save must be byte-stable (idempotent re-save)').toBe(
-    sha256(resavedBytes),
+    sha256(resavedBytes)
   );
 });

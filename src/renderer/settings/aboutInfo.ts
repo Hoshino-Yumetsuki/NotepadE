@@ -21,14 +21,14 @@ export const APP_NAME = 'NotepadE';
 export const ABOUT_LINKS: readonly { label: string; url: string }[] = [
   { label: 'Source code', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE' },
   { label: 'Report an issue', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE/issues' },
-  { label: 'Release notes', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE/releases' },
+  { label: 'Release notes', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE/releases' }
   /*{ label: 'Privacy policy', url: 'https://github.com/0x7c13/Notepads/blob/master/PRIVACY.md' }, */
 ];
 
 /** Third-party dependency credits (verbatim from UWP AboutPage.xaml). */
 export const DEPENDENCY_CREDITS: readonly { label: string; url: string }[] = [
   { label: 'Fluent UI', url: 'https://github.com/microsoft/fluentui' },
-  { label: 'React', url: 'https://github.com/facebook/react' },
+  { label: 'React', url: 'https://github.com/facebook/react' }
 ];
 
 /** License + disclaimer line. */

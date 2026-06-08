@@ -351,7 +351,7 @@ const table: LocaleTable = {
   XslFileDisplayName: 'XSL 파일',
   YamlFileDisplayName: 'YAML 파일',
   ZshellConfigFileDisplayName: 'Z shell 구성 파일',
-  ZshellHistoryFileDisplayName: 'Z shell 내역 파일',
+  ZshellHistoryFileDisplayName: 'Z shell 내역 파일'
 };
 
 export default table;

@@ -40,7 +40,7 @@ export const SETTINGS_SELECTORS = {
   paneAdvanced: '[data-testid="settings-pane-advanced"]',
   paneAbout: '[data-testid="settings-pane-about"]',
   // App-shell surface that live-affects: the Phase-4 status bar.
-  statusBar: '[data-testid="status-bar"]',
+  statusBar: '[data-testid="status-bar"]'
 } as const;
 
 /** Nav item selector for a section id. */
@@ -101,7 +101,7 @@ export async function forceSurfaceOpaqueForCapture(page: Page): Promise<void> {
       page.evaluate((sel) => {
         const el = document.querySelector(sel);
         return el ? Number(getComputedStyle(el).opacity) : 0;
-      }, SETTINGS_SELECTORS.surface),
+      }, SETTINGS_SELECTORS.surface)
     )
     .toBeGreaterThanOrEqual(1);
 }
@@ -115,7 +115,7 @@ export async function forceSurfaceOpaqueForCapture(page: Page): Promise<void> {
  */
 export async function selectPane(
   page: Page,
-  section: 'textEditor' | 'personalization' | 'advanced' | 'about',
+  section: 'textEditor' | 'personalization' | 'advanced' | 'about'
 ): Promise<void> {
   await forceSurfaceOpaqueForCapture(page);
   await page.locator(navItem(section)).click({ force: true });
@@ -128,7 +128,7 @@ export async function selectPane(
  */
 export async function getSetting<K extends keyof Settings>(
   page: Page,
-  key: K,
+  key: K
 ): Promise<Settings[K]> {
   return page.evaluate((k) => {
     const s = window.__notepadsTest?.settings;
@@ -155,7 +155,7 @@ export async function getActiveTheme(page: Page): Promise<'light' | 'dark' | 'hc
 export async function patchSettings(page: Page, patch: Partial<Settings>): Promise<void> {
   const res = await page.evaluate(
     (p) => window.notepads.settings.set(p as Partial<Settings>),
-    patch,
+    patch
   );
   if (!res.ok) throw new Error(`settings.set failed: ${res.error}`);
 }
@@ -168,11 +168,11 @@ export async function patchSettings(page: Page, patch: Partial<Settings>): Promi
 export async function expectSetting<K extends keyof Settings>(
   page: Page,
   key: K,
-  expected: Settings[K],
+  expected: Settings[K]
 ): Promise<void> {
   await expect
     .poll(async () => getSetting(page, key), {
-      message: `setting ${String(key)} = ${String(expected)}`,
+      message: `setting ${String(key)} = ${String(expected)}`
     })
     .toEqual(expected);
 }
@@ -224,7 +224,7 @@ export async function brandBackground(page: Page): Promise<string> {
  */
 export async function driveOsTheme(
   app: ElectronApplication,
-  theme: 'light' | 'dark',
+  theme: 'light' | 'dark'
 ): Promise<void> {
   await app.evaluate(({ nativeTheme }, t) => {
     nativeTheme.themeSource = t;

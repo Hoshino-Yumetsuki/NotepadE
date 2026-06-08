@@ -66,7 +66,7 @@ describe('printDocuments', () => {
     await printDocuments([
       { title: 'a', text: '1' },
       { title: 'b', text: '2' },
-      { title: 'c', text: '3' },
+      { title: 'c', text: '3' }
     ]);
     expect(count).toBe(3);
   });

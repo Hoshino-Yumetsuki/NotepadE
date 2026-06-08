@@ -20,7 +20,7 @@ import {
   SUPPORTED_LOCALES,
   BASE_LOCALE,
   type LocaleTable,
-  type SupportedLocale,
+  type SupportedLocale
 } from './locales/index';
 import { SUPPLEMENT } from './locales/supplement';
 
@@ -65,7 +65,7 @@ export function matchLocale(requested: string): SupportedLocale | undefined {
  */
 export function resolveLocale(
   appLanguage: string,
-  uiLanguages: readonly string[],
+  uiLanguages: readonly string[]
 ): SupportedLocale {
   if (appLanguage.trim()) {
     const explicit = matchLocale(appLanguage);

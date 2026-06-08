@@ -44,7 +44,7 @@ export interface TransferTextSource {
 export function buildEnvelope(
   store: TabsStore,
   source: TransferTextSource,
-  editorId: string,
+  editorId: string
 ): DragEnvelope | null {
   const tab = store.get(editorId);
   if (!tab) return null;
@@ -59,7 +59,7 @@ export function buildEnvelope(
     isModified: tab.isModified,
     fileNamePlaceholder: tab.filePath === null ? tab.untitledName || 'Untitled' : '',
     dateModifiedMs: 0,
-    viewMode: tab.viewMode,
+    viewMode: tab.viewMode
   };
 }
 
@@ -67,7 +67,7 @@ export function buildEnvelope(
 export async function beginTransfer(
   store: TabsStore,
   source: TransferTextSource,
-  editorId: string,
+  editorId: string
 ): Promise<string | null> {
   const envelope = buildEnvelope(store, source, editorId);
   if (!envelope) return null;
@@ -97,7 +97,7 @@ export async function completeTransfer(token: string, dropIndex: number): Promis
 export function applyAdopt(
   store: TabsStore,
   source: TransferTextSource,
-  payload: AdoptPayload,
+  payload: AdoptPayload
 ): string {
   const { file, pendingText, isModified, dropIndex, viewMode } = payload;
   const localId = store.mintEditorId();
@@ -109,14 +109,14 @@ export function applyAdopt(
     isModified,
     untitledName: file.filePath === null ? '' : undefined,
     index: dropIndex,
-    activate: true,
+    activate: true
   });
   store.setViewMode(localId, viewMode);
   // Seed the visible document: the dirty pending text if modified, else the
   // last-saved baseline. The editor seam wires the doc into the CM6 instance.
   source.seedAdoptedDoc(
     localId,
-    isModified && pendingText != null ? pendingText : file.decodedText,
+    isModified && pendingText != null ? pendingText : file.decodedText
   );
   return localId;
 }
@@ -168,7 +168,7 @@ export function installTransferTestHook(store: TabsStore, source: TransferTextSo
     begin: (editorId) => beginTransfer(store, source, editorId),
     complete: (token, dropIndex) => completeTransfer(token, dropIndex),
     voidDrop: (editorId) => handleVoidDrop(store, editorId),
-    envelope: (editorId) => buildEnvelope(store, source, editorId),
+    envelope: (editorId) => buildEnvelope(store, source, editorId)
   };
 
   const existing = window.__notepadsTest as

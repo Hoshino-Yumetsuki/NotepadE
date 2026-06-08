@@ -31,7 +31,7 @@ import {
   TextEditStyleRegular,
   DarkThemeRegular,
   WrenchRegular,
-  InfoRegular,
+  InfoRegular
 } from '@fluentui/react-icons';
 import type { Settings } from '@shared/ipc-contract';
 import { TextEditorPane } from './TextEditorPane';
@@ -54,7 +54,7 @@ const SECTIONS: readonly { id: SectionId; labelKey: string; Icon: FC }[] = [
   { id: 'textEditor', labelKey: 'TextAndEditorPage_Title.Content', Icon: TextEditStyleRegular },
   { id: 'personalization', labelKey: 'PersonalizationPage_Title.Content', Icon: DarkThemeRegular },
   { id: 'advanced', labelKey: 'AdvancedPage_Title.Content', Icon: WrenchRegular },
-  { id: 'about', labelKey: 'AboutPage_Title.Content', Icon: InfoRegular },
+  { id: 'about', labelKey: 'AboutPage_Title.Content', Icon: InfoRegular }
 ];
 
 /** UWP RootSplitView.OpenPaneLength — the right pane is 385px wide. */
@@ -144,7 +144,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
         zIndex: 1000,
         background: 'rgba(0,0,0,0.4)',
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-end'
       }}
     >
       <FluentProvider
@@ -172,7 +172,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
           // the resting transform is translateX(0), so React never writes an
           // off-screen inline transform that could race a re-render.
           boxShadow: '-8px 0 24px rgba(0,0,0,0.35)',
-          ...acrylicVars(resolvedTheme),
+          ...acrylicVars(resolvedTheme)
         }}
       >
         {/* Pane chrome bar: title + close (UWP SplitView pane header). */}
@@ -182,7 +182,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '12px 12px 8px 16px',
-            flex: '0 0 auto',
+            flex: '0 0 auto'
           }}
         >
           <span style={{ fontSize: 20, fontWeight: 600 }}>
@@ -201,7 +201,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
             display: 'flex',
             gap: 0,
             flex: '1 1 auto',
-            minHeight: 0,
+            minHeight: 0
           }}
         >
           {/* UWP NavigationView PaneDisplayMode=LeftCompact: a hamburger toggles the
@@ -222,7 +222,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
               padding: '0 4px',
               boxSizing: 'border-box',
               transition: 'width 150ms ease',
-              overflow: 'hidden',
+              overflow: 'hidden'
             }}
           >
             <Button
@@ -238,7 +238,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 justifyContent: expanded ? 'flex-start' : 'center',
                 paddingLeft: expanded ? 10 : 0,
                 paddingRight: 0,
-                marginBottom: 4,
+                marginBottom: 4
               }}
             />
             {SECTIONS.map((s) => (
@@ -259,7 +259,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                   paddingLeft: expanded ? 10 : 0,
                   paddingRight: 0,
                   whiteSpace: 'nowrap',
-                  overflow: 'hidden',
+                  overflow: 'hidden'
                 }}
               >
                 {/* Label appears only when expanded (icon-only rail otherwise). */}
@@ -276,7 +276,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              padding: '0 8px 0 12px',
+              padding: '0 8px 0 12px'
             }}
           >
             <div
@@ -288,7 +288,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 fontWeight: 600,
                 padding: '0 0 10px 0',
                 marginBottom: 8,
-                borderBottom: '1px solid var(--colorNeutralStroke2)',
+                borderBottom: '1px solid var(--colorNeutralStroke2)'
               }}
             >
               {t(sectionTitle)}

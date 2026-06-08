@@ -23,7 +23,7 @@ import {
   REGEX_PARITY_CASES,
   RTL_REVERSE_CASES,
   DOCUMENTED_DIVERGENCES,
-  type RegexParityCase,
+  type RegexParityCase
 } from './regexParity.fixture';
 import {
   findNext,
@@ -32,7 +32,7 @@ import {
   replaceAll,
   type MatchSpan,
   type ReplaceAllResult,
-  type SearchOptions,
+  type SearchOptions
 } from './searchEngine';
 
 /** Force useRegex:true for every parity row (the fixture is regex-only). */
@@ -70,8 +70,8 @@ describe('regex-parity fixture (Gate 3)', () => {
           c.expected != null &&
           !Array.isArray(c.expected) &&
           'to' in c.expected &&
-          c.expected.to === c.caret,
-      ),
+          c.expected.to === c.caret
+      )
     ).toBe(true);
     // Documented flavor divergences must be enumerated for sign-off (#5).
     expect(DOCUMENTED_DIVERGENCES.length).toBeGreaterThan(0);
@@ -103,7 +103,7 @@ describe('regex-parity: RightToLeft reverse-search shim (Gate 3 / R5)', () => {
         c.pattern,
         regexOptions(c.options),
         c.caret ?? 0,
-        c.wrap ?? false,
+        c.wrap ?? false
       );
       expect(actual).toEqual(c.expected);
     });

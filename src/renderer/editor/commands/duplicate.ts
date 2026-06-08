@@ -34,8 +34,8 @@ export const duplicateLineOrSelection: StateCommand = ({ state, dispatch }): boo
         changes: { from: line.to, to: line.to, insert },
         selection: EditorSelection.cursor(newHead),
         scrollIntoView: true,
-        userEvent: 'input.duplicate',
-      }),
+        userEvent: 'input.duplicate'
+      })
     );
     return true;
   }
@@ -47,8 +47,8 @@ export const duplicateLineOrSelection: StateCommand = ({ state, dispatch }): boo
       changes: { from: range.to, to: range.to, insert: text },
       selection: EditorSelection.range(range.to, range.to + text.length),
       scrollIntoView: true,
-      userEvent: 'input.duplicate',
-    }),
+      userEvent: 'input.duplicate'
+    })
   );
   return true;
 };

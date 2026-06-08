@@ -3,7 +3,7 @@ import {
   recordLastSaved,
   forgetEditor,
   getLastSaved,
-  deriveModificationState,
+  deriveModificationState
 } from './fileStatusTracker';
 
 /**
@@ -32,7 +32,7 @@ describe('fileStatusTracker', () => {
 
   it('maps an untitled (null path) tab to none', () => {
     expect(deriveModificationState(null, { exists: true, dateModifiedMs: 5 }, undefined)).toBe(
-      'none',
+      'none'
     );
   });
 
@@ -44,11 +44,7 @@ describe('fileStatusTracker', () => {
   it('maps a missing file to renamedMovedDeleted (E9CE)', () => {
     recordLastSaved('e1', 'C:\\a.txt', 1000);
     expect(
-      deriveModificationState(
-        'C:\\a.txt',
-        { exists: false, dateModifiedMs: 0 },
-        getLastSaved('e1'),
-      ),
+      deriveModificationState('C:\\a.txt', { exists: false, dateModifiedMs: 0 }, getLastSaved('e1'))
     ).toBe('renamedMovedDeleted');
   });
 
@@ -58,8 +54,8 @@ describe('fileStatusTracker', () => {
       deriveModificationState(
         'C:\\a.txt',
         { exists: true, dateModifiedMs: 2000 },
-        getLastSaved('e1'),
-      ),
+        getLastSaved('e1')
+      )
     ).toBe('modifiedOutside');
   });
 
@@ -69,8 +65,8 @@ describe('fileStatusTracker', () => {
       deriveModificationState(
         'C:\\a.txt',
         { exists: true, dateModifiedMs: 1000 },
-        getLastSaved('e1'),
-      ),
+        getLastSaved('e1')
+      )
     ).toBe('none');
   });
 
@@ -81,14 +77,14 @@ describe('fileStatusTracker', () => {
       deriveModificationState(
         'C:\\new.txt',
         { exists: true, dateModifiedMs: 2000 },
-        getLastSaved('e1'),
-      ),
+        getLastSaved('e1')
+      )
     ).toBe('none');
   });
 
   it('treats a present file with no baseline at all as none', () => {
     expect(
-      deriveModificationState('C:\\a.txt', { exists: true, dateModifiedMs: 2000 }, undefined),
+      deriveModificationState('C:\\a.txt', { exists: true, dateModifiedMs: 2000 }, undefined)
     ).toBe('none');
   });
 });

@@ -73,7 +73,7 @@ export function installTabsTestHook(store: TabsStore): () => void {
         encodingId: t.encodingId,
         eolId: t.eolId,
         isModified: t.isModified,
-        active: t.editorId === store.activeEditorId,
+        active: t.editorId === store.activeEditorId
       })),
     activeId: () => store.activeEditorId,
     count: () => store.count(),
@@ -92,7 +92,7 @@ export function installTabsTestHook(store: TabsStore): () => void {
       const tab = store.get(editorId);
       if (!tab) return;
       if (tab.filePath === null) store.setUntitledName(editorId, name);
-    },
+    }
   };
 
   const existing = window.__notepadsTest;

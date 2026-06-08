@@ -18,8 +18,8 @@ beforeEach(() => {
     settings: {
       get: vi.fn(async () => ({ ok: true as const, data: DEFAULT_SETTINGS })),
       set: vi.fn(async () => ({ ok: true as const, data: DEFAULT_SETTINGS })),
-      onChanged: () => () => {},
-    },
+      onChanged: () => () => {}
+    }
   } as unknown as typeof window.notepads;
 });
 
@@ -77,7 +77,7 @@ describe('GoToLineDialog', () => {
     fireEvent.click(screen.getByTestId('goto-line-submit'));
     expect(onSubmit).not.toHaveBeenCalled();
     expect(
-      screen.getByText('Line number exceeds beyond the total number of lines!'),
+      screen.getByText('Line number exceeds beyond the total number of lines!')
     ).toBeInTheDocument();
   });
 

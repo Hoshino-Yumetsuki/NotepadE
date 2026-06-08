@@ -22,15 +22,15 @@ function installMock(initial: Partial<Settings> = {}): void {
       get: vi.fn(async () => ({ ok: true as const, data: bag })),
       set: vi.fn(async (patch: Partial<Settings>) => ({
         ok: true as const,
-        data: { ...bag, ...patch },
+        data: { ...bag, ...patch }
       })),
       onChanged: (cb: (s: Settings) => void) => {
         changedCb = cb;
         return () => {
           changedCb = null;
         };
-      },
-    },
+      }
+    }
   } as unknown as typeof window.notepads;
 }
 
@@ -52,7 +52,7 @@ function Probe(): JSX.Element {
         {plural(
           1,
           'TextEditor_LineColumnIndicator_FullText_SingularSelectedWord',
-          'TextEditor_LineColumnIndicator_FullText_PluralSelectedWord',
+          'TextEditor_LineColumnIndicator_FullText_PluralSelectedWord'
         )}
       </span>
     </div>
@@ -69,12 +69,12 @@ describe('I18nProvider + useT runtime switch', () => {
     render(
       <I18nProvider>
         <Probe />
-      </I18nProvider>,
+      </I18nProvider>
     );
     await screen.findByText(tableFor('en-US').FileOpenErrorDialog_PrimaryButtonText);
     expect(screen.getByTestId('locale').textContent).toBe('en-US');
     expect(screen.getByTestId('fmt').textContent).toBe(
-      'Sorry, file "a.txt" couldn\'t be opened: denied',
+      'Sorry, file "a.txt" couldn\'t be opened: denied'
     );
   });
 
@@ -83,7 +83,7 @@ describe('I18nProvider + useT runtime switch', () => {
     render(
       <I18nProvider>
         <Probe />
-      </I18nProvider>,
+      </I18nProvider>
     );
     await screen.findByText(tableFor('en-US').FileOpenErrorDialog_PrimaryButtonText);
 
@@ -91,7 +91,7 @@ describe('I18nProvider + useT runtime switch', () => {
 
     expect(screen.getByTestId('locale').textContent).toBe('ja-JP');
     expect(screen.getByTestId('ok').textContent).toBe(
-      tableFor('ja-JP').FileOpenErrorDialog_PrimaryButtonText,
+      tableFor('ja-JP').FileOpenErrorDialog_PrimaryButtonText
     );
     // The placeholder template must format in the new locale too.
     expect(screen.getByTestId('fmt').textContent).toContain('a.txt');
@@ -103,7 +103,7 @@ describe('I18nProvider + useT runtime switch', () => {
     render(
       <I18nProvider>
         <Probe />
-      </I18nProvider>,
+      </I18nProvider>
     );
     await screen.findByText(tableFor('de-DE').FileOpenErrorDialog_PrimaryButtonText);
     expect(screen.getByTestId('locale').textContent).toBe('de-DE');
@@ -115,7 +115,7 @@ describe('I18nProvider + useT runtime switch', () => {
     render(
       <I18nProvider>
         <Probe />
-      </I18nProvider>,
+      </I18nProvider>
     );
     await screen.findByTestId('missing');
     expect(screen.getByTestId('missing').textContent).toBe('Totally_Unknown_Key');
@@ -126,11 +126,11 @@ describe('I18nProvider + useT runtime switch', () => {
     render(
       <I18nProvider>
         <Probe />
-      </I18nProvider>,
+      </I18nProvider>
     );
     await screen.findByTestId('plural-1');
     expect(screen.getByTestId('plural-1').textContent).toBe(
-      tableFor('en-US').TextEditor_LineColumnIndicator_FullText_SingularSelectedWord,
+      tableFor('en-US').TextEditor_LineColumnIndicator_FullText_SingularSelectedWord
     );
   });
 });

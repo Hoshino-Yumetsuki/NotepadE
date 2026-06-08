@@ -20,7 +20,7 @@ export const EDITOR_SELECTORS = {
   /** The find bar (mounted by useFindBar; visible only when open). */
   findBar: '[data-testid="find-bar"]',
   findInput: '[data-testid="find-input"]',
-  replaceInput: '[data-testid="replace-input"]',
+  replaceInput: '[data-testid="replace-input"]'
 } as const;
 
 /** Assert the editor seam is installed (fails loudly if lane-b hasn't shipped it). */
@@ -29,7 +29,7 @@ async function requireEditorSeam(page: Page): Promise<void> {
   if (!present) {
     throw new Error(
       'window.__notepadsTest.editor not installed (Phase-3 editor seam missing). ' +
-        'App must install the editor seam under NOTEPADS_E2E (src/renderer/editor/test-hook.ts).',
+        'App must install the editor seam under NOTEPADS_E2E (src/renderer/editor/test-hook.ts).'
     );
   }
 }
@@ -50,7 +50,7 @@ export async function focusEditor(page: Page): Promise<void> {
       page.evaluate(() => {
         const ae = document.activeElement;
         return !!ae && ae.classList.contains('cm-content');
-      }),
+      })
     )
     .toBe(true);
 }
@@ -81,7 +81,7 @@ export async function setEditorDoc(page: Page, text: string, caret?: number): Pr
       const at = c ?? hook.getDocText().length;
       hook.setSelection(at, at);
     },
-    { text, caret },
+    { text, caret }
   );
   await focusEditor(page);
 }
@@ -114,7 +114,7 @@ export async function getSelection(page: Page): Promise<{ from: number; to: numb
 export async function setSelection(page: Page, from: number, to: number): Promise<void> {
   await page.evaluate(([f, t]) => window.__notepadsTest?.editor?.setSelection(f, t), [
     from,
-    to,
+    to
   ] as const);
 }
 

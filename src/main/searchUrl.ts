@@ -30,7 +30,7 @@ import type { SearchEngineId } from '../shared/ipc-contract.js';
 const SEARCH_ENGINE_TEMPLATES: Record<Exclude<SearchEngineId, 'custom'>, string> = {
   bing: 'https://www.bing.com/search?q={0}&form=NPCTXT',
   google: 'https://www.google.com/search?q={0}&oq={0}',
-  duckDuckGo: 'https://duckduckgo.com/?q={0}&ia=web',
+  duckDuckGo: 'https://duckduckgo.com/?q={0}&ia=web'
 };
 
 /** True when `value` is an absolute http/https URL (UWP TryCreate + scheme guard). */
@@ -68,7 +68,7 @@ export function templateForEngine(engine: SearchEngineId, customSearchUrl: strin
 export function resolveSearchUrl(
   query: string,
   engine: SearchEngineId,
-  customSearchUrl: string,
+  customSearchUrl: string
 ): string | null {
   const trimmed = query.trim();
   if (trimmed.length === 0) return null;

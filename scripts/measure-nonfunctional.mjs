@@ -21,13 +21,13 @@ import { join } from 'node:path';
 const TARGETS = {
   coldStartMs: 2000,
   idleRamMB: 250,
-  openMs: 300,
+  openMs: 300
 };
 
 function resolveMainEntry() {
   const candidates = [
     join(process.cwd(), 'out', 'main', 'index.js'),
-    join(process.cwd(), 'dist', 'main', 'index.js'),
+    join(process.cwd(), 'dist', 'main', 'index.js')
   ];
   for (const c of candidates) if (existsSync(c)) return c;
   throw new Error('Electron main entry not found. Run `yarn build` first.');
@@ -41,7 +41,7 @@ async function main() {
   const t0 = Date.now();
   const app = await electron.launch({
     args: [main],
-    env: { ...process.env, NOTEPADS_E2E: '1', NOTEPADS_E2E_USERDATA: userDataDir },
+    env: { ...process.env, NOTEPADS_E2E: '1', NOTEPADS_E2E_USERDATA: userDataDir }
   });
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
@@ -72,26 +72,26 @@ async function main() {
       'Cold start',
       coldStartMs.toFixed(0) + ' ms',
       TARGETS.coldStartMs + ' ms',
-      coldStartMs <= TARGETS.coldStartMs,
+      coldStartMs <= TARGETS.coldStartMs
     ],
     [
       'Idle RAM',
       idleRamMB.toFixed(0) + ' MB',
       TARGETS.idleRamMB + ' MB',
-      idleRamMB <= TARGETS.idleRamMB,
+      idleRamMB <= TARGETS.idleRamMB
     ],
-    ['1 MB open', openMs.toFixed(0) + ' ms', TARGETS.openMs + ' ms', openMs <= TARGETS.openMs],
+    ['1 MB open', openMs.toFixed(0) + ' ms', TARGETS.openMs + ' ms', openMs <= TARGETS.openMs]
   ];
   console.log('\nNon-functional measurements (Gate-8):\n');
   for (const [name, got, target, ok] of rows) {
     console.log(
-      `  ${ok ? 'PASS' : 'FAIL'}  ${name.padEnd(12)} ${String(got).padStart(10)}  (target ≤ ${target})`,
+      `  ${ok ? 'PASS' : 'FAIL'}  ${name.padEnd(12)} ${String(got).padStart(10)}  (target ≤ ${target})`
     );
   }
   const failures = rows.filter((r) => !r[3]);
   if (failures.length > 0) {
     console.log(
-      `\n${failures.length} target(s) exceeded — red-flag divergence (needs sign-off).\n`,
+      `\n${failures.length} target(s) exceeded — red-flag divergence (needs sign-off).\n`
     );
     process.exit(1);
   }

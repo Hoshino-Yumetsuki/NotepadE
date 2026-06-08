@@ -70,7 +70,7 @@ function sweepExpired(): void {
  */
 export function dragOutBegin(
   event: Electron.IpcMainInvokeEvent,
-  envelope: DragEnvelope,
+  envelope: DragEnvelope
 ): Result<{ token: string }> {
   try {
     sweepExpired();
@@ -81,7 +81,7 @@ export function dragOutBegin(
     registry.set(token, {
       envelope: { ...envelope, sourceWindowId },
       sourceWindowId,
-      createdAt: Date.now(),
+      createdAt: Date.now()
     });
     return { ok: true, data: { token } };
   } catch (e) {
@@ -113,7 +113,7 @@ async function buildAdoptedFile(envelope: DragEnvelope): Promise<OpenedFile> {
     eolId: envelope.eolId,
     dateModifiedMs,
     filePath: envelope.filePath,
-    hasBom: false,
+    hasBom: false
   };
 }
 
@@ -126,7 +126,7 @@ async function buildAdoptedFile(envelope: DragEnvelope): Promise<OpenedFile> {
 export async function dragOutComplete(
   event: Electron.IpcMainInvokeEvent,
   token: string,
-  dropIndex: number,
+  dropIndex: number
 ): Promise<Result<void>> {
   try {
     const pending = registry.get(token);
@@ -144,7 +144,7 @@ export async function dragOutComplete(
       pendingText: envelope.isModified ? envelope.pendingText : null,
       isModified: envelope.isModified,
       dropIndex,
-      viewMode: envelope.viewMode,
+      viewMode: envelope.viewMode
     };
 
     // Push adopt to the target FIRST so the tab exists before the source drops it.

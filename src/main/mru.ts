@@ -80,7 +80,7 @@ function enqueue<T>(op: () => Promise<T>): Promise<T> {
   const run = writeTail.then(op, op);
   writeTail = run.then(
     () => undefined,
-    () => undefined,
+    () => undefined
   );
   return run;
 }

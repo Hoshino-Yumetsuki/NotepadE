@@ -10,7 +10,7 @@ import {
   resetToSingleTab,
   seedTabs,
   tabByEditorId,
-  tabOrderFromSeam,
+  tabOrderFromSeam
 } from './helpers/tabs';
 
 /**

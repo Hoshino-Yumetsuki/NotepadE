@@ -84,7 +84,7 @@ const UNICODE_LINES = [
   'Hello, Notepads.',
   'Unicode: café — naïve — 日本語 — Ωmega — 🚀',
   'mixed scripts: Ω ß ç 日 한 中',
-  'final line',
+  'final line'
 ];
 
 /**
@@ -97,24 +97,24 @@ const UNICODE_PAYLOADS: string[][] = [
   ['single line no break'],
   ['', 'leading blank line', '', 'trailing blank line', ''],
   ['emoji run 🚀🎉🧪✅', 'symbols ©®™§¶', 'math ∑∏∫√≈≠'],
-  ['tabs\tand\tspaces   here', 'punctuation: …—–«»“”', 'done'],
+  ['tabs\tand\tspaces   here', 'punctuation: …—–«»“”', 'done']
 ];
 const ASCII_PAYLOADS: string[][] = [
   ASCII_LINES,
   ['a'],
   ['1', '2', '3', '4', '5'],
-  ['key=value', 'foo:bar', 'path/to/thing'],
+  ['key=value', 'foo:bar', 'path/to/thing']
 ];
 const WESTERN_PAYLOADS: string[][] = [
   WESTERN_LINES,
   ['àâäçéèêëîïôùûü', 'ÀÂÄÇÉÈÊËÎÏÔÙÛÜ'],
-  ['Größe', 'Mañana', 'Garçon', 'Smörgåsbord'],
+  ['Größe', 'Mañana', 'Garçon', 'Smörgåsbord']
 ];
 const GB_PAYLOADS: string[][] = [GB_LINES, ['中文', '单行'], ['编码', '往返', '测试', '完成']];
 const SJIS_PAYLOADS: string[][] = [
   SJIS_LINES,
   ['日本語', '一行'],
-  ['ひらがな', 'カタカナ', '漢字'],
+  ['ひらがな', 'カタカナ', '漢字']
 ];
 const BIG5_PAYLOADS: string[][] = [BIG5_LINES, ['繁體', '單行'], ['編碼', '往返', '測試', '完成']];
 
@@ -139,7 +139,7 @@ const LABELS = {
   big5: 'Traditional Chinese (big5)',
   win1252: 'Western (windows-1252)',
   win1251: 'Cyrillic (windows-1251)',
-  win1250: 'Central European (windows-1250)',
+  win1250: 'Central European (windows-1250)'
 } as const;
 
 /** iconv-lite codec for a label, mirroring encoding.ts codecForLabel. */
@@ -155,7 +155,7 @@ const CODEC: Record<string, string> = {
   [LABELS.big5]: 'big5',
   [LABELS.win1252]: 'windows-1252',
   [LABELS.win1251]: 'windows-1251',
-  [LABELS.win1250]: 'windows-1250',
+  [LABELS.win1250]: 'windows-1250'
 };
 
 /**
@@ -205,7 +205,7 @@ export function buildCorpus(): ByteFile[] {
     reopen: string,
     lines: string[],
     eol: EolId,
-    opts: Partial<CorpusEntry> = {},
+    opts: Partial<CorpusEntry> = {}
   ): void => {
     const text = joinEol(lines, eol);
     const bytes = encodeForLabel(text, label);
@@ -218,7 +218,7 @@ export function buildCorpus(): ByteFile[] {
       hasBom: labelWantsBom(label),
       roundTripClass: 'byte-identical',
       family,
-      ...opts,
+      ...opts
     };
     files.push({ entry, bytes });
   };
@@ -236,24 +236,24 @@ export function buildCorpus(): ByteFile[] {
   // --- UTF-16 LE / BE, +/- BOM -------------------------------------------
   for (const eol of EOLS) {
     UNICODE_PAYLOADS.forEach((p) =>
-      add('utf16le-bom', LABELS.utf16leBom, LABELS.utf16leBom, p, eol),
+      add('utf16le-bom', LABELS.utf16leBom, LABELS.utf16leBom, p, eol)
     );
     UNICODE_PAYLOADS.forEach((p) =>
-      add('utf16be-bom', LABELS.utf16beBom, LABELS.utf16beBom, p, eol),
+      add('utf16be-bom', LABELS.utf16beBom, LABELS.utf16beBom, p, eol)
     );
     // BOM-less UTF-16: detection is unreliable (jschardet); reopen-with the
     // explicit label guarantees the byte round-trip, but auto-detect may miss.
     UNICODE_PAYLOADS.forEach((p) =>
       add('utf16le-nobom', LABELS.utf16le, LABELS.utf16le, p, eol, {
         detectionLenient: true,
-        note: 'BOM-less UTF-16 LE: jschardet may not detect; round-trip via reopen-with. Counts toward <=2% miss budget.',
-      }),
+        note: 'BOM-less UTF-16 LE: jschardet may not detect; round-trip via reopen-with. Counts toward <=2% miss budget.'
+      })
     );
     UNICODE_PAYLOADS.forEach((p) =>
       add('utf16be-nobom', LABELS.utf16be, LABELS.utf16be, p, eol, {
         detectionLenient: true,
-        note: 'BOM-less UTF-16 BE: detection lenient (risk R2).',
-      }),
+        note: 'BOM-less UTF-16 BE: detection lenient (risk R2).'
+      })
     );
   }
   // --- GB18030 ------------------------------------------------------------
@@ -261,24 +261,24 @@ export function buildCorpus(): ByteFile[] {
     GB_PAYLOADS.forEach((p) =>
       add('gb18030', LABELS.gb18030, LABELS.gb18030, p, eol, {
         detectionLenient: true,
-        note: 'jschardet may report GB2312/GB18030 variance on short text; reopen-with pins round-trip.',
-      }),
+        note: 'jschardet may report GB2312/GB18030 variance on short text; reopen-with pins round-trip.'
+      })
     );
   }
   // --- Shift-JIS ----------------------------------------------------------
   for (const eol of EOLS) {
     SJIS_PAYLOADS.forEach((p) =>
       add('shift-jis', LABELS.shiftJis, LABELS.shiftJis, p, eol, {
-        detectionLenient: true,
-      }),
+        detectionLenient: true
+      })
     );
   }
   // --- Big5 ---------------------------------------------------------------
   for (const eol of EOLS) {
     BIG5_PAYLOADS.forEach((p) =>
       add('big5', LABELS.big5, LABELS.big5, p, eol, {
-        detectionLenient: true,
-      }),
+        detectionLenient: true
+      })
     );
   }
   // --- ANSI single-byte pages (Western/Cyrillic/Central-European) ---------
@@ -286,14 +286,14 @@ export function buildCorpus(): ByteFile[] {
     WESTERN_PAYLOADS.forEach((p) =>
       add('ansi-1252', LABELS.win1252, LABELS.win1252, p, eol, {
         detectionLenient: true,
-        note: 'Single-byte ANSI detection is heuristic; reopen-with pins round-trip.',
-      }),
+        note: 'Single-byte ANSI detection is heuristic; reopen-with pins round-trip.'
+      })
     );
     add('ansi-1251', LABELS.win1251, LABELS.win1251, ['Привет мир', 'кодировка', 'конец'], eol, {
-      detectionLenient: true,
+      detectionLenient: true
     });
     add('ansi-1250', LABELS.win1250, LABELS.win1250, ['Příliš žluťoučký', 'kůň', 'konec'], eol, {
-      detectionLenient: true,
+      detectionLenient: true
     });
   }
 
@@ -314,9 +314,9 @@ export function buildCorpus(): ByteFile[] {
         hasBom: false,
         roundTripClass: 'normalizing',
         family: 'mixed-eol',
-        note: 'Contains CRLF+CR+LF. Editor normalizes on save (UWP parity); assert detected eol + idempotent re-save.',
+        note: 'Contains CRLF+CR+LF. Editor normalizes on save (UWP parity); assert detected eol + idempotent re-save.'
       },
-      bytes,
+      bytes
     });
   }
   {
@@ -332,9 +332,9 @@ export function buildCorpus(): ByteFile[] {
         expectedEol: 'cr',
         hasBom: false,
         roundTripClass: 'normalizing',
-        family: 'mixed-eol',
+        family: 'mixed-eol'
       },
-      bytes,
+      bytes
     });
   }
 
@@ -350,9 +350,9 @@ export function buildCorpus(): ByteFile[] {
         hasBom: false,
         roundTripClass: 'byte-identical',
         family: 'empty',
-        note: 'Zero-byte file. decodeBytes returns UTF-8 no BOM; save of empty writes 0 bytes.',
+        note: 'Zero-byte file. decodeBytes returns UTF-8 no BOM; save of empty writes 0 bytes.'
       },
-      bytes: Buffer.alloc(0),
+      bytes: Buffer.alloc(0)
     });
   }
 
@@ -373,9 +373,9 @@ export function buildCorpus(): ByteFile[] {
         roundTripClass: 'byte-identical',
         family: 'dotlog',
         isLog: true,
-        note: '.LOG round-trip uses reopen-with (no auto-stamp on the harness open path).',
+        note: '.LOG round-trip uses reopen-with (no auto-stamp on the harness open path).'
       },
-      bytes: iconv.encode(text, 'utf8'),
+      bytes: iconv.encode(text, 'utf8')
     });
   }
 
@@ -406,9 +406,9 @@ export function buildCorpus(): ByteFile[] {
         roundTripClass: 'byte-identical',
         family: 'large',
         isLarge: true,
-        note: `${bytes.length} bytes (> old ${OLD_CAP} cap). Proves the cap is dropped (#10): opens/edits/saves with 0% byte mismatch.`,
+        note: `${bytes.length} bytes (> old ${OLD_CAP} cap). Proves the cap is dropped (#10): opens/edits/saves with 0% byte mismatch.`
       },
-      bytes,
+      bytes
     });
   }
 

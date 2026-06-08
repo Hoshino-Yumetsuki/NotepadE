@@ -48,7 +48,7 @@ export const LIGHT_APP_TOKENS: AppThemeTokens = {
   titlebar: '#D2D2D2',
   captionHover: '#B4B4B4',
   captionPressed: '#969696',
-  tabEdgeShadowOpacity: 0.06,
+  tabEdgeShadowOpacity: 0.06
 };
 
 /** Dark theme — base #2E2E2E (UWP darkModeBaseColor). */
@@ -57,7 +57,7 @@ export const DARK_APP_TOKENS: AppThemeTokens = {
   titlebar: '#2D2D2D',
   captionHover: '#5A5A5A',
   captionPressed: '#787878',
-  tabEdgeShadowOpacity: 0.1,
+  tabEdgeShadowOpacity: 0.1
 };
 
 /**
@@ -69,7 +69,7 @@ export const HC_APP_TOKENS: AppThemeTokens = {
   titlebar: 'Canvas',
   captionHover: 'Highlight',
   captionPressed: 'Highlight',
-  tabEdgeShadowOpacity: 0.0,
+  tabEdgeShadowOpacity: 0.0
 };
 
 /** Resolve the chrome token set for a theme bucket. */
@@ -158,14 +158,14 @@ export interface AcrylicTokens {
 export const LIGHT_ACRYLIC_TOKENS: AcrylicTokens = {
   tint: 'rgba(240, 240, 240, 0.75)',
   blurRadius: 30,
-  luminosity: 'rgba(255, 255, 255, 0.30)',
+  luminosity: 'rgba(255, 255, 255, 0.30)'
 };
 
 /** Dark acrylic — base #2E2E2E tinted at 0.75, a faint dark luminosity layer. */
 export const DARK_ACRYLIC_TOKENS: AcrylicTokens = {
   tint: 'rgba(46, 46, 46, 0.75)',
   blurRadius: 30,
-  luminosity: 'rgba(0, 0, 0, 0.30)',
+  luminosity: 'rgba(0, 0, 0, 0.30)'
 };
 
 /**
@@ -176,7 +176,7 @@ export const DARK_ACRYLIC_TOKENS: AcrylicTokens = {
 export const HC_ACRYLIC_TOKENS: AcrylicTokens = {
   tint: 'Canvas',
   blurRadius: 0,
-  luminosity: 'transparent',
+  luminosity: 'transparent'
 };
 
 /** Resolve the acrylic recipe for a theme bucket. */
@@ -206,7 +206,7 @@ export function acrylicVars(theme: AppTheme): Record<string, string> {
   return {
     [ACRYLIC_VAR_TINT]: t.tint,
     [ACRYLIC_VAR_BLUR]: `${t.blurRadius}px`,
-    [ACRYLIC_VAR_LUMINOSITY]: t.luminosity,
+    [ACRYLIC_VAR_LUMINOSITY]: t.luminosity
   };
 }
 

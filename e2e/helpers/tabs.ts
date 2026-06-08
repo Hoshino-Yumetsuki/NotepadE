@@ -31,7 +31,7 @@ export const TAB_SELECTORS = {
   menuCloseSaved: '[data-testid="tab-menu-close-saved"]',
   menuCopyPath: '[data-testid="tab-menu-copy-path"]',
   menuOpenFolder: '[data-testid="tab-menu-open-folder"]',
-  menuRename: '[data-testid="tab-menu-rename"]',
+  menuRename: '[data-testid="tab-menu-rename"]'
 } as const;
 
 /** A tab element selected by its editorId via the data-editor-id attribute. */
@@ -56,7 +56,7 @@ export async function activeTabId(page: Page): Promise<string | null> {
 /** The editorIds in current DOM order — used to assert reorder via the rendered strip. */
 export async function tabOrderFromDom(page: Page): Promise<string[]> {
   return page.$$eval(TAB_SELECTORS.tab, (els) =>
-    els.map((el) => el.getAttribute('data-editor-id') ?? ''),
+    els.map((el) => el.getAttribute('data-editor-id') ?? '')
   );
 }
 
@@ -74,7 +74,7 @@ export async function tabCount(page: Page): Promise<number> {
 export async function expectTabCount(page: Page, n: number): Promise<void> {
   await expect
     .poll(async () => (await listTabs(page)).length, {
-      message: `expected ${n} tabs`,
+      message: `expected ${n} tabs`
     })
     .toBe(n);
 }
@@ -120,7 +120,7 @@ export async function clickMenuItem(page: Page, selector: string): Promise<void>
 export async function dragTabTo(
   page: Page,
   fromEditorId: string,
-  toEditorId: string,
+  toEditorId: string
 ): Promise<void> {
   const from = page.locator(tabByEditorId(fromEditorId));
   const to = page.locator(tabByEditorId(toEditorId));
@@ -140,7 +140,7 @@ export async function dragTabTo(
       x,
       y,
       button: 'left',
-      buttons: 1,
+      buttons: 1
     });
 
   await client.send('Input.dispatchMouseEvent', {
@@ -149,7 +149,7 @@ export async function dragTabTo(
     y: fy,
     button: 'left',
     buttons: 1,
-    clickCount: 1,
+    clickCount: 1
   });
   // Cross the 4px activation threshold, glide to the target, small settle nudge.
   await move(fx + 8, fy);
@@ -162,7 +162,7 @@ export async function dragTabTo(
     y: ty,
     button: 'left',
     buttons: 0,
-    clickCount: 1,
+    clickCount: 1
   });
   await client.detach();
 }

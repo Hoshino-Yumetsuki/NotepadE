@@ -79,7 +79,7 @@ export function planCompactEnter(current: WindowFlags): CompactEnterPlan {
     bounds: current.bounds,
     alwaysOnTop: current.alwaysOnTop,
     wasMaximized: current.maximized,
-    wasFullScreen: current.fullScreen,
+    wasFullScreen: current.fullScreen
   };
   const actions: WindowAction[] = [];
   // Clear fullscreen FIRST — resizing a fullscreen window is a no-op on Windows.
@@ -141,7 +141,7 @@ export function createCompactState(): CompactState {
 export function toggleCompact(
   port: CompactWindowPort,
   state: CompactState,
-  enabled: boolean,
+  enabled: boolean
 ): { isCompactOverlay: boolean } {
   const isCompact = state.snapshot !== null;
   if (enabled && !isCompact) {
@@ -186,6 +186,6 @@ export function windowStateFrom(flags: WindowFlags, isCompactOverlay: boolean): 
     bounds: { width: flags.bounds.width, height: flags.bounds.height },
     isAlwaysOnTop: flags.alwaysOnTop,
     isMaximized: flags.maximized,
-    isFullScreen: flags.fullScreen,
+    isFullScreen: flags.fullScreen
   };
 }

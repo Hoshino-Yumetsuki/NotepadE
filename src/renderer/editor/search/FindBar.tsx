@@ -9,7 +9,7 @@ import {
   MenuList,
   MenuItemCheckbox,
   Tooltip,
-  type MenuProps,
+  type MenuProps
 } from '@fluentui/react-components';
 import type { SearchOptions } from './searchEngine';
 import {
@@ -17,7 +17,7 @@ import {
   FindDimensions,
   FindInputBackground,
   FindPanelBackground,
-  FindPanelBorder,
+  FindPanelBorder
 } from './findTokens';
 import { useT } from '../../i18n';
 import { useAppTheme } from '../../theme/useAppTheme';
@@ -58,7 +58,7 @@ export interface FindBarProps {
     query: string,
     options: SearchOptions,
     replacement: string,
-    direction: FindDirection,
+    direction: FindDirection
   ) => void;
   /** Replace every occurrence (one undo step). */
   onReplaceAll: (query: string, options: SearchOptions, replacement: string) => void;
@@ -91,7 +91,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
     onQueryChange,
     onToggleReplace,
     onDismiss,
-    status,
+    status
   } = props;
 
   const { t } = useT();
@@ -143,8 +143,8 @@ export function FindBar(props: FindBarProps): JSX.Element {
     findOption: [
       ...(matchCase ? ['matchCase'] : []),
       ...(wholeWord ? ['wholeWord'] : []),
-      ...(useRegex ? ['useRegex'] : []),
-    ],
+      ...(useRegex ? ['useRegex'] : [])
+    ]
   };
 
   const onCheckedValueChange = useCallback<NonNullable<MenuProps['onCheckedValueChange']>>(
@@ -165,7 +165,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
       setWholeWord(nextWholeWord);
       setUseRegex(nextUseRegex);
     },
-    [wholeWord],
+    [wholeWord]
   );
 
   const doFind = useCallback(
@@ -174,7 +174,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
       onFind(query, options, direction);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasQuery, query, matchCase, wholeWord, useRegex, onFind],
+    [hasQuery, query, matchCase, wholeWord, useRegex, onFind]
   );
 
   const doReplaceOne = useCallback(
@@ -183,7 +183,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
       onReplaceOne(query, options, replacement, direction);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasQuery, query, replacement, matchCase, wholeWord, useRegex, onReplaceOne],
+    [hasQuery, query, replacement, matchCase, wholeWord, useRegex, onReplaceOne]
   );
 
   const doReplaceAll = useCallback(() => {
@@ -210,7 +210,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
         replaceInputRef.current?.focus();
       }
     },
-    [doFind, onDismiss, showReplace],
+    [doFind, onDismiss, showReplace]
   );
 
   // REPLACE box key handling (ReplaceBar_OnKeyDown).
@@ -232,14 +232,14 @@ export function FindBar(props: FindBarProps): JSX.Element {
         findInputRef.current?.focus();
       }
     },
-    [doReplaceOne, onDismiss],
+    [doReplaceOne, onDismiss]
   );
 
   const iconBtnStyle: React.CSSProperties = {
     minWidth: FindDimensions.buttonWidth,
     width: FindDimensions.buttonWidth,
     height: FindDimensions.rowHeight,
-    padding: 0,
+    padding: 0
   };
 
   return (
@@ -270,7 +270,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
         gridTemplateRows: showReplace ? 'auto auto' : 'auto',
         alignItems: 'center',
         gap: 2,
-        padding: 4,
+        padding: 4
       }}
     >
       {/* Toggle-replace chevron (spans both rows when replace is shown). */}
@@ -288,7 +288,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
             width: FindDimensions.toggleWidth,
             height: FindDimensions.rowHeight,
             padding: 0,
-            gridRow: showReplace ? '1 / span 2' : '1',
+            gridRow: showReplace ? '1 / span 2' : '1'
           }}
           icon={
             <Glyph
@@ -312,7 +312,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
           style={{
             flex: '1 1 auto',
             fontSize: FindDimensions.textFontSize,
-            backgroundColor: inputBackground,
+            backgroundColor: inputBackground
           }}
         />
         <Menu checkedValues={checkedValues} onCheckedValueChange={onCheckedValueChange}>
@@ -427,7 +427,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
             style={{
               gridColumn: '2',
               fontSize: FindDimensions.textFontSize,
-              backgroundColor: inputBackground,
+              backgroundColor: inputBackground
             }}
           />
           <div style={{ gridColumn: '3', display: 'flex', alignItems: 'center', gap: 2 }}>

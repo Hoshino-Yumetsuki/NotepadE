@@ -67,7 +67,7 @@ export interface ThemeCase {
 export const THEME_CASES: readonly ThemeCase[] = [
   { name: 'light', colorScheme: 'light', forcedColors: 'none' },
   { name: 'dark', colorScheme: 'dark', forcedColors: 'none' },
-  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' },
+  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' }
 ] as const;
 
 /**
@@ -83,7 +83,7 @@ export const THEME_CASES: readonly ThemeCase[] = [
 export async function applyTheme(
   app: ElectronApplication,
   page: Page,
-  tc: ThemeCase,
+  tc: ThemeCase
 ): Promise<void> {
   // R10: MAIN nativeTheme is authoritative for the light/dark bucket (the renderer
   // never reads prefers-color-scheme for it). Drive the seam per-case via app.evaluate.
@@ -109,7 +109,7 @@ export async function applyTheme(
 export async function assertThemeGuard(
   page: Page,
   tc: ThemeName,
-  guardLocator?: Locator,
+  guardLocator?: Locator
 ): Promise<void> {
   if (guardLocator) {
     // Surfaces that expose data-theme (StatusBar pattern) get the strongest guard.
@@ -122,7 +122,7 @@ export async function assertThemeGuard(
 
   if (tc === 'hc') {
     const forcedActive = await page.evaluate(
-      () => window.matchMedia('(forced-colors: active)').matches,
+      () => window.matchMedia('(forced-colors: active)').matches
     );
     expect(forcedActive, 'HC capture requires forced-colors: active to be live').toBe(true);
     return;
@@ -140,7 +140,7 @@ export async function assertThemeGuard(
   } else {
     expect(
       rootLuma,
-      `dark root surface luminance (got ${rootLuma}) — >120 means the theme read regressed to light`,
+      `dark root surface luminance (got ${rootLuma}) — >120 means the theme read regressed to light`
     ).toBeLessThan(120);
   }
 }
@@ -205,18 +205,18 @@ export async function captureGolden(args: CaptureGoldenArgs): Promise<CaptureGol
       x: Math.round(box.x),
       y: Math.round(box.y),
       width: Math.round(box.width),
-      height: Math.round(box.height),
-    },
+      height: Math.round(box.height)
+    }
   });
 
   const baselinePath = join(BASELINE_DIR, `${component}-${tc.name}.png`);
   const result = await compareToBaseline(actual, baselinePath, `${component}-${tc.name}`, {
-    createMissingBaseline: UPDATE_BASELINES,
+    createMissingBaseline: UPDATE_BASELINES
   });
 
   return {
     pass: result.pass,
     message: formatDiff(`${component}-${tc.name}`, result),
-    baselineCreated: result.baselineCreated,
+    baselineCreated: result.baselineCreated
   };
 }

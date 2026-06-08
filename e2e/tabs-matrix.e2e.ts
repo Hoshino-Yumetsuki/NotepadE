@@ -15,7 +15,7 @@ import {
   seedTabs,
   tabByEditorId,
   tabOrderFromDom,
-  tabOrderFromSeam,
+  tabOrderFromSeam
 } from './helpers/tabs';
 
 /**
@@ -124,7 +124,7 @@ test('rename: F2 + type + Enter updates the tab title and DOM', async () => {
     .poll(async () => (await listTabs(page)).find((t) => t.editorId === ids[1])?.title)
     .toBe('renamed-tab.txt');
   await expect(page.locator(tabByEditorId(ids[1])).locator(TAB_SELECTORS.tabTitle)).toHaveText(
-    'renamed-tab.txt',
+    'renamed-tab.txt'
   );
 });
 
@@ -177,7 +177,7 @@ test('copy-path: routes the file-backed tab path through the shell.copyPath IPC 
   // Poll the main-process record (the IPC round-trip is async).
   await expect
     .poll(() =>
-      app.evaluate(() => (globalThis as unknown as { __copyPathCalls: string[] }).__copyPathCalls),
+      app.evaluate(() => (globalThis as unknown as { __copyPathCalls: string[] }).__copyPathCalls)
     )
     .toEqual([filePath]);
 });

@@ -3,7 +3,7 @@ import {
   EditorSelection,
   type SelectionRange,
   type StateCommand,
-  type Extension,
+  type Extension
 } from '@codemirror/state';
 import { EditorView, type Command } from '@codemirror/view';
 import { editorSettings, type EditorSettings } from '../editorSettings';
@@ -35,7 +35,7 @@ export function runStateCommand(
   command: StateCommand,
   doc: string,
   selection: SelectionLike,
-  settings?: Partial<EditorSettings>,
+  settings?: Partial<EditorSettings>
 ): RunResult {
   const extensions = settings ? [editorSettings.of(settings)] : [];
   let state = EditorState.create({ doc, selection, extensions });
@@ -45,7 +45,7 @@ export function runStateCommand(
     dispatch: (tr) => {
       changed = true;
       state = tr.state;
-    },
+    }
   });
   // A command may return true yet dispatch nothing (no-op consume); track both.
   void result;
@@ -56,7 +56,7 @@ export function runStateCommand(
     head: m.head,
     from: m.from,
     to: m.to,
-    changed,
+    changed
   };
 }
 
@@ -64,13 +64,13 @@ export function runStateCommand(
 export function mountView(
   doc: string,
   selection: SelectionLike,
-  extensions: Extension = [],
+  extensions: Extension = []
 ): EditorView {
   const parent = document.createElement('div');
   document.body.appendChild(parent);
   return new EditorView({
     state: EditorState.create({ doc, selection, extensions }),
-    parent,
+    parent
   });
 }
 

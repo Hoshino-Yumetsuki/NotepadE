@@ -22,7 +22,7 @@ import {
   DialogSurface,
   DialogTitle,
   Field,
-  Input,
+  Input
 } from '@fluentui/react-components';
 import { useT } from '../../i18n';
 

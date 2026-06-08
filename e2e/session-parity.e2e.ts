@@ -36,7 +36,7 @@ interface SnapshotWithBackups extends SessionSnapshot {
 /** Persist a snapshot through the real contract; returns the write result. */
 async function snapshot(
   app: LaunchedApp,
-  data: SnapshotWithBackups,
+  data: SnapshotWithBackups
 ): Promise<{ ok: boolean; written?: boolean; error?: string }> {
   return app.page.evaluate(async (d) => {
     const res = await window.notepads.session.snapshot(d as never);
@@ -68,7 +68,7 @@ function makeTab(over: Partial<SessionTab> & Pick<SessionTab, 'editorId'>): Sess
     selectionEnd: 0,
     scrollTop: 0,
     viewMode: { preview: false, diff: false },
-    ...over,
+    ...over
   };
 }
 
@@ -92,7 +92,7 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
         selectionStart: 5,
         selectionEnd: 12,
         scrollTop: 240,
-        viewMode: { preview: true, diff: false },
+        viewMode: { preview: true, diff: false }
       }),
       // Untitled, clean, diff view on.
       makeTab({
@@ -104,8 +104,8 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
         selectionStart: 3,
         selectionEnd: 3,
         scrollTop: 17,
-        viewMode: { preview: false, diff: true },
-      }),
+        viewMode: { preview: false, diff: true }
+      })
     ];
 
     const snap: SnapshotWithBackups = {
@@ -114,8 +114,8 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
       activeEditorId: 'ed-2',
       _backups: {
         'ed-1': { lastSaved: 'persisted content\n', pending: 'persisted content edited' },
-        'ed-2': { lastSaved: 'untitled body' },
-      },
+        'ed-2': { lastSaved: 'untitled body' }
+      }
     };
 
     // --- session 1: write the snapshot, then kill the app ---
@@ -188,7 +188,7 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
       version: 1,
       tabs: [makeTab({ editorId: 'ed-x', filePath: doomedFile, isModified: false })],
       activeEditorId: 'ed-x',
-      _backups: { 'ed-x': { lastSaved: 'here for now\n' } },
+      _backups: { 'ed-x': { lastSaved: 'here for now\n' } }
     };
 
     let app = await launchApp({ userDataDir });
@@ -228,7 +228,7 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
         version: 1,
         tabs: [makeTab({ editorId: 'ed-c', filePath: null, isModified: true })],
         activeEditorId: 'ed-c',
-        _backups: { 'ed-c': { lastSaved: 'base', pending: 'dirty edit' } },
+        _backups: { 'ed-c': { lastSaved: 'base', pending: 'dirty edit' } }
       });
       expect(w.ok && w.written).toBe(true);
     } finally {
@@ -239,7 +239,7 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
     writeFileSync(
       join(userDataDir, 'NotepadsSessionData.json'),
       '{ this is not valid json',
-      'utf8',
+      'utf8'
     );
 
     app = await launchApp({ userDataDir });
@@ -268,7 +268,7 @@ test.describe('Gate 4 — session snapshot + crash recovery parity', () => {
         version: 1,
         tabs: [makeTab({ editorId: 'ed-d', filePath: null, isModified: true })],
         activeEditorId: 'ed-d',
-        _backups: { 'ed-d': { lastSaved: 'base', pending: 'dirty' } },
+        _backups: { 'ed-d': { lastSaved: 'base', pending: 'dirty' } }
       });
       expect(w.ok && w.written).toBe(true);
       await clearRecovered(app);

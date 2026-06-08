@@ -4,7 +4,7 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
-  MenuDivider,
+  MenuDivider
 } from '@fluentui/react-components';
 import type { ReactElement } from 'react';
 import { useT } from '../i18n';
@@ -66,7 +66,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
     onCloseSaved,
     onCopyFullPath,
     onOpenContainingFolder,
-    onRename,
+    onRename
   } = props;
 
   // UWP enable conditions (TabContextFlyout_Opening, lines 79-82).

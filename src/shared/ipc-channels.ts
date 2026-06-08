@@ -80,7 +80,7 @@ export const IpcChannels = {
   EvtThemeAccentChanged: 'notepads:evt:theme:accentChanged',
   EvtSettingsChanged: 'notepads:evt:settings:changed',
   EvtAppActivation: 'notepads:evt:app:activation',
-  EvtAppProtocol: 'notepads:evt:app:protocol',
+  EvtAppProtocol: 'notepads:evt:app:protocol'
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];

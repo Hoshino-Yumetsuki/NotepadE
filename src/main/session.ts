@@ -96,7 +96,7 @@ function serializeForDisk(data: SessionSnapshot): string {
   const ordered = {
     version: 1 as const,
     tabs: data.tabs,
-    activeEditorId: data.activeEditorId,
+    activeEditorId: data.activeEditorId
   };
   return JSON.stringify(ordered, null, 2);
 }

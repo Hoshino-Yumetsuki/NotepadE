@@ -78,6 +78,6 @@ export function edgeShadowStyle(theme: AppTheme, direction: EdgeShadowDirection)
     height: EDGE_SHADOW_BLUR,
     pointerEvents: 'none',
     zIndex: 2,
-    background: `linear-gradient(to ${gradientTo}, ${shadowColor(o)} 0%, transparent 100%)`,
+    background: `linear-gradient(to ${gradientTo}, ${shadowColor(o)} 0%, transparent 100%)`
   };
 }

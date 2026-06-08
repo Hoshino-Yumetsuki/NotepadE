@@ -107,7 +107,7 @@ export function MarkdownPreview({
   text,
   isDark = false,
   fontSize = 14,
-  editorView = null,
+  editorView = null
 }: MarkdownPreviewProps): JSX.Element {
   // Re-render only when the source text changes. Render (markdown-it) then
   // sanitize (DOMPurify) — both are pure transforms keyed on the text.

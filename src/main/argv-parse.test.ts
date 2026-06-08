@@ -6,7 +6,7 @@ import {
   isNewInstanceProtocol,
   PROTOCOL_SCHEME,
   NEW_INSTANCE_VERB,
-  type ArgvEnv,
+  type ArgvEnv
 } from './argv-parse';
 
 /**
@@ -96,7 +96,7 @@ describe('parseArgv', () => {
     const out = parseArgv(
       [ENV.execPath, '/app/notepads/out/main/index.js', ENV.appPath, '.', real],
       '/cwd',
-      ENV,
+      ENV
     );
     expect(out.paths).toEqual([real]);
   });

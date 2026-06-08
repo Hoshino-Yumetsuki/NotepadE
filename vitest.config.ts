@@ -20,8 +20,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@shared': resolve(__dirname, 'src/shared'),
-    },
+      '@shared': resolve(__dirname, 'src/shared')
+    }
   },
   test: {
     environment: 'jsdom',
@@ -30,6 +30,6 @@ export default defineConfig({
     // Co-located renderer/shared specs. e2e/** is Playwright-only — exclude it so
     // `vitest run` never tries to execute Playwright's `test()` from @playwright/test.
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-    exclude: ['node_modules', 'out', 'dist', 'e2e/**'],
-  },
+    exclude: ['node_modules', 'out', 'dist', 'e2e/**']
+  }
 });

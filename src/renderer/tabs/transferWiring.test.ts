@@ -21,7 +21,7 @@ describe('applyAdopt cross-window editorId collision', () => {
     source = {
       getLastSavedText: () => '',
       getPendingText: () => '',
-      seedAdoptedDoc: (editorId, text) => seeded.push({ editorId, text }),
+      seedAdoptedDoc: (editorId, text) => seeded.push({ editorId, text })
     };
   });
 
@@ -34,12 +34,12 @@ describe('applyAdopt cross-window editorId collision', () => {
         eolId: 'lf',
         dateModifiedMs: 0,
         filePath: '/work/note.txt',
-        hasBom: false,
+        hasBom: false
       },
       pendingText: null,
       isModified: false,
       dropIndex: 1,
-      viewMode: { preview: false, diff: false },
+      viewMode: { preview: false, diff: false }
     };
   }
 

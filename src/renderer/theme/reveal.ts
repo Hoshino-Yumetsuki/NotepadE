@@ -62,7 +62,7 @@ export interface RevealTokens {
 export const LIGHT_REVEAL_TOKENS: RevealTokens = {
   hoverColor: 'rgba(0, 0, 0, 0.06)',
   pressedColor: 'rgba(0, 0, 0, 0.10)',
-  radius: 108,
+  radius: 108
 };
 
 /**
@@ -72,7 +72,7 @@ export const LIGHT_REVEAL_TOKENS: RevealTokens = {
 export const DARK_REVEAL_TOKENS: RevealTokens = {
   hoverColor: 'rgba(255, 255, 255, 0.08)',
   pressedColor: 'rgba(255, 255, 255, 0.12)',
-  radius: 108,
+  radius: 108
 };
 
 /**
@@ -84,7 +84,7 @@ export const DARK_REVEAL_TOKENS: RevealTokens = {
 export const HC_REVEAL_TOKENS: RevealTokens = {
   hoverColor: 'transparent',
   pressedColor: 'transparent',
-  radius: 108,
+  radius: 108
 };
 
 /** Resolve the reveal token set for an app theme bucket. */
@@ -164,7 +164,7 @@ export function useReveal(): {
       nextRef.current = { x, y, opacity };
       if (rafRef.current == null) rafRef.current = requestAnimationFrame(flush);
     },
-    [flush],
+    [flush]
   );
 
   const fromEvent = useCallback(
@@ -173,7 +173,7 @@ export function useReveal(): {
       if (!rect) return;
       write(e.clientX - rect.left, e.clientY - rect.top, 1);
     },
-    [write],
+    [write]
   );
 
   const onPointerEnter = useCallback(
@@ -185,11 +185,11 @@ export function useReveal(): {
       }
       fromEvent(e);
     },
-    [fromEvent],
+    [fromEvent]
   );
   const onPointerMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => fromEvent(e),
-    [fromEvent],
+    [fromEvent]
   );
   const onPointerLeave = useCallback(() => write(0, 0, 0), [write]);
 
@@ -197,7 +197,7 @@ export function useReveal(): {
     () => () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     },
-    [],
+    []
   );
 
   return { hostRef, handlers: { onPointerMove, onPointerEnter, onPointerLeave } };

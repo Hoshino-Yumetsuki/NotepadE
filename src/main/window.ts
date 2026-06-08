@@ -24,7 +24,7 @@ import {
   type CompactState,
   type CompactWindowPort,
   type WindowAction,
-  type WindowState,
+  type WindowState
 } from './compact-overlay.js';
 
 function errMsg(e: unknown): string {
@@ -56,7 +56,7 @@ export function windowMinimize(event: Electron.IpcMainInvokeEvent): Result<void>
 
 /** Toggle maximize/restore; resolves with the resulting maximized flag. */
 export function windowToggleMaximize(
-  event: Electron.IpcMainInvokeEvent,
+  event: Electron.IpcMainInvokeEvent
 ): Result<{ isMaximized: boolean }> {
   const win = windowFor(event);
   if (!win) return { ok: false, error: 'No window for this renderer' };
@@ -145,7 +145,7 @@ export function installCloseGuard(win: BrowserWindow): void {
 
 /** Current maximized flag — seeds the renderer's restore glyph on mount. */
 export function windowIsMaximized(
-  event: Electron.IpcMainInvokeEvent,
+  event: Electron.IpcMainInvokeEvent
 ): Result<{ isMaximized: boolean }> {
   const win = windowFor(event);
   if (!win) return { ok: false, error: 'No window for this renderer' };
@@ -194,10 +194,10 @@ function compactPort(win: BrowserWindow): CompactWindowPort {
         bounds: { x: b.x, y: b.y, width: b.width, height: b.height },
         alwaysOnTop: win.isAlwaysOnTop(),
         maximized: win.isMaximized(),
-        fullScreen: win.isFullScreen(),
+        fullScreen: win.isFullScreen()
       };
     },
-    apply: (actions) => applyActions(win, actions),
+    apply: (actions) => applyActions(win, actions)
   };
 }
 
@@ -221,7 +221,7 @@ export async function windowBrokerRequest(args: {
 /** Toggle native fullscreen on the calling window; reports the resolved flag. */
 export function windowSetFullScreen(
   event: Electron.IpcMainInvokeEvent,
-  enabled: boolean,
+  enabled: boolean
 ): Result<{ isFullScreen: boolean }> {
   const win = windowFor(event);
   if (!win) return { ok: false, error: 'No window for this renderer' };
@@ -244,7 +244,7 @@ export function windowSetFullScreen(
  */
 export function windowSetCompactOverlay(
   event: Electron.IpcMainInvokeEvent,
-  enabled: boolean,
+  enabled: boolean
 ): Result<{ isCompactOverlay: boolean }> {
   const win = windowFor(event);
   if (!win) return { ok: false, error: 'No window for this renderer' };

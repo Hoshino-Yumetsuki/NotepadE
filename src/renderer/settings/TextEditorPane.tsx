@@ -16,7 +16,7 @@ import {
   Input,
   RadioGroup,
   Radio,
-  type SpinButtonOnChangeData,
+  type SpinButtonOnChangeData
 } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
 import type {
@@ -25,7 +25,7 @@ import type {
   TabIndents,
   SearchEngineId,
   DefaultDecoding,
-  EncodingId,
+  EncodingId
 } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
@@ -37,7 +37,7 @@ import {
   DECODING_OPTIONS,
   ENCODING_OPTIONS,
   FONT_SIZE_MIN,
-  FONT_SIZE_MAX,
+  FONT_SIZE_MAX
 } from './settingsOptions';
 import { EOL_MENU_ROWS } from '../statusbar/statusModel';
 import { useT } from '../i18n/I18nProvider';
@@ -52,14 +52,14 @@ const TAB_INDENT_KEYS: Record<number, string> = {
   [-1]: 'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content',
   2: 'TextAndEditorPage_TabKeySettings_TwoSpacesRadioButton.Content',
   4: 'TextAndEditorPage_TabKeySettings_FourSpacesRadioButton.Content',
-  8: 'TextAndEditorPage_TabKeySettings_EightSpacesRadioButton.Content',
+  8: 'TextAndEditorPage_TabKeySettings_EightSpacesRadioButton.Content'
 };
 
 /** Ported .resw key for each fallback-decoding option. */
 const DECODING_KEYS: Record<string, string> = {
   auto: 'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content',
   'utf-8': 'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content',
-  ansi: 'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content',
+  ansi: 'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content'
 };
 
 export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
@@ -119,7 +119,7 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
         <SettingRow
           id="highlightMisspelledWords"
           label={t(
-            'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent',
+            'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent'
           )}
         >
           <Switch

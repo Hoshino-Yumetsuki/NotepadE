@@ -67,7 +67,7 @@ function DiffColumn({
   scrollRef,
   onScroll,
   fontFamily,
-  fontSize,
+  fontSize
 }: {
   rows: DiffRow[];
   side: 'left' | 'right';
@@ -90,7 +90,7 @@ function DiffColumn({
         lineHeight: 1.5,
         whiteSpace: 'pre',
         boxSizing: 'border-box',
-        borderRight: side === 'left' ? '1px solid rgba(128,128,128,0.4)' : undefined,
+        borderRight: side === 'left' ? '1px solid rgba(128,128,128,0.4)' : undefined
       }}
     >
       {rows.map((row, i) => {
@@ -102,7 +102,7 @@ function DiffColumn({
             style={{
               backgroundColor: bg ?? undefined,
               padding: '0 8px',
-              minHeight: `${Math.round(fontSize * 1.5)}px`,
+              minHeight: `${Math.round(fontSize * 1.5)}px`
             }}
           >
             <RowContent row={row} />
@@ -117,7 +117,7 @@ export function DiffViewer({
   original,
   modified,
   fontFamily = MONO_FALLBACK,
-  fontSize = 14,
+  fontSize = 14
 }: DiffViewerProps): JSX.Element {
   const model = useMemo(() => buildDiffModel(original, modified), [original, modified]);
 

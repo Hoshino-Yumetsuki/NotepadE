@@ -87,7 +87,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 0,
     wrap: false,
-    expected: { from: 0, to: 2 },
+    expected: { from: 0, to: 2 }
   },
   {
     id: 'forward/from-mid-doc',
@@ -98,7 +98,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 1,
     wrap: false,
-    expected: { from: 3, to: 5 },
+    expected: { from: 3, to: 5 }
   },
   {
     id: 'forward/no-match-no-wrap-returns-null',
@@ -109,7 +109,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 11,
     wrap: false,
-    expected: null,
+    expected: null
   },
   {
     id: 'forward/wrap-to-doc-start',
@@ -120,7 +120,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 11,
     wrap: true,
-    expected: { from: 0, to: 2 },
+    expected: { from: 0, to: 2 }
   },
 
   // --- Case sensitivity (RegexOptions.IgnoreCase unless match-case) ---------
@@ -133,7 +133,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 0,
     wrap: false,
-    expected: { from: 0, to: 3 },
+    expected: { from: 0, to: 3 }
   },
   {
     id: 'case/sensitive-no-match',
@@ -144,7 +144,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX_CASE,
     caret: 0,
     wrap: false,
-    expected: null,
+    expected: null
   },
 
   // --- Multiline anchors (RegexOptions.Multiline is always set) ------------
@@ -157,7 +157,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 0,
     wrap: false,
-    expected: { from: 4, to: 5 }, // start of 'two'
+    expected: { from: 4, to: 5 } // start of 'two'
   },
   {
     id: 'multiline/dollar-anchors-line-end',
@@ -168,7 +168,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     caret: 0,
     wrap: false,
-    expected: { from: 5, to: 6 }, // the 'b' before the 2nd newline
+    expected: { from: 5, to: 6 } // the 'b' before the 2nd newline
   },
   {
     id: 'multiline/dot-does-not-cross-newline',
@@ -177,7 +177,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     input: 'ab\ncd',
     pattern: 'a.c',
     options: REGEX,
-    expected: [], // '.' excludes '\n' (no dotall), matching .NET default
+    expected: [] // '.' excludes '\n' (no dotall), matching .NET default
   },
 
   // --- findAll ordering + zero-width termination ---------------------------
@@ -191,8 +191,8 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     expected: [
       { from: 0, to: 2 },
       { from: 3, to: 5 },
-      { from: 6, to: 8 },
-    ],
+      { from: 6, to: 8 }
+    ]
   },
   {
     id: 'findAll/zero-width-terminates',
@@ -206,8 +206,8 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     expected: [
       { from: 0, to: 0 },
       { from: 1, to: 1 },
-      { from: 2, to: 2 },
-    ],
+      { from: 2, to: 2 }
+    ]
   },
 
   // --- RIGHT-TO-LEFT REVERSE SEARCH (divergence #5 / risk R5) ---------------
@@ -225,7 +225,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     caret: 11, // EOF
     wrap: false,
     expected: { from: 9, to: 11 }, // 'd4' — rightmost
-    note: '.NET RegexOptions.RightToLeft emulated via forward-match-all + pick-last-before-caret shim.',
+    note: '.NET RegexOptions.RightToLeft emulated via forward-match-all + pick-last-before-caret shim.'
   },
   {
     id: 'rtl/match-ending-exactly-at-caret-qualifies',
@@ -237,7 +237,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     caret: 8, // end of 'c3' is exactly 8 → qualifies (<=)
     wrap: false,
     expected: { from: 6, to: 8 },
-    note: 'RTL shim uses to <= caret (half-open), so a match ending exactly at the caret qualifies.',
+    note: 'RTL shim uses to <= caret (half-open), so a match ending exactly at the caret qualifies.'
   },
   {
     id: 'rtl/match-spanning-caret-excluded',
@@ -249,7 +249,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     caret: 7, // mid 'c3' (ends at 8 > 7) → excluded; previous qualifying is 'b2'
     wrap: false,
     expected: { from: 3, to: 5 },
-    note: 'A match whose end is past the caret is excluded by the RTL shim.',
+    note: 'A match whose end is past the caret is excluded by the RTL shim.'
   },
   {
     id: 'rtl/bof-no-wrap-returns-null',
@@ -261,7 +261,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     caret: 0,
     wrap: false,
     expected: null,
-    note: 'At BOF with wrap=false the RTL shim returns null (UWP stopAtBof).',
+    note: 'At BOF with wrap=false the RTL shim returns null (UWP stopAtBof).'
   },
   {
     id: 'rtl/wrap-yields-doc-final-match',
@@ -273,7 +273,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     caret: 0,
     wrap: true,
     expected: { from: 9, to: 11 },
-    note: 'UWP retries Match(content, content.Length) on wrap → rightmost (doc-final) match.',
+    note: 'UWP retries Match(content, content.Length) on wrap → rightmost (doc-final) match.'
   },
   {
     id: 'rtl/multiline-reverse-picks-last-line-start',
@@ -285,7 +285,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     caret: 11, // EOF; line starts at 0,4,8 — rightmost qualifying is 'top' at 8
     wrap: false,
     expected: { from: 8, to: 9 },
-    note: 'RTL + Multiline: rightmost line-start anchor before caret.',
+    note: 'RTL + Multiline: rightmost line-start anchor before caret.'
   },
 
   // --- replaceAll: $-group substitution + escape-sequence fix --------------
@@ -297,7 +297,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     pattern: '(\\w+) (\\w+)',
     options: REGEX,
     replacement: '$2 $1',
-    expected: { text: 'smith john', count: 1 },
+    expected: { text: 'smith john', count: 1 }
   },
   {
     id: 'replaceAll/escape-newline-expanded',
@@ -308,7 +308,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     replacement: '\\n',
     expected: { text: 'a\nb\nc', count: 2 },
-    note: 'ApplyTabAndLineEndingFix: \\r \\n \\t expanded in regex replacement only.',
+    note: 'ApplyTabAndLineEndingFix: \\r \\n \\t expanded in regex replacement only.'
   },
   {
     id: 'replaceAll/escape-tab+cr',
@@ -318,7 +318,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     pattern: '=',
     options: REGEX,
     replacement: '\\t\\r',
-    expected: { text: 'k\t\rv', count: 1 },
+    expected: { text: 'k\t\rv', count: 1 }
   },
   {
     id: 'replaceAll/count-multiple',
@@ -328,7 +328,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     pattern: '[a-z]\\d',
     options: REGEX,
     replacement: 'X',
-    expected: { text: 'X X X', count: 3 },
+    expected: { text: 'X X X', count: 3 }
   },
 
   // --- DOCUMENTED .NET-VS-JS FLAVOR DIVERGENCES (sign-off item #5) ----------
@@ -344,7 +344,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     options: REGEX,
     replacement: '$<last> $<first>',
     expected: { text: 'smith john', count: 1 },
-    note: '.NET named groups use ${name} in replacement; JS RegExp uses $<name>. The engine passes the replacement to RegExp.replace verbatim, so JS syntax ($<name>) is the supported form — documented divergence.',
+    note: '.NET named groups use ${name} in replacement; JS RegExp uses $<name>. The engine passes the replacement to RegExp.replace verbatim, so JS syntax ($<name>) is the supported form — documented divergence.'
   },
   {
     id: 'divergence/backslash-z-anchor-not-supported',
@@ -357,7 +357,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     wrap: false,
     // \Z is invalid in JS RegExp → buildRegex throws → engine returns null.
     expected: null,
-    note: '.NET \\Z / \\z (end-of-string anchors) are not valid JS RegExp; the pattern fails to compile and finds nothing. Use $ (with/without Multiline). Documented divergence — compileQuery surfaces the error to the UI.',
+    note: '.NET \\Z / \\z (end-of-string anchors) are not valid JS RegExp; the pattern fails to compile and finds nothing. Use $ (with/without Multiline). Documented divergence — compileQuery surfaces the error to the UI.'
   },
   {
     id: 'divergence/balancing-groups-not-supported',
@@ -370,7 +370,7 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     wrap: false,
     // .NET balancing-group construct (?<-name>) is invalid in JS → no match.
     expected: null,
-    note: '.NET balancing groups (?<-name>) have no JS RegExp equivalent; pattern fails to compile → no match. Documented divergence (sign-off #5).',
+    note: '.NET balancing groups (?<-name>) have no JS RegExp equivalent; pattern fails to compile → no match. Documented divergence (sign-off #5).'
   },
   {
     id: 'divergence/inline-options-block',
@@ -385,8 +385,8 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
     // not a flag toggle). With match-case on and inline (?i) unsupported, the
     // engine compiles it as a literal group attempt → no match. Documented.
     expected: null,
-    note: '.NET inline option groups like (?i) are not JS RegExp flags; case is controlled by the match-case toggle (gmi vs gm). Documented divergence.',
-  },
+    note: '.NET inline option groups like (?i) are not JS RegExp flags; case is controlled by the match-case toggle (gmi vs gm). Documented divergence.'
+  }
 ];
 
 /**
@@ -394,6 +394,6 @@ export const REGEX_PARITY_CASES: RegexParityCase[] = [
  * `divergence` rows; the gate enumerates `shim` (RTL) coverage.
  */
 export const RTL_REVERSE_CASES = REGEX_PARITY_CASES.filter(
-  (c) => c.kind === 'shim' && c.op === 'findPrevious',
+  (c) => c.kind === 'shim' && c.op === 'findPrevious'
 );
 export const DOCUMENTED_DIVERGENCES = REGEX_PARITY_CASES.filter((c) => c.kind === 'divergence');

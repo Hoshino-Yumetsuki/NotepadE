@@ -56,7 +56,7 @@ test('app mounts: shell + tab strip + editor render with no page error', async (
     return {
       rootChildCount: root?.childElementCount ?? -1,
       hasFluentProvider: !!document.querySelector('.fui-FluentProvider'),
-      hasAppShell: !!document.querySelector('#app-shell'),
+      hasAppShell: !!document.querySelector('#app-shell')
     };
   });
   expect(mounted.rootChildCount).toBeGreaterThan(0);

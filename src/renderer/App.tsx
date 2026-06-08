@@ -25,7 +25,7 @@ import {
   beginTransfer,
   handleVoidDrop,
   installTransferTestHook,
-  type TransferTextSource,
+  type TransferTextSource
 } from './tabs/transferWiring';
 import type { TabState } from './tabs/types';
 import { normalizeToShadow } from './editor/eol';
@@ -118,7 +118,7 @@ function TabSurfaceWash(props: {
         clipPath,
         WebkitClipPath: clipPath,
         pointerEvents: 'none',
-        zIndex: 0,
+        zIndex: 0
       }}
     />
   );
@@ -134,7 +134,7 @@ export function App(): JSX.Element {
 
   const isFrameless = useMemo(
     () => navigator.userAgent.includes('Windows') || navigator.userAgent.includes('Mac'),
-    [],
+    []
   );
 
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
@@ -183,11 +183,11 @@ export function App(): JSX.Element {
       store.activeEditorId
         ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
         : null,
-    [store],
+    [store]
   );
   const getActiveHandle = useCallback(
     () => (store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null),
-    [store],
+    [store]
   );
 
   const find = useFindBar({ getActiveView });
@@ -196,7 +196,7 @@ export function App(): JSX.Element {
   // `editorExtensions` prop (after the command keymap, before the CM6 base).
   const findEditorExtensions = useMemo(
     () => [keymap.of(find.keymap), find.editorExtensions],
-    [find.keymap, find.editorExtensions],
+    [find.keymap, find.editorExtensions]
   );
 
   // Compose the editor extensions actually mounted: the find seam PLUS a doc-change
@@ -210,9 +210,9 @@ export function App(): JSX.Element {
         const id = tabsStore.activeEditorId;
         const vm = id ? tabsStore.get(id)?.viewMode : undefined;
         if (vm && (vm.preview || vm.diff)) bumpDocVersion((v) => v + 1);
-      }),
+      })
     ],
-    [findEditorExtensions],
+    [findEditorExtensions]
   );
 
   // Content integrations (Phase 6, Lane B): print (Ctrl+P / Ctrl+Shift+P), share,
@@ -237,7 +237,7 @@ export function App(): JSX.Element {
       const id = store.activeEditorId;
       const t = id ? store.get(id) : undefined;
       if (id && t) store.setViewMode(id, { diff: !t.viewMode.diff, preview: false });
-    },
+    }
   });
 
   // Editor right-click context menu (UWP TextEditorContextFlyout). Mounts a CM6
@@ -245,7 +245,7 @@ export function App(): JSX.Element {
   // positioned Fluent menu. Gives Share + RTL their UI entry points.
   const editorContextMenu = useEditorContextMenu({
     isPreviewEligible: isMarkdownPath(
-      (store.activeEditorId ? store.get(store.activeEditorId) : undefined)?.filePath ?? null,
+      (store.activeEditorId ? store.get(store.activeEditorId) : undefined)?.filePath ?? null
     ),
     onTogglePreview: () => {
       const id = store.activeEditorId;
@@ -265,13 +265,13 @@ export function App(): JSX.Element {
           ? view.state.sliceDoc(sel.from, sel.to)
           : view.state.doc.toString();
       void share({ title: tabTitle(tb), text });
-    },
+    }
   });
 
   // Editor extensions including the contextmenu seam (find/preview-pulse + menu).
   const editorExtensionsWithMenu = useMemo(
     () => [paneEditorExtensions, editorContextMenu.extension],
-    [paneEditorExtensions, editorContextMenu.extension],
+    [paneEditorExtensions, editorContextMenu.extension]
   );
 
   // e.g. en 'Untitled.txt' / zh '新建文本文档.txt' / ja '無題.txt'). The store
@@ -334,7 +334,7 @@ export function App(): JSX.Element {
       // OpenedFile mtime so a later disk change is detectable (Lane C, Gate-4).
       if (file.filePath) recordLastSaved(id, file.filePath, file.dateModifiedMs);
     },
-    [store],
+    [store]
   );
 
   // Editor test hook reads the ACTIVE editor's handle + labels (existing Gate-1).
@@ -343,7 +343,7 @@ export function App(): JSX.Element {
       () =>
         store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
       () => labelsRef.current,
-      onFileOpened,
+      onFileOpened
     );
     return uninstall;
   }, [onFileOpened, store]);
@@ -356,7 +356,7 @@ export function App(): JSX.Element {
     const uninstall = installEditorTestHook(() =>
       store.activeEditorId
         ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
-        : null,
+        : null
     );
     return uninstall;
   }, [store]);
@@ -381,7 +381,7 @@ export function App(): JSX.Element {
         else setTimeout(seed, 0);
       };
       seed();
-    },
+    }
   });
 
   // Subscribe to MAIN's adopt/release pushes (this window is a transfer target
@@ -395,7 +395,7 @@ export function App(): JSX.Element {
       lastSavedTextRef.current.set(localId, payload.file.decodedText);
     });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
-      applyRelease(store, editorId),
+      applyRelease(store, editorId)
     );
     return () => {
       offAdopt();
@@ -426,7 +426,7 @@ export function App(): JSX.Element {
       const norm = (p: string): string => (winNT ? p.toLowerCase() : p);
       const target = norm(path);
       const existing = store.tabs.find(
-        (tab) => tab.filePath !== null && norm(tab.filePath) === target,
+        (tab) => tab.filePath !== null && norm(tab.filePath) === target
       );
       if (existing) {
         store.activate(existing.editorId);
@@ -464,7 +464,7 @@ export function App(): JSX.Element {
           filePath: res.data.filePath,
           encodingId: res.data.encodingId,
           eolId: res.data.eolId,
-          activate: true,
+          activate: true
         });
         // The new tab's editor mounts on a later render; seed once its handle
         // exists. Call synchronously first, then setTimeout(0)-retry while the
@@ -481,7 +481,7 @@ export function App(): JSX.Element {
         if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
       });
     },
-    [store],
+    [store]
   );
 
   // Open dialog (Ctrl+O + menu, UWP MainMenuButton_OpenButton): MAIN owns the
@@ -589,13 +589,13 @@ export function App(): JSX.Element {
         else store.newTab();
       }
     },
-    [store, settings.exitWhenLastTabClosed],
+    [store, settings.exitWhenLastTabClosed]
   );
 
   // Close-reminder dialog state (Issue 4, UWP SetCloseSaveReminderDialog). Non-null
   // while a MODIFIED tab is awaiting the user's Save / Don't Save / Cancel choice.
   const [pendingClose, setPendingClose] = useState<{ editorId: string; fileName: string } | null>(
-    null,
+    null
   );
 
   // Close a tab. With exitWhenLastTabClosed OFF, closing the sole PRISTINE untitled
@@ -618,7 +618,7 @@ export function App(): JSX.Element {
       }
       performClose(id);
     },
-    [store, settings.exitWhenLastTabClosed, performClose],
+    [store, settings.exitWhenLastTabClosed, performClose]
   );
 
   // Stable TabStrip callback identities. SortableTab is React.memo'd; if these were
@@ -629,7 +629,7 @@ export function App(): JSX.Element {
   const onNewTab = useCallback(() => store.newTab(), [store]);
   const onBeginTransfer = useCallback(
     (id: string) => beginTransfer(store, transferSource.current, id),
-    [store],
+    [store]
   );
   const onVoidDrop = useCallback((id: string) => handleVoidDrop(store, id), [store]);
 
@@ -646,7 +646,7 @@ export function App(): JSX.Element {
       const dirty = handle.getShadowText() !== baseline;
       store.setModified(editorId, dirty);
     },
-    [store],
+    [store]
   );
 
   // Save pipeline (Issue 3, UWP NotepadsMainPage.IO.cs:159-217). doSave writes the
@@ -671,13 +671,13 @@ export function App(): JSX.Element {
               shadowText,
               encodingId: tab.encodingId,
               eolId: tab.eolId,
-              suggestedName: tabTitle(tab),
+              suggestedName: tabTitle(tab)
             })
           : await window.notepads.file.save({
               filePath: tab.filePath as string,
               shadowText,
               encodingId: tab.encodingId,
-              eolId: tab.eolId,
+              eolId: tab.eolId
             });
       // Cancelled picker or write error: leave the tab dirty, surface nothing.
       if (!res.ok) return false;
@@ -691,7 +691,7 @@ export function App(): JSX.Element {
       store.setModified(editorId, false);
       return true;
     },
-    [store],
+    [store]
   );
 
   // Save All (UWP: loop modified editors). Untitled modified buffers each open a
@@ -776,7 +776,7 @@ export function App(): JSX.Element {
         window.dispatchEvent(evt);
       }
     },
-    onCloseActive: (id) => closeTab(id),
+    onCloseActive: (id) => closeTab(id)
   });
 
   // Status-bar view model (Lane C): derives the 8-column props from the active
@@ -785,7 +785,7 @@ export function App(): JSX.Element {
     theme: resolvedTheme,
     store,
     getActiveHandle,
-    activeEditorId,
+    activeEditorId
   });
 
   // Settings test seam (Phase 5 Gate-5 harness): exposes open/close + the live
@@ -796,7 +796,7 @@ export function App(): JSX.Element {
       open: () => setSettingsOpen(true),
       close: () => setSettingsOpen(false),
       getSettings: () => settings,
-      getResolvedTheme: () => resolvedTheme,
+      getResolvedTheme: () => resolvedTheme
     });
   }, [settings, resolvedTheme]);
 
@@ -866,7 +866,7 @@ export function App(): JSX.Element {
     if (id && t) {
       void print.printCurrent({
         title: tabTitle(t),
-        text: editorHandles.current.get(id)?.getShadowText() ?? '',
+        text: editorHandles.current.get(id)?.getShadowText() ?? ''
       });
     }
   }, [print, store]);
@@ -874,8 +874,8 @@ export function App(): JSX.Element {
     void print.printAll(
       store.tabs.map((t) => ({
         title: tabTitle(t),
-        text: editorHandles.current.get(t.editorId)?.getShadowText() ?? '',
-      })),
+        text: editorHandles.current.get(t.editorId)?.getShadowText() ?? ''
+      }))
     );
   }, [print, store]);
   useEffect(() => {
@@ -954,7 +954,7 @@ export function App(): JSX.Element {
       onNewWindow: doNewWindow,
       // Open Recent submenu (TabStrip fetches the list on flyout open via
       // recent.list and opens each entry via this shared primitive).
-      onOpenRecent: openPathIntoTab,
+      onOpenRecent: openPathIntoTab
     }),
     [
       store,
@@ -967,8 +967,8 @@ export function App(): JSX.Element {
       doSaveAll,
       doOpen,
       doNewWindow,
-      openPathIntoTab,
-    ],
+      openPathIntoTab
+    ]
   );
 
   // Map the MAIN-owned persisted Settings bag onto the editor-behavior facets
@@ -979,9 +979,9 @@ export function App(): JSX.Element {
       tabAsSpaces: settings.tabIndents,
       smartCopy: settings.smartCopy,
       searchEngine: settings.searchEngine,
-      fontSize: settings.editorFontSize,
+      fontSize: settings.editorFontSize
     }),
-    [settings.tabIndents, settings.smartCopy, settings.searchEngine, settings.editorFontSize],
+    [settings.tabIndents, settings.smartCopy, settings.searchEngine, settings.editorFontSize]
   );
   // word-wrap derives from the persisted TextWrapMode ('wrap' | 'noWrap').
   const editorWordWrap = settings.textWrapping === 'wrap';
@@ -993,7 +993,7 @@ export function App(): JSX.Element {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: appBackgroundTint(resolvedTheme, settings.tintOpacity),
+        backgroundColor: appBackgroundTint(resolvedTheme, settings.tintOpacity)
       }}
     >
       <TabStrip
@@ -1023,7 +1023,7 @@ export function App(): JSX.Element {
           // strip→editor line rounded to a 1px seam on fractional DPI (the "接缝" the
           // user flagged). One shared layer makes that boundary internal to a single
           // paint, so there is physically no seam at any scaling factor.
-          background: 'transparent',
+          background: 'transparent'
         }}
       >
         {/* Single continuous wash sheet (UWP SetsView selected-tab brush == content
@@ -1068,7 +1068,7 @@ export function App(): JSX.Element {
                 // Above the TabSurfaceWash (zIndex 0) so the editor content paints
                 // over the shared wash (the CM6 surface is transparent, so the wash
                 // still reads through as the editor background).
-                zIndex: 1,
+                zIndex: 1
               }}
             >
               <div
@@ -1084,7 +1084,7 @@ export function App(): JSX.Element {
                   // the editor visible beside it produced THREE columns. Hide the
                   // editor for diff so the viewer's own two panes are the only split.
                   right: tab.viewMode.preview ? '50%' : 0,
-                  display: tab.viewMode.diff ? 'none' : 'block',
+                  display: tab.viewMode.diff ? 'none' : 'block'
                 }}
               >
                 <CodeMirrorEditor
@@ -1122,7 +1122,7 @@ export function App(): JSX.Element {
                     right: 0,
                     left: '50%',
                     overflow: 'hidden',
-                    borderLeft: '1px solid rgba(128,128,128,0.4)',
+                    borderLeft: '1px solid rgba(128,128,128,0.4)'
                   }}
                 >
                   <MarkdownPreview
@@ -1145,7 +1145,7 @@ export function App(): JSX.Element {
                     // spans the full width so the DiffViewer's two internal columns
                     // are the entire side-by-side view — not a third column beside a
                     // still-visible editor.
-                    left: 0,
+                    left: 0
                   }}
                 >
                   <DiffViewer

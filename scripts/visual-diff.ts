@@ -84,7 +84,7 @@ export async function compareToBaseline(
   actualPng: Buffer,
   baselinePath: string,
   name: string,
-  options: CompareOptions = {},
+  options: CompareOptions = {}
 ): Promise<DiffResult> {
   const maxRatio = options.maxRatio ?? TAB_STRIP_MAX_DIFF_RATIO;
   const threshold = options.threshold ?? PIXELMATCH_THRESHOLD;
@@ -101,13 +101,13 @@ export async function compareToBaseline(
         ratio: 0,
         pass: true,
         diffPath: null,
-        baselineCreated: true,
+        baselineCreated: true
       };
     }
     throw new Error(
       `Missing baseline: ${baselinePath}\n` +
         'Run the capture flow (npm run visual:capture) to create baselines, or pass ' +
-        'createMissingBaseline=true for a first run. CI never auto-blesses baselines.',
+        'createMissingBaseline=true for a first run. CI never auto-blesses baselines.'
     );
   }
 
@@ -118,7 +118,7 @@ export async function compareToBaseline(
     throw new Error(
       `Dimension mismatch for "${name}": baseline ${baseline.width}x${baseline.height} ` +
         `vs actual ${actual.width}x${actual.height}. Re-capture the baseline if the ` +
-        'component size intentionally changed.',
+        'component size intentionally changed.'
     );
   }
 
@@ -126,7 +126,7 @@ export async function compareToBaseline(
   // jimp gives a w*h*4 RGBA bitmap; reuse it as pixelmatch's diff output buffer.
   const diffImg = new Jimp({ width, height });
   const diffPixels = pixelmatch(baseline.data, actual.data, diffImg.bitmap.data, width, height, {
-    threshold,
+    threshold
   });
 
   const totalPixels = width * height;

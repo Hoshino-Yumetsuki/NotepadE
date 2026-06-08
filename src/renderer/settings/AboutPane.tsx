@@ -18,7 +18,7 @@ import {
   APP_VERSION,
   ABOUT_LINKS,
   DEPENDENCY_CREDITS,
-  ABOUT_DISCLAIMER,
+  ABOUT_DISCLAIMER
 } from './aboutInfo';
 import { useT } from '../i18n/I18nProvider';
 

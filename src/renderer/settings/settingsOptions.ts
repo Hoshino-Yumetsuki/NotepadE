@@ -14,7 +14,7 @@ import type {
   TabIndents,
   SearchEngineId,
   DefaultDecoding,
-  EncodingId,
+  EncodingId
 } from '@shared/ipc-contract';
 import { UNICODE_ENCODINGS } from '../statusbar/statusModel';
 
@@ -49,14 +49,14 @@ export const APP_LANGUAGES: readonly { tag: string; label: string }[] = [
   { tag: 'uk-UA', label: 'Українська' },
   { tag: 'vi-VN', label: 'Tiếng Việt' },
   { tag: 'zh-CN', label: '简体中文' },
-  { tag: 'zh-TW', label: '繁體中文' },
+  { tag: 'zh-TW', label: '繁體中文' }
 ];
 
 /** Font-slant options (UWP FontStyle). */
 export const FONT_STYLES: readonly { id: FontStyleId; label: string }[] = [
   { id: 'normal', label: 'Normal' },
   { id: 'italic', label: 'Italic' },
-  { id: 'oblique', label: 'Oblique' },
+  { id: 'oblique', label: 'Oblique' }
 ];
 
 /** Common font-weight steps (OpenType weight; 400 = Normal). */
@@ -64,7 +64,7 @@ export const FONT_WEIGHTS: readonly { weight: number; label: string }[] = [
   { weight: 300, label: 'Light' },
   { weight: 400, label: 'Normal' },
   { weight: 600, label: 'Semibold' },
-  { weight: 700, label: 'Bold' },
+  { weight: 700, label: 'Bold' }
 ];
 
 /** Tab-as-spaces width options (UWP EditorDefaultTabIndents); -1 = real tab. */
@@ -72,7 +72,7 @@ export const TAB_INDENTS: readonly { value: TabIndents; label: string }[] = [
   { value: -1, label: 'Tab' },
   { value: 2, label: '2 spaces' },
   { value: 4, label: '4 spaces' },
-  { value: 8, label: '8 spaces' },
+  { value: 8, label: '8 spaces' }
 ];
 
 /** Web-search engine options (UWP SearchEngine enum). */
@@ -80,14 +80,14 @@ export const SEARCH_ENGINES: readonly { id: SearchEngineId; label: string }[] = 
   { id: 'bing', label: 'Bing' },
   { id: 'google', label: 'Google' },
   { id: 'duckDuckGo', label: 'DuckDuckGo' },
-  { id: 'custom', label: 'Custom' },
+  { id: 'custom', label: 'Custom' }
 ];
 
 /** Default-decoding options (UWP EditorDefaultDecoding). */
 export const DECODING_OPTIONS: readonly { id: DefaultDecoding; label: string }[] = [
   { id: 'auto', label: 'Auto-guess' },
   { id: 'utf-8', label: 'UTF-8' },
-  { id: 'ansi', label: 'ANSI (system code page)' },
+  { id: 'ansi', label: 'ANSI (system code page)' }
 ];
 
 /**
@@ -97,7 +97,7 @@ export const DECODING_OPTIONS: readonly { id: DefaultDecoding; label: string }[]
  * single source of truth.
  */
 export const ENCODING_OPTIONS: readonly { id: EncodingId; label: string }[] = UNICODE_ENCODINGS.map(
-  (id) => ({ id, label: id }),
+  (id) => ({ id, label: id })
 );
 
 /** Common monospace font families offered for the editor. */
@@ -107,7 +107,7 @@ export const FONT_FAMILIES: readonly string[] = [
   'Cascadia Mono',
   'Courier New',
   'Lucida Console',
-  'Segoe UI',
+  'Segoe UI'
 ];
 
 /** Tint-opacity slider bounds (0..1, default 0.75 per ThemeSettingsService). */

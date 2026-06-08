@@ -21,8 +21,8 @@ beforeEach(() => {
     settings: {
       get: vi.fn(async () => ({ ok: true as const, data: DEFAULT_SETTINGS })),
       set: vi.fn(async () => ({ ok: true as const, data: DEFAULT_SETTINGS })),
-      onChanged: () => () => {},
-    },
+      onChanged: () => () => {}
+    }
   } as unknown as typeof window.notepads;
 });
 
@@ -59,7 +59,7 @@ describe('CloseReminderDialog', () => {
   it('shows the dialog for a modified tab and fires Save', () => {
     const { onSave, onDontSave, onCancel } = renderDialog({
       editorId: 'e1',
-      fileName: 'notes.txt',
+      fileName: 'notes.txt'
     });
     expect(screen.getByTestId('close-reminder-dialog')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('close-reminder-save'));
@@ -78,7 +78,7 @@ describe('CloseReminderDialog', () => {
   it('fires Cancel (keep the tab)', () => {
     const { onCancel, onSave, onDontSave } = renderDialog({
       editorId: 'e1',
-      fileName: 'notes.txt',
+      fileName: 'notes.txt'
     });
     fireEvent.click(screen.getByTestId('close-reminder-cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);

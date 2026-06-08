@@ -353,7 +353,7 @@ const table: LocaleTable = {
   XslFileDisplayName: 'ଏକ୍ସଏସଏଲ ଫାଇଲ୍',
   YamlFileDisplayName: 'ୟାମଲ ଫାଇଲ୍',
   ZshellConfigFileDisplayName: 'ଜି ଶେଲ୍ କନଫିଗ୍ ଫାଇଲ୍',
-  ZshellHistoryFileDisplayName: 'ଜି ଶେଲ୍ ଇତିହାସ ଫାଇଲ୍',
+  ZshellHistoryFileDisplayName: 'ଜି ଶେଲ୍ ଇତିହାସ ଫାଇଲ୍'
 };
 
 export default table;

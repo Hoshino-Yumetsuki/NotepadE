@@ -34,7 +34,7 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
+  type ReactNode
 } from 'react';
 import { DEFAULT_SETTINGS } from '@shared/ipc-contract';
 import {
@@ -44,7 +44,7 @@ import {
   format,
   BASE_LOCALE,
   type LocaleTable,
-  type SupportedLocale,
+  type SupportedLocale
 } from './resolve';
 
 /** What useT() hands every consumer. */
@@ -75,7 +75,7 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue>({
   locale: BASE_LOCALE,
-  table: tableFor(BASE_LOCALE),
+  table: tableFor(BASE_LOCALE)
 });
 
 /** Read navigator.languages (fallback to [navigator.language]) defensively. */
@@ -136,8 +136,8 @@ export function useT(): Translator {
       plural: (count, singularKey, pluralKey, ...args) => {
         const key = Math.abs(count) === 1 ? singularKey : pluralKey;
         return format(lookup(table, key, locale), args);
-      },
+      }
     }),
-    [locale, table],
+    [locale, table]
   );
 }

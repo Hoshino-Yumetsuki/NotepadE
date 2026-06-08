@@ -25,8 +25,8 @@ export function createBadWindow(): BrowserWindow {
       // VIOLATION: contextIsolation must be true.
       contextIsolation: false,
       // VIOLATION: sandbox must be true where feasible.
-      sandbox: false,
-    },
+      sandbox: false
+    }
   });
 
   // touch the forbidden imports so linters cannot dead-code-eliminate them

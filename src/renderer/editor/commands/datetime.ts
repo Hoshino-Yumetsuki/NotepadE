@@ -28,7 +28,7 @@ import { StateField, StateEffect } from '@codemirror/state';
 export function formatCurrentCultureDateTime(date: Date, locale?: string): string {
   const fmt = new Intl.DateTimeFormat(locale, {
     dateStyle: 'short',
-    timeStyle: 'medium',
+    timeStyle: 'medium'
   });
   return fmt.format(date);
 }
@@ -66,8 +66,8 @@ export function makeInsertDateTime(now: () => Date = () => new Date()): StateCom
     dispatch(
       state.update(state.replaceSelection(text), {
         scrollIntoView: true,
-        userEvent: 'input.type',
-      }),
+        userEvent: 'input.type'
+      })
     );
     return true;
   };
@@ -97,7 +97,7 @@ export const logEntryGuard = StateField.define<boolean>({
       if (e.is(markLogEntryAdded)) return true;
     }
     return value;
-  },
+  }
 });
 
 /**
@@ -123,8 +123,8 @@ export function tryInsertLogEntry(view: EditorView, now: () => Date = () => new 
       selection: { anchor: end + stamp.length },
       effects: markLogEntryAdded.of(undefined),
       scrollIntoView: true,
-      userEvent: 'input',
-    }),
+      userEvent: 'input'
+    })
   );
   return true;
 }

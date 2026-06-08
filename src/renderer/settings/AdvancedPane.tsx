@@ -27,7 +27,7 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
   const langLabel =
     languageLabel(
       settings.appLanguage,
-      APP_LANGUAGES.find((l) => l.tag === settings.appLanguage)?.label ?? '',
+      APP_LANGUAGES.find((l) => l.tag === settings.appLanguage)?.label ?? ''
     ) || systemDefaultLabel;
 
   return (
@@ -71,7 +71,7 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
         <SettingRow
           id="alwaysOpenNewWindow"
           label={t(
-            'AdvancedPage_LaunchPreferenceSettings_AlwaysOpenNewWindowToggleSwitch.OnContent',
+            'AdvancedPage_LaunchPreferenceSettings_AlwaysOpenNewWindowToggleSwitch.OnContent'
           )}
           description={t('AdvancedPage_AlwaysOpenNewWindow_Description.Text')}
         >
@@ -83,7 +83,7 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
         <SettingRow
           id="exitWhenLastTabClosed"
           label={t(
-            'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent',
+            'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent'
           )}
         >
           <Switch

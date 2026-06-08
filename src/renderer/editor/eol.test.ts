@@ -35,7 +35,7 @@ describe('normalizeToShadow', () => {
 
   it('preserves trailing whitespace and a missing final newline', () => {
     expect(normalizeToShadow('line one   \r\nlast no newline')).toBe(
-      'line one   \nlast no newline',
+      'line one   \nlast no newline'
     );
   });
 

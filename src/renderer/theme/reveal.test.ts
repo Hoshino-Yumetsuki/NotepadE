@@ -6,7 +6,7 @@ import {
   DARK_REVEAL_TOKENS,
   HC_REVEAL_TOKENS,
   REVEAL_VAR_X,
-  REVEAL_VAR_Y,
+  REVEAL_VAR_Y
 } from './reveal';
 
 /**
@@ -37,10 +37,10 @@ describe('tokensForReveal', () => {
     // Compare the trailing alpha of the rgba() strings.
     const alpha = (rgba: string): number => Number(rgba.match(/[\d.]+\)$/)?.[0].replace(')', ''));
     expect(alpha(LIGHT_REVEAL_TOKENS.pressedColor)).toBeGreaterThan(
-      alpha(LIGHT_REVEAL_TOKENS.hoverColor),
+      alpha(LIGHT_REVEAL_TOKENS.hoverColor)
     );
     expect(alpha(DARK_REVEAL_TOKENS.pressedColor)).toBeGreaterThan(
-      alpha(DARK_REVEAL_TOKENS.hoverColor),
+      alpha(DARK_REVEAL_TOKENS.hoverColor)
     );
   });
 

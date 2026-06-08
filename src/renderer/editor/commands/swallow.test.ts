@@ -17,7 +17,7 @@ describe('swallowKeymap', () => {
       'Mod-Shift-b',
       'Mod-Shift-i',
       'Mod-Shift-u',
-      'Mod-Shift-l',
+      'Mod-Shift-l'
     ]);
   });
 

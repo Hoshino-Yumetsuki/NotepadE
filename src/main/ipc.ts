@@ -17,7 +17,7 @@ import type {
   EolId,
   SessionSnapshot,
   Settings,
-  DragEnvelope,
+  DragEnvelope
 } from '../shared/ipc-contract.js';
 import {
   openFile,
@@ -26,7 +26,7 @@ import {
   saveFileAs,
   reloadFromDisk,
   revalidatePath,
-  decodeWithEncoding,
+  decodeWithEncoding
 } from './file-io.js';
 import { listRecentResult, clearRecent } from './mru.js';
 import { listAnsiEncodings } from './encoding.js';
@@ -43,7 +43,7 @@ import {
   windowClose,
   windowIsMaximized,
   windowQuit,
-  windowConfirmClose,
+  windowConfirmClose
 } from './window.js';
 import { dragOutBegin, dragOutComplete } from './dragout.js';
 import { openContainingFolder, copyPath, webSearch, print, share } from './shell.js';
@@ -64,14 +64,14 @@ export function registerIpcHandlers(): void {
   // --- encoding ---
   ipcMain.handle(IpcChannels.EncodingListAnsi, () => ({ ok: true, data: listAnsiEncodings() }));
   ipcMain.handle(IpcChannels.EncodingDecodeWith, (_e, path: string, encodingId: EncodingId) =>
-    decodeWithEncoding(path, encodingId),
+    decodeWithEncoding(path, encodingId)
   );
   ipcMain.handle(
     IpcChannels.EncodingConvertEol,
     (_e, text: string, eolId: EolId): Result<string> => ({
       ok: true,
-      data: applyEol(text, eolId),
-    }),
+      data: applyEol(text, eolId)
+    })
   );
 
   // --- session (Phase 4) ---
@@ -86,13 +86,13 @@ export function registerIpcHandlers(): void {
   // --- window (Phase 6) ---
   ipcMain.handle(
     IpcChannels.WindowBrokerRequest,
-    (_e, args: { paths: string[]; forceNewWindow?: boolean }) => windowBrokerRequest(args),
+    (_e, args: { paths: string[]; forceNewWindow?: boolean }) => windowBrokerRequest(args)
   );
   ipcMain.handle(IpcChannels.WindowSetFullScreen, (e, enabled: boolean) =>
-    windowSetFullScreen(e, enabled),
+    windowSetFullScreen(e, enabled)
   );
   ipcMain.handle(IpcChannels.WindowSetCompactOverlay, (e, enabled: boolean) =>
-    windowSetCompactOverlay(e, enabled),
+    windowSetCompactOverlay(e, enabled)
   );
   // Custom caption controls (replace the OS titleBarOverlay — transparent buttons).
   ipcMain.handle(IpcChannels.WindowMinimize, (e) => windowMinimize(e));
@@ -104,21 +104,21 @@ export function registerIpcHandlers(): void {
 
   // --- dragOut (Phase 6) ---
   ipcMain.handle(IpcChannels.DragOutBegin, (e, envelope: DragEnvelope) =>
-    dragOutBegin(e, envelope),
+    dragOutBegin(e, envelope)
   );
   ipcMain.handle(IpcChannels.DragOutComplete, (e, token: string, dropIndex: number) =>
-    dragOutComplete(e, token, dropIndex),
+    dragOutComplete(e, token, dropIndex)
   );
 
   // --- shell (Phase 6) ---
   ipcMain.handle(IpcChannels.ShellOpenContainingFolder, (_e, path: string) =>
-    openContainingFolder(path),
+    openContainingFolder(path)
   );
   ipcMain.handle(IpcChannels.ShellCopyPath, (_e, path: string) => copyPath(path));
   ipcMain.handle(IpcChannels.ShellWebSearch, (_e, query: string) => webSearch(query));
   ipcMain.handle(IpcChannels.ShellPrint, () => print());
   ipcMain.handle(IpcChannels.ShellShare, (_e, args: { title: string; text: string }) =>
-    share(args),
+    share(args)
   );
 
   // --- theme (Phase 5) ---

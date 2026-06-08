@@ -15,7 +15,7 @@ import type {
   SaveAsArgs,
   SaveResult,
   EncodingId,
-  EolId,
+  EolId
 } from '../shared/ipc-contract.js';
 import { decodeBytes, decodeBytesWith, encodeText } from './encoding.js';
 import { detectEol, applyEol } from './eol.js';
@@ -55,7 +55,7 @@ export async function writeFileWithRetry(
   bytes: Buffer,
   attempts = 3,
   backoffMs = 80,
-  writeFn: (p: string, b: Buffer) => Promise<void> = writeFile,
+  writeFn: (p: string, b: Buffer) => Promise<void> = writeFile
 ): Promise<void> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -92,8 +92,8 @@ export async function openFile(path: string): Promise<Result<OpenedFile>> {
         eolId,
         dateModifiedMs: stats.mtimeMs,
         filePath: path,
-        hasBom,
-      },
+        hasBom
+      }
     };
   } catch (e) {
     return { ok: false, error: errMsg(e) };
@@ -116,7 +116,7 @@ export async function openFileDialog(): Promise<Result<string[]>> {
     const focused = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
     const options: Electron.OpenDialogOptions = {
       title: 'Open',
-      properties: ['openFile', 'multiSelections'],
+      properties: ['openFile', 'multiSelections']
     };
     const picked = focused
       ? await dialog.showOpenDialog(focused, options)
@@ -137,7 +137,7 @@ export async function openFileDialog(): Promise<Result<string[]>> {
  */
 export async function decodeWithEncoding(
   path: string,
-  encodingId: EncodingId,
+  encodingId: EncodingId
 ): Promise<Result<OpenedFile>> {
   try {
     const bytes = await readFile(path);
@@ -153,8 +153,8 @@ export async function decodeWithEncoding(
         eolId,
         dateModifiedMs: stats.mtimeMs,
         filePath: path,
-        hasBom,
-      },
+        hasBom
+      }
     };
   } catch (e) {
     return { ok: false, error: errMsg(e) };
@@ -179,7 +179,7 @@ export async function saveFileAs(args: SaveAsArgs): Promise<Result<SaveResult>> 
     const focused = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
     const options: Electron.SaveDialogOptions = {
       title: 'Save As',
-      defaultPath: dialogDefaultPath(args),
+      defaultPath: dialogDefaultPath(args)
     };
     const picked = focused
       ? await dialog.showSaveDialog(focused, options)
@@ -210,7 +210,7 @@ function dialogDefaultPath(args: SaveAsArgs): string | undefined {
  */
 async function writeShadowToPath(
   filePath: string,
-  args: { shadowText?: string; encodingId?: EncodingId; eolId?: EolId },
+  args: { shadowText?: string; encodingId?: EncodingId; eolId?: EolId }
 ): Promise<SaveResult> {
   const known = fileMeta.get(filePath);
   const encodingId = args.encodingId ?? known?.encodingId ?? 'UTF-8';
@@ -239,7 +239,7 @@ async function writeShadowToPath(
 }
 
 export async function revalidatePath(
-  path: string,
+  path: string
 ): Promise<Result<{ exists: boolean; dateModifiedMs: number }>> {
   try {
     const stats = await stat(path);

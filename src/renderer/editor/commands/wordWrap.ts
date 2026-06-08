@@ -36,14 +36,14 @@ export const wordWrapField = StateField.define<boolean>({
       if (e.is(setWordWrap)) next = e.value;
     }
     return next;
-  },
+  }
 });
 
 /** Alt+Z — toggle word wrap (updates the field AND reconfigures the compartment). */
 export const toggleWordWrap: Command = (view) => {
   const next = !view.state.field(wordWrapField);
   view.dispatch({
-    effects: [setWordWrap.of(next), wordWrapCompartment.reconfigure(wordWrapExtension(next))],
+    effects: [setWordWrap.of(next), wordWrapCompartment.reconfigure(wordWrapExtension(next))]
   });
   return true;
 };

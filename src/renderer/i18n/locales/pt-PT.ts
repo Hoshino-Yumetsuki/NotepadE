@@ -372,7 +372,7 @@ const table: LocaleTable = {
   XslFileDisplayName: 'Folha de Estilos XML',
   YamlFileDisplayName: 'Documento YAML',
   ZshellConfigFileDisplayName: 'Configuração de Z shell',
-  ZshellHistoryFileDisplayName: 'Ficheiro de Histórico Z shell',
+  ZshellHistoryFileDisplayName: 'Ficheiro de Histórico Z shell'
 };
 
 export default table;

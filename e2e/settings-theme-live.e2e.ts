@@ -8,7 +8,7 @@ import {
   rootSurfaceLuma,
   brandBackground,
   driveOsTheme,
-  resetOsTheme,
+  resetOsTheme
 } from './helpers/settings';
 
 /**
@@ -79,14 +79,14 @@ test.describe('Gate 5 — live theme + accent (no reload)', () => {
     await expect.poll(() => getActiveTheme(page)).toBe('dark'); // reactive recompute, no reload
     expect(
       await rootSurfaceLuma(page),
-      'dark root surface luminance (>180 means the theme read regressed to light)',
+      'dark root surface luminance (>180 means the theme read regressed to light)'
     ).toBeLessThan(120);
 
     // --- hc (forced-colors wins over the OS theme) ---
     await page.emulateMedia({ colorScheme: 'dark', forcedColors: 'active' });
     await expect.poll(() => getActiveTheme(page)).toBe('hc');
     const forcedActive = await page.evaluate(
-      () => window.matchMedia('(forced-colors: active)').matches,
+      () => window.matchMedia('(forced-colors: active)').matches
     );
     expect(forcedActive, 'HC requires forced-colors: active to be live').toBe(true);
 
@@ -134,7 +134,7 @@ test.describe('Gate 5 — live theme + accent (no reload)', () => {
     await expect.poll(() => brandBackground(page)).not.toBe(blueBrand);
     const magentaBrand = await brandBackground(page);
     expect(magentaBrand, 'magenta accent must move the brand token off the blue value').not.toBe(
-      blueBrand,
+      blueBrand
     );
   });
 });

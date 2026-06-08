@@ -74,7 +74,7 @@ const ANSI_CODECS: AnsiCodec[] = [
   { codePage: 28599, label: 'Turkish (iso-8859-9)', codec: 'iso-8859-9' },
   { codePage: 950, label: 'Traditional Chinese (big5)', codec: 'big5' },
   { codePage: 1258, label: 'Vietnamese (windows-1258)', codec: 'windows-1258' },
-  { codePage: 850, label: 'Western European DOS (ibm850)', codec: 'cp850' },
+  { codePage: 850, label: 'Western European DOS (ibm850)', codec: 'cp850' }
 ];
 
 const ANSI_BY_LABEL = new Map(ANSI_CODECS.map((c) => [c.label.toLowerCase(), c]));
@@ -109,7 +109,7 @@ function jschardetNameToCodec(name: string): AnsiCodec | null {
     'windows-1251': 1251,
     'windows-1253': 1253,
     'windows-1255': 1255,
-    'tis-620': 874,
+    'tis-620': 874
   };
   const cp = aliases[lower];
   if (cp != null) {
@@ -177,7 +177,7 @@ const ICONV_BY_LABEL: Record<string, string> = {
   'UTF-32 BE BOM': 'utf-32be',
   'UTF-32 LE': 'utf-32le',
   'UTF-32 BE': 'utf-32be',
-  'UTF-7': 'utf-7',
+  'UTF-7': 'utf-7'
 };
 
 /** Resolve a label to the iconv-lite codec name used for decode/encode. */
@@ -263,7 +263,7 @@ export function decodeBytes(bytes: Buffer): DecodeResult {
     return {
       decodedText: iconv.decode(Buffer.from(body), codec),
       encodingId: bom.encodingId,
-      hasBom: true,
+      hasBom: true
     };
   }
 

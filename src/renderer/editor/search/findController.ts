@@ -29,7 +29,7 @@ import {
   findNext,
   findPrevious,
   findAllRegexMatches,
-  replaceAll as engineReplaceAll,
+  replaceAll as engineReplaceAll
 } from './searchEngine';
 
 /** A find query bundled with its options (the controller's working state). */
@@ -67,21 +67,21 @@ const highlightField = StateField.define<DecorationSet>({
         const spans = effect.value;
         next = Decoration.set(
           spans.filter((s) => s.to > s.from).map((s) => highlightMark.range(s.from, s.to)),
-          true,
+          true
         );
       }
     }
     return next;
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => EditorView.decorations.from(f)
 });
 
 /** Theme for the match highlight. Subtle translucent fill (non-accent). */
 const highlightTheme = EditorView.baseTheme({
   '.cm-search-match': {
     backgroundColor: 'rgba(255, 213, 0, 0.32)',
-    borderRadius: '2px',
-  },
+    borderRadius: '2px'
+  }
 });
 
 /**
@@ -151,7 +151,7 @@ function selectAndReveal(view: EditorView, span: MatchSpan): void {
   view.dispatch({
     selection: { anchor: span.from, head: span.to },
     effects: EditorView.scrollIntoView(span.from, { y: 'center' }),
-    scrollIntoView: true,
+    scrollIntoView: true
   });
 }
 
@@ -237,7 +237,7 @@ export function replaceOne(view: EditorView, q: FindQuery, replacement: string):
 
   view.dispatch({
     changes: { from, to, insert },
-    selection: { anchor: from + insert.length },
+    selection: { anchor: from + insert.length }
   });
 
   // Advance to the next match (UWP find-next after replace).
@@ -256,7 +256,7 @@ function expandRegexReplacement(
   q: FindQuery,
   from: number,
   to: number,
-  replacement: string,
+  replacement: string
 ): string {
   const slice = view.state.doc.sliceString(from, to);
   // replaceAll on the isolated slice yields exactly one substitution with the
@@ -280,7 +280,7 @@ export function replaceAllInView(view: EditorView, q: FindQuery, replacement: st
   view.dispatch({
     changes: { from: 0, to: view.state.doc.length, insert: result.text },
     selection: { anchor: result.text.length },
-    scrollIntoView: true,
+    scrollIntoView: true
   });
   return result.count;
 }
@@ -298,7 +298,7 @@ export function goToLine(view: EditorView, lineNumber: number): number {
   view.dispatch({
     selection: { anchor: line.from },
     effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
-    scrollIntoView: true,
+    scrollIntoView: true
   });
   return clamped;
 }

@@ -66,7 +66,7 @@ export function glowColor(themeMode: 'light' | 'dark' | 'hc', _accentColor: stri
 
 export function glowOpacityForDistance(
   distanceRightOfEdge: number,
-  falloff = GLOW_FALLOFF_PX,
+  falloff = GLOW_FALLOFF_PX
 ): number {
   if (distanceRightOfEdge <= 0) return 1;
   if (distanceRightOfEdge >= falloff) return 0;
@@ -117,7 +117,7 @@ class LineNumberGlowPlugin implements PluginValue {
   constructor(
     private readonly view: EditorView,
     private readonly color: string,
-    private readonly disabled: boolean,
+    private readonly disabled: boolean
   ) {
     if (this.disabled) return;
     this.onEnter = this.onEnter.bind(this);

@@ -42,7 +42,7 @@ export function installSettingsTestHook(acc: SettingsSeamAccessors): () => void 
     },
     getSetting<K extends keyof Settings>(key: K): Settings[K] {
       return acc.getSettings()[key];
-    },
+    }
   };
 
   const existing = window.__notepadsTest;

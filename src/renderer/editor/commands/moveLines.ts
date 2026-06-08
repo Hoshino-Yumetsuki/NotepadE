@@ -39,8 +39,8 @@ export const moveLinesUp: StateCommand = ({ state, dispatch }): boolean => {
       changes: { from: prev.from, to: endLine.to, insert },
       selection: EditorSelection.range(range.anchor - shift, range.head - shift),
       scrollIntoView: true,
-      userEvent: 'move.line',
-    }),
+      userEvent: 'move.line'
+    })
   );
   return true;
 };
@@ -67,8 +67,8 @@ export const moveLinesDown: StateCommand = ({ state, dispatch }): boolean => {
       changes: { from: startLine.from, to: next.to, insert },
       selection: EditorSelection.range(range.anchor + shift, range.head + shift),
       scrollIntoView: true,
-      userEvent: 'move.line',
-    }),
+      userEvent: 'move.line'
+    })
   );
   return true;
 };

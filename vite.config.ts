@@ -35,7 +35,7 @@ const nodeExternals = [
   'electron',
   ...builtinModules,
   ...builtinModules.map((m) => `node:${m}`),
-  ...Object.keys(pkg.dependencies ?? {}),
+  ...Object.keys(pkg.dependencies ?? {})
 ];
 
 export default defineConfig(({ command }) => ({
@@ -45,19 +45,19 @@ export default defineConfig(({ command }) => ({
   // Inline the real package version at build time so the About pane shows it
   // (UWP surfaced Package.Current.Id.Version). No IPC needed — pure build constant.
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0'),
+    __APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0')
   },
   resolve: {
     alias: {
-      '@shared': resolve(dirname, 'src/shared'),
-    },
+      '@shared': resolve(dirname, 'src/shared')
+    }
   },
   build: {
     outDir: resolve(dirname, 'out/renderer'),
     emptyOutDir: true,
     rollupOptions: {
-      input: resolve(dirname, 'src/renderer/index.html'),
-    },
+      input: resolve(dirname, 'src/renderer/index.html')
+    }
   },
   plugins: [
     react(),
@@ -69,7 +69,7 @@ export default defineConfig(({ command }) => ({
           apply: 'serve' as const,
           transformIndexHtml(html: string): string {
             return html.replace(/<meta http-equiv="Content-Security-Policy"[\s\S]*?\/>\s*/, '');
-          },
+          }
         }
       : null,
     electron({
@@ -90,10 +90,10 @@ export default defineConfig(({ command }) => ({
             outDir: resolve(dirname, 'out/main'),
             rollupOptions: {
               external: nodeExternals,
-              output: { format: 'es', entryFileNames: 'index.js' },
-            },
-          },
-        },
+              output: { format: 'es', entryFileNames: 'index.js' }
+            }
+          }
+        }
       },
       preload: {
         input: resolve(dirname, 'src/preload/index.ts'),
@@ -103,11 +103,11 @@ export default defineConfig(({ command }) => ({
             rollupOptions: {
               external: nodeExternals,
               // Sandboxed preloads (sandbox:true) MUST be CommonJS.
-              output: { format: 'cjs', entryFileNames: 'index.js' },
-            },
-          },
-        },
-      },
-    }),
-  ],
+              output: { format: 'cjs', entryFileNames: 'index.js' }
+            }
+          }
+        }
+      }
+    })
+  ]
 }));

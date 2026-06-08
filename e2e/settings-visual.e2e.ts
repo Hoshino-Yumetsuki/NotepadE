@@ -8,7 +8,7 @@ import {
   selectPane,
   patchSettings,
   getActiveTheme,
-  forceSurfaceOpaqueForCapture,
+  forceSurfaceOpaqueForCapture
 } from './helpers/settings';
 
 /**
@@ -49,7 +49,7 @@ interface ThemeCase {
 const THEME_CASES: ThemeCase[] = [
   { name: 'light', colorScheme: 'light', forcedColors: 'none' },
   { name: 'dark', colorScheme: 'dark', forcedColors: 'none' },
-  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' },
+  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' }
 ];
 
 let launched: LaunchedApp;
@@ -119,7 +119,7 @@ for (const tc of THEME_CASES) {
     await expect.poll(() => getActiveTheme(page)).toBe(tc.name);
     if (tc.name === 'hc') {
       const forcedActive = await page.evaluate(
-        () => window.matchMedia('(forced-colors: active)').matches,
+        () => window.matchMedia('(forced-colors: active)').matches
       );
       expect(forcedActive, 'HC capture requires forced-colors: active to be live').toBe(true);
     }
@@ -142,19 +142,19 @@ for (const tc of THEME_CASES) {
         x: Math.round(box.x),
         y: Math.round(box.y),
         width: Math.round(box.width),
-        height: Math.round(box.height),
-      },
+        height: Math.round(box.height)
+      }
     });
     const baselinePath = join(BASELINE_DIR, `settings-${tc.name}.png`);
 
     const result = await compareToBaseline(actual, baselinePath, `settings-${tc.name}`, {
-      createMissingBaseline: UPDATE_BASELINES,
+      createMissingBaseline: UPDATE_BASELINES
     });
 
     if (result.baselineCreated) {
       test.info().annotations.push({
         type: 'baseline-created',
-        description: `Wrote new baseline ${baselinePath} (REQUIRES_UWP_REFERENCE for 1:1 sign-off).`,
+        description: `Wrote new baseline ${baselinePath} (REQUIRES_UWP_REFERENCE for 1:1 sign-off).`
       });
     }
 

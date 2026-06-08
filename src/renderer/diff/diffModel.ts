@@ -94,7 +94,7 @@ function splitLines(value: string): string[] {
  */
 function charPieces(
   oldLine: string,
-  newLine: string,
+  newLine: string
 ): {
   left: DiffPiece[];
   right: DiffPiece[];
@@ -126,7 +126,7 @@ function emitReplaceBlock(
   removed: string[],
   added: string[],
   left: DiffRow[],
-  right: DiffRow[],
+  right: DiffRow[]
 ): void {
   const paired = Math.min(removed.length, added.length);
   for (let i = 0; i < paired; i++) {

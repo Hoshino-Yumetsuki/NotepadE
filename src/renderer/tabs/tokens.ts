@@ -18,7 +18,7 @@ import {
   ChevronLeftRegular,
   ChevronRightRegular,
   CircleSmallRegular,
-  SaveRegular,
+  SaveRegular
 } from '@fluentui/react-icons';
 import type { FC } from 'react';
 
@@ -35,7 +35,7 @@ export const TabGlyph = {
   /** Modified/unsaved indicator dot. */
   modifiedDot: CircleSmallRegular as FC,
   /** Save glyph, shown on a dirty tab in place of the old dot. */
-  save: SaveRegular as FC,
+  save: SaveRegular as FC
 } as const;
 
 /**
@@ -80,7 +80,7 @@ export const TabDimensions = {
   addButtonWidth: 42,
   addButtonHeight: 32,
   /** Add-tab glyph Viewbox max (14×14). */
-  addGlyphSize: 14,
+  addGlyphSize: 14
 } as const;
 
 /**
@@ -96,7 +96,7 @@ export const TabScroll = {
   /** Scroll buttons appear only when ScrollableWidth exceeds this (px). */
   showThreshold: 65,
   /** End-detection tolerance (px) for enabling/disabling the chevrons. */
-  endTolerance: 0.1,
+  endTolerance: 0.1
 } as const;
 
 /**
@@ -176,7 +176,7 @@ export const LIGHT_TOKENS: TabThemeTokens = {
   elevationShadowAlpha: 0.3,
   // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.55).
   elevationBandAlpha: 0.08,
-  accent: '#0078D4',
+  accent: '#0078D4'
 };
 
 /** Dark theme — base #2E2E2E, black overlays. */
@@ -193,7 +193,7 @@ export const DARK_TOKENS: TabThemeTokens = {
   elevationShadowAlpha: 0.45,
   // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.7).
   elevationBandAlpha: 0.12,
-  accent: '#0078D4',
+  accent: '#0078D4'
 };
 
 /**
@@ -216,7 +216,7 @@ export const HC_TOKENS: TabThemeTokens = {
   elevationShadow: 'none',
   elevationShadowAlpha: 0,
   elevationBandAlpha: 0,
-  accent: 'Highlight',
+  accent: 'Highlight'
 };
 
 /** Resolve the token set for a strip theme. */
@@ -248,5 +248,5 @@ export const TabAnimation = {
    * IsStaggeringEnabled=False). A newly-inserted tab fades + slides in over ~160ms
    * instead of snapping into existence.
    */
-  enterMs: 160,
+  enterMs: 160
 } as const;

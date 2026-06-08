@@ -16,7 +16,7 @@ import type {
   SaveResult,
   EncodingId,
   EolId,
-  Settings,
+  Settings
 } from '../../src/shared/ipc-contract';
 
 /**

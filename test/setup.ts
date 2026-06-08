@@ -24,7 +24,7 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
       removeListener: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
-      dispatchEvent: () => false,
+      dispatchEvent: () => false
     }) as unknown as MediaQueryList;
 }
 

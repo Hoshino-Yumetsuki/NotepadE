@@ -51,11 +51,11 @@ test('the (+) add-tab button is visible and within the viewport (even under tab 
       ok: within,
       rect: { left: r.left, right: r.right, top: r.top, bottom: r.bottom },
       vw: window.innerWidth,
-      vh: window.innerHeight,
+      vh: window.innerHeight
     };
   }, TAB_SELECTORS.addTab);
   expect(
     inWindow.ok,
-    `add button must be fully within the window: ${JSON.stringify(inWindow)}`,
+    `add button must be fully within the window: ${JSON.stringify(inWindow)}`
   ).toBe(true);
 });

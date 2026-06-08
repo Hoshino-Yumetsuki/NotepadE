@@ -21,7 +21,7 @@ import {
   DialogBody,
   DialogContent,
   DialogSurface,
-  DialogTitle,
+  DialogTitle
 } from '@fluentui/react-components';
 import { useT } from './i18n';
 

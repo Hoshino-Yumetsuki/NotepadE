@@ -101,7 +101,7 @@ class LineNumberColumnPlugin implements PluginValue {
 
   constructor(
     private readonly view: EditorView,
-    private readonly opts: LineNumberColumnOptions,
+    private readonly opts: LineNumberColumnOptions
   ) {
     this.onScroll = () => this.layout();
     this.mount();

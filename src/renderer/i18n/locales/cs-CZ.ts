@@ -360,7 +360,7 @@ const table: LocaleTable = {
   XslFileDisplayName: 'XSL File',
   YamlFileDisplayName: 'Soubor YAML',
   ZshellConfigFileDisplayName: 'Konfigurační soubor Z shell',
-  ZshellHistoryFileDisplayName: 'Soubor historie Z shell',
+  ZshellHistoryFileDisplayName: 'Soubor historie Z shell'
 };
 
 export default table;

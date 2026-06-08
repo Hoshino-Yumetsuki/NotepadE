@@ -168,8 +168,8 @@ export function initJumpListTasks(): void {
         title: 'New window',
         description: 'Open a new Notepads window',
         iconPath: process.execPath,
-        iconIndex: 0,
-      },
+        iconIndex: 0
+      }
     ]);
   } catch {
     // User tasks are a nicety; never let a failure surface.

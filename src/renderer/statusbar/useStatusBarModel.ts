@@ -38,7 +38,7 @@ export function useStatusBarModel(args: {
   const [lineColumn, setLineColumn] = useState<LineColumn>({
     line: 1,
     column: 1,
-    selectedCount: 0,
+    selectedCount: 0
   });
   const [zoomPercent, setZoomPercent] = useState(100);
   const [ansiEncodings, setAnsiEncodings] = useState<readonly AnsiEncodingEntry[]>([]);
@@ -59,7 +59,7 @@ export function useStatusBarModel(args: {
       prev.column === next.column &&
       prev.selectedCount === next.selectedCount
         ? prev
-        : next,
+        : next
     );
   }, [getActiveHandle]);
 
@@ -140,7 +140,7 @@ export function useStatusBarModel(args: {
     (id: EncodingId) => {
       if (filePath) void window.notepads.encoding.decodeWith(filePath, id);
     },
-    [filePath],
+    [filePath]
   );
 
   // Reload from disk, then re-baseline the last-saved mtime from the fresh
@@ -178,7 +178,7 @@ export function useStatusBarModel(args: {
       onRename: () => {
         if (activeEditorId) {
           window.dispatchEvent(
-            new CustomEvent('notepads:begin-rename', { detail: { editorId: activeEditorId } }),
+            new CustomEvent('notepads:begin-rename', { detail: { editorId: activeEditorId } })
           );
         }
       },
@@ -206,7 +206,7 @@ export function useStatusBarModel(args: {
             setFileModificationState('none');
           }
         });
-      },
+      }
     }),
     [
       theme,
@@ -223,7 +223,7 @@ export function useStatusBarModel(args: {
       activeEditorId,
       store,
       onReopenWithEncoding,
-      reloadAndRebaseline,
-    ],
+      reloadAndRebaseline
+    ]
   );
 }

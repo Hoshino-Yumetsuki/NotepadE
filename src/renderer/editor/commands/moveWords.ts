@@ -30,7 +30,7 @@ function isLetterOrDigit(ch: string): boolean {
 function movingWordSpan(
   doc: string,
   selStart: number,
-  selEnd: number,
+  selEnd: number
 ): { start: number; end: number } {
   let startIndex = selStart;
   if (selEnd === selStart || (selStart < doc.length && isLetterOrDigit(doc[selStart]))) {
@@ -70,7 +70,7 @@ function swapSpans(
   rightEnd: number,
   selStart: number,
   selEnd: number,
-  moveAmount: number,
+  moveAmount: number
 ): { text: string; from: number; to: number; anchor: number; head: number } {
   const leftWords = doc.slice(leftStart, leftEnd);
   const rightWords = doc.slice(rightStart, rightEnd);
@@ -82,7 +82,7 @@ function swapSpans(
     from: leftStart,
     to: rightEnd,
     anchor: selStart + moveAmount,
-    head: selEnd + moveAmount,
+    head: selEnd + moveAmount
   };
 }
 
@@ -125,7 +125,7 @@ export const moveWordLeft: StateCommand = ({ state, dispatch }): boolean => {
     endIndex,
     start,
     end,
-    moveAmount,
+    moveAmount
   );
   let anchor = swap.anchor;
   if (anchor < 0) anchor = 0;
@@ -134,8 +134,8 @@ export const moveWordLeft: StateCommand = ({ state, dispatch }): boolean => {
       changes: { from: swap.from, to: swap.to, insert: swap.text },
       selection: EditorSelection.range(anchor, swap.head < 0 ? 0 : swap.head),
       scrollIntoView: true,
-      userEvent: 'input.moveword',
-    }),
+      userEvent: 'input.moveword'
+    })
   );
   return true;
 };
@@ -171,15 +171,15 @@ export const moveWordRight: StateCommand = ({ state, dispatch }): boolean => {
     replacedEnd,
     start,
     end,
-    moveAmount,
+    moveAmount
   );
   dispatch(
     state.update({
       changes: { from: swap.from, to: swap.to, insert: swap.text },
       selection: EditorSelection.range(swap.anchor, swap.head),
       scrollIntoView: true,
-      userEvent: 'input.moveword',
-    }),
+      userEvent: 'input.moveword'
+    })
   );
   return true;
 };

@@ -16,7 +16,7 @@ const groupStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
-  marginBottom: 28,
+  marginBottom: 28
 };
 
 const rowStyle: CSSProperties = {
@@ -24,7 +24,7 @@ const rowStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 16,
-  minHeight: 32,
+  minHeight: 32
 };
 
 /**
@@ -39,7 +39,7 @@ const rowStackStyle: CSSProperties = {
   flexDirection: 'column',
   alignItems: 'stretch',
   gap: 6,
-  minHeight: 32,
+  minHeight: 32
 };
 
 const rowLabelStyle: CSSProperties = {
@@ -47,7 +47,7 @@ const rowLabelStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 2,
   flex: '1 1 auto',
-  minWidth: 0,
+  minWidth: 0
 };
 
 const paneStyle: CSSProperties = {
@@ -59,7 +59,7 @@ const paneStyle: CSSProperties = {
   padding: '4px 4px 24px 4px',
   overflowY: 'auto',
   height: '100%',
-  boxSizing: 'border-box',
+  boxSizing: 'border-box'
 };
 
 /** A titled group of related settings. */

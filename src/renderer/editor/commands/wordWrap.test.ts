@@ -12,7 +12,7 @@ describe('toggleWordWrap', () => {
   function view(initial: boolean) {
     return mountView('a long line of text', EditorSelection.cursor(0), [
       wordWrapField.init(() => initial),
-      wordWrapCompartment.of(wordWrapExtension(initial)),
+      wordWrapCompartment.of(wordWrapExtension(initial))
     ]);
   }
 

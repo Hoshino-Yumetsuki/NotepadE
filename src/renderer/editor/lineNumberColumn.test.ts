@@ -6,7 +6,7 @@ import {
   numberColor,
   activeNumberColor,
   columnBackground,
-  digitsFor,
+  digitsFor
 } from './lineNumberColumn';
 
 describe('lineNumberColumn — pure helpers', () => {
@@ -42,16 +42,16 @@ describe('lineNumberColumn — live EditorView wiring (jsdom)', () => {
   function mount(
     themeMode: 'light' | 'dark' | 'hc',
     doc = 'a\nb\nc',
-    lineHighlighter = false,
+    lineHighlighter = false
   ): EditorView {
     const parent = document.createElement('div');
     document.body.appendChild(parent);
     return new EditorView({
       state: EditorState.create({
         doc,
-        extensions: [lineNumberColumn({ themeMode, fontFamily: 'monospace', lineHighlighter })],
+        extensions: [lineNumberColumn({ themeMode, fontFamily: 'monospace', lineHighlighter })]
       }),
-      parent,
+      parent
     });
   }
 
@@ -69,13 +69,13 @@ describe('lineNumberColumn — live EditorView wiring (jsdom)', () => {
   it('is transparent on dark/light and opaque Canvas under HC', () => {
     const dark = mount('dark');
     expect(dark.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!.style.background).toBe(
-      'transparent',
+      'transparent'
     );
     dark.destroy();
     const hc = mount('hc');
     // jsdom lowercases CSS system-color keywords (Canvas → canvas); compare loosely.
     expect(
-      hc.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!.style.background.toLowerCase(),
+      hc.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!.style.background.toLowerCase()
     ).toBe('canvas');
     hc.destroy();
   });
@@ -84,7 +84,7 @@ describe('lineNumberColumn — live EditorView wiring (jsdom)', () => {
     const view = mount('light', 'one\ntwo\nthree\nfour');
     const col = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!;
     const cells = Array.from(col.children).filter(
-      (c) => (c as HTMLElement).style.display !== 'none',
+      (c) => (c as HTMLElement).style.display !== 'none'
     );
     expect(cells.map((c) => c.textContent)).toEqual(['1', '2', '3', '4']);
     view.destroy();

@@ -88,7 +88,7 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   'SettingsShell_Close.AutomationProperties.Name': {
     'en-US': 'Close settings',
     'de-DE': 'Einstellungen schließen',
-    'ja-JP': '設定を閉じる',
+    'ja-JP': '設定を閉じる'
   },
   // Rail expand/collapse toggle (UWP NavigationView PaneDisplayMode=LeftCompact
   // hamburger). UWP labeled it via the platform NavigationView template; the web
@@ -96,7 +96,7 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   'SettingsNav_Expand.AutomationProperties.Name': {
     'en-US': 'Toggle navigation pane',
     'de-DE': 'Navigationsbereich umschalten',
-    'ja-JP': 'ナビゲーション ウィンドウの切り替え',
+    'ja-JP': 'ナビゲーション ウィンドウの切り替え'
   },
 
   // Settings panes (web port) — strings the UWP pages rendered inline/in code or
@@ -108,59 +108,59 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   PersonalizationPage_CustomAccentColor_Title: {
     'en-US': 'Custom accent',
     'de-DE': 'Benutzerdefinierte Akzentfarbe',
-    'ja-JP': 'カスタム アクセント',
+    'ja-JP': 'カスタム アクセント'
   },
   PersonalizationPage_CustomAccentColor_Description: {
     'en-US': 'Hex color, e.g. #0078D4.',
     'de-DE': 'Hex-Farbe, z. B. #0078D4.',
-    'ja-JP': '16 進数の色 (例: #0078D4)。',
+    'ja-JP': '16 進数の色 (例: #0078D4)。'
   },
   PersonalizationPage_CustomAccentColor_Invalid: {
     'en-US': 'Invalid',
     'de-DE': 'Ungültig',
-    'ja-JP': '無効',
+    'ja-JP': '無効'
   },
   PersonalizationPage_CustomAccentColorPicker_Label: {
     'en-US': 'Custom accent color picker',
     'de-DE': 'Auswahl der benutzerdefinierten Akzentfarbe',
-    'ja-JP': 'カスタム アクセント カラーの選択',
+    'ja-JP': 'カスタム アクセント カラーの選択'
   },
   PersonalizationPage_AccentColorSettings_Description: {
     'en-US': 'Follow the system accent.',
     'de-DE': 'Dem Systemakzent folgen.',
-    'ja-JP': 'システムのアクセントに従います。',
+    'ja-JP': 'システムのアクセントに従います。'
   },
   // Text & Editor — the web port labels the font-family dropdown explicitly and
   // gives the web-search section its own group header.
   TextAndEditorPage_FontFamilySettings_Title: {
     'en-US': 'Font family',
     'de-DE': 'Schriftartfamilie',
-    'ja-JP': 'フォント ファミリ',
+    'ja-JP': 'フォント ファミリ'
   },
   TextAndEditorPage_WebSearch_GroupTitle: {
     'en-US': 'Web search',
     'de-DE': 'Websuche',
-    'ja-JP': 'Web 検索',
+    'ja-JP': 'Web 検索'
   },
   TextAndEditorPage_CustomSearchUrl_Description: {
     'en-US': 'Use {0} where the query should go.',
     'de-DE': 'Verwenden Sie {0} an der Stelle der Suchanfrage.',
-    'ja-JP': 'クエリを挿入する位置に {0} を使用します。',
+    'ja-JP': 'クエリを挿入する位置に {0} を使用します。'
   },
   // About — the web port groups the links and renders a "Version {0}" line.
   AboutPage_Links_GroupTitle: {
     'en-US': 'Links',
     'de-DE': 'Links',
-    'ja-JP': 'リンク',
+    'ja-JP': 'リンク'
   },
   AboutPage_BuiltWith_GroupTitle: {
     'en-US': 'Built with',
     'de-DE': 'Entwickelt mit',
-    'ja-JP': '使用ライブラリ',
+    'ja-JP': '使用ライブラリ'
   },
   AboutPage_Version_Label: {
     'en-US': 'Version {0}',
     'de-DE': 'Version {0}',
-    'ja-JP': 'バージョン {0}',
-  },
+    'ja-JP': 'バージョン {0}'
+  }
 };

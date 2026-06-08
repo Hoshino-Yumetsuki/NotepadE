@@ -18,8 +18,8 @@ beforeEach(() => {
     settings: {
       get: vi.fn(async () => ({ ok: true as const, data: DEFAULT_SETTINGS })),
       set: vi.fn(async () => ({ ok: true as const, data: DEFAULT_SETTINGS })),
-      onChanged: () => () => {},
-    },
+      onChanged: () => () => {}
+    }
   } as unknown as typeof window.notepads;
 });
 

@@ -26,15 +26,15 @@ function installMock(initial: Partial<Settings> = {}): void {
       get: vi.fn(async () => ({ ok: true as const, data: bag })),
       set: vi.fn(async (patch: Partial<Settings>) => ({
         ok: true as const,
-        data: { ...bag, ...patch },
+        data: { ...bag, ...patch }
       })),
       onChanged: (cb: (s: Settings) => void) => {
         changedCb = cb;
         return () => {
           changedCb = null;
         };
-      },
-    },
+      }
+    }
   } as unknown as typeof window.notepads;
 }
 
@@ -63,7 +63,7 @@ describe('wave-2 settings-button label runtime switch', () => {
     render(
       <I18nProvider>
         <SettingsButtonProbe />
-      </I18nProvider>,
+      </I18nProvider>
     );
 
     const en = tableFor('en-US')[SETTINGS_KEY];

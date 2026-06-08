@@ -39,7 +39,7 @@ import {
   setRtl,
   directionCompartment,
   directionExtension,
-  type TextDirection,
+  type TextDirection
 } from './direction';
 import { toggleWordWrap, wordWrapCompartment, wordWrapExtension, wordWrapField } from './wordWrap';
 import { webSearchSelection } from './webSearch';
@@ -52,7 +52,7 @@ import {
   zoomField,
   zoomBaseTheme,
   zoomStyle,
-  ctrlWheelZoom,
+  ctrlWheelZoom
 } from './zoom';
 
 /** The full ordered keymap for the editor commands. */
@@ -94,7 +94,7 @@ export const editorCommandKeymap: readonly KeyBinding[] = [
 
   // Auto-indent on Enter / Shift+Enter.
   { key: 'Enter', run: enterWithAutoIndent, preventDefault: true },
-  { key: 'Shift-Enter', run: enterWithAutoIndent, preventDefault: true },
+  { key: 'Shift-Enter', run: enterWithAutoIndent, preventDefault: true }
 ];
 
 /**
@@ -131,9 +131,9 @@ export const undoRedoExtension = Prec.highest(
           }
         }
         return false;
-      },
-    },
-  ]),
+      }
+    }
+  ])
 );
 
 /**
@@ -162,9 +162,9 @@ export const altCommandExtension = Prec.highest(
           }
         }
         return false;
-      },
-    },
-  ]),
+      }
+    }
+  ])
 );
 
 /** Callbacks that the Alt+P / Alt+D view-mode extension calls into. */
@@ -212,9 +212,9 @@ export const viewModeCommandExtension = Prec.highest(
           }
         }
         return false;
-      },
-    },
-  ]),
+      }
+    }
+  ])
 );
 
 export interface EditorCommandOptions {
@@ -259,6 +259,6 @@ export function editorCommandExtensions(options: EditorCommandOptions = {}): Ext
     // handling. See viewModeCommandExtension.
     viewModeCommandExtension,
     // High precedence so our Tab / Enter / Mod-* bindings beat CM6 defaults.
-    Prec.high(keymap.of([...editorCommandKeymap, ...swallowKeymap])),
+    Prec.high(keymap.of([...editorCommandKeymap, ...swallowKeymap]))
   ];
 }

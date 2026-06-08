@@ -9,7 +9,7 @@ import {
   getDocText,
   undoDepth,
   pasteText,
-  expectFindBarVisible,
+  expectFindBarVisible
 } from './helpers/editor';
 
 /**

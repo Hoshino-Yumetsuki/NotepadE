@@ -79,13 +79,13 @@ test.describe('Gate 6 — content integrations', () => {
       await pressViewMode(page, 'p');
       // The rendered markdown surface shows the heading as a real <h1> (not raw '#').
       const heading = page.locator(
-        '[data-testid="preview-pane"] [data-testid="markdown-preview"] h1',
+        '[data-testid="preview-pane"] [data-testid="markdown-preview"] h1'
       );
       await expect(heading).toBeVisible();
       await expect(heading).toHaveText('Heading One');
       // And the inline code span renders as <code> (markdown actually parsed).
       const code = page.locator(
-        '[data-testid="preview-pane"] [data-testid="markdown-preview"] code',
+        '[data-testid="preview-pane"] [data-testid="markdown-preview"] code'
       );
       await expect(code).toHaveText('code');
     } finally {
@@ -196,11 +196,11 @@ test.describe('Gate 6 — i18n 29-locale runtime switch', () => {
     const en = tableFor('en-US')[SETTINGS_KEY];
     expect(en, 'en-US anchor label resolves').toBeTruthy();
     const nonEnDistinct = LOCALES_29.filter((l) => l !== 'en-US').every(
-      (l) => tableFor(l)[SETTINGS_KEY] && tableFor(l)[SETTINGS_KEY] !== en,
+      (l) => tableFor(l)[SETTINGS_KEY] && tableFor(l)[SETTINGS_KEY] !== en
     );
     expect(
       nonEnDistinct,
-      'every non-en locale resolves the anchor to a string distinct from en-US',
+      'every non-en locale resolves the anchor to a string distinct from en-US'
     ).toBe(true);
   });
 

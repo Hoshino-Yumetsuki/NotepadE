@@ -104,7 +104,7 @@ function buildRegex(query: string, options: SearchOptions): RegExp {
 export function findAllRegexMatches(
   text: string,
   query: string,
-  options: SearchOptions,
+  options: SearchOptions
 ): MatchSpan[] {
   const out: MatchSpan[] = [];
   if (query.length === 0) return out;
@@ -133,7 +133,7 @@ export function findNext(
   query: string,
   options: SearchOptions,
   from: number,
-  wrap: boolean,
+  wrap: boolean
 ): MatchSpan | null {
   if (query.length === 0) return null;
   const start = clamp(from, 0, text.length);
@@ -160,7 +160,7 @@ export function findPrevious(
   query: string,
   options: SearchOptions,
   start: number,
-  wrap: boolean,
+  wrap: boolean
 ): MatchSpan | null {
   if (query.length === 0) return null;
   const caret = clamp(start, 0, text.length);
@@ -196,7 +196,7 @@ function findPreviousRegex(
   query: string,
   options: SearchOptions,
   caret: number,
-  wrap: boolean,
+  wrap: boolean
 ): MatchSpan | null {
   const all = findAllRegexMatches(text, query, options);
   if (all.length === 0) return null;
@@ -215,7 +215,7 @@ function regexMatchFrom(
   text: string,
   query: string,
   options: SearchOptions,
-  from: number,
+  from: number
 ): MatchSpan | null {
   let re: RegExp;
   try {
@@ -232,7 +232,7 @@ function literalIndexOf(
   text: string,
   query: string,
   options: SearchOptions,
-  from: number,
+  from: number
 ): MatchSpan | null {
   const hay = options.matchCase ? text : text.toLowerCase();
   const needle = options.matchCase ? query : query.toLowerCase();
@@ -252,7 +252,7 @@ function literalLastIndexOf(
   text: string,
   query: string,
   options: SearchOptions,
-  from: number,
+  from: number
 ): MatchSpan | null {
   const hay = options.matchCase ? text : text.toLowerCase();
   const needle = options.matchCase ? query : query.toLowerCase();
@@ -296,7 +296,7 @@ export function replaceAll(
   text: string,
   query: string,
   options: SearchOptions,
-  replacement: string,
+  replacement: string
 ): ReplaceAllResult {
   if (query.length === 0) return { text, count: 0 };
 

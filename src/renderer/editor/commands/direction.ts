@@ -26,7 +26,7 @@ export function directionExtension(dir: TextDirection): Extension {
 /** Reconfigure the editor's content direction. */
 function setDirection(view: EditorView, dir: TextDirection): boolean {
   view.dispatch({
-    effects: directionCompartment.reconfigure(directionExtension(dir)),
+    effects: directionCompartment.reconfigure(directionExtension(dir))
   });
   return true;
 }

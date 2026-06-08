@@ -22,7 +22,7 @@ import {
   processInitialActivation,
   flushPendingActivation,
   flushColdStartActivations,
-  installMainTestSeam,
+  installMainTestSeam
 } from './broker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

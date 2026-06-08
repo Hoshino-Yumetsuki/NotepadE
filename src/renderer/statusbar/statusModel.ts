@@ -97,7 +97,7 @@ export interface EolMenuRow {
 export const EOL_MENU_ROWS: readonly EolMenuRow[] = [
   { eol: 'crlf', text: 'Windows (CRLF)' },
   { eol: 'cr', text: 'Macintosh (CR)' },
-  { eol: 'lf', text: 'Unix (LF)' },
+  { eol: 'lf', text: 'Unix (LF)' }
 ];
 
 // ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ export const UNICODE_ENCODINGS: readonly EncodingId[] = [
   'UTF-8',
   'UTF-8-BOM',
   'UTF-16 LE BOM',
-  'UTF-16 BE BOM',
+  'UTF-16 BE BOM'
 ];
 
 /** A leaf encoding row (reopen-with / save-with both use the same label). */
@@ -141,6 +141,6 @@ export interface EncodingMenuModel {
 export function buildEncodingMenuModel(ansi: readonly AnsiEncodingEntry[]): EncodingMenuModel {
   return {
     unicode: UNICODE_ENCODINGS.map((id) => ({ encodingId: id, label: id })),
-    more: ansi.map((e) => ({ encodingId: e.label, label: e.label })),
+    more: ansi.map((e) => ({ encodingId: e.label, label: e.label }))
   };
 }

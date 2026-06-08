@@ -47,7 +47,7 @@ async function stubOpenDialog(app: LaunchedApp, paths: string[]): Promise<void> 
   await app.app.evaluate(async (electron, picked) => {
     electron.dialog.showOpenDialog = (async () => ({
       canceled: picked.length === 0,
-      filePaths: picked,
+      filePaths: picked
     })) as typeof electron.dialog.showOpenDialog;
   }, paths);
 }
@@ -157,21 +157,21 @@ test.describe('file-io smoke — open / new window / open recent', () => {
         const tokenEv = new DragEvent('dragover', {
           bubbles: true,
           cancelable: true,
-          dataTransfer: tokenDt,
+          dataTransfer: tokenDt
         });
         window.dispatchEvent(tokenEv);
 
         const fileEv = new DragEvent('dragover', {
           bubbles: true,
           cancelable: true,
-          dataTransfer: new DataTransfer(),
+          dataTransfer: new DataTransfer()
         });
         Object.defineProperty(fileEv.dataTransfer, 'types', { value: ['Files'] });
         window.dispatchEvent(fileEv);
 
         return {
           tokenDragPrevented: tokenEv.defaultPrevented,
-          fileDragPrevented: fileEv.defaultPrevented,
+          fileDragPrevented: fileEv.defaultPrevented
         };
       });
       // Transfer token drag: NOT intercepted (dnd-kit / token drag preserved).

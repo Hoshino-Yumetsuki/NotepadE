@@ -3,7 +3,7 @@ import { listAnsiEncodings } from './encoding';
 import {
   systemAnsiCodePage,
   __resetSystemAnsiCacheForTest,
-  __setSystemAnsiCacheForTest,
+  __setSystemAnsiCacheForTest
 } from './system-codepage';
 
 /**

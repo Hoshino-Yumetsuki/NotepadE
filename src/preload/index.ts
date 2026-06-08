@@ -23,7 +23,7 @@ import type {
   RecentEntry,
   EncodingId,
   EolId,
-  Unsubscribe,
+  Unsubscribe
 } from '../shared/ipc-contract.js';
 
 function invoke<T>(channel: string, ...args: unknown[]): Promise<Result<T>> {
@@ -45,33 +45,33 @@ const api: NotepadsApi = {
     saveAs: (args: SaveAsArgs) => invoke<SaveResult>(IpcChannels.FileSaveAs, args),
     reloadFromDisk: (path) => invoke<OpenedFile>(IpcChannels.FileReloadFromDisk, path),
     revalidatePath: (path) =>
-      invoke<{ exists: boolean; dateModifiedMs: number }>(IpcChannels.FileRevalidatePath, path),
+      invoke<{ exists: boolean; dateModifiedMs: number }>(IpcChannels.FileRevalidatePath, path)
   },
   recent: {
     list: () => invoke<RecentEntry[]>(IpcChannels.RecentList),
-    clear: () => invoke<void>(IpcChannels.RecentClear),
+    clear: () => invoke<void>(IpcChannels.RecentClear)
   },
   paths: {
     // webUtils.getPathForFile is synchronous and lives ONLY here in preload (PA-8);
     // the renderer's drop handler passes the dropped File and gets back its path.
-    forFile: (file: File) => webUtils.getPathForFile(file),
+    forFile: (file: File) => webUtils.getPathForFile(file)
   },
   encoding: {
     listAnsi: () => invoke<AnsiEncodingEntry[]>(IpcChannels.EncodingListAnsi),
     decodeWith: (path, encodingId: EncodingId) =>
       invoke<OpenedFile>(IpcChannels.EncodingDecodeWith, path, encodingId),
-    convertEol: (text, eolId: EolId) => invoke<string>(IpcChannels.EncodingConvertEol, text, eolId),
+    convertEol: (text, eolId: EolId) => invoke<string>(IpcChannels.EncodingConvertEol, text, eolId)
   },
   session: {
     snapshot: (data: SessionSnapshot) =>
       invoke<{ written: boolean }>(IpcChannels.SessionSnapshot, data),
     loadLast: () => invoke<SessionSnapshot | null>(IpcChannels.SessionLoadLast),
-    clearRecovered: () => invoke<void>(IpcChannels.SessionClearRecovered),
+    clearRecovered: () => invoke<void>(IpcChannels.SessionClearRecovered)
   },
   settings: {
     get: () => invoke<Settings>(IpcChannels.SettingsGet),
     set: (patch: Partial<Settings>) => invoke<Settings>(IpcChannels.SettingsSet, patch),
-    onChanged: (cb) => subscribe<Settings>(IpcChannels.EvtSettingsChanged, cb),
+    onChanged: (cb) => subscribe<Settings>(IpcChannels.EvtSettingsChanged, cb)
   },
   window: {
     brokerRequest: (args) => invoke<void>(IpcChannels.WindowBrokerRequest, args),
@@ -86,35 +86,35 @@ const api: NotepadsApi = {
     onMaximizeChanged: (cb) => subscribe<boolean>(IpcChannels.WindowMaximizeChanged, cb),
     quit: () => invoke<void>(IpcChannels.WindowQuit),
     confirmClose: () => invoke<void>(IpcChannels.WindowConfirmClose),
-    onCloseRequested: (cb) => subscribe<undefined>(IpcChannels.EvtWindowCloseRequested, () => cb()),
+    onCloseRequested: (cb) => subscribe<undefined>(IpcChannels.EvtWindowCloseRequested, () => cb())
   },
   dragOut: {
     begin: (envelope: DragEnvelope) =>
       invoke<{ token: string }>(IpcChannels.DragOutBegin, envelope),
-    complete: (token, dropIndex) => invoke<void>(IpcChannels.DragOutComplete, token, dropIndex),
+    complete: (token, dropIndex) => invoke<void>(IpcChannels.DragOutComplete, token, dropIndex)
   },
   editor: {
     onAdopt: (cb: (payload: AdoptPayload) => void) =>
       subscribe<AdoptPayload>(IpcChannels.EvtEditorAdopt, cb),
-    onRelease: (cb) => subscribe<{ editorId: string }>(IpcChannels.EvtEditorRelease, cb),
+    onRelease: (cb) => subscribe<{ editorId: string }>(IpcChannels.EvtEditorRelease, cb)
   },
   theme: {
     get: () => invoke<ThemeState>(IpcChannels.ThemeGet),
     onOsThemeChanged: (cb) => subscribe<'light' | 'dark'>(IpcChannels.EvtThemeOsChanged, cb),
-    onAccentChanged: (cb) => subscribe<string>(IpcChannels.EvtThemeAccentChanged, cb),
+    onAccentChanged: (cb) => subscribe<string>(IpcChannels.EvtThemeAccentChanged, cb)
   },
   app: {
     onActivation: (cb: (event: ActivationEvent) => void) =>
       subscribe<ActivationEvent>(IpcChannels.EvtAppActivation, cb),
-    onProtocol: (cb) => subscribe<string>(IpcChannels.EvtAppProtocol, cb),
+    onProtocol: (cb) => subscribe<string>(IpcChannels.EvtAppProtocol, cb)
   },
   shell: {
     openContainingFolder: (path) => invoke<void>(IpcChannels.ShellOpenContainingFolder, path),
     copyPath: (path) => invoke<void>(IpcChannels.ShellCopyPath, path),
     webSearch: (query) => invoke<void>(IpcChannels.ShellWebSearch, query),
     print: () => invoke<void>(IpcChannels.ShellPrint),
-    share: (args) => invoke<void>(IpcChannels.ShellShare, args),
-  },
+    share: (args) => invoke<void>(IpcChannels.ShellShare, args)
+  }
 };
 
 contextBridge.exposeInMainWorld('notepads', Object.freeze(api));

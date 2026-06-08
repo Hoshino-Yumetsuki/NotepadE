@@ -14,14 +14,14 @@ function resolveMainEntry(): string {
     join(process.cwd(), 'out', 'main', 'index.js'),
     join(process.cwd(), 'dist', 'main', 'index.js'),
     join(process.cwd(), 'dist-electron', 'main', 'index.js'),
-    join(process.cwd(), '.vite', 'build', 'main.js'),
+    join(process.cwd(), '.vite', 'build', 'main.js')
   ];
   for (const c of candidates) {
     if (existsSync(c)) return c;
   }
   throw new Error(
     'Electron main entry not found. Build the app first (`npm run build`).\n' +
-      `Probed: ${candidates.join(', ')}`,
+      `Probed: ${candidates.join(', ')}`
   );
 }
 
@@ -91,7 +91,7 @@ export function safeRm(dir: string, attempts = 8, delayMs = 125): void {
  * array first arg is still accepted as `extraArgs`.
  */
 export async function launchApp(
-  optionsOrArgs: string[] | LaunchOptions = {},
+  optionsOrArgs: string[] | LaunchOptions = {}
 ): Promise<LaunchedApp> {
   const options: LaunchOptions = Array.isArray(optionsOrArgs)
     ? { extraArgs: optionsOrArgs }
@@ -109,8 +109,8 @@ export async function launchApp(
       ...process.env,
       NOTEPADS_E2E: '1',
       NOTEPADS_E2E_USERDATA: userDataDir,
-      ...(options.env ?? {}),
-    },
+      ...(options.env ?? {})
+    }
   });
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');

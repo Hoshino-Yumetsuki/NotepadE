@@ -26,7 +26,7 @@ import {
   createLightTheme,
   createDarkTheme,
   createHighContrastTheme,
-  type Theme,
+  type Theme
 } from '@fluentui/react-components';
 import type { Settings, ThemeState, ThemeMode } from '@shared/ipc-contract';
 import { DEFAULT_SETTINGS } from '@shared/ipc-contract';
@@ -61,7 +61,7 @@ function resolveAccent(settings: Settings, osAccent: string): string {
 function resolveBucket(
   mode: ThemeMode,
   osTheme: 'light' | 'dark',
-  highContrast: boolean,
+  highContrast: boolean
 ): AppTheme {
   if (highContrast) return 'hc';
   if (mode === 'system') return osTheme;
@@ -80,13 +80,13 @@ export function useAppTheme(): AppThemeResult {
   const [osTheme, setOsTheme] = useState<'light' | 'dark'>(() =>
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
       ? 'dark'
-      : 'light',
+      : 'light'
   );
   const [osAccent, setOsAccent] = useState<string>(DEFAULT_ACCENT);
   const [highContrast, setHighContrast] = useState<boolean>(() =>
     typeof window !== 'undefined'
       ? (window.matchMedia?.('(forced-colors: active)').matches ?? false)
-      : false,
+      : false
   );
 
   // Initial pull of the persisted settings bag + OS theme state.

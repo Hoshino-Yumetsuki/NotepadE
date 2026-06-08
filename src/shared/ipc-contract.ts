@@ -330,7 +330,7 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOpenNewWindow: false,
   exitWhenLastTabClosed: false,
   appLanguage: '',
-  openWithContextMenu: false,
+  openWithContextMenu: false
 };
 
 export interface SettingsApi {

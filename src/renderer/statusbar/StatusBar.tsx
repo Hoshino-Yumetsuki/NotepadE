@@ -5,7 +5,7 @@ import {
   MenuList,
   MenuItem,
   MenuDivider,
-  Slider,
+  Slider
 } from '@fluentui/react-components';
 import { useState, createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import type { FC } from 'react';
@@ -15,7 +15,7 @@ import {
   StatusDimensions,
   tokensForStatusTheme,
   type StatusTheme,
-  type StatusThemeTokens,
+  type StatusThemeTokens
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 import { useT } from '../i18n';
@@ -24,7 +24,7 @@ import {
   eolDisplayText,
   EOL_MENU_ROWS,
   buildEncodingMenuModel,
-  type LineColumn,
+  type LineColumn
 } from './statusModel';
 
 /**
@@ -181,7 +181,7 @@ function Cell(props: CellProps): JSX.Element {
     position: 'relative',
     overflow: 'hidden',
     // Hover-reveal overlay, only on interactive cells (UWP PointerEntered).
-    background: !isStatic && hovered ? tokens.hover : 'transparent',
+    background: !isStatic && hovered ? tokens.hover : 'transparent'
   };
 
   return (
@@ -226,7 +226,7 @@ function Cell(props: CellProps): JSX.Element {
             background: revealGradient(revealTokens),
             opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
             transition: 'opacity 120ms ease-out',
-            zIndex: 0,
+            zIndex: 0
           }}
         />
       )}
@@ -247,7 +247,7 @@ function Glyph(props: { icon: FC; color?: string }): JSX.Element {
       style={{
         fontSize: StatusDimensions.iconSize,
         lineHeight: 1,
-        color: props.color,
+        color: props.color
       }}
     >
       <Icon />
@@ -539,7 +539,7 @@ function ZoomColumn(props: {
               color: tokens.text,
               cursor: 'default',
               fontSize: StatusDimensions.fontSize,
-              fontFamily: 'Segoe UI, system-ui, sans-serif',
+              fontFamily: 'Segoe UI, system-ui, sans-serif'
             }}
           >
             {ZOOM_DEFAULT}%
@@ -558,7 +558,7 @@ function zoomButtonStyle(tokens: StatusThemeTokens): CSSProperties {
     cursor: 'default',
     display: 'inline-flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   };
 }
 
@@ -749,7 +749,7 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
           background: tokens.background,
           borderTop: `1px solid ${tokens.topBorder}`,
           color: tokens.text,
-          overflow: 'hidden',
+          overflow: 'hidden'
         }}
       >
         <ModificationStateColumn

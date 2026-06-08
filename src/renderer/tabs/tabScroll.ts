@@ -29,7 +29,7 @@ export interface HBox {
 export function clampOverlayToList(
   strip: HBox,
   list: HBox,
-  tab: HBox,
+  tab: HBox
 ): { left: number; width: number } | null {
   const visLeft = list.left - strip.left;
   const visRight = list.right - strip.left;
@@ -58,7 +58,7 @@ export function scrollLeftToReveal(
   list: HBox,
   tab: HBox,
   scrollWidth: number,
-  clientWidth: number,
+  clientWidth: number
 ): number {
   // Already fully visible → no change.
   if (tab.left >= list.left && tab.right <= list.right) return scrollLeft;

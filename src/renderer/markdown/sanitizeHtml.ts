@@ -149,7 +149,7 @@ const PURIFY_CONFIG = {
     'u',
     'ul',
     'var',
-    'wbr',
+    'wbr'
   ],
   ALLOWED_ATTR: [
     'href',
@@ -177,10 +177,10 @@ const PURIFY_CONFIG = {
     // `style` is needed by the align plugin (text-align:…). DOMPurify runs its
     // built-in CSS sanitizer over style values, so this does not open a
     // script/expression injection path.
-    'style',
+    'style'
   ],
   // input is allow-listed ONLY for task-list checkboxes; constrain it to that.
-  ALLOW_DATA_ATTR: false,
+  ALLOW_DATA_ATTR: false
 };
 
 /**

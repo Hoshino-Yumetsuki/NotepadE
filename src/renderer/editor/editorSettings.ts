@@ -42,7 +42,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   tabAsSpaces: -1,
   smartCopy: false,
   searchEngine: 'bing',
-  fontSize: 14,
+  fontSize: 14
 };
 
 /**
@@ -60,10 +60,10 @@ export const editorSettings = Facet.define<Partial<EditorSettings>, EditorSettin
         tabAsSpaces: (_a, b) => b,
         smartCopy: (_a, b) => b,
         searchEngine: (_a, b) => b,
-        fontSize: (_a, b) => b,
-      },
+        fontSize: (_a, b) => b
+      }
     );
-  },
+  }
 });
 
 /** Normalize an arbitrary number to the legal {-1,2,4,8} set (else real tab). */

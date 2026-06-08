@@ -39,8 +39,8 @@ export const enterWithAutoIndent: StateCommand = ({ state, dispatch }): boolean 
   dispatch(
     state.update(state.replaceSelection('\n' + indent), {
       scrollIntoView: true,
-      userEvent: 'input',
-    }),
+      userEvent: 'input'
+    })
   );
   return true;
 };

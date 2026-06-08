@@ -6,7 +6,7 @@ import {
   COMPACT_WIDTH,
   COMPACT_HEIGHT,
   type CompactWindowPort,
-  type WindowRect,
+  type WindowRect
 } from './compact-overlay';
 
 /**
@@ -35,7 +35,7 @@ function fakeWindow(
     alwaysOnTop: boolean;
     maximized: boolean;
     fullScreen: boolean;
-  }> = {},
+  }> = {}
 ): CompactWindowPort & { calls: string[] } {
   let bounds: WindowRect = initial.bounds ?? RECT;
   let alwaysOnTop = initial.alwaysOnTop ?? false;
@@ -74,7 +74,7 @@ function fakeWindow(
             break;
         }
       }
-    },
+    }
   };
 }
 
@@ -86,7 +86,7 @@ describe('toggleCompact', () => {
     expect(res.isCompactOverlay).toBe(true);
     expect(win.calls).toEqual([
       'setAlwaysOnTop:true',
-      `setSize:${COMPACT_WIDTH}x${COMPACT_HEIGHT}`,
+      `setSize:${COMPACT_WIDTH}x${COMPACT_HEIGHT}`
     ]);
   });
 
@@ -107,14 +107,14 @@ describe('toggleCompact', () => {
     expect(win.calls).toEqual([
       'unmaximize',
       'setAlwaysOnTop:true',
-      `setSize:${COMPACT_WIDTH}x${COMPACT_HEIGHT}`,
+      `setSize:${COMPACT_WIDTH}x${COMPACT_HEIGHT}`
     ]);
     win.calls.length = 0;
     toggleCompact(win, state, false);
     expect(win.calls).toEqual([
       'setAlwaysOnTop:false',
       `setBounds:${RECT.width}x${RECT.height}`,
-      'maximize',
+      'maximize'
     ]);
   });
 
@@ -125,14 +125,14 @@ describe('toggleCompact', () => {
     expect(win.calls).toEqual([
       'setFullScreen:false',
       'setAlwaysOnTop:true',
-      `setSize:${COMPACT_WIDTH}x${COMPACT_HEIGHT}`,
+      `setSize:${COMPACT_WIDTH}x${COMPACT_HEIGHT}`
     ]);
     win.calls.length = 0;
     toggleCompact(win, state, false);
     expect(win.calls).toEqual([
       'setAlwaysOnTop:false',
       `setBounds:${RECT.width}x${RECT.height}`,
-      'setFullScreen:true',
+      'setFullScreen:true'
     ]);
   });
 
@@ -163,14 +163,14 @@ describe('windowStateFrom', () => {
   it('shapes the e2e readWindowState payload from flags + compact flag', () => {
     const state = windowStateFrom(
       { bounds: RECT, alwaysOnTop: true, maximized: false, fullScreen: false },
-      true,
+      true
     );
     expect(state).toEqual({
       isCompactOverlay: true,
       bounds: { width: RECT.width, height: RECT.height },
       isAlwaysOnTop: true,
       isMaximized: false,
-      isFullScreen: false,
+      isFullScreen: false
     });
   });
 
@@ -180,16 +180,16 @@ describe('windowStateFrom', () => {
         bounds: { x: 5, y: 9, width: 800, height: 600 },
         alwaysOnTop: false,
         maximized: true,
-        fullScreen: true,
+        fullScreen: true
       },
-      false,
+      false
     );
     expect(state).toEqual({
       isCompactOverlay: false,
       bounds: { width: 800, height: 600 },
       isAlwaysOnTop: false,
       isMaximized: true,
-      isFullScreen: true,
+      isFullScreen: true
     });
   });
 });

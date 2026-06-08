@@ -134,7 +134,7 @@ function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
     return {
       activeLine: 'rgba(255, 255, 255, 0.05)',
       scrollbarThumb: 'rgba(138, 138, 138, 0.35)',
-      scrollbarThumbHover: 'rgba(138, 138, 138, 0.6)',
+      scrollbarThumbHover: 'rgba(138, 138, 138, 0.6)'
     };
   }
   // light + hc share the grey-on-light overlay (HC paints opaque system colors
@@ -142,7 +142,7 @@ function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
   return {
     activeLine: 'rgba(127, 127, 127, 0.08)',
     scrollbarThumb: 'rgba(137, 137, 137, 0.35)',
-    scrollbarThumbHover: 'rgba(137, 137, 137, 0.6)',
+    scrollbarThumbHover: 'rgba(137, 137, 137, 0.6)'
   };
 }
 
@@ -176,7 +176,7 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
       lineHeight: '1.2',
       // CM6 owns horizontal padding via .cm-line; vertical padding here.
       padding: '6px 0 10px 0',
-      caretColor: 'currentColor',
+      caretColor: 'currentColor'
     },
     '.cm-line': { padding: '0 6px' },
     '.cm-scroller': {
@@ -186,7 +186,7 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
       // reserves no layout gutter. Thumb tints mirror the UWP OS default:
       // #898989 light / #8A8A8A dark, semi-transparent.
       scrollbarWidth: 'thin',
-      scrollbarColor: `${overlay.scrollbarThumb} transparent`,
+      scrollbarColor: `${overlay.scrollbarThumb} transparent`
     },
     // Active line: the CM6 default highlight is invisible on our transparent
     // surface, so paint an explicit subtle overlay (per-theme tint from
@@ -217,11 +217,11 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
       backgroundColor: overlay.scrollbarThumb,
       borderRadius: '6px',
       border: '3px solid transparent',
-      backgroundClip: 'content-box',
+      backgroundClip: 'content-box'
     },
     '.cm-scroller:hover::-webkit-scrollbar-thumb': {
-      backgroundColor: overlay.scrollbarThumbHover,
-    },
+      backgroundColor: overlay.scrollbarThumbHover
+    }
   });
 }
 
@@ -253,9 +253,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       fontWeight = 400,
       accentColor = DEFAULT_ACCENT,
       editorExtensions,
-      onDocChanged,
+      onDocChanged
     },
-    ref,
+    ref
   ) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
@@ -305,7 +305,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           if (!view) return; // applied on mount from docRef
           view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: normalized },
-            annotations: Transaction.addToHistory.of(false),
+            annotations: Transaction.addToHistory.of(false)
           });
         },
         getShadowText(): string {
@@ -323,9 +323,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         },
         getView(): EditorView | null {
           return viewRef.current;
-        },
+        }
       }),
-      [],
+      []
     );
 
     useEffect(() => {
@@ -360,7 +360,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // Ctrl-z→undo never claims the slot before our undoRedoExtension `any`
         // handler (which owns undo/redo/Ctrl+Y). history() the StateField stays.
         keymap.of(
-          defaultKeymap.filter((b) => b.key !== 'Mod-z' && b.key !== 'Mod-y' && b.mac !== 'Mod-z'),
+          defaultKeymap.filter((b) => b.key !== 'Mod-z' && b.key !== 'Mod-y' && b.mac !== 'Mod-z')
         ),
         // highlightActiveLine() gated on lineHighlighter, in a compartment so the
         // "Highlight current line" toggle reconfigures it live.
@@ -377,20 +377,20 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
             fontWeight,
             accentColor,
             lineHighlighter,
-            themeMode,
-          }),
+            themeMode
+          })
         ),
         // Line numbers gated on the prop, in a compartment so toggling the setting
         // mounts/unmounts the external column live. NOT CM6's lineNumbers() — an
         // out-of-scroller column so it stays transparent without text overlap.
         lineNumbersCompartment.current.of(
-          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : [],
+          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : []
         ),
         // Line-number reveal glow, mounted iff the gutter is shown. Empty when off
         // so there is no overlay/listeners without a gutter to light.
         lineNumberGlowCompartment.current.of(
-          showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : [],
-        ),
+          showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : []
+        )
       ];
 
       const view = new EditorView({
@@ -399,9 +399,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           // remount — incl. the StrictMode double-mount — never loses seeded text.
           // The doc enters as the INITIAL state, carrying no history (undoDepth 0).
           doc: docRef.current ?? normalizeToShadow(initialDoc),
-          extensions,
+          extensions
         }),
-        parent: hostRef.current,
+        parent: hostRef.current
       });
       viewRef.current = view;
       // Seed the zoom CSS variable so the initial font-size reflects 100%.
@@ -432,9 +432,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
             fontWeight,
             accentColor,
             lineHighlighter,
-            themeMode,
-          }),
-        ),
+            themeMode
+          })
+        )
       });
     }, [fontFamily, fontStyle, fontWeight, accentColor, lineHighlighter, themeMode]);
 
@@ -444,7 +444,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       const view = viewRef.current;
       if (!view) return;
       view.dispatch({
-        effects: fontSizeCompartment.current.reconfigure(editorSettings.of({ fontSize })),
+        effects: fontSizeCompartment.current.reconfigure(editorSettings.of({ fontSize }))
       });
       initZoomVar(view);
     }, [fontSize]);
@@ -457,8 +457,8 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       if (!view) return;
       view.dispatch({
         effects: lineNumbersCompartment.current.reconfigure(
-          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : [],
-        ),
+          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : []
+        )
       });
     }, [showLineNumbers, themeMode, fontFamily, lineHighlighter]);
 
@@ -470,8 +470,8 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       if (!view) return;
       view.dispatch({
         effects: lineNumberGlowCompartment.current.reconfigure(
-          showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : [],
-        ),
+          showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : []
+        )
       });
     }, [showLineNumbers, themeMode, accentColor]);
 
@@ -481,8 +481,8 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       if (!view) return;
       view.dispatch({
         effects: activeLineCompartment.current.reconfigure(
-          lineHighlighter ? highlightActiveLine() : [],
-        ),
+          lineHighlighter ? highlightActiveLine() : []
+        )
       });
     }, [lineHighlighter]);
 
@@ -495,11 +495,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       view.dispatch({
         effects: [
           setWordWrap.of(wordWrap),
-          wordWrapCompartment.reconfigure(wordWrapExtension(wordWrap)),
-        ],
+          wordWrapCompartment.reconfigure(wordWrapExtension(wordWrap))
+        ]
       });
     }, [wordWrap]);
 
     return <div ref={hostRef} style={{ height: '100%' }} />;
-  },
+  }
 );

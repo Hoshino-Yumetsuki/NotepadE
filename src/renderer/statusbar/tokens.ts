@@ -26,7 +26,7 @@ import {
   ArrowUndoRegular,
   ZoomOutRegular,
   ZoomInRegular,
-  WindowMultipleRegular,
+  WindowMultipleRegular
 } from '@fluentui/react-icons';
 import type { FC } from 'react';
 
@@ -41,7 +41,7 @@ export const StatusGlyph = {
   revert: ArrowUndoRegular as FC,
   zoomOut: ZoomOutRegular as FC,
   zoomIn: ZoomInRegular as FC,
-  shadowWindow: WindowMultipleRegular as FC,
+  shadowWindow: WindowMultipleRegular as FC
 } as const;
 
 /**
@@ -67,7 +67,7 @@ export const StatusDimensions = {
   /** Col 0 MinWidth (xaml:284). */
   col0MinWidth: 4,
   /** Glyph icon font size inside the 25px bar (Viewbox-scaled in UWP; we pin). */
-  iconSize: 12,
+  iconSize: 12
 } as const;
 
 /** Hardcoded status-bar theme tokens (Dark #2E2E2E / Light #F0F0F0 base). */
@@ -93,7 +93,7 @@ export const LIGHT_STATUS_TOKENS: StatusThemeTokens = {
   text: 'rgba(0, 0, 0, 0.80)',
   accent: '#0078D4',
   hover: 'rgba(0, 0, 0, 0.06)',
-  topBorder: 'rgba(0, 0, 0, 0.10)',
+  topBorder: 'rgba(0, 0, 0, 0.10)'
 };
 
 /** Dark theme — base #2E2E2E. */
@@ -102,7 +102,7 @@ export const DARK_STATUS_TOKENS: StatusThemeTokens = {
   text: 'rgba(255, 255, 255, 0.80)',
   accent: '#0091F8',
   hover: 'rgba(255, 255, 255, 0.08)',
-  topBorder: 'rgba(255, 255, 255, 0.10)',
+  topBorder: 'rgba(255, 255, 255, 0.10)'
 };
 
 /**
@@ -115,7 +115,7 @@ export const HC_STATUS_TOKENS: StatusThemeTokens = {
   text: 'CanvasText',
   accent: 'Highlight',
   hover: 'Highlight',
-  topBorder: 'CanvasText',
+  topBorder: 'CanvasText'
 };
 
 /** Resolve the token set for a status-bar theme. */

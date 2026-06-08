@@ -26,7 +26,7 @@ import {
   MenuList,
   MenuPopover,
   MenuTrigger,
-  MenuDivider,
+  MenuDivider
 } from '@fluentui/react-components';
 import {
   CutRegular,
@@ -38,7 +38,7 @@ import {
   GlobeRegular,
   EyeRegular,
   ShareRegular,
-  CheckmarkRegular,
+  CheckmarkRegular
 } from '@fluentui/react-icons';
 import type { FC } from 'react';
 import { EditorView } from '@codemirror/view';
@@ -60,7 +60,7 @@ const CtxGlyph = {
   webSearch: GlobeRegular as FC,
   preview: EyeRegular as FC,
   share: ShareRegular as FC,
-  check: CheckmarkRegular as FC,
+  check: CheckmarkRegular as FC
 } as const;
 
 /** Render a Fluent UI icon in the menu icon slot. */
@@ -74,7 +74,7 @@ function Glyph(props: { icon: FC }): JSX.Element {
         alignItems: 'center',
         justifyContent: 'center',
         width: 20,
-        height: 20,
+        height: 20
       }}
     >
       <Icon />
@@ -125,7 +125,7 @@ async function pastePlainText(view: EditorView): Promise<void> {
     view.dispatch({
       changes: { from, to, insert: text },
       selection: { anchor: from + text.length },
-      scrollIntoView: true,
+      scrollIntoView: true
     });
     view.focus();
   } catch {
@@ -169,7 +169,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
       hasText: view.state.doc.length > 0,
       wordWrap: view.state.field(wordWrapField, false) ?? false,
       // CM6 Direction.RTL === 1 (derived from the content DOM `dir`).
-      rtl: view.textDirection === 1,
+      rtl: view.textDirection === 1
     });
   }, []);
 
@@ -179,9 +179,9 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
         contextmenu: (e, view) => {
           open(view, e);
           return true;
-        },
+        }
       }),
-    [open],
+    [open]
   );
 
   const close = (): void => setCtx(null);
@@ -200,7 +200,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
         if (!data.open) close();
       }}
       positioning={{
-        target: { getBoundingClientRect: () => new DOMRect(ctx.x, ctx.y, 0, 0) },
+        target: { getBoundingClientRect: () => new DOMRect(ctx.x, ctx.y, 0, 0) }
       }}
     >
       <MenuTrigger disableButtonEnhancement>

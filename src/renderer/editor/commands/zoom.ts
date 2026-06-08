@@ -57,7 +57,7 @@ export const zoomField = StateField.define<number>({
       if (e.is(setZoom)) next = clampZoom(e.value);
     }
     return next;
-  },
+  }
 });
 
 /**
@@ -71,7 +71,7 @@ function zoomTheme(view: EditorView): Extension {
   const px = (base * percent) / 100;
   return EditorView.theme({
     '.cm-content': { fontSize: `${px}px` },
-    '.cm-gutters': { fontSize: `${px}px` },
+    '.cm-gutters': { fontSize: `${px}px` }
   });
 }
 
@@ -92,7 +92,7 @@ export const zoomStyle = EditorView.updateListener.of((update) => {
 /** Base theme binding `.cm-content` to the zoom CSS variable. */
 export const zoomBaseTheme = EditorView.theme({
   '.cm-content': { fontSize: 'var(--cm-zoom-font-size)' },
-  '.cm-gutters': { fontSize: 'var(--cm-zoom-font-size)' },
+  '.cm-gutters': { fontSize: 'var(--cm-zoom-font-size)' }
 });
 
 /** Initialize the zoom CSS variable for a freshly created view. */
@@ -142,5 +142,5 @@ export const ctrlWheelZoom = EditorView.domEventHandlers({
     if (event.deltaY < 0) zoomIn(view);
     else if (event.deltaY > 0) zoomOut(view);
     return true;
-  },
+  }
 });

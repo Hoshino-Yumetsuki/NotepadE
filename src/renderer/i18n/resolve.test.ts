@@ -12,7 +12,7 @@ import {
   lookup,
   tableFor,
   SUPPORTED_LOCALES,
-  BASE_LOCALE,
+  BASE_LOCALE
 } from './resolve';
 import { SUPPLEMENT } from './locales/supplement';
 
@@ -136,7 +136,7 @@ describe('SUPPLEMENT overlay (web-port keys with no .resw origin)', () => {
   it('falls a supplement key through to its en-US value when the locale is untranslated', () => {
     // Entries are en-US-only for now; any resolved locale gets the en-US string.
     expect(
-      lookup(tableFor('de-DE'), 'TabStrip_NewTabButton.AutomationProperties.Name', 'de-DE'),
+      lookup(tableFor('de-DE'), 'TabStrip_NewTabButton.AutomationProperties.Name', 'de-DE')
     ).toBe('New tab');
   });
 

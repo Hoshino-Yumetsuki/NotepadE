@@ -9,7 +9,7 @@ import {
   zoomField,
   zoomIn,
   zoomOut,
-  zoomReset,
+  zoomReset
 } from './zoom';
 import { editorSettings } from '../editorSettings';
 import { mountView } from './testUtils';

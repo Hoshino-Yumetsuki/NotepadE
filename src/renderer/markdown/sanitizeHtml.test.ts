@@ -27,7 +27,7 @@ describe('sanitizeMarkdownHtml — XSS gate', () => {
 
   it('keeps safe structural markup the plugins emit', () => {
     const out = sanitizeMarkdownHtml(
-      '<div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p></div>',
+      '<div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p></div>'
     );
     expect(out).toContain('markdown-alert-note');
     expect(out).toContain('markdown-alert-title');
@@ -35,7 +35,7 @@ describe('sanitizeMarkdownHtml — XSS gate', () => {
 
   it('keeps task-list checkboxes (input allow-listed)', () => {
     const out = sanitizeMarkdownHtml(
-      '<input type="checkbox" class="task-list-item-checkbox" checked>',
+      '<input type="checkbox" class="task-list-item-checkbox" checked>'
     );
     expect(out).toContain('type="checkbox"');
   });

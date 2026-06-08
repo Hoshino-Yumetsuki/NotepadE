@@ -79,7 +79,7 @@ function getRenderer(): MarkdownIt {
           }
         }
         return hljs.highlightAuto(code).value;
-      },
+      }
     });
     // Inline / span extensions (GFM-ish): ==mark==, ++ins++, ~sub~, ^sup^,
     // >!spoiler!<, abbreviations, and :emoji: shortcodes.

@@ -75,7 +75,7 @@ function populatePrintHost(host: HTMLElement, docs: PrintDocument[]): void {
         `<section class="np-print-doc">` +
         `<div class="np-print-title">${escapeHtml(doc.title)}</div>` +
         `<div>${escapeHtml(doc.text)}</div>` +
-        `</section>`,
+        `</section>`
     )
     .join('');
 }
@@ -86,7 +86,7 @@ function populatePrintHost(host: HTMLElement, docs: PrintDocument[]): void {
  * it. Returns the bridge Result; a user cancel resolves ok (MAIN maps it).
  */
 export async function printDocuments(
-  docs: PrintDocument[],
+  docs: PrintDocument[]
 ): Promise<{ ok: boolean; error?: string }> {
   if (docs.length === 0) return { ok: true };
   ensurePrintStyle();

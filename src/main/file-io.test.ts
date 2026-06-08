@@ -34,7 +34,7 @@ describe('writeFileWithRetry', () => {
   it('retries up to the limit then throws the last transient error', async () => {
     const writeFn = vi.fn().mockRejectedValue(fsError('EPERM'));
     await expect(writeFileWithRetry('/x', BYTES, 3, 0, writeFn)).rejects.toMatchObject({
-      code: 'EPERM',
+      code: 'EPERM'
     });
     expect(writeFn).toHaveBeenCalledTimes(3);
   });
@@ -42,7 +42,7 @@ describe('writeFileWithRetry', () => {
   it('does NOT retry a non-transient error (ENOENT) — throws immediately', async () => {
     const writeFn = vi.fn().mockRejectedValue(fsError('ENOENT'));
     await expect(writeFileWithRetry('/x', BYTES, 3, 0, writeFn)).rejects.toMatchObject({
-      code: 'ENOENT',
+      code: 'ENOENT'
     });
     expect(writeFn).toHaveBeenCalledTimes(1);
   });
@@ -50,7 +50,7 @@ describe('writeFileWithRetry', () => {
   it('treats EACCES (read-only file) as transient and retries', async () => {
     const writeFn = vi.fn().mockRejectedValue(fsError('EACCES'));
     await expect(writeFileWithRetry('/x', BYTES, 2, 0, writeFn)).rejects.toMatchObject({
-      code: 'EACCES',
+      code: 'EACCES'
     });
     expect(writeFn).toHaveBeenCalledTimes(2);
   });

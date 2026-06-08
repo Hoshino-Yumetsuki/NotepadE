@@ -31,7 +31,7 @@ import {
   parseArgv as parseArgvPure,
   isNewInstanceProtocol,
   resolveCwdRelative,
-  type ParsedArgv,
+  type ParsedArgv
 } from './argv-parse.js';
 
 /** How the broker spawns a new window. Injected so index.ts owns window-factory. */
@@ -124,7 +124,7 @@ function trackFocus(): void {
 function parseArgv(argv: readonly string[], cwd: string): ParsedArgv {
   return parseArgvPure(argv, cwd, {
     execPath: process.execPath,
-    appPath: app.getAppPath(),
+    appPath: app.getAppPath()
   });
 }
 
@@ -234,7 +234,7 @@ export function processInitialActivation(): void {
   void routeActivation({
     paths: parsed.paths,
     cwd: process.cwd(),
-    protocolUrl: parsed.protocolUrl,
+    protocolUrl: parsed.protocolUrl
   });
 }
 
@@ -247,7 +247,7 @@ export async function brokerRequest(paths: string[], forceNewWindow: boolean): P
   await routeActivation({
     paths,
     cwd: process.cwd(),
-    protocolUrl: forceNewWindow ? `${PROTOCOL_SCHEME}://${NEW_INSTANCE_VERB}` : null,
+    protocolUrl: forceNewWindow ? `${PROTOCOL_SCHEME}://${NEW_INSTANCE_VERB}` : null
   });
 }
 
@@ -293,7 +293,7 @@ export interface MainTestSeam {
    * window the activation was delivered to (the target's id, or null).
    */
   routeActivation(
-    event: ActivationEvent,
+    event: ActivationEvent
   ): Promise<{ windowCount: number; targetId: number | null }>;
   /**
    * Model an OS `second-instance` exactly as the real handler does: parse argv
@@ -303,7 +303,7 @@ export interface MainTestSeam {
    */
   simulateSecondInstance(
     argv: readonly string[],
-    cwd: string,
+    cwd: string
   ): Promise<{ parsed: ParsedArgv; windowCount: number; targetId: number | null }>;
   /**
    * Read the primary (focused, else first live) window's live state for the
@@ -321,7 +321,7 @@ function buildMainTestSeam(): MainTestSeam {
     BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed()).length;
 
   const routeAndReport = async (
-    event: ActivationEvent,
+    event: ActivationEvent
   ): Promise<{ windowCount: number; targetId: number | null }> => {
     const before = new Set(BrowserWindow.getAllWindows().map((w) => w.id));
     await routeActivation(event);
@@ -344,10 +344,10 @@ function buildMainTestSeam(): MainTestSeam {
       const { windowCount, targetId } = await routeAndReport({
         paths: parsed.paths,
         cwd,
-        protocolUrl: parsed.protocolUrl,
+        protocolUrl: parsed.protocolUrl
       });
       return { parsed, windowCount, targetId };
-    },
+    }
   };
 }
 

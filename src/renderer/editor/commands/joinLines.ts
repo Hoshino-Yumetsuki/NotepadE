@@ -45,8 +45,8 @@ export const joinLines: StateCommand = ({ state, dispatch }): boolean => {
       changes: { from, to, insert: joined },
       selection: EditorSelection.range(anchor, head),
       scrollIntoView: true,
-      userEvent: 'input.join',
-    }),
+      userEvent: 'input.join'
+    })
   );
   return true;
 };

@@ -61,7 +61,7 @@ async function setSetting(app: LaunchedApp, patch: Record<string, unknown>): Pro
 async function simulateSecondInstance(
   app: LaunchedApp,
   argv: string[],
-  cwd: string,
+  cwd: string
 ): Promise<{ paths: string[]; protocolUrl: string | null; windowCount: number }> {
   return app.app.evaluate(
     async (_electron, arg: { argv: string[]; cwd: string }) => {
@@ -70,7 +70,7 @@ async function simulateSecondInstance(
           __notepadsMainTest?: {
             simulateSecondInstance(
               argv: readonly string[],
-              cwd: string,
+              cwd: string
             ): Promise<{
               parsed: { paths: string[]; protocolUrl: string | null };
               windowCount: number;
@@ -86,10 +86,10 @@ async function simulateSecondInstance(
       return {
         paths: r.parsed.paths,
         protocolUrl: r.parsed.protocolUrl,
-        windowCount: r.windowCount,
+        windowCount: r.windowCount
       };
     },
-    { argv, cwd },
+    { argv, cwd }
   );
 }
 

@@ -9,7 +9,7 @@ import {
   glowBackground,
   lineNumberGlow,
   GLOW_FALLOFF_PX,
-  GLOW_LINE_WIDTH,
+  GLOW_LINE_WIDTH
 } from './lineNumberGlow';
 
 describe('lineNumberGlow — pure helpers', () => {
@@ -79,10 +79,10 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
         doc: 'a\nb\nc',
         extensions: [
           lineNumberColumn({ themeMode, fontFamily: 'monospace', lineHighlighter: false }),
-          lineNumberGlow({ themeMode, accentColor: accent }),
-        ],
+          lineNumberGlow({ themeMode, accentColor: accent })
+        ]
       }),
-      parent,
+      parent
     });
   }
 
@@ -135,7 +135,7 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
     expect(overlay.style.height).toBe('120px');
     // Pointer far right → no glow.
     scroller.dispatchEvent(
-      new PointerEvent('pointermove', { clientX: 40 + GLOW_FALLOFF_PX + 10, clientY: 50 }),
+      new PointerEvent('pointermove', { clientX: 40 + GLOW_FALLOFF_PX + 10, clientY: 50 })
     );
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     expect(overlay.style.opacity).toBe('0');

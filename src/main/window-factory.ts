@@ -65,7 +65,7 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
           transparent: true,
           vibrancy: 'under-window' as const,
           visualEffectState: 'active' as const,
-          hasShadow: false, // transparent windows lose the macOS shadow
+          hasShadow: false // transparent windows lose the macOS shadow
         }
       : {}),
     autoHideMenuBar: true,
@@ -77,18 +77,18 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
       ? {
           titleBarStyle: 'hidden' as const,
           trafficLightPosition: { x: -80, y: -20 } as const,
-          titleBarOverlay: true,
+          titleBarOverlay: true
         }
       : {
-          titleBarStyle: isWindows ? ('hidden' as const) : ('default' as const),
+          titleBarStyle: isWindows ? ('hidden' as const) : ('default' as const)
         }),
     webPreferences: {
       // PA-8 HARD RULE — do not weaken.
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: join(__dirname, '../preload/index.js'),
-    },
+      preload: join(__dirname, '../preload/index.js')
+    }
   });
 
   win.once('ready-to-show', () => {

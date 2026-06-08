@@ -22,7 +22,7 @@ const mainEntry = resolve(process.cwd(), 'out/main/index.js');
 
 const FATAL = [
   'Failed to create shared context for virtualization',
-  'Exiting GPU process due to errors during initialization',
+  'Exiting GPU process due to errors during initialization'
 ];
 
 // Each trial is raw Chromium switches passed on argv. The env-configurable
@@ -35,7 +35,7 @@ const trials = [
   { name: '--no-sandbox + angle=gl', flags: ['--no-sandbox', '--use-angle=gl'] },
   {
     name: '--no-sandbox + disable-gpu-compositing',
-    flags: ['--no-sandbox', '--disable-gpu-compositing'],
+    flags: ['--no-sandbox', '--disable-gpu-compositing']
   },
   { name: 'angle=d3d11', flags: ['--use-angle=d3d11'] },
   { name: 'angle=d3d9', flags: ['--use-angle=d3d9'] },
@@ -43,14 +43,14 @@ const trials = [
   { name: 'angle=vulkan', flags: ['--use-angle=vulkan'] },
   { name: 'angle=swiftshader (CPU/WARP)', flags: ['--use-angle=swiftshader'] },
   { name: 'disable-gpu-compositing', flags: ['--disable-gpu-compositing'] },
-  { name: 'disable-gpu (no acrylic)', flags: ['--disable-gpu'] },
+  { name: 'disable-gpu (no acrylic)', flags: ['--disable-gpu'] }
 ];
 
 function runTrial(t) {
   return new Promise((res) => {
     const child = spawn(electronPath, [mainEntry, ...t.flags], {
       env: { ...process.env, NOTEPADS_E2E: '1' },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     let buf = '';
     child.stdout.on('data', (d) => (buf += d));

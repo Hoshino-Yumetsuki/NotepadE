@@ -53,7 +53,7 @@ test('external-modification indicator: modifiedOutside → reload → renamedMov
   // --- OPEN via the real renderer flow; seeds the column-0 mtime baseline. ---
   const openResult = await page.evaluate(
     (path) => window.__notepadsTest.openFileIntoEditor(path),
-    workFile,
+    workFile
   );
   expect(openResult.ok, `open failed: ${JSON.stringify(openResult)}`).toBe(true);
 

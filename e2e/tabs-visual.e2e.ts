@@ -7,7 +7,7 @@ import {
   seedTabs,
   clickTab,
   expectTabCount,
-  resetToSingleTab,
+  resetToSingleTab
 } from './helpers/tabs';
 import { driveOsTheme } from './helpers/settings';
 
@@ -55,7 +55,7 @@ interface ThemeCase {
 const THEME_CASES: ThemeCase[] = [
   { name: 'light', colorScheme: 'light', forcedColors: 'none' },
   { name: 'dark', colorScheme: 'dark', forcedColors: 'none' },
-  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' },
+  { name: 'hc', colorScheme: 'dark', forcedColors: 'active' }
 ];
 
 let launched: LaunchedApp;
@@ -129,7 +129,7 @@ for (const tc of THEME_CASES) {
       // HC: confirm forced-colors is genuinely active in the page (the reactivity
       // R9 protects). If this query is false the HC capture is meaningless.
       const forcedActive = await page.evaluate(
-        () => window.matchMedia('(forced-colors: active)').matches,
+        () => window.matchMedia('(forced-colors: active)').matches
       );
       expect(forcedActive, 'HC capture requires forced-colors: active to be live').toBe(true);
     } else {
@@ -155,7 +155,7 @@ for (const tc of THEME_CASES) {
       } else {
         expect(
           bgLuma,
-          `dark app surface luminance (got ${bgLuma}) — a value >180 means the theme read regressed to light`,
+          `dark app surface luminance (got ${bgLuma}) — a value >180 means the theme read regressed to light`
         ).toBeLessThan(120);
       }
     }
@@ -180,19 +180,19 @@ for (const tc of THEME_CASES) {
         x: Math.round(box.x),
         y: Math.round(box.y),
         width: Math.round(box.width),
-        height: Math.round(box.height),
-      },
+        height: Math.round(box.height)
+      }
     });
     const baselinePath = join(BASELINE_DIR, `tab-strip-${tc.name}.png`);
 
     const result = await compareToBaseline(actual, baselinePath, `tab-strip-${tc.name}`, {
-      createMissingBaseline: UPDATE_BASELINES,
+      createMissingBaseline: UPDATE_BASELINES
     });
 
     if (result.baselineCreated) {
       test.info().annotations.push({
         type: 'baseline-created',
-        description: `Wrote new baseline ${baselinePath} (REQUIRES_UWP_REFERENCE for 1:1 sign-off).`,
+        description: `Wrote new baseline ${baselinePath} (REQUIRES_UWP_REFERENCE for 1:1 sign-off).`
       });
     }
 

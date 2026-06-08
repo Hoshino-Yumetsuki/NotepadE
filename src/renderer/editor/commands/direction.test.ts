@@ -11,7 +11,7 @@ import { mountView } from './testUtils';
 describe('direction commands', () => {
   function view(initial: 'ltr' | 'rtl') {
     return mountView('hello', EditorSelection.cursor(0), [
-      directionCompartment.of(directionExtension(initial)),
+      directionCompartment.of(directionExtension(initial))
     ]);
   }
 

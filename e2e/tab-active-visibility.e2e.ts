@@ -46,10 +46,10 @@ test('clicking (+) under overflow scrolls the new active tab fully into view (Bu
       const fullyVisible = tb.left >= lb.left - 0.5 && tb.right <= lb.right + 0.5;
       return { ok: fullyVisible, lb: { l: lb.left, r: lb.right }, tb: { l: tb.left, r: tb.right } };
     },
-    { listSel: TAB_SELECTORS.tabList, activeSel: '[data-testid="tab"][data-active="true"]' },
+    { listSel: TAB_SELECTORS.tabList, activeSel: '[data-testid="tab"][data-active="true"]' }
   );
   expect(vis.ok, `active tab must be fully within the list viewport: ${JSON.stringify(vis)}`).toBe(
-    true,
+    true
   );
 });
 
@@ -88,10 +88,10 @@ test('scrolling a selected tab out of view does not leak its elevation over the 
       const within = eb.left >= lb.left - 0.5 && eb.right <= lb.right + 0.5;
       return { ok: within, lb: { l: lb.left, r: lb.right }, eb: { l: eb.left, r: eb.right } };
     },
-    { listSel: '[data-testid="tab-list"]', elevSel: '[data-testid="tab-elevation"]' },
+    { listSel: '[data-testid="tab-list"]', elevSel: '[data-testid="tab-elevation"]' }
   );
   expect(
     leak.ok,
-    `selected-tab elevation must not leak over the chrome: ${JSON.stringify(leak)}`,
+    `selected-tab elevation must not leak over the chrome: ${JSON.stringify(leak)}`
   ).toBe(true);
 });

@@ -37,7 +37,7 @@ function getDwmSet(): DwmSetFn | null {
     const koffi = require('koffi') as typeof import('koffi');
     const dwmapi = koffi.load('dwmapi.dll');
     dwmSet = dwmapi.func(
-      'int DwmSetWindowAttribute(void *hwnd, uint dwAttribute, void *pvAttribute, uint cbAttribute)',
+      'int DwmSetWindowAttribute(void *hwnd, uint dwAttribute, void *pvAttribute, uint cbAttribute)'
     ) as unknown as DwmSetFn;
   } catch {
     dwmSet = null;

@@ -27,7 +27,7 @@ import {
   revealGradient,
   tokensForReveal,
   REVEAL_VAR_OPACITY,
-  type RevealTokens,
+  type RevealTokens
 } from './reveal';
 import type { AppTheme } from './tokens';
 
@@ -58,7 +58,7 @@ export function RevealLayer(props: RevealLayerProps): JSX.Element {
     background: revealGradient(tokens),
     opacity: `var(${REVEAL_VAR_OPACITY}, 0)` as unknown as number,
     transition: 'opacity 120ms ease-out',
-    zIndex: 0,
+    zIndex: 0
   };
   return <span aria-hidden data-testid={testid} data-reveal-layer="true" style={style} />;
 }
@@ -94,7 +94,7 @@ export function RevealSurface(props: RevealSurfaceProps): JSX.Element {
     position: 'relative',
     overflow: 'hidden',
     borderRadius,
-    ...style,
+    ...style
   };
   const Tag = as;
 

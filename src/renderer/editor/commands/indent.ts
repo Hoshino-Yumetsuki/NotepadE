@@ -39,8 +39,8 @@ export const indentSelection: StateCommand = ({ state, dispatch }): boolean => {
     dispatch(
       state.update(state.replaceSelection(tabStr), {
         scrollIntoView: true,
-        userEvent: 'input.indent',
-      }),
+        userEvent: 'input.indent'
+      })
     );
     return true;
   }
@@ -64,8 +64,8 @@ export const indentSelection: StateCommand = ({ state, dispatch }): boolean => {
       changes,
       selection: EditorSelection.range(newAnchor, newHead),
       scrollIntoView: true,
-      userEvent: 'input.indent',
-    }),
+      userEvent: 'input.indent'
+    })
   );
   return true;
 };
@@ -122,8 +122,8 @@ export const outdentSelection: StateCommand = ({ state, dispatch }): boolean => 
       changes,
       selection: EditorSelection.range(newAnchor, newHead),
       scrollIntoView: true,
-      userEvent: 'delete.outdent',
-    }),
+      userEvent: 'delete.outdent'
+    })
   );
   return true;
 };

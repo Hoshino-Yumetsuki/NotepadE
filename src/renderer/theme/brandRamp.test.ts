@@ -48,7 +48,7 @@ describe('brandRampFromAccent', () => {
     const gv = [
       parseInt(got.slice(0, 2), 16),
       parseInt(got.slice(2, 4), 16),
-      parseInt(got.slice(4, 6), 16),
+      parseInt(got.slice(4, 6), 16)
     ];
     gv.forEach((c, i) => expect(Math.abs(c - seed[i])).toBeLessThanOrEqual(1));
   });

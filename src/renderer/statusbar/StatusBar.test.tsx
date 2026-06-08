@@ -13,7 +13,7 @@ import { StatusBar, type StatusBarProps } from './StatusBar';
 
 const ANSI: AnsiEncodingEntry[] = [
   { codePage: 1252, label: 'Western (windows-1252)' },
-  { codePage: 932, label: 'Japanese (shift_jis)' },
+  { codePage: 932, label: 'Japanese (shift_jis)' }
 ];
 
 function makeProps(overrides: Partial<StatusBarProps> = {}): StatusBarProps {
@@ -41,7 +41,7 @@ function makeProps(overrides: Partial<StatusBarProps> = {}): StatusBarProps {
     onChangeEol: vi.fn(),
     onReopenWithEncoding: vi.fn(),
     onSaveWithEncoding: vi.fn(),
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -50,7 +50,7 @@ function renderBar(overrides: Partial<StatusBarProps> = {}): StatusBarProps {
   render(
     <FluentProvider theme={webLightTheme}>
       <StatusBar {...props} />
-    </FluentProvider>,
+    </FluentProvider>
   );
   return props;
 }
@@ -61,7 +61,7 @@ describe('StatusBar', () => {
     const bar = screen.getByTestId('status-bar');
     expect(bar).toBeInTheDocument();
     expect(bar).toHaveStyle({
-      gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto',
+      gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto'
     });
   });
 
@@ -74,7 +74,7 @@ describe('StatusBar', () => {
   it('formats selected-character count in the line/column cell', () => {
     renderBar({ lineColumn: { line: 3, column: 2, selectedCount: 4 } });
     expect(screen.getByTestId('status-linecol-text')).toHaveTextContent(
-      'Ln 3, Col 2 (4 characters selected)',
+      'Ln 3, Col 2 (4 characters selected)'
     );
   });
 
@@ -104,13 +104,13 @@ describe('StatusBar', () => {
     const { rerender } = render(
       <FluentProvider theme={webLightTheme}>
         <StatusBar {...makeProps({ isModified: false })} />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('status-modification')).toBeEmptyDOMElement();
     rerender(
       <FluentProvider theme={webLightTheme}>
         <StatusBar {...makeProps({ isModified: true })} />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('status-modification')).toHaveTextContent('Modified');
   });
@@ -130,13 +130,13 @@ describe('StatusBar', () => {
     const { rerender } = render(
       <FluentProvider theme={webLightTheme}>
         <StatusBar {...makeProps({ isShadowWindow: false })} />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('status-shadow')).toBeEmptyDOMElement();
     rerender(
       <FluentProvider theme={webLightTheme}>
         <StatusBar {...makeProps({ isShadowWindow: true })} />
-      </FluentProvider>,
+      </FluentProvider>
     );
     expect(screen.getByTestId('status-shadow')).not.toBeEmptyDOMElement();
   });
