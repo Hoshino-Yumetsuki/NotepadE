@@ -135,6 +135,20 @@ function redirectTarget(): BrowserWindow | null {
   return all.length > 0 ? all[all.length - 1] : null;
 }
 
+/**
+ * Bring a window to the foreground for an activation. Restores it if minimized,
+ * re-shows it (Windows: `show()` raises + focuses, where a bare `focus()` may only
+ * flash the taskbar button), then focuses — so opening a file with the app as the
+ * default handler surfaces the already-running window instead of leaving it behind
+ * other apps. 1:1 with the UWP redirect bringing the active view to the front.
+ */
+function bringToFront(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
 /** Send the activation push to a specific window's renderer. */
 function deliver(win: BrowserWindow, event: ActivationEvent): void {
   if (win.isDestroyed()) return;
@@ -170,7 +184,9 @@ async function routeActivation(event: ActivationEvent): Promise<void> {
   const forceNew = alwaysNew || isNewInstanceProtocol(event.protocolUrl);
 
   const target = forceNew ? spawnWindow() : (redirectTarget() ?? spawnWindow());
-  if (forceNew && !target.isDestroyed()) target.focus();
+  // A freshly spawned window already comes up shown+focused; a redirected
+  // existing window may be behind other apps or minimized, so surface it.
+  if (!forceNew) bringToFront(target);
   deliver(target, event);
 }
 
