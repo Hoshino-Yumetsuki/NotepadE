@@ -1,6 +1,6 @@
 {
   "name": "notepade",
-  "version": "1.0.0-beta.5",
+  "version": "1.0.0-beta.6",
   "private": true,
   "description": "Electron + Fluent UI v9 + React + TypeScript 1:1 rewrite of the UWP Notepads app",
   "type": "module",
