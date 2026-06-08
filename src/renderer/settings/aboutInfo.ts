@@ -19,11 +19,10 @@ export const APP_NAME = 'NotepadE';
 
 /** Upstream + support links (verbatim from UWP AboutPage.xaml). */
 export const ABOUT_LINKS: readonly { label: string; url: string }[] = [
-  /* { label: 'Website', url: 'https://www.NotepadsApp.com' },*/
-  { label: 'Source code', url: 'https://github.com/0x7c13/Notepads' },
-  /* { label: 'Report an issue', url: 'https://github.com/0x7c13/Notepads/issues' },
-  { label: 'Release notes', url: 'https://github.com/0x7c13/Notepads/releases' },
-  { label: 'Privacy policy', url: 'https://github.com/0x7c13/Notepads/blob/master/PRIVACY.md' }, */
+  { label: 'Source code', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE' },
+  { label: 'Report an issue', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE/issues' },
+  { label: 'Release notes', url: 'https://github.com/Hoshino-Yumetsuki/NotepadE/releases' },
+  /*{ label: 'Privacy policy', url: 'https://github.com/0x7c13/Notepads/blob/master/PRIVACY.md' }, */
 ];
 
 /** Third-party dependency credits (verbatim from UWP AboutPage.xaml). */

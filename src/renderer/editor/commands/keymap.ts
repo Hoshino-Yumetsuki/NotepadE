@@ -217,7 +217,6 @@ export const viewModeCommandExtension = Prec.highest(
   ]),
 );
 
-
 export interface EditorCommandOptions {
   /** Initial editor settings (host-provided; falls back to UWP defaults). */
   settings?: Partial<EditorSettings>;

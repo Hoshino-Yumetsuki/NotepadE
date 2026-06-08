@@ -681,7 +681,11 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
             {t('MainMenu_Button_New_Window.Text')}
           </MenuItem>
           {/* TODO: file-open dialog (Ctrl+O) — no renderer picker yet. */}
-          <MenuItem secondaryContent={`${modKey}+O`} disabled={!commands.onOpen} onClick={commands.onOpen}>
+          <MenuItem
+            secondaryContent={`${modKey}+O`}
+            disabled={!commands.onOpen}
+            onClick={commands.onOpen}
+          >
             {t('MainMenu_Button_Open.Text')}
           </MenuItem>
           {/* Open Recent (UWP MenuOpenRecentlyUsedFileButton) — nested submenu of
@@ -730,12 +734,16 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           )}
           <MenuDivider />
           {/* TODO: save active tab (Ctrl+S) — no renderer save handler yet. */}
-          <MenuItem secondaryContent={`${modKey}+S`} disabled={!commands.onSave} onClick={commands.onSave}>
+          <MenuItem
+            secondaryContent={`${modKey}+S`}
+            disabled={!commands.onSave}
+            onClick={commands.onSave}
+          >
             {t('MainMenu_Button_Save.Text')}
           </MenuItem>
           {/* TODO: save-as (Ctrl+Shift+S) — no renderer save-as handler yet. */}
           <MenuItem
-             secondaryContent={`${modKey}+Shift+S`}
+            secondaryContent={`${modKey}+Shift+S`}
             disabled={!commands.onSaveAs}
             onClick={commands.onSaveAs}
           >
