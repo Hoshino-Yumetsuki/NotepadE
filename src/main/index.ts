@@ -168,7 +168,7 @@ if (isPrimary) {
     // a stable AppUserModelID (must match electron-builder's appId). No-op
     // elsewhere. Set before any window is created.
     if (process.platform === 'win32') {
-      app.setAppUserModelId('com.notepads.next');
+      app.setAppUserModelId('com.notepade.app');
     }
     bootstrap();
   });

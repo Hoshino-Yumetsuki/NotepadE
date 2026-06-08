@@ -12,9 +12,9 @@
 # manifest's plain-text file types; the full ~200-entry set can be appended
 # verbatim from src/Notepads/Package.appxmanifest when packaging lands.
 
-appId: com.notepads.next
+appId: com.notepade.app
 productName: NotepadE
-copyright: Copyright © NotepadE
+copyright: Copyright © Hoshino-Yumetsuki
 
 # Packaged app layout. `yarn build` emits the 3-tier bundle to out/{main,preload,
 # renderer}; main loads ../preload/index.js + ../renderer/index.html by RELATIVE
@@ -55,128 +55,8 @@ fileAssociations:
   - ext: md
     name: Markdown
     role: Editor
-  - ext: markdown
-    name: Markdown
-    role: Editor
-  - ext: json
-    name: JSON
-    role: Editor
-  - ext: jsonc
-    name: JSON with Comments
-    role: Editor
-  - ext: xml
-    name: XML
-    role: Editor
-  - ext: yml
-    name: YAML
-    role: Editor
-  - ext: yaml
-    name: YAML
-    role: Editor
-  - ext: ini
-    name: INI
-    role: Editor
-  - ext: conf
-    name: Config
-    role: Editor
-  - ext: config
-    name: Config
-    role: Editor
-  - ext: cfg
-    name: Config
-    role: Editor
   - ext: log
     name: Log
-    role: Editor
-  - ext: csv
-    name: CSV
-    role: Editor
-  - ext: html
-    name: HTML
-    role: Editor
-  - ext: htm
-    name: HTML
-    role: Editor
-  - ext: css
-    name: CSS
-    role: Editor
-  - ext: scss
-    name: SCSS
-    role: Editor
-  - ext: less
-    name: Less
-    role: Editor
-  - ext: js
-    name: JavaScript
-    role: Editor
-  - ext: jsx
-    name: JavaScript JSX
-    role: Editor
-  - ext: ts
-    name: TypeScript
-    role: Editor
-  - ext: tsx
-    name: TypeScript JSX
-    role: Editor
-  - ext: mjs
-    name: JavaScript Module
-    role: Editor
-  - ext: cjs
-    name: CommonJS
-    role: Editor
-  - ext: py
-    name: Python
-    role: Editor
-  - ext: rb
-    name: Ruby
-    role: Editor
-  - ext: java
-    name: Java
-    role: Editor
-  - ext: c
-    name: C
-    role: Editor
-  - ext: h
-    name: C Header
-    role: Editor
-  - ext: cpp
-    name: C++
-    role: Editor
-  - ext: cs
-    name: C#
-    role: Editor
-  - ext: go
-    name: Go
-    role: Editor
-  - ext: rs
-    name: Rust
-    role: Editor
-  - ext: php
-    name: PHP
-    role: Editor
-  - ext: sh
-    name: Shell Script
-    role: Editor
-  - ext: ps1
-    name: PowerShell
-    role: Editor
-  - ext: sql
-    name: SQL
-    role: Editor
-  - ext: toml
-    name: TOML
-    role: Editor
-  - ext: env
-    name: Env File
-    role: Editor
-  - ext: gitignore
-    name: Git Ignore
-    role: Editor
-  - ext: gitattributes
-    name: Git Attributes
-    role: Editor
-  - ext: dockerfile
-    name: Dockerfile
     role: Editor
 
 win:
@@ -213,8 +93,7 @@ linux:
   icon: build/icon.png
   category: Utility
   # `deb` requires a maintainer; AppImage is the distro-agnostic portable build.
-  maintainer: NotepadE <noreply@notepads.example>
+  maintainer: Hoshino-Yumetsuki <147403913+Hoshino-Yumetsuki@users.noreply.github.com>
   synopsis: Modern, lightweight text editor
   description: >-
-    NotepadE — a modern, lightweight text editor. Electron + Fluent UI v9
-    rewrite of the UWP Notepads app.
+    NotepadE — a modern, lightweight, cross-platform text editor with a minimalist design.
