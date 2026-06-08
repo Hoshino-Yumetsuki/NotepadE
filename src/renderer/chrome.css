@@ -151,3 +151,10 @@ body,
     animation: none;
   }
 }
+
+.cm-editor.cm-focused,
+.cm-editor,
+.cm-scroller {
+  outline: none !important;
+  box-shadow: none !important;
+}
