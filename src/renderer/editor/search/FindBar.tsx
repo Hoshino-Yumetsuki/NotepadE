@@ -272,7 +272,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
         borderRadius: 0,
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
         display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto',
+        gridTemplateColumns: 'auto minmax(0, 1fr) auto',
         gridTemplateRows: showReplace ? 'auto auto' : 'auto',
         alignItems: 'center',
         gap: 2,
@@ -306,7 +306,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
       </Tooltip>
 
       {/* Find input + options gear. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
         <Input
           input={{ ref: findInputRef }}
           data-testid="find-input"
@@ -317,6 +317,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
           onKeyDown={onFindKeyDown}
           style={{
             flex: '1 1 auto',
+            minWidth: 0,
             fontSize: FindDimensions.textFontSize,
             backgroundColor: inputBackground
           }}

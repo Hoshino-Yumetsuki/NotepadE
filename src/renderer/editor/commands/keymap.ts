@@ -41,7 +41,12 @@ import {
   directionExtension,
   type TextDirection
 } from './direction';
-import { toggleWordWrap, wordWrapCompartment, wordWrapExtension, wordWrapField } from './wordWrap';
+import {
+  toggleWordWrapPreferGlobal,
+  wordWrapCompartment,
+  wordWrapExtension,
+  wordWrapField
+} from './wordWrap';
 import { webSearchSelection } from './webSearch';
 import { smartCopyHandler } from './smartCopy';
 import { swallowKeymap } from './swallow';
@@ -158,7 +163,7 @@ export const altCommandExtension = Prec.highest(
         if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
           if (event.code === 'KeyZ') {
             event.preventDefault();
-            return toggleWordWrap(view);
+            return toggleWordWrapPreferGlobal(view);
           }
         }
         return false;

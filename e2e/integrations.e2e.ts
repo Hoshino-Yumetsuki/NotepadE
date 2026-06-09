@@ -21,8 +21,8 @@ import { tableFor, SUPPORTED_LOCALES, type SupportedLocale } from '../src/render
  * VIEW-MODE PATH (verified against the landed impl, c1ee4d2):
  *   There is NO `__notepadsTest.view` seam. The preview/diff toggles are driven by
  *   the REAL accelerators useViewModeKeyboard installs on `window`:
- *     - Alt+P → preview (e.code 'KeyP', altKey && !ctrl && !meta), GATED to the .md
- *       family (isMarkdownPath); a no-op on non-markdown tabs.
+ *     - Alt+P → preview (e.code 'KeyP', altKey && !ctrl && !meta), available for ANY
+ *       file type (the pane renders the buffer as markdown regardless of extension).
  *     - Alt+D → diff (always).
  *   App.tsx wires those to store.setViewMode (mutually exclusive). The active tab's
  *   pane mounts at [data-testid="preview-pane"] / [data-testid="diff-pane"] (50/50

@@ -45,7 +45,7 @@ import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import { undo, redo } from '@codemirror/commands';
 import { setLtr, setRtl } from './commands/direction';
-import { toggleWordWrap, wordWrapField } from './commands/wordWrap';
+import { toggleWordWrapPreferGlobal, wordWrapField } from './commands/wordWrap';
 import { webSearchSelection } from './commands/webSearch';
 import { useT } from '../i18n';
 import { modKey } from '@shared/platform';
@@ -276,7 +276,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
             data-testid="ctx-wordwrap"
             icon={<ToggleIcon on={ctx.wordWrap} />}
             secondaryContent="Alt+Z"
-            onClick={run((v) => void toggleWordWrap(v))}
+            onClick={run((v) => void toggleWordWrapPreferGlobal(v))}
           >
             {t('TextEditor_ContextFlyout_WordWrapButtonDisplayText')}
           </MenuItem>

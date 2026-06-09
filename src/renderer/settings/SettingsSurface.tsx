@@ -186,6 +186,15 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
       <FluentProvider
         theme={props.theme}
         data-testid="settings-surface"
+        // Fluent's default `applyStylesToPortals` copies THIS provider's className
+        // onto the portal mount node it appends to <body> for popups (Dropdown/Menu
+        // listboxes). That leaked our slide/acrylic classes (np-settings-enter
+        // transform, np-acrylic backdrop-filter) onto the portal node, turning it
+        // into a containing block floating-ui doesn't account for — so the
+        // language/font/theme dropdowns landed ~a viewport off and drifted on every
+        // open. Disabling it makes portals inherit ONLY the theme tokens, so popups
+        // anchor to the viewport correctly. The pane itself still themes normally.
+        applyStylesToPortals={false}
         className={`np-acrylic ${closing ? 'np-settings-exit' : 'np-settings-enter'}`}
         // While the slide is in flight the heavy backdrop blur is suppressed (see
         // the `settled` gate above + acrylic.css). The attribute is omitted once

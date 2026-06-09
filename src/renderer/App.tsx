@@ -29,7 +29,7 @@ import {
 } from './tabs/transferWiring';
 import type { TabState } from './tabs/types';
 import { normalizeToShadow } from './editor/eol';
-import { isMarkdownPath } from './markdown/renderMarkdown';
+import { wordWrapToggleRef } from './editor/commands/wordWrap';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useEditorContextMenu } from './editor/EditorContextMenu';
@@ -318,16 +318,14 @@ export function App(): JSX.Element {
   const print = usePrint();
   const { share } = useShare();
   useViewModeKeyboard({
-    isPreviewEligible: () => {
-      const id = store.activeEditorId;
-      return isMarkdownPath((id ? store.get(id) : undefined)?.filePath ?? null);
-    },
+    // Preview is available for ANY file, not just the .md family — the preview
+    // pane renders the buffer as markdown regardless of extension, so a .txt (or
+    // untitled) buffer can be previewed too. Eligible whenever a tab is active.
+    isPreviewEligible: () => store.activeEditorId != null,
     togglePreview: () => {
       const id = store.activeEditorId;
       const t = id ? store.get(id) : undefined;
       if (!id || !t) return;
-      // Hard guard: only toggle preview for markdown-eligible files.
-      if (!isMarkdownPath(t.filePath)) return;
       store.setViewMode(id, { preview: !t.viewMode.preview, diff: false });
     },
     toggleDiff: () => {
@@ -341,14 +339,12 @@ export function App(): JSX.Element {
   // contextmenu seam into every editor (via paneEditorExtensions) and renders a
   // positioned Fluent menu. Gives Share + RTL their UI entry points.
   const editorContextMenu = useEditorContextMenu({
-    isPreviewEligible: isMarkdownPath(
-      (store.activeEditorId ? store.get(store.activeEditorId) : undefined)?.filePath ?? null
-    ),
+    // Preview offered for every file type (see useViewModeKeyboard above).
+    isPreviewEligible: store.activeEditorId != null,
     onTogglePreview: () => {
       const id = store.activeEditorId;
       const tb = id ? store.get(id) : undefined;
       if (!id || !tb) return;
-      if (!isMarkdownPath(tb.filePath)) return;
       store.setViewMode(id, { preview: !tb.viewMode.preview, diff: false });
     },
     onShare: (selectionOnly: boolean) => {
@@ -1082,6 +1078,23 @@ export function App(): JSX.Element {
   );
   // word-wrap derives from the persisted TextWrapMode ('wrap' | 'noWrap').
   const editorWordWrap = settings.textWrapping === 'wrap';
+
+  // Word wrap is a single GLOBAL preference (UWP TextWrapping is an app setting,
+  // not per-document). Bridge the in-editor toggle (Alt+Z + the right-click "Word
+  // Wrap" item) to flip the persisted `textWrapping` setting, so the change applies
+  // to EVERY open editor and survives restarts — instead of mutating just the
+  // focused editor's CM6 compartment (which left other/new tabs unwrapped, forcing
+  // a re-toggle in each file). The persisted value flows back to all editors via
+  // the `wordWrap` prop below; this only owns the write side.
+  const toggleWordWrapGlobal = useCallback(() => {
+    updateSettings({ textWrapping: settings.textWrapping === 'wrap' ? 'noWrap' : 'wrap' });
+  }, [settings.textWrapping, updateSettings]);
+  useEffect(() => {
+    wordWrapToggleRef.current = toggleWordWrapGlobal;
+    return () => {
+      wordWrapToggleRef.current = null;
+    };
+  }, [toggleWordWrapGlobal]);
 
   return (
     <FluentProvider

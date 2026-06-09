@@ -47,3 +47,28 @@ export const toggleWordWrap: Command = (view) => {
   });
   return true;
 };
+
+/**
+ * Bridge from CM6 into React for the GLOBAL word-wrap preference. When the host
+ * installs a callback here, Alt+Z (and the right-click "Word Wrap" item) flip the
+ * persisted `textWrapping` setting instead of just this one editor's compartment —
+ * so word wrap becomes a single app-wide preference applied to every open file and
+ * surviving restarts, rather than a per-editor, per-file ephemeral toggle (which
+ * forced users to re-enable it in each new tab). Left null in tests / when no host
+ * is mounted, where `toggleWordWrapPreferGlobal` falls back to the local toggle.
+ */
+export const wordWrapToggleRef: { current: (() => void) | null } = { current: null };
+
+/**
+ * Toggle word wrap the way the user expects: prefer the global setting bridge when
+ * the host has wired it (change applies to ALL editors and persists), otherwise
+ * fall back to the local per-editor compartment toggle.
+ */
+export const toggleWordWrapPreferGlobal: Command = (view) => {
+  const cb = wordWrapToggleRef.current;
+  if (cb) {
+    cb();
+    return true;
+  }
+  return toggleWordWrap(view);
+};
