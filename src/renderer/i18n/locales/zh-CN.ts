@@ -194,8 +194,8 @@ const table: LocaleTable = {
   'PersonalizationPage_AccentColorSettings_UseWindowsAccentColorToggleSwitch.OnContent':
     '使用Windows颜色',
   'PersonalizationPage_BackgroundTintOpacitySettings_Description.Text':
-    '亚克力背景透明度设置。请注意，当系统处于节能模式中或者Windows设置中禁用了透明效果，您将无法更改此设置并且亚克力效果会被禁用。',
-  'PersonalizationPage_BackgroundTintOpacitySettings_Title.Text': '背景透明度',
+    '亚克力背景不透明度设置。请注意，当系统处于节能模式中或者Windows设置中禁用了透明效果，您将无法更改此设置并且亚克力效果会被禁用。',
+  'PersonalizationPage_BackgroundTintOpacitySettings_Title.Text': '背景不透明度',
   'PersonalizationPage_ThemeModeSettings_DarkModeRadioButton.Content': '深色',
   'PersonalizationPage_ThemeModeSettings_LightModeRadioButton.Content': '浅色',
   'PersonalizationPage_ThemeModeSettings_Title.Text': '主题模式',

@@ -8,10 +8,33 @@
  * showStatusBar is consumed live by the App shell to mount/unmount the Phase-4
  * status bar.
  *
- * PA-8: consumes only the settings bag + update callback — no IPC/fs.
+ * Reset (web port only — UWP had no such affordance): a "Reset all settings"
+ * button at the bottom of the pane, gated by a Fluent confirmation dialog
+ * (destructive action; same Dialog composition as CloseReminderDialog). On
+ * confirm it calls window.notepads.settings.resetAll(): MAIN restores the
+ * verbatim defaults, deletes the managed wallpaper file (via the wallpaper
+ * lifecycle), and broadcasts EvtSettingsChanged — every control in every
+ * window snaps back live, no restart (appLanguage keeps its existing
+ * restart-prompt convention).
+ *
+ * PA-8: consumes the settings bag + update callback + the typed
+ * window.notepads.settings contract — no fs/path/child_process.
  */
 
-import { Switch, Dropdown, Option } from '@fluentui/react-components';
+import { useState } from 'react';
+import {
+  Switch,
+  Dropdown,
+  Option,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  tokens
+} from '@fluentui/react-components';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import { APP_LANGUAGES } from './settingsOptions';
 import { useT } from '../i18n/I18nProvider';
@@ -19,6 +42,49 @@ import type { PaneProps } from './TextEditorPane';
 
 export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
   const { t } = useT();
+
+  // Reset-all confirmation state. The dialog gates the destructive action;
+  // `busy` debounces double-clicks while MAIN restores + broadcasts; `error`
+  // surfaces an ok:false Result (or a rejected invoke) inline in the dialog so
+  // a failure is never silent (PersonalizationPane's wallpaper error pattern).
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  const onResetConfirmed = (): void => {
+    if (resetBusy) return;
+    setResetBusy(true);
+    setResetError('');
+    // MAIN does the whole reset (defaults persist + wallpaper-file delete +
+    // broadcast); the live settings bag reconciles via settings.onChanged so
+    // no local update() call is needed — same flow as an external write.
+    // Success closes the dialog; an ok:false Result keeps it open with the
+    // error shown. The catch + busy-always-cleared matters: without it a
+    // rejected invoke would leave resetBusy=true forever and the busy-guarded
+    // onOpenChange below would refuse to close — an unclosable modal.
+    void window.notepads.settings
+      .resetAll()
+      .then((r) => {
+        if (r.ok) {
+          setResetConfirmOpen(false);
+        } else {
+          setResetError(r.error);
+        }
+      })
+      .catch((e: unknown) => {
+        setResetError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        setResetBusy(false);
+      });
+  };
+
+  /** Close + clear the transient error so a reopen starts clean. */
+  const closeResetDialog = (): void => {
+    setResetConfirmOpen(false);
+    setResetError('');
+  };
+
   const systemDefaultLabel = t('AdvancedPage_LanguagePreferenceSettings_SystemDefaultText');
   // The empty-tag entry is the localized "System Default"; named locales keep
   // their endonym label (e.g. "日本語") so the list reads natively in any UI lang.
@@ -128,6 +194,67 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
           </Dropdown>
         </SettingRow>
       </SettingGroup>
+
+      <SettingGroup title={t('AdvancedPage_ResetSettings_Title')}>
+        <SettingRow
+          id="resetAllSettings"
+          layout="stack"
+          label={t('AdvancedPage_ResetSettings_Title')}
+          description={t('AdvancedPage_ResetSettings_Description')}
+        >
+          <div>
+            <Button
+              data-testid="setting-resetAll-button"
+              onClick={() => setResetConfirmOpen(true)}
+            >
+              {t('AdvancedPage_ResetSettings_Button')}
+            </Button>
+          </div>
+        </SettingRow>
+      </SettingGroup>
+
+      {/* Confirmation dialog (destructive action — UWP ContentDialog pattern,
+          same Fluent composition as CloseReminderDialog). Backdrop/Esc == Cancel. */}
+      <Dialog
+        open={resetConfirmOpen}
+        onOpenChange={(_e, data) => {
+          if (!data.open && !resetBusy) closeResetDialog();
+        }}
+      >
+        <DialogSurface data-testid="reset-settings-dialog">
+          <DialogBody>
+            <DialogTitle>{t('AdvancedPage_ResetSettings_ConfirmTitle')}</DialogTitle>
+            <DialogContent>
+              {t('AdvancedPage_ResetSettings_ConfirmBody')}
+              {resetError !== '' ? (
+                <div
+                  data-testid="reset-settings-error"
+                  style={{ color: tokens.colorPaletteRedForeground1, marginTop: 8 }}
+                >
+                  {resetError}
+                </div>
+              ) : null}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance="primary"
+                data-testid="reset-settings-confirm"
+                disabled={resetBusy}
+                onClick={onResetConfirmed}
+              >
+                {t('AdvancedPage_ResetSettings_ConfirmButton')}
+              </Button>
+              <Button
+                data-testid="reset-settings-cancel"
+                disabled={resetBusy}
+                onClick={closeResetDialog}
+              >
+                {t('AdvancedPage_ResetSettings_CancelButton')}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </SettingsPane>
   );
 }

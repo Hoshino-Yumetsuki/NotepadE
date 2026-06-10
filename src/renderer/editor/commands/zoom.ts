@@ -76,6 +76,22 @@ function zoomTheme(view: EditorView): Extension {
 }
 
 /**
+ * Write the zoom font-size variable and schedule a measure.
+ *
+ * The variable resizes `.cm-content`/`.cm-gutters` behind CM6's back: an inline
+ * style write is not a document/theme change, so the view schedules no
+ * re-measure of its own and keeps stale line metrics until the next user
+ * interaction. Anything positioned off those metrics (the external line-number
+ * column) then lags at the old scale — numbers ghosting over each other — until
+ * a click forces a measure. Request one explicitly so the height oracle re-reads
+ * the new font in the same frame the variable lands.
+ */
+export function applyZoomFontSize(view: EditorView, px: number): void {
+  view.dom.style.setProperty('--cm-zoom-font-size', `${px}px`);
+  view.requestMeasure();
+}
+
+/**
  * A ViewPlugin that keeps an inline font-size style on `.cm-scroller` in sync
  * with the zoom field. Using an inline style (not a regenerated theme) keeps the
  * update cheap and avoids reconfiguration churn on every wheel tick.
@@ -86,7 +102,7 @@ export const zoomStyle = EditorView.updateListener.of((update) => {
   if (prev === now) return;
   const base = update.state.facet(editorSettings).fontSize;
   const px = ((now ?? DEFAULT_ZOOM) * base) / 100;
-  update.view.dom.style.setProperty('--cm-zoom-font-size', `${px}px`);
+  applyZoomFontSize(update.view, px);
 });
 
 /** Base theme binding `.cm-content` to the zoom CSS variable. */
@@ -99,7 +115,7 @@ export const zoomBaseTheme = EditorView.theme({
 export function initZoomVar(view: EditorView): void {
   const base = view.state.facet(editorSettings).fontSize;
   const percent = view.state.field(zoomField, false) ?? DEFAULT_ZOOM;
-  view.dom.style.setProperty('--cm-zoom-font-size', `${(base * percent) / 100}px`);
+  applyZoomFontSize(view, (base * percent) / 100);
 }
 
 void zoomTheme;

@@ -16,7 +16,8 @@ import { recordLastSaved, forgetEditor } from './statusbar/fileStatusTracker';
 import { useSettings } from './settings/useSettings';
 import { useAppTheme } from './theme/useAppTheme';
 import { installSettingsTestHook } from './settings/settingsTestHook';
-import { appBackgroundTint } from './theme/tokens';
+import { appRootBackground, isWallpaperActive, wallpaperLayerStyle } from './theme/wallpaper';
+import { useWallpaper } from './theme/useWallpaper';
 import { edgeShadowStyle, EDGE_SHADOW_BLUR } from './theme/shadow';
 import { tokensForTheme, TabDimensions, TabAnimation } from './tabs/tokens';
 import {
@@ -205,6 +206,21 @@ export function App(): JSX.Element {
   // status-bar visibility (showStatusBar), and the theme resolution above.
   const { settings, update: updateSettings } = useSettings();
 
+  // Custom wallpaper (web-port-only personalization). The persisted managed
+  // file name doubles as the change signal (set/replace/clear all rewrite it
+  // via MAIN's settings store, which broadcasts to every window); useWallpaper
+  // resolves it to a data: URL. HC suppresses the layer (flat system colors).
+  const wallpaperOn = isWallpaperActive(settings.wallpaperFileName, resolvedTheme);
+  const wallpaperDataUrl = useWallpaper(settings.wallpaperFileName);
+  // Memoized: wallpaperLayerStyle re-concatenates `url("${dataUrl}")` — for a
+  // 20MB image that's a ~27MB string build + an O(n) inline-style compare on
+  // EVERY App render if computed inline. Only the data URL and the opacity
+  // slider actually change the style, so key on exactly those.
+  const wallpaperStyle = useMemo(
+    () => (wallpaperDataUrl ? wallpaperLayerStyle(wallpaperDataUrl, settings.tintOpacity) : null),
+    [wallpaperDataUrl, settings.tintOpacity]
+  );
+
   // Settings surface open/close state (entry point in the tab strip toolbar).
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   // Latches true the first time settings is opened. The lazy SettingsSurface is
@@ -235,6 +251,10 @@ export function App(): JSX.Element {
   // keep only mtime, so the diff pane's "original" column needs the text captured
   // at each authoritative load point (open / activation-open / adopt). Untitled
   // buffers have no entry → '' (everything shows as an insert). Pure renderer.
+  // INVARIANT: entries are stored ALREADY '\n'-shadow-normalized (every writer
+  // normalizes at set time). recomputeDirty runs on EVERY doc change; normalizing
+  // a raw CRLF baseline there instead would re-build a full copy of the string
+  // per keystroke (~190ms + ~120MB transient on a 120MB file — measured).
   const lastSavedTextRef = useRef<Map<string, string>>(new Map());
   // A no-value re-render pulse: while a content pane (preview/diff) is open we bump
   // this on every doc change so the pane re-reads the live shadow text (CM6 owns
@@ -410,15 +430,21 @@ export function App(): JSX.Element {
       // Playwright primary window never composites, so rAF callbacks never fire
       // and the seed would starve (it also starves a minimized/occluded window
       // in production); setTimeout fires regardless of compositing.
+      // Normalize ONCE here and feed the same string to the baseline AND setDoc
+      // (on already-'\n' input setDoc's internal normalize has no matches and —
+      // in V8, which returns the receiver from a no-match String.replace — builds
+      // no second full-size copy; that's an engine behavior, not ECMAScript spec,
+      // but Electron pins V8. Matters on >100MB files).
+      const normalized = normalizeToShadow(file.decodedText);
       const seedOpened = (): void => {
         const handle = editorHandles.current.get(id);
-        if (handle) handle.setDoc(file.decodedText);
+        if (handle) handle.setDoc(normalized);
         else setTimeout(seedOpened, 0);
       };
       // Seed the diff/dirty baseline TEXT (Phase 6 + Issue 3) BEFORE setDoc: the
       // setDoc dispatch fires the doc-change listener → recomputeDirty, which must
       // read the just-loaded text as the baseline so an open is "clean", not dirty.
-      lastSavedTextRef.current.set(id, file.decodedText);
+      lastSavedTextRef.current.set(id, normalized);
       seedOpened();
       store.setLabels(id, file.encodingId, file.eolId);
       store.setFilePath(id, file.filePath);
@@ -483,9 +509,10 @@ export function App(): JSX.Element {
     const offAdopt = window.notepads.editor.onAdopt((payload) => {
       // applyAdopt re-keys the adopted tab under a FRESH local editorId (the
       // source's id can collide cross-window — Task #20). Key the diff baseline
-      // by the returned local id, not payload.editorId.
+      // by the returned local id, not payload.editorId — normalized at set time
+      // (lastSavedTextRef invariant: entries are always '\n'-shadow form).
       const localId = applyAdopt(store, transferSource.current, payload);
-      lastSavedTextRef.current.set(localId, payload.file.decodedText);
+      lastSavedTextRef.current.set(localId, normalizeToShadow(payload.file.decodedText));
     });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
       applyRelease(store, editorId)
@@ -541,12 +568,17 @@ export function App(): JSX.Element {
         const seedTab = s.length === 1 && s[0].filePath === null && !s[0].isModified ? s[0] : null;
         if (seedTab) {
           const id = seedTab.editorId;
+          // Normalize ONCE; share the string between baseline and setDoc (whose
+          // internal normalize then matches nothing — V8 returns the receiver
+          // from a no-match String.replace, an engine behavior Electron pins,
+          // so no duplicate full-size copy is built).
+          const normalized = normalizeToShadow(res.data.decodedText);
           const seedOpened = (): void => {
             const handle = editorHandles.current.get(id);
-            if (handle) handle.setDoc(res.data.decodedText);
+            if (handle) handle.setDoc(normalized);
             else setTimeout(seedOpened, 0);
           };
-          lastSavedTextRef.current.set(id, res.data.decodedText);
+          lastSavedTextRef.current.set(id, normalized);
           seedOpened();
           store.setLabels(id, res.data.encodingId, res.data.eolId);
           store.setFilePath(id, res.data.filePath);
@@ -564,12 +596,17 @@ export function App(): JSX.Element {
         // handle is null — NOT rAF, which never fires in a non-compositing
         // window (the Playwright primary window, or a minimized/occluded one)
         // and would leave the doc empty. setDoc tolerates an unmounted view.
+        // Normalize ONCE; share the string between baseline and setDoc (whose
+        // internal normalize then matches nothing — V8 returns the receiver
+        // from a no-match String.replace, an engine behavior Electron pins,
+        // so no duplicate full-size copy is built).
+        const normalized = normalizeToShadow(res.data.decodedText);
         const seedOpened = (): void => {
           const handle = editorHandles.current.get(id);
-          if (handle) handle.setDoc(res.data.decodedText);
+          if (handle) handle.setDoc(normalized);
           else setTimeout(seedOpened, 0);
         };
-        lastSavedTextRef.current.set(id, res.data.decodedText);
+        lastSavedTextRef.current.set(id, normalized);
         seedOpened();
         if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
       });
@@ -727,15 +764,28 @@ export function App(): JSX.Element {
   const onVoidDrop = useCallback((id: string) => handleVoidDrop(store, id), [store]);
 
   // Recompute a tab's dirty flag (Issue 3): compare the live '\n'-shadow text to
-  // that tab's last-saved baseline (also normalized to '\n' — the stored baseline
-  // is raw decoded text that may carry CRLF). Untitled buffers have no baseline
-  // entry → '' (any typed character makes them dirty). Drives the tab dot +
-  // status-bar "Modified" via store.setModified.
+  // that tab's last-saved baseline. The baseline map stores entries ALREADY
+  // shadow-normalized (see lastSavedTextRef), so no normalize pass runs here —
+  // this fires on EVERY doc change, and re-normalizing a 120MB baseline per
+  // keystroke costs ~190ms + a full-size transient copy (measured). Untitled
+  // buffers have no baseline entry → '' (any typed character makes them dirty).
+  // Drives the tab dot + status-bar "Modified" via store.setModified.
   const recomputeDirty = useCallback(
     (editorId: string): void => {
       const handle = editorHandles.current.get(editorId);
       if (!handle) return;
-      const baseline = normalizeToShadow(lastSavedTextRef.current.get(editorId) ?? '');
+      const baseline = lastSavedTextRef.current.get(editorId) ?? '';
+      // Length fast-path: getShadowText() materializes the WHOLE document as a
+      // fresh string (doc.toString() — ~46ms + a full-size allocation per call on
+      // a 120MB doc, measured), and this runs on EVERY doc change. Most edits
+      // change the length, so compare doc.length (the CM6 rope tracks it in O(1);
+      // the line separator is pinned to '\n', matching the baseline's shadow
+      // form) and only materialize + compare content when the lengths tie.
+      const view = handle.getView();
+      if (view && view.state.doc.length !== baseline.length) {
+        store.setModified(editorId, true);
+        return;
+      }
       const dirty = handle.getShadowText() !== baseline;
       store.setModified(editorId, dirty);
     },
@@ -764,7 +814,19 @@ export function App(): JSX.Element {
               shadowText,
               encodingId: tab.encodingId,
               eolId: tab.eolId,
-              suggestedName: tabTitle(tab)
+              suggestedName: tabTitle(tab),
+              // Save As on a file-backed tab starts in the file's CURRENT folder
+              // (UWP FileSavePicker seeded SuggestedSaveFile). PA-8: no path
+              // module in the renderer — slice the directory off the absolute
+              // path INCLUSIVE of the last separator (so a drive-root file
+              // yields "C:\", which path.join treats as absolute, not the
+              // drive-relative "C:"); MAIN joins the name back on. Untitled
+              // buffers pass undefined and MAIN anchors to Documents.
+              defaultDir: ((): string | undefined => {
+                if (!tab.filePath) return undefined;
+                const sep = tab.filePath.search(/[\\/][^\\/]*$/);
+                return sep >= 0 ? tab.filePath.slice(0, sep + 1) : undefined;
+              })()
             })
           : await window.notepads.file.save({
               filePath: tab.filePath as string,
@@ -1104,9 +1166,24 @@ export function App(): JSX.Element {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: appBackgroundTint(resolvedTheme, settings.tintOpacity)
+        position: 'relative',
+        // Own stacking context so the negative-z wallpaper layer paints above
+        // this background but below ALL in-flow content (theme/wallpaper.ts).
+        isolation: 'isolate',
+        // Wallpaper active → opaque theme base (the image replaces the desktop
+        // see-through backdrop); else the historical translucent tint whose
+        // alpha is tintOpacity (over the OS acrylic/vibrancy material).
+        backgroundColor: appRootBackground(resolvedTheme, settings.tintOpacity, wallpaperOn)
       }}
     >
+      {/* Custom wallpaper layer (web-port-only personalization): a full-window
+          image UNDER every UI surface, replacing the acrylic/vibrancy desktop
+          sample. While active, the SAME tintOpacity slider drives THIS layer's
+          CSS opacity instead of the background tint alpha (the "Background
+          Tint Opacity" semantics switch — see theme/wallpaper.ts). */}
+      {wallpaperOn && wallpaperStyle ? (
+        <div data-testid="app-wallpaper" aria-hidden style={wallpaperStyle} />
+      ) : null}
       <TabStrip
         tabs={tabs}
         activeEditorId={activeEditorId}
@@ -1266,9 +1343,9 @@ export function App(): JSX.Element {
                   <Suspense fallback={null}>
                     <PaneMount reduced={reducedMotion}>
                       <DiffViewer
-                        original={normalizeToShadow(
-                          lastSavedTextRef.current.get(tab.editorId) ?? ''
-                        )}
+                        // Baseline entries are stored already '\n'-normalized
+                        // (lastSavedTextRef invariant) — no per-render normalize.
+                        original={lastSavedTextRef.current.get(tab.editorId) ?? ''}
                         modified={shadow}
                       />
                     </PaneMount>

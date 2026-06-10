@@ -295,6 +295,18 @@ export interface Settings {
    * No-op on non-Windows platforms.
    */
   openWithContextMenu: boolean;
+  /**
+   * Custom background wallpaper — the FILE NAME of the image inside
+   * `{userData}/wallpaper/`, or '' when no wallpaper is set. ONLY the name is
+   * persisted (never the user's original path or a URL): MAIN copies/downloads
+   * the picked image into that folder and owns its lifecycle (the previous file
+   * is deleted on replace/clear — see main/wallpaper.ts). When non-empty, the
+   * renderer paints the image as a full-window layer UNDER all UI surfaces,
+   * replacing the desktop see-through backdrop (acrylic/vibrancy), and
+   * `tintOpacity` then drives the WALLPAPER layer's CSS opacity instead of the
+   * background tint alpha. No UWP equivalent (web-port-only personalization).
+   */
+  wallpaperFileName: string;
 }
 
 /**
@@ -330,7 +342,10 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOpenNewWindow: false,
   exitWhenLastTabClosed: false,
   appLanguage: '',
-  openWithContextMenu: false
+  openWithContextMenu: false,
+  // No wallpaper by default — the acrylic/vibrancy desktop see-through backdrop
+  // is the out-of-box look; the wallpaper is an explicit opt-in personalization.
+  wallpaperFileName: ''
 };
 
 export interface SettingsApi {
@@ -341,6 +356,15 @@ export interface SettingsApi {
    * `EvtSettingsChanged` to ALL windows. Returns the merged settings.
    */
   set(patch: Partial<Settings>): Promise<Result<Settings>>;
+  /**
+   * Restore EVERY setting to its verbatim default (the recovery hatch for a
+   * misconfigured app — broken font / transparency / wallpaper). Also deletes
+   * the managed wallpaper file via the wallpaper lifecycle (main/wallpaper.ts
+   * clear — never a duplicated delete). Persists + broadcasts through the
+   * normal set path, so all windows reflect defaults live (no restart; the
+   * appLanguage restart convention is unchanged). Returns the defaults bag.
+   */
+  resetAll(): Promise<Result<Settings>>;
   /** Subscribe to settings changes (this or any other window / external write). */
   onChanged(cb: (settings: Settings) => void): Unsubscribe;
 }
@@ -491,6 +515,53 @@ export interface ShellApi {
 }
 
 // ---------------------------------------------------------------------------
+//  wallpaper — custom background image (web-port-only personalization)
+// ---------------------------------------------------------------------------
+//
+// MAIN owns the wallpaper file lifecycle (PA-8: fs/net/dialogs in MAIN only):
+// the picked image is COPIED (local path) or DOWNLOADED (URL, content-type +
+// size validated) into `{userData}/wallpaper/`, the previous file is DELETED on
+// replace/clear, and only the managed FILE NAME is persisted in Settings
+// (`wallpaperFileName`). The renderer receives the image as a `data:` URL — the
+// page CSP already allows `img-src data:`, wallpapers are size-capped (20MB),
+// and no custom protocol / webSecurity weakening is needed. Pushes ride the
+// existing `EvtSettingsChanged` broadcast (setting changes on set/clear), so
+// every window re-fetches via `wallpaper.get()` on its settings subscription.
+
+/** Snapshot of the active wallpaper, as served to the renderer. */
+export interface WallpaperState {
+  /** Managed file name inside `{userData}/wallpaper/`; '' when none is set. */
+  fileName: string;
+  /** The image as a `data:<mime>;base64,...` URL, or null when none is set. */
+  dataUrl: string | null;
+}
+
+export interface WallpaperApi {
+  /** Current wallpaper (file read + data-URL encode happen in MAIN). */
+  get(): Promise<Result<WallpaperState>>;
+  /**
+   * Copy a local image into the managed folder and activate it. Validates the
+   * extension against the allowed image set and enforces the size cap. The
+   * user's original file is never referenced after the copy.
+   */
+  setFromPath(path: string): Promise<Result<WallpaperState>>;
+  /**
+   * Download an http(s) image into the managed folder and activate it. MAIN
+   * validates the response content-type is an allowed image type and enforces
+   * the size cap while streaming — remote content is stored, never executed.
+   */
+  setFromUrl(url: string): Promise<Result<WallpaperState>>;
+  /**
+   * Prompt for a local image via MAIN's native open dialog, then setFromPath.
+   * Resolves `null` when the user cancels (cancel is a normal success, NOT an
+   * error — same convention as file.openDialog). PA-8: dialog lives in MAIN.
+   */
+  pick(): Promise<Result<WallpaperState | null>>;
+  /** Remove the active wallpaper and DELETE its file from the managed folder. */
+  clear(): Promise<Result<void>>;
+}
+
+// ---------------------------------------------------------------------------
 //  The frozen window.notepads object
 // ---------------------------------------------------------------------------
 
@@ -507,6 +578,7 @@ export interface NotepadsApi {
   theme: ThemeApi;
   app: AppApi;
   shell: ShellApi;
+  wallpaper: WallpaperApi;
 }
 
 declare global {

@@ -6,10 +6,30 @@
  * reload): toggling useWindowsAccentColor off and entering a custom #RRGGBB
  * recomputes the FluentProvider theme on the next settings.onChanged.
  *
- * PA-8: consumes only the settings bag + update callback — no IPC/fs.
+ * Custom wallpaper (web-port-only): a background image set from a URL or a
+ * local file. MAIN owns the whole lifecycle behind window.notepads.wallpaper
+ * (download/copy into {userData}/wallpaper/, delete-on-replace/clear, PA-8) —
+ * this pane only triggers those actions; the persisted `wallpaperFileName`
+ * flows back through the shared settings bag like every other field. While a
+ * wallpaper is active the tint-opacity slider drives the WALLPAPER layer's
+ * opacity instead of the background tint alpha (theme/wallpaper.ts), so the
+ * slider row swaps in an explanatory description.
+ *
+ * PA-8: consumes the settings bag + update callback + the typed
+ * window.notepads.wallpaper contract — no fs/path/child_process.
  */
 
-import { RadioGroup, Radio, Slider, Switch, Input, Label } from '@fluentui/react-components';
+import { useState } from 'react';
+import {
+  RadioGroup,
+  Radio,
+  Slider,
+  Switch,
+  Input,
+  Label,
+  Button,
+  tokens
+} from '@fluentui/react-components';
 import type { ThemeMode } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import { TINT_MIN, TINT_MAX, TINT_STEP } from './settingsOptions';
@@ -31,6 +51,49 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
   const { t } = useT();
   const tintPct = Math.round(settings.tintOpacity * 100);
   const accentValid = isValidHex(settings.customAccentColor);
+  const wallpaperActive = settings.wallpaperFileName !== '';
+
+  // Wallpaper URL input + transient action state. The settings bag never holds
+  // the URL (only MAIN's managed file name persists), so the field is local.
+  const [wallpaperUrl, setWallpaperUrl] = useState('');
+  const [wallpaperBusy, setWallpaperBusy] = useState(false);
+  const [wallpaperError, setWallpaperError] = useState('');
+
+  /** Shared completion handler: surface MAIN's error or clear it on success. */
+  const finishWallpaperAction = (r: { ok: true } | { ok: false; error: string }): void => {
+    setWallpaperBusy(false);
+    setWallpaperError(r.ok ? '' : r.error);
+  };
+
+  const onWallpaperFromUrl = (): void => {
+    const url = wallpaperUrl.trim();
+    if (!url || wallpaperBusy) return;
+    setWallpaperBusy(true);
+    setWallpaperError('');
+    // MAIN downloads + validates (content-type/size) and persists the managed
+    // file name; the settings bag updates via the EvtSettingsChanged broadcast.
+    void window.notepads.wallpaper.setFromUrl(url).then((r) => {
+      finishWallpaperAction(r);
+      if (r.ok) setWallpaperUrl('');
+    });
+  };
+
+  const onWallpaperBrowse = (): void => {
+    if (wallpaperBusy) return;
+    setWallpaperBusy(true);
+    setWallpaperError('');
+    // MAIN shows the native image-filtered open dialog, then copies the pick
+    // into the managed folder. Cancel resolves ok/null — a silent no-op.
+    void window.notepads.wallpaper.pick().then(finishWallpaperAction);
+  };
+
+  const onWallpaperClear = (): void => {
+    if (wallpaperBusy) return;
+    setWallpaperBusy(true);
+    setWallpaperError('');
+    // MAIN empties the setting and DELETES the managed file (no orphans).
+    void window.notepads.wallpaper.clear().then(finishWallpaperAction);
+  };
 
   return (
     <SettingsPane id="personalization">
@@ -54,7 +117,14 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
           id="tintOpacity"
           layout="stack"
           label={t('PersonalizationPage_BackgroundTintOpacitySettings_Title.Text')}
-          description={`${tintPct}%`}
+          description={
+            // Semantics switch: with a wallpaper active this slider drives the
+            // WALLPAPER layer's opacity (theme/wallpaper.ts), not the tint alpha
+            // over the OS material — tell the user which one they're tuning.
+            wallpaperActive
+              ? `${tintPct}% — ${t('PersonalizationPage_Wallpaper_OpacityHint')}`
+              : `${tintPct}%`
+          }
         >
           <Slider
             data-testid="setting-tintOpacity-slider"
@@ -65,6 +135,68 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
             onChange={(_e, d) => update({ tintOpacity: d.value })}
             style={{ width: '100%' }}
           />
+        </SettingRow>
+      </SettingGroup>
+
+      <SettingGroup title={t('PersonalizationPage_Wallpaper_Title')}>
+        <SettingRow
+          id="wallpaperUrl"
+          layout="stack"
+          label={t('PersonalizationPage_Wallpaper_UrlLabel')}
+          description={t('PersonalizationPage_Wallpaper_Description')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Input
+              data-testid="setting-wallpaperUrl-input"
+              value={wallpaperUrl}
+              placeholder="https://"
+              disabled={wallpaperBusy}
+              onChange={(_e, d) => setWallpaperUrl(d.value)}
+              style={{ flex: '1 1 auto', minWidth: 0 }}
+            />
+            <Button
+              data-testid="setting-wallpaperUrl-apply"
+              disabled={wallpaperBusy || wallpaperUrl.trim() === ''}
+              onClick={onWallpaperFromUrl}
+            >
+              {t('PersonalizationPage_Wallpaper_SetFromUrlButton')}
+            </Button>
+          </div>
+        </SettingRow>
+        <SettingRow
+          id="wallpaperActions"
+          layout="stack"
+          label={t('PersonalizationPage_Wallpaper_LocalLabel')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Button
+              data-testid="setting-wallpaperBrowse-button"
+              disabled={wallpaperBusy}
+              onClick={onWallpaperBrowse}
+            >
+              {t('PersonalizationPage_Wallpaper_BrowseButton')}
+            </Button>
+            {wallpaperActive ? (
+              <Button
+                data-testid="setting-wallpaperClear-button"
+                disabled={wallpaperBusy}
+                onClick={onWallpaperClear}
+              >
+                {t('PersonalizationPage_Wallpaper_ClearButton')}
+              </Button>
+            ) : null}
+          </div>
+          {wallpaperError !== '' ? (
+            <Label
+              size="small"
+              data-testid="setting-wallpaper-error"
+              // Theme token (not a hardcoded color) so the error reads
+              // correctly in dark mode and HC re-maps it like any Fluent text.
+              style={{ color: tokens.colorPaletteRedForeground1 }}
+            >
+              {wallpaperError}
+            </Label>
+          ) : null}
         </SettingRow>
       </SettingGroup>
 

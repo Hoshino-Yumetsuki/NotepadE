@@ -7,6 +7,7 @@ import type { StatusTheme } from './tokens';
 import { type LineColumn } from './statusModel';
 import type { FileModificationState, StatusBarProps } from './StatusBar';
 import { recordLastSaved, getLastSaved, deriveModificationState } from './fileStatusTracker';
+import { zoomField, setZoom, DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM } from '../editor/commands/zoom';
 
 /**
  * useStatusBarModel — derives StatusBarProps from the active tab + its CM6 view
@@ -73,6 +74,22 @@ export function useStatusBarModel(args: {
     );
   }, [getActiveHandle]);
 
+  // Mirror the ACTIVE editor's per-editor zoomField into local state so the
+  // status-bar percent/slider tracks Ctrl+wheel / Ctrl+± / Ctrl+0 zoom (which
+  // dispatch setZoom effects straight into the CM6 view, bypassing React). Same
+  // channel as refreshCaret: the editor view is owned by CodeMirrorEditor, so
+  // the status bar reads the field over the existing 250ms poll instead of
+  // mounting its own updateListener (which would remount that view). Because
+  // zoomField is PER-EDITOR state, this read also makes the slider reflect the
+  // active editor's zoom after a tab switch (the poll effect re-fires on
+  // activeEditorId below). setState with an identical number is a React no-op,
+  // so the poll never causes render churn while zoom is unchanged.
+  const refreshZoom = useCallback(() => {
+    const view = getActiveHandle()?.getView();
+    if (!view) return;
+    setZoomPercent(view.state.field(zoomField, false) ?? DEFAULT_ZOOM);
+  }, [getActiveHandle]);
+
   // Drive Ln/Col from caret/selection movement. The 250ms poll is retained as the
   // settle mechanism the e2e statusbar driver waits on (it seeds a doc + selection
   // then waits ~250ms before asserting "Ln x, Col y"); the editor view is owned by
@@ -81,9 +98,13 @@ export function useStatusBarModel(args: {
   // gone (see refreshCaret above), so the remaining poll is a cheap O(log n) read.
   useEffect(() => {
     refreshCaret();
-    const id = window.setInterval(refreshCaret, 250);
+    refreshZoom();
+    const id = window.setInterval(() => {
+      refreshCaret();
+      refreshZoom();
+    }, 250);
     return () => window.clearInterval(id);
-  }, [refreshCaret, activeEditorId]);
+  }, [refreshCaret, refreshZoom, activeEditorId]);
 
   // Pull the ANSI table once for the "More encodings" submenu.
   useEffect(() => {
@@ -169,6 +190,25 @@ export function useStatusBarModel(args: {
     }
   }, []);
 
+  // Slider/buttons → editor: dispatch an absolute setZoom effect into the
+  // ACTIVE editor's CM6 view (the zoomField reducer clamps; zoomStyle then
+  // repaints the font-size variable — the exact same pipeline Ctrl+wheel uses,
+  // so slider zoom and keyboard zoom can never diverge). Local state is updated
+  // optimistically so the flyout percent tracks the drag immediately instead of
+  // waiting up to 250ms for the next poll tick; the poll re-reads the field and
+  // settles on the clamped authoritative value. The optimistic write applies
+  // the SAME [MIN_ZOOM, MAX_ZOOM] clamp as the field reducer: with no active
+  // view (no tabs) there is no reducer to clamp and no poll to correct, so an
+  // out-of-range value would otherwise stick in the displayed percent.
+  const applyZoom = useCallback(
+    (percent: number) => {
+      setZoomPercent(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, percent)));
+      const view = getActiveHandle()?.getView();
+      if (view) view.dispatch({ effects: setZoom.of(percent) });
+    },
+    [getActiveHandle]
+  );
+
   return useMemo<StatusBarProps>(
     () => ({
       theme,
@@ -207,8 +247,8 @@ export function useStatusBarModel(args: {
       onGoToLine: () => {
         window.dispatchEvent(new CustomEvent('notepads:go-to-line'));
       },
-      onSetZoom: (percent: number) => setZoomPercent(percent),
-      onResetZoom: () => setZoomPercent(100),
+      onSetZoom: applyZoom,
+      onResetZoom: () => applyZoom(DEFAULT_ZOOM),
       onChangeEol: (eol: EolId) => {
         if (activeEditorId) store.setLabels(activeEditorId, encodingId, eol);
       },
@@ -239,7 +279,8 @@ export function useStatusBarModel(args: {
       activeEditorId,
       store,
       onReopenWithEncoding,
-      reloadAndRebaseline
+      reloadAndRebaseline,
+      applyZoom
     ]
   );
 }

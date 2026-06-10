@@ -7,7 +7,7 @@
 
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import type {
   OpenedFile,
   Result,
@@ -170,6 +170,21 @@ export async function saveFile(args: SaveArgs): Promise<Result<SaveResult>> {
 }
 
 /**
+ * Save-dialog file-type filters: txt ONLY (product decision — the save surface
+ * is plain text, full stop; no Markdown/Log/All-Files choices).
+ *
+ * With a filter present Windows/Electron automatically appends the active
+ * filter's extension to an extensionless filename — so an untitled "Untitled 1"
+ * saves as "Untitled 1.txt" instead of an extensionless file. A user can still
+ * type an explicit different extension (e.g. "notes.md") and Windows keeps it
+ * verbatim. Electron requires extensions WITHOUT dots/wildcards ('txt', not
+ * '.txt'/'*.txt').
+ */
+export const SAVE_DIALOG_FILTERS: Electron.FileFilter[] = [
+  { name: 'Text Documents (*.txt)', extensions: ['txt'] }
+];
+
+/**
  * Prompt for a destination via the native Save dialog, then write the shadow
  * text there. Cancellation surfaces as a normal error (renderer treats it as a
  * no-op). UWP parity: SaveFileAs prompts, then runs the same encode/write path.
@@ -179,7 +194,8 @@ export async function saveFileAs(args: SaveAsArgs): Promise<Result<SaveResult>> 
     const focused = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
     const options: Electron.SaveDialogOptions = {
       title: 'Save As',
-      defaultPath: dialogDefaultPath(args)
+      defaultPath: dialogDefaultPath(args, documentsDirOrUndefined()),
+      filters: SAVE_DIALOG_FILTERS
     };
     const picked = focused
       ? await dialog.showSaveDialog(focused, options)
@@ -195,12 +211,41 @@ export async function saveFileAs(args: SaveAsArgs): Promise<Result<SaveResult>> 
   }
 }
 
-/** Compose the Save dialog's defaultPath from suggestedName + defaultDir. */
-function dialogDefaultPath(args: SaveAsArgs): string | undefined {
-  if (args.suggestedName && args.defaultDir) {
-    return join(args.defaultDir, args.suggestedName);
+/**
+ * Compose the Save dialog's defaultPath from suggestedName + defaultDir.
+ *
+ * The composed path must be ABSOLUTE: Windows' IFileSaveDialog unreliably
+ * honors a bare relative filename (Electron #1541/#9127 — the name field comes
+ * up empty and the shell substitutes its own default, which surfaced as the
+ * product name "NotepadE" instead of the tab title). When the renderer gives no
+ * directory (untitled buffer), anchor the name to `fallbackDir` — saveFileAs
+ * passes the user's Documents folder, mirroring the UWP FileSavePicker's
+ * SuggestedStartLocation = DocumentsLibrary. The bare-name return remains only
+ * as a last resort when no directory is resolvable at all.
+ *
+ * Exported for unit tests (electron-free by convention: `fallbackDir` is
+ * injected so vitest never touches app.getPath).
+ */
+export function dialogDefaultPath(args: SaveAsArgs, fallbackDir?: string): string | undefined {
+  const dir = args.defaultDir ?? fallbackDir;
+  if (args.suggestedName && dir) {
+    return join(dir, args.suggestedName);
   }
-  return args.defaultDir ?? args.suggestedName ?? undefined;
+  return dir ?? args.suggestedName ?? undefined;
+}
+
+/**
+ * The Documents folder used to anchor an untitled buffer's suggested filename.
+ * Wrapped in try/catch: app.getPath can throw in exotic environments (missing
+ * known folder); a failed lookup degrades to the bare-name behavior instead of
+ * breaking Save As entirely.
+ */
+function documentsDirOrUndefined(): string | undefined {
+  try {
+    return app.getPath('documents');
+  } catch {
+    return undefined;
+  }
 }
 
 /**

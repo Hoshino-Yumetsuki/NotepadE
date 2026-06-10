@@ -29,3 +29,5 @@ plan
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+.perf-tmp

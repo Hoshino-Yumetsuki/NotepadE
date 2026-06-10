@@ -130,6 +130,78 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
     'de-DE': 'Dem Systemakzent folgen.',
     'ja-JP': 'システムのアクセントに従います。'
   },
+  // Personalization — custom wallpaper (web port only; the UWP app had no
+  // wallpaper feature — its acrylic sampled the desktop directly). MAIN owns
+  // the file lifecycle ({userData}/wallpaper/); these are the pane strings.
+  // en-US + zh-CN are provided; every other locale falls through to English
+  // per the standard overlay policy (awaiting-translation).
+  PersonalizationPage_Wallpaper_Title: {
+    'en-US': 'Background Image',
+    'zh-CN': '背景图片'
+  },
+  PersonalizationPage_Wallpaper_Description: {
+    'en-US':
+      'Set a custom background image from a web address or a local file. The image is copied into the app data folder. It replaces the see-through window backdrop, and the tint opacity slider then controls the image opacity.',
+    'zh-CN':
+      '从网址或本地文件设置自定义背景图片。图片会被复制到应用数据文件夹中。它将替代窗口的透视背景，此后“背景色调不透明度”滑块将控制图片的不透明度。'
+  },
+  PersonalizationPage_Wallpaper_UrlLabel: {
+    'en-US': 'Image URL',
+    'zh-CN': '图片网址'
+  },
+  PersonalizationPage_Wallpaper_SetFromUrlButton: {
+    'en-US': 'Set',
+    'zh-CN': '设置'
+  },
+  PersonalizationPage_Wallpaper_LocalLabel: {
+    'en-US': 'Local image',
+    'zh-CN': '本地图片'
+  },
+  PersonalizationPage_Wallpaper_BrowseButton: {
+    'en-US': 'Browse…',
+    'zh-CN': '浏览…'
+  },
+  PersonalizationPage_Wallpaper_ClearButton: {
+    'en-US': 'Remove background image',
+    'zh-CN': '移除背景图片'
+  },
+  PersonalizationPage_Wallpaper_OpacityHint: {
+    'en-US': 'controls the background image opacity while one is set',
+    'zh-CN': '设置背景图片后，此滑块控制图片的不透明度'
+  },
+  // Advanced — "Reset all settings" (web port only; UWP had no factory-reset
+  // affordance — its settings store silently re-initialized defaults). en-US +
+  // zh-CN provided; other locales fall through to English (overlay policy).
+  AdvancedPage_ResetSettings_Title: {
+    'en-US': 'Reset Settings',
+    'zh-CN': '重置设置'
+  },
+  AdvancedPage_ResetSettings_Description: {
+    'en-US':
+      'Restore every setting to its default value, including the custom background image (its file is deleted).',
+    'zh-CN': '将所有设置恢复为默认值，包括自定义背景图片（其文件将被删除）。'
+  },
+  AdvancedPage_ResetSettings_Button: {
+    'en-US': 'Reset all settings',
+    'zh-CN': '重置所有设置'
+  },
+  AdvancedPage_ResetSettings_ConfirmTitle: {
+    'en-US': 'Reset all settings?',
+    'zh-CN': '要重置所有设置吗？'
+  },
+  AdvancedPage_ResetSettings_ConfirmBody: {
+    'en-US':
+      'All settings will be restored to their defaults and the custom background image will be removed. This cannot be undone.',
+    'zh-CN': '所有设置将恢复为默认值，自定义背景图片将被移除。此操作无法撤销。'
+  },
+  AdvancedPage_ResetSettings_ConfirmButton: {
+    'en-US': 'Reset',
+    'zh-CN': '重置'
+  },
+  AdvancedPage_ResetSettings_CancelButton: {
+    'en-US': 'Cancel',
+    'zh-CN': '取消'
+  },
   // Text & Editor — the web port labels the font-family dropdown explicitly and
   // gives the web-search section its own group header.
   TextAndEditorPage_FontFamilySettings_Title: {

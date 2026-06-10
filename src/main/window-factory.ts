@@ -60,6 +60,21 @@ export function createMainWindow(_options: CreateWindowOptions = {}): BrowserWin
     // transparent:true + backgroundColor:'#00000000' so the desktop wallpaper
     // samples through the NSVisualEffectView. visualEffectState:'active' keeps
     // the blur consistent regardless of window focus.
+    //
+    // KNOWN LIMITATION (mac transparency setting): the renderer's tint layer
+    // (appBackgroundTint alpha = settings.tintOpacity) has little/no visible
+    // effect over vibrancy. Unlike Win11's backgroundMaterial:'acrylic' — a
+    // plain wallpaper blur the rgba tint composites over linearly — macOS's
+    // NSVisualEffectView applies its OWN adaptive material recipe (system tint
+    // + saturation + luminosity mixing), so an in-page semi-transparent wash
+    // over it is largely swallowed by the material's own blending and the
+    // slider reads as a no-op. There is no Electron knob to drive the
+    // NSVisualEffectView's material opacity at runtime, so this is accepted
+    // as-is for the no-wallpaper look. The CROSS-PLATFORM answer is the custom
+    // wallpaper feature (main/wallpaper.ts + renderer theme/wallpaper.ts):
+    // with a wallpaper active the renderer paints an OPAQUE base + an in-page
+    // image layer whose opacity the same slider drives — pure CSS, identical
+    // on mac/win/linux, vibrancy no longer participates.
     ...(isMac
       ? {
           transparent: true,

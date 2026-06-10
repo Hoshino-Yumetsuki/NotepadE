@@ -23,7 +23,8 @@ import type {
   RecentEntry,
   EncodingId,
   EolId,
-  Unsubscribe
+  Unsubscribe,
+  WallpaperState
 } from '../shared/ipc-contract.js';
 
 function invoke<T>(channel: string, ...args: unknown[]): Promise<Result<T>> {
@@ -71,6 +72,7 @@ const api: NotepadsApi = {
   settings: {
     get: () => invoke<Settings>(IpcChannels.SettingsGet),
     set: (patch: Partial<Settings>) => invoke<Settings>(IpcChannels.SettingsSet, patch),
+    resetAll: () => invoke<Settings>(IpcChannels.SettingsResetAll),
     onChanged: (cb) => subscribe<Settings>(IpcChannels.EvtSettingsChanged, cb)
   },
   window: {
@@ -114,6 +116,13 @@ const api: NotepadsApi = {
     webSearch: (query) => invoke<void>(IpcChannels.ShellWebSearch, query),
     print: () => invoke<void>(IpcChannels.ShellPrint),
     share: (args) => invoke<void>(IpcChannels.ShellShare, args)
+  },
+  wallpaper: {
+    get: () => invoke<WallpaperState>(IpcChannels.WallpaperGet),
+    setFromPath: (path) => invoke<WallpaperState>(IpcChannels.WallpaperSetFromPath, path),
+    setFromUrl: (url) => invoke<WallpaperState>(IpcChannels.WallpaperSetFromUrl, url),
+    pick: () => invoke<WallpaperState | null>(IpcChannels.WallpaperPick),
+    clear: () => invoke<void>(IpcChannels.WallpaperClear)
   }
 };
 

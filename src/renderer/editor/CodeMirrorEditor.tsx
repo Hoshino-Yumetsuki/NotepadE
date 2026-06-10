@@ -282,12 +282,16 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     // so the bloom matches the live theme + accent. Self-contained in
     // lineNumberGlow.ts; paints an inline-styled overlay (no CM6 theme selector).
     const lineNumberGlowCompartment = useRef(new Compartment());
-    // The host-authoritative document. setDoc updates this and the view is rebuilt
-    // FROM it on every mount, so seeded text survives a remount. This matters
+    // The host-authoritative document. setDoc parks text here ONLY while no view
+    // exists; once a live view holds the doc this is cleared and re-captured from
+    // the view in the mount-effect cleanup, so a remount restores it. This matters
     // because React 18 StrictMode double-invokes the mount effect (create → destroy
     // → recreate): a one-shot "flush on first mount" queue would seed the first,
     // soon-destroyed view, and the recreated view would start from the empty
-    // initialDoc — the cold-start argv-open empty-doc bug. null = use initialDoc.
+    // initialDoc — the cold-start argv-open empty-doc bug. Clearing it while a view
+    // is live matters for LARGE files: keeping the full normalized string here
+    // alongside the CM6 doc permanently retains a duplicate copy (~120MB extra on
+    // a 120MB file). null = use initialDoc (or the view already owns the doc).
     const docRef = useRef<string | null>(null);
 
     useImperativeHandle(
@@ -296,13 +300,19 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         setDoc(text: string): void {
           const normalized = normalizeToShadow(text);
           // A host setDoc is always an AUTHORITATIVE load (open / activation /
-          // cross-window adopt / reload). Remember it so a remount restores it,
-          // and apply it WITHOUT a history entry: a freshly loaded or adopted
-          // document must have undoDepth 0 so Ctrl+Z is a no-op and never blanks
-          // the just-loaded content (the source's undo stack does not transfer).
-          docRef.current = normalized;
+          // cross-window adopt / reload), applied WITHOUT a history entry: a
+          // freshly loaded or adopted document must have undoDepth 0 so Ctrl+Z
+          // is a no-op and never blanks the just-loaded content (the source's
+          // undo stack does not transfer). With no view yet, PARK the text in
+          // docRef for the mount effect; with a live view, hand the string to
+          // CM6 and deliberately do NOT also retain it in docRef — a duplicate
+          // retained copy doubles memory on large files (see docRef comment).
           const view = viewRef.current;
-          if (!view) return; // applied on mount from docRef
+          if (!view) {
+            docRef.current = normalized; // applied on mount from docRef
+            return;
+          }
+          docRef.current = null;
           view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: normalized },
             annotations: Transaction.addToHistory.of(false)
@@ -395,19 +405,28 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
 
       const view = new EditorView({
         state: EditorState.create({
-          // Restore the host-authoritative doc (set via setDoc) if present, so a
-          // remount — incl. the StrictMode double-mount — never loses seeded text.
-          // The doc enters as the INITIAL state, carrying no history (undoDepth 0).
+          // Restore the host-authoritative doc (parked via setDoc or re-captured
+          // by the previous cleanup) if present, so a remount — incl. the
+          // StrictMode double-mount — never loses seeded text. The doc enters as
+          // the INITIAL state, carrying no history (undoDepth 0).
           doc: docRef.current ?? normalizeToShadow(initialDoc),
           extensions
         }),
         parent: hostRef.current
       });
+      // The view owns the document now. Drop the parked string so a large file
+      // is retained ONCE (inside CM6's rope), not twice (see docRef comment).
+      docRef.current = null;
       viewRef.current = view;
       // Seed the zoom CSS variable so the initial font-size reflects 100%.
       initZoomVar(view);
 
       return () => {
+        // Re-capture the live doc before destroying so a REMOUNT (StrictMode
+        // double-mount, key change) restores it. Transient duplicate only: the
+        // next mount hands it back to a view and clears docRef again, and on a
+        // final unmount the ref is discarded with the component instance.
+        docRef.current = view.state.doc.toString();
         view.destroy();
         viewRef.current = null;
       };

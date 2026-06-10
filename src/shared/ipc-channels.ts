@@ -32,6 +32,8 @@ export const IpcChannels = {
   // settings
   SettingsGet: 'notepads:settings:get',
   SettingsSet: 'notepads:settings:set',
+  /** Factory reset: restore all defaults + delete the managed wallpaper file. */
+  SettingsResetAll: 'notepads:settings:resetAll',
 
   // window
   WindowBrokerRequest: 'notepads:window:brokerRequest',
@@ -72,6 +74,14 @@ export const IpcChannels = {
 
   // theme
   ThemeGet: 'notepads:theme:get',
+
+  // wallpaper (custom background image; MAIN owns the {userData}/wallpaper/
+  // folder lifecycle — copy/download in, delete the previous file on replace)
+  WallpaperGet: 'notepads:wallpaper:get',
+  WallpaperSetFromPath: 'notepads:wallpaper:setFromPath',
+  WallpaperSetFromUrl: 'notepads:wallpaper:setFromUrl',
+  WallpaperPick: 'notepads:wallpaper:pick',
+  WallpaperClear: 'notepads:wallpaper:clear',
 
   // --- push events (main -> renderer) ---
   EvtEditorAdopt: 'notepads:evt:editor:adopt',

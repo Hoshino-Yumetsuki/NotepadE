@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { EditorSelection } from '@codemirror/state';
 import {
   MIN_ZOOM,
@@ -7,9 +7,12 @@ import {
   nextZoomIn,
   nextZoomOut,
   zoomField,
+  zoomStyle,
   zoomIn,
   zoomOut,
-  zoomReset
+  zoomReset,
+  applyZoomFontSize,
+  initZoomVar
 } from './zoom';
 import { editorSettings } from '../editorSettings';
 import { mountView } from './testUtils';
@@ -91,6 +94,56 @@ describe('zoom commands on a live view', () => {
       expect(v.state.field(zoomField)).toBe(MAX_ZOOM);
       for (let i = 0; i < 100; i++) zoomOut(v);
       expect(v.state.field(zoomField)).toBe(MIN_ZOOM);
+    } finally {
+      v.destroy();
+    }
+  });
+});
+
+describe('zoomStyle geometry sync', () => {
+  function styledView() {
+    return mountView('hello', EditorSelection.cursor(0), [
+      editorSettings.of({}),
+      zoomField,
+      zoomStyle
+    ]);
+  }
+
+  it('updates the zoom CSS variable on zoom change', () => {
+    const v = styledView();
+    try {
+      zoomIn(v); // 100% -> 110% of the 14px default base
+      expect(v.dom.style.getPropertyValue('--cm-zoom-font-size')).toBe(`${(14 * 110) / 100}px`);
+    } finally {
+      v.destroy();
+    }
+  });
+
+  it('applyZoomFontSize writes the variable AND schedules a re-measure', () => {
+    // The CSS variable resizes the text behind CM6's back: the view's scroller
+    // box does not change, so no ResizeObserver fires and a pure-effect
+    // transaction schedules no measure of its own. Without an explicit
+    // requestMeasure the line metrics stay stale until the next interaction —
+    // the "line numbers ghost until you click the text" bug. applyZoomFontSize
+    // is the single seam both zoomStyle and initZoomVar go through.
+    const v = styledView();
+    try {
+      const measure = vi.spyOn(v, 'requestMeasure');
+      applyZoomFontSize(v, 21);
+      expect(v.dom.style.getPropertyValue('--cm-zoom-font-size')).toBe('21px');
+      expect(measure).toHaveBeenCalled();
+    } finally {
+      v.destroy();
+    }
+  });
+
+  it('initZoomVar seeds the variable through the measuring seam', () => {
+    const v = styledView();
+    try {
+      const measure = vi.spyOn(v, 'requestMeasure');
+      initZoomVar(v);
+      expect(v.dom.style.getPropertyValue('--cm-zoom-font-size')).toBe('14px');
+      expect(measure).toHaveBeenCalled();
     } finally {
       v.destroy();
     }

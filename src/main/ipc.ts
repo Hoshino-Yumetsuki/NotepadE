@@ -33,6 +33,7 @@ import { listAnsiEncodings } from './encoding.js';
 import { applyEol } from './eol.js';
 import { snapshot, loadLast, clearRecovered } from './session.js';
 import { getSettings, setSettings } from './settings.js';
+import { resetAllSettings } from './settings-reset.js';
 import { getThemeState } from './theme.js';
 import {
   windowBrokerRequest,
@@ -47,6 +48,13 @@ import {
 } from './window.js';
 import { dragOutBegin, dragOutComplete } from './dragout.js';
 import { openContainingFolder, copyPath, webSearch, print, share } from './shell.js';
+import {
+  getWallpaper,
+  setWallpaperFromPath,
+  setWallpaperFromUrl,
+  pickWallpaper,
+  clearWallpaper
+} from './wallpaper.js';
 
 export function registerIpcHandlers(): void {
   // --- file ---
@@ -82,6 +90,8 @@ export function registerIpcHandlers(): void {
   // --- settings (Phase 5) ---
   ipcMain.handle(IpcChannels.SettingsGet, () => getSettings());
   ipcMain.handle(IpcChannels.SettingsSet, (_e, patch: Partial<Settings>) => setSettings(patch));
+  // Factory reset: wallpaper-file cleanup + full-defaults persist/broadcast.
+  ipcMain.handle(IpcChannels.SettingsResetAll, () => resetAllSettings());
 
   // --- window (Phase 6) ---
   ipcMain.handle(
@@ -123,4 +133,13 @@ export function registerIpcHandlers(): void {
 
   // --- theme (Phase 5) ---
   ipcMain.handle(IpcChannels.ThemeGet, () => getThemeState());
+
+  // --- wallpaper (custom background image; MAIN owns the managed folder) ---
+  ipcMain.handle(IpcChannels.WallpaperGet, () => getWallpaper());
+  ipcMain.handle(IpcChannels.WallpaperSetFromPath, (_e, path: string) =>
+    setWallpaperFromPath(path)
+  );
+  ipcMain.handle(IpcChannels.WallpaperSetFromUrl, (_e, url: string) => setWallpaperFromUrl(url));
+  ipcMain.handle(IpcChannels.WallpaperPick, () => pickWallpaper());
+  ipcMain.handle(IpcChannels.WallpaperClear, () => clearWallpaper());
 }
