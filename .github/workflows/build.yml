@@ -81,3 +81,4 @@ jobs:
           artifacts: release/*
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
+          makeLatest: "true"
