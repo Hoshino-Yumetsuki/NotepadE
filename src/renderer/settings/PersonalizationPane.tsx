@@ -12,7 +12,8 @@
  * this pane only triggers those actions; the persisted `wallpaperFileName`
  * flows back through the shared settings bag like every other field. While a
  * wallpaper is active the tint-opacity slider drives the WALLPAPER layer's
- * opacity instead of the background tint alpha (theme/wallpaper.ts), so the
+ * BLUR intensity instead of the background tint alpha (theme/wallpaper.ts) —
+ * higher = blurrier, converging on the no-wallpaper acrylic material — so the
  * slider row swaps in an explanatory description.
  *
  * PA-8: consumes the settings bag + update callback + the typed
@@ -107,9 +108,18 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
             layout="horizontal"
             value={settings.themeMode}
             onChange={(_e, d) => update({ themeMode: d.value as ThemeMode })}
+            // Whole radios wrap to the next row at the 385px pane width instead
+            // of squeezing each label into a vertical sliver.
+            style={{ flexWrap: 'wrap' }}
           >
             {THEME_MODES.map((m) => (
-              <Radio key={m.id} value={m.id} label={t(m.labelKey)} />
+              <Radio
+                key={m.id}
+                value={m.id}
+                // nowrap on the label slot: CJK text breaks between ANY two
+                // characters, so a squeezed 浅色/深色 would stack vertically.
+                label={{ children: t(m.labelKey), style: { whiteSpace: 'nowrap' } }}
+              />
             ))}
           </RadioGroup>
         </SettingRow>
@@ -119,8 +129,9 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
           label={t('PersonalizationPage_BackgroundTintOpacitySettings_Title.Text')}
           description={
             // Semantics switch: with a wallpaper active this slider drives the
-            // WALLPAPER layer's opacity (theme/wallpaper.ts), not the tint alpha
-            // over the OS material — tell the user which one they're tuning.
+            // WALLPAPER layer's BLUR intensity (theme/wallpaper.ts), not the
+            // tint alpha over the OS material — tell the user which one
+            // they're tuning.
             wallpaperActive
               ? `${tintPct}% — ${t('PersonalizationPage_Wallpaper_OpacityHint')}`
               : `${tintPct}%`

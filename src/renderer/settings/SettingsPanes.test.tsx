@@ -117,6 +117,20 @@ describe('PersonalizationPane', () => {
     expect(update).toHaveBeenCalledWith({ themeMode: 'dark' });
   });
 
+  it('lets theme-mode radios wrap as whole units, never mid-label (CJK)', () => {
+    renderPane(<PersonalizationPane settings={makeSettings()} update={vi.fn()} />);
+    const row = screen.getByTestId('setting-themeMode');
+    // The group wraps whole radios to the next line at narrow pane widths...
+    const group = within(row).getByRole('radiogroup');
+    expect(group).toHaveStyle({ flexWrap: 'wrap' });
+    // ...and each label refuses mid-word breaks (CJK breaks between ANY two
+    // characters, so a squeezed 浅色/深色 would otherwise stack vertically).
+    for (const radio of within(row).getAllByRole('radio')) {
+      const label = row.querySelector(`label[for="${radio.id}"]`);
+      expect(label).toHaveStyle({ whiteSpace: 'nowrap' });
+    }
+  });
+
   it('hides the custom-accent row when Windows accent is on', () => {
     renderPane(
       <PersonalizationPane
