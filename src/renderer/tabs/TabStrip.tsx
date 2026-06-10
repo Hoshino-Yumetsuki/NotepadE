@@ -224,6 +224,9 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
     id: tab.editorId
   });
   const [hovered, setHovered] = useState(false);
+  // Pressed (pointer-down) state — UWP SetsViewItem "Pressed" visual state dims
+  // the top selection indicator to opacity 0.4 while the pointer is down.
+  const [pressed, setPressed] = useState(false);
   const renameRef = useRef<HTMLInputElement | null>(null);
   // Cursor-follow reveal highlight (Phase 7, Task #27): writes --reveal-x/y/opacity
   // on the tab header so the radial layer below tracks the pointer. Disabled in HC
@@ -311,6 +314,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
         e.preventDefault();
         return;
       }
+      setPressed(true);
       onActivate(tab.editorId);
       // Hand off to dnd-kit so a drag can begin past the activation distance.
       listeners?.onPointerDown?.(e);
@@ -367,6 +371,8 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
         onDragStart={transferEnabled ? onNativeDragStart : undefined}
         onDragEnd={transferEnabled ? onNativeDragEnd : undefined}
         onPointerDown={onPointerDown}
+        onPointerUp={() => setPressed(false)}
+        onPointerCancel={() => setPressed(false)}
         onPointerMove={reveal.handlers.onPointerMove}
         onMouseEnter={(e) => {
           setHovered(true);
@@ -374,6 +380,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
         }}
         onMouseLeave={() => {
           setHovered(false);
+          setPressed(false);
           reveal.handlers.onPointerLeave();
         }}
       >
@@ -393,7 +400,9 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
             zIndex: 0
           }}
         />
-        {/* Top selection indicator bar (accent), only when active. */}
+        {/* Top selection indicator bar (accent), only when active. Opacity is
+            INSTANT (no transition — UWP SelectionIndicator has none) and dims
+            to 0.4 while pressed (SetsViewItem Pressed visual state). */}
         {active && (
           <span
             data-testid="tab-selection-bar"
@@ -404,6 +413,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
               right: 0,
               height: TabDimensions.selectionBarHeight,
               background: 'var(--tab-accent, #0078D4)',
+              opacity: pressed ? 0.4 : 1,
               zIndex: 1
             }}
           />

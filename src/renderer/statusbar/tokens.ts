@@ -101,7 +101,7 @@ export const DARK_STATUS_TOKENS: StatusThemeTokens = {
   background: 'transparent',
   text: 'rgba(255, 255, 255, 0.80)',
   accent: '#0091F8',
-  hover: 'rgba(255, 255, 255, 0.08)',
+  hover: 'rgba(255, 255, 255, 0.06)',
   topBorder: 'rgba(255, 255, 255, 0.10)'
 };
 

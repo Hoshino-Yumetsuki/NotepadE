@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import type { FC } from 'react';
+import type { CSSProperties, FC } from 'react';
 import { Button, FluentProvider, type Theme } from '@fluentui/react-components';
 import {
   DismissRegular,
@@ -51,7 +51,11 @@ type SectionId = 'textEditor' | 'personalization' | 'advanced' | 'about';
  * live on a language switch; `Icon` is the Fluent UI SVG icon component replacing
  * the Windows-only Segoe MDL2 font glyphs for cross-platform rendering.
  */
-const SECTIONS: readonly { id: SectionId; labelKey: string; Icon: FC }[] = [
+const SECTIONS: readonly {
+  id: SectionId;
+  labelKey: string;
+  Icon: FC<{ style?: CSSProperties }>;
+}[] = [
   { id: 'textEditor', labelKey: 'TextAndEditorPage_Title.Content', Icon: TextEditStyleRegular },
   { id: 'personalization', labelKey: 'PersonalizationPage_Title.Content', Icon: DarkThemeRegular },
   { id: 'advanced', labelKey: 'AdvancedPage_Title.Content', Icon: WrenchRegular },
@@ -64,6 +68,17 @@ const PANE_WIDTH = 385;
 /** UWP NavigationView PaneDisplayMode=LeftCompact rail widths (compact / expanded). */
 const RAIL_COMPACT_WIDTH = 48;
 const RAIL_EXPANDED_WIDTH = 200;
+
+/**
+ * UWP CustomNavigationViewItemStyle: 40px item height; the SelectionIndicator
+ * is a 6x24 accent Rectangle vertically centered at the item's left edge. A
+ * single shared indicator slides between items (top transition) like the
+ * NavigationView selection animation.
+ */
+const NAV_ITEM_HEIGHT = 40;
+const NAV_ITEM_GAP = 2;
+const NAV_INDICATOR_WIDTH = 6;
+const NAV_INDICATOR_HEIGHT = 24;
 
 export interface SettingsSurfaceProps {
   open: boolean;
@@ -111,8 +126,9 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
       return;
     }
     // Fallback: guarantee the settled blur even if animationend never arrives
-    // (reduced-motion engines skip the animation entirely). Longer than the slide.
-    const id = window.setTimeout(() => setSettled(true), 240);
+    // (reduced-motion engines skip the animation entirely). Longer than the
+    // 350ms UWP open slide.
+    const id = window.setTimeout(() => setSettled(true), 420);
     return () => window.clearTimeout(id);
   }, [open]);
 
@@ -141,9 +157,10 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   }
 
   // Fallback unmount timer for the close slide (animationend is the common path).
+  // Slightly longer than the 120ms UWP close slide.
   useEffect(() => {
     if (!closing) return;
-    const id = window.setTimeout(() => setClosing(false), 240);
+    const id = window.setTimeout(() => setClosing(false), 180);
     return () => window.clearTimeout(id);
   }, [closing]);
 
@@ -218,7 +235,8 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
           // The slide is owned by the np-settings-enter CSS keyframe (chrome.css);
           // the resting transform is translateX(0), so React never writes an
           // off-screen inline transform that could race a re-render.
-          boxShadow: '-8px 0 24px rgba(0,0,0,0.35)',
+          // UWP CustomSplitViewStyle pane drop shadow.
+          boxShadow: '0 0 12px rgba(0,0,0,0.3)',
           ...acrylicVars(resolvedTheme)
         }}
       >
@@ -260,12 +278,13 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
             aria-orientation="vertical"
             data-testid="settings-nav"
             style={{
+              position: 'relative',
               width: expanded ? RAIL_EXPANDED_WIDTH : RAIL_COMPACT_WIDTH,
               flex: '0 0 auto',
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              gap: 2,
+              gap: NAV_ITEM_GAP,
               padding: '0 4px',
               boxSizing: 'border-box',
               transition: 'width 150ms ease',
@@ -282,6 +301,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
               style={{
                 minWidth: 0,
                 width: '100%',
+                height: NAV_ITEM_HEIGHT,
                 justifyContent: expanded ? 'flex-start' : 'center',
                 paddingLeft: expanded ? 10 : 0,
                 paddingRight: 0,
@@ -296,12 +316,14 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 aria-label={t(s.labelKey)}
                 title={t(s.labelKey)}
                 appearance={section === s.id ? 'secondary' : 'subtle'}
-                icon={<s.Icon />}
+                icon={<s.Icon style={{ fontSize: 20, width: 20, height: 20 }} />}
                 data-testid={`settings-nav-${s.id}`}
                 onClick={() => setSection(s.id)}
                 style={{
                   minWidth: 0,
                   width: '100%',
+                  height: NAV_ITEM_HEIGHT,
+                  flex: '0 0 auto',
                   justifyContent: expanded ? 'flex-start' : 'center',
                   paddingLeft: expanded ? 10 : 0,
                   paddingRight: 0,
@@ -313,6 +335,33 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 {expanded ? t(s.labelKey) : null}
               </Button>
             ))}
+            {/* UWP NavigationView SelectionIndicator: a 6x24 accent bar at the rail's
+                left edge that SLIDES vertically to the selected item (top transition,
+                np-nav-indicator). One shared element, so the motion reads as the bar
+                travelling rather than fading in/out per item. aria-hidden — selection
+                is already conveyed by aria-selected on the tabs. */}
+            <div
+              aria-hidden
+              className="np-nav-indicator"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top:
+                  NAV_ITEM_HEIGHT +
+                  4 +
+                  Math.max(
+                    0,
+                    SECTIONS.findIndex((s) => s.id === section)
+                  ) *
+                    (NAV_ITEM_HEIGHT + NAV_ITEM_GAP) +
+                  (NAV_ITEM_HEIGHT - NAV_INDICATOR_HEIGHT) / 2,
+                width: NAV_INDICATOR_WIDTH,
+                height: NAV_INDICATOR_HEIGHT,
+                borderRadius: 0,
+                background: 'var(--colorCompoundBrandForeground1, #0078D4)',
+                pointerEvents: 'none'
+              }}
+            />
           </div>
           {/* Content column: per-section 24px title + bottom-border header
               (UWP SettingsPanel.xaml 60px header row), then the scrolling pane. */}
@@ -329,11 +378,16 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
             <div
               data-testid="settings-section-title"
               style={{
+                // UWP SettingsPanel.xaml header row: fixed 60px, 24px title,
+                // 1px bottom separator.
                 flex: '0 0 auto',
+                height: 60,
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
                 fontSize: 24,
                 lineHeight: '1.2',
                 fontWeight: 600,
-                padding: '0 0 10px 0',
                 marginBottom: 8,
                 borderBottom: '1px solid var(--colorNeutralStroke2)'
               }}

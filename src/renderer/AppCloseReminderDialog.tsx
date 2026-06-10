@@ -27,17 +27,21 @@ import {
   DialogTitle
 } from '@fluentui/react-components';
 import { useT } from './i18n';
+import type { AppTheme } from './theme/tokens';
+import { dialogSurfaceStyle, dialogBackdropStyle } from './theme/dialogStyles';
 
 export interface AppCloseReminderDialogProps {
   /** Whether the dialog is shown (a window close is pending on unsaved tabs). */
   readonly open: boolean;
+  /** Resolved app theme (drives the UWP ContentDialog surface/backdrop colors). */
+  readonly theme?: AppTheme;
   readonly onSaveAllAndExit: () => void;
   readonly onDiscardAndExit: () => void;
   readonly onCancel: () => void;
 }
 
 export function AppCloseReminderDialog(props: AppCloseReminderDialogProps): JSX.Element {
-  const { open, onSaveAllAndExit, onDiscardAndExit, onCancel } = props;
+  const { open, theme = 'light', onSaveAllAndExit, onDiscardAndExit, onCancel } = props;
   const { t } = useT();
 
   return (
@@ -48,7 +52,12 @@ export function AppCloseReminderDialog(props: AppCloseReminderDialogProps): JSX.
         if (!data.open) onCancel();
       }}
     >
-      <DialogSurface data-testid="app-close-reminder-dialog">
+      <DialogSurface
+        data-testid="app-close-reminder-dialog"
+        className="np-dialog-enter"
+        style={dialogSurfaceStyle(theme)}
+        backdrop={{ style: dialogBackdropStyle(theme) }}
+      >
         <DialogBody>
           <DialogTitle>{t('AppCloseSaveReminderDialog_Title')}</DialogTitle>
           <DialogContent>{t('AppCloseSaveReminderDialog_Content')}</DialogContent>

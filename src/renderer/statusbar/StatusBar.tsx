@@ -137,6 +137,12 @@ interface CellProps {
   onClick?: () => void;
   /** When true, render as a non-interactive container (column 7 shadow icon). */
   static?: boolean;
+  /**
+   * Hover affordance. 'background' (default) paints the UWP reveal-low tint
+   * instantly; 'opacity' dims the cell to 0.7 instead (the UWP PathIndicator
+   * PointerEntered drops Opacity, it never paints a background).
+   */
+  hoverEffect?: 'background' | 'opacity';
   title?: string;
   children: ReactNode;
 }
@@ -157,6 +163,7 @@ const StatusRevealThemeContext = createContext<StatusTheme>('light');
 function Cell(props: CellProps): JSX.Element {
   const { tokens, testid, ariaLabel, padLeft, onClick, title, children } = props;
   const isStatic = props.static ?? false;
+  const hoverEffect = props.hoverEffect ?? 'background';
   const [hovered, setHovered] = useState(false);
   // Cursor-follow reveal highlight (Phase 7, Task #27). Interactive cells track
   // the pointer into --reveal-x/y/opacity for the radial layer below; static
@@ -177,11 +184,16 @@ function Cell(props: CellProps): JSX.Element {
     color: tokens.text,
     whiteSpace: 'nowrap',
     userSelect: 'none',
-    cursor: 'default',
+    // UWP status-bar segments show the hand cursor (Core PointerCursor "Hand").
+    cursor: isStatic ? 'default' : 'pointer',
     position: 'relative',
     overflow: 'hidden',
-    // Hover-reveal overlay, only on interactive cells (UWP PointerEntered).
-    background: !isStatic && hovered ? tokens.hover : 'transparent'
+    // Hover affordances are INSTANT (no transition) — UWP PointerEntered swaps
+    // the brush in one frame. 'background' paints reveal-low; 'opacity' dims to
+    // 0.7 (the PathIndicator behavior — UWP never tints the path cell).
+    opacity: !isStatic && hoverEffect === 'opacity' && hovered ? 0.7 : 1,
+    background:
+      !isStatic && hoverEffect === 'background' && hovered ? tokens.hover : 'transparent'
   };
 
   return (
@@ -340,6 +352,7 @@ function PathColumn(props: {
             ariaLabel={t('StatusBar_FilePath')}
             title={text}
             padLeft={StatusDimensions.pathPadLeft}
+            hoverEffect="opacity"
           >
             <span
               data-testid="status-path-text"

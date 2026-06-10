@@ -31,9 +31,9 @@ describe('tokensForAcrylic', () => {
     expect(DARK_ACRYLIC_TOKENS.tint).toContain('0.75');
   });
 
-  it('grounds the tint on the chrome base colors (240 light / 46 dark)', () => {
-    expect(LIGHT_ACRYLIC_TOKENS.tint).toContain('240, 240, 240');
-    expect(DARK_ACRYLIC_TOKENS.tint).toContain('46, 46, 46');
+  it('grounds the tint on the UWP settings pane base colors (245 light / 34 dark)', () => {
+    expect(LIGHT_ACRYLIC_TOKENS.tint).toContain('245, 245, 245');
+    expect(DARK_ACRYLIC_TOKENS.tint).toContain('34, 34, 34');
   });
 
   it('blurs light/dark but NOT high-contrast', () => {

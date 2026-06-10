@@ -172,8 +172,8 @@ export const LIGHT_TOKENS: TabThemeTokens = {
   textDefault: 'rgba(0, 0, 0, 0.60)',
   textSelected: 'rgba(0, 0, 0, 0.90)',
   // Left+right drop shadow (no bottom) — UWP SideEdgeShadow blur 8, opacity 0.55.
-  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.30), 3px 0 8px -2px rgba(0,0,0,0.30)',
-  elevationShadowAlpha: 0.3,
+  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.55), 3px 0 8px -2px rgba(0,0,0,0.55)',
+  elevationShadowAlpha: 0.55,
   // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.55).
   elevationBandAlpha: 0.08,
   accent: '#0078D4'
@@ -189,8 +189,8 @@ export const DARK_TOKENS: TabThemeTokens = {
   textDefault: 'rgba(255, 255, 255, 0.60)',
   textSelected: 'rgba(255, 255, 255, 0.90)',
   // Left+right drop shadow (no bottom) — UWP SideEdgeShadow blur 8, opacity 0.7.
-  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.45), 3px 0 8px -2px rgba(0,0,0,0.45)',
-  elevationShadowAlpha: 0.45,
+  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.7), 3px 0 8px -2px rgba(0,0,0,0.7)',
+  elevationShadowAlpha: 0.7,
   // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.7).
   elevationBandAlpha: 0.12,
   accent: '#0078D4'

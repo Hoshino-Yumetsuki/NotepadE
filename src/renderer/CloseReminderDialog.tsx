@@ -24,17 +24,21 @@ import {
   DialogTitle
 } from '@fluentui/react-components';
 import { useT } from './i18n';
+import type { AppTheme } from './theme/tokens';
+import { dialogSurfaceStyle, dialogBackdropStyle } from './theme/dialogStyles';
 
 export interface CloseReminderDialogProps {
   /** The modified tab pending close, or null when the dialog is hidden. */
   readonly pending: { readonly editorId: string; readonly fileName: string } | null;
+  /** Resolved app theme (drives the UWP ContentDialog surface/backdrop colors). */
+  readonly theme?: AppTheme;
   readonly onSave: () => void;
   readonly onDontSave: () => void;
   readonly onCancel: () => void;
 }
 
 export function CloseReminderDialog(props: CloseReminderDialogProps): JSX.Element {
-  const { pending, onSave, onDontSave, onCancel } = props;
+  const { pending, theme = 'light', onSave, onDontSave, onCancel } = props;
   const { t } = useT();
   const open = pending !== null;
 
@@ -46,7 +50,12 @@ export function CloseReminderDialog(props: CloseReminderDialogProps): JSX.Elemen
         if (!data.open) onCancel();
       }}
     >
-      <DialogSurface data-testid="close-reminder-dialog">
+      <DialogSurface
+        data-testid="close-reminder-dialog"
+        className="np-dialog-enter"
+        style={dialogSurfaceStyle(theme)}
+        backdrop={{ style: dialogBackdropStyle(theme) }}
+      >
         <DialogBody>
           <DialogTitle>{t('SetCloseSaveReminderDialog_Title')}</DialogTitle>
           <DialogContent>

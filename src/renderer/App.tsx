@@ -1099,6 +1099,7 @@ export function App(): JSX.Element {
   return (
     <FluentProvider
       theme={appTheme.theme}
+      className="np-theme-transition"
       style={{
         height: '100vh',
         display: 'flex',
@@ -1304,12 +1305,14 @@ export function App(): JSX.Element {
       ) : null}
       <CloseReminderDialog
         pending={pendingClose}
+        theme={resolvedTheme}
         onSave={onReminderSave}
         onDontSave={onReminderDontSave}
         onCancel={onReminderCancel}
       />
       <AppCloseReminderDialog
         open={appClosePending}
+        theme={resolvedTheme}
         onSaveAllAndExit={onAppCloseSaveAll}
         onDiscardAndExit={onAppCloseDiscard}
         onCancel={onAppCloseCancel}

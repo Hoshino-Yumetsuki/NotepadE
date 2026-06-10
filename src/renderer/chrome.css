@@ -97,27 +97,30 @@ body,
 }
 
 /*
- * New-tab entrance (UWP SetsView EntranceThemeTransition). A newly-mounted tab
- * fades in. This is OPACITY-ONLY on purpose: a translate/transform offset would
- * move the tab's box during the 160ms animation, and the active-tab elevation
- * overlay (side shadows + strip→editor merge) is measured once via rAF right after
- * mount — reading an offset rect would pin the overlay ~8px off the tab's real
- * edges, leaving a visible gap on the left/right ("缺一块"). Opacity does not affect
- * getBoundingClientRect, so the tab sits at its final position from frame 0 and the
- * overlay stays aligned. React keys tabs by editorId, so only a freshly created
- * element runs this once; existing tabs keep their identity and never re-animate.
- * Reduced-motion users get an instant show.
+ * New-tab entrance (UWP SetsView EntranceThemeTransition / EdgeUIThemeTransition
+ * Edge=Bottom): a newly-mounted tab floats UP from below (translateY 6px → 0)
+ * while fading in, on the WinUI decelerate curve cubic-bezier(0.1, 0.9, 0.2, 1).
+ * VERTICAL-only transform on purpose: the active-tab elevation overlay (side
+ * shadows + strip→editor merge) is measured via getBoundingClientRect right after
+ * mount, but only its HORIZONTAL extents are consumed (clampOverlayToList works
+ * on left/right; the overlay is pinned at top:0) — a translateX would pin the
+ * overlay off the tab's real edges ("缺一块"), a translateY cannot. React keys
+ * tabs by editorId, so only a freshly created element runs this once; existing
+ * tabs keep their identity and never re-animate. Reduced-motion users get an
+ * instant show.
  */
 @keyframes np-tab-enter {
   from {
     opacity: 0;
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 .np-tab-enter {
-  animation: np-tab-enter 160ms ease-out;
+  animation: np-tab-enter 160ms cubic-bezier(0.1, 0.9, 0.2, 1);
 }
 @media (prefers-reduced-motion: reduce) {
   .np-tab-enter {
@@ -171,14 +174,15 @@ body,
  */
 @keyframes np-settings-enter {
   from {
-    transform: translateX(100%);
+    transform: translateX(385px);
   }
   to {
     transform: translateX(0);
   }
 }
 .np-settings-enter {
-  animation: np-settings-enter 160ms ease-out;
+  /* UWP CustomSplitViewStyle: 350ms open, Fluent decelerate cubic-bezier(0.1,0.9,0.2,1). */
+  animation: np-settings-enter 350ms cubic-bezier(0.1, 0.9, 0.2, 1);
 }
 @media (prefers-reduced-motion: reduce) {
   .np-settings-enter {
@@ -198,11 +202,12 @@ body,
     transform: translateX(0);
   }
   to {
-    transform: translateX(100%);
+    transform: translateX(385px);
   }
 }
 .np-settings-exit {
-  animation: np-settings-exit 160ms ease-in forwards;
+  /* UWP CustomSplitViewStyle: 120ms close (asymmetric — much faster than open). */
+  animation: np-settings-exit 120ms cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .np-settings-exit {
@@ -232,10 +237,10 @@ body,
   }
 }
 .np-scrim-in {
-  animation: np-scrim-in 160ms ease-out;
+  animation: np-scrim-in 350ms cubic-bezier(0.1, 0.9, 0.2, 1);
 }
 .np-scrim-out {
-  animation: np-scrim-out 160ms ease-in forwards;
+  animation: np-scrim-out 120ms cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .np-scrim-in,
@@ -298,4 +303,68 @@ body,
 .cm-scroller {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/*
+ * Dialog entrance (UWP ContentDialog open transition). The dialog surface scales
+ * down 1.05 → 1.0 while fading in, with the Fluent "decelerate" easing
+ * cubic-bezier(0.1, 0.9, 0.2, 1) over 250ms — the ContentDialogShowing visual
+ * the UWP NotepadsDialog plays. Applied to the Fluent DialogSurface via
+ * className; transform is safe here (dialogs are centered overlays with no
+ * geometry-measurement constraint). Gated for reduced motion (instant show).
+ */
+@keyframes np-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.np-dialog-enter {
+  animation: np-dialog-enter 250ms cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-dialog-enter {
+    animation: none;
+  }
+}
+
+/*
+ * Theme-switch brush transition (UWP BrushTransition, 167ms). The root
+ * FluentProvider carries the tinted window background; when the resolved theme
+ * flips light↔dark the color glides instead of snapping. background-color only —
+ * never transform/layout. Disabled while ANY descendant acrylic surface is mid
+ * slide (data-acrylic-animating): a root repaint during the settings-pane motion
+ * would force the backdrop-filter to re-sample every frame and reintroduce the
+ * slide stutter the attribute exists to prevent. Gated for reduced motion.
+ */
+.np-theme-transition {
+  transition: background-color 167ms linear;
+}
+.np-theme-transition:has([data-acrylic-animating]) {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-theme-transition {
+    transition: none;
+  }
+}
+
+/*
+ * Settings nav rail selection indicator (UWP CustomNavigationViewItemStyle:
+ * a 6x24 accent Rectangle at the item's left edge). One shared bar slides
+ * vertically between items — the NavigationView selection-follows animation —
+ * using the same UWP decelerate curve as the pane slide. top-only transition;
+ * the bar is 6px wide so the layout cost is nil.
+ */
+.np-nav-indicator {
+  transition: top 200ms cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-nav-indicator {
+    transition: none;
+  }
 }

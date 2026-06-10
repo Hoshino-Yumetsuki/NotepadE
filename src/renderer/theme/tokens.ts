@@ -151,19 +151,19 @@ export interface AcrylicTokens {
 }
 
 /**
- * Light acrylic — base #F0F0F0 tinted at 0.75, a soft white luminosity layer.
- * (240,240,240)@0.75 keeps the surface readable while letting motion behind it
- * blur through, matching the UWP light in-app acrylic.
+ * Light acrylic — base #F5F5F5 tinted at 0.75, a soft white luminosity layer.
+ * (245,245,245)@0.75 matches the UWP CustomSplitViewStyle light pane base while
+ * letting motion behind it blur through, matching the UWP light in-app acrylic.
  */
 export const LIGHT_ACRYLIC_TOKENS: AcrylicTokens = {
-  tint: 'rgba(240, 240, 240, 0.75)',
+  tint: 'rgba(245, 245, 245, 0.75)',
   blurRadius: 30,
   luminosity: 'rgba(255, 255, 255, 0.30)'
 };
 
-/** Dark acrylic — base #2E2E2E tinted at 0.75, a faint dark luminosity layer. */
+/** Dark acrylic — base #222222 tinted at 0.75, a faint dark luminosity layer. */
 export const DARK_ACRYLIC_TOKENS: AcrylicTokens = {
-  tint: 'rgba(46, 46, 46, 0.75)',
+  tint: 'rgba(34, 34, 34, 0.75)',
   blurRadius: 30,
   luminosity: 'rgba(0, 0, 0, 0.30)'
 };
