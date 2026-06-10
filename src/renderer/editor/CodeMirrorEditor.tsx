@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import { Compartment, EditorState, Transaction, type Extension } from '@codemirror/state';
-import { EditorView, keymap, highlightActiveLine } from '@codemirror/view';
+import { EditorView, keymap, highlightActiveLine, scrollPastEnd } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL, normalizeToShadow } from './eol';
 import { editorSettings, type EditorSettings } from './editorSettings';
@@ -375,6 +375,16 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // highlightActiveLine() gated on lineHighlighter, in a compartment so the
         // "Highlight current line" toggle reconfigures it live.
         activeLineCompartment.current.of(lineHighlighter ? highlightActiveLine() : []),
+        // Scroll-past-end: virtual space below the last line so the document can
+        // be scrolled until the last line reaches the top. Crucially this defuses
+        // CM6's bottom scroll anchor: with only 10px content bottom padding the
+        // scroller is almost always "scrolledToBottom" (within 4px) while editing
+        // at EOF, so viewState anchored scroll to the document END — pressing
+        // Enter then pinned the BOTTOM and shifted everything ABOVE the caret up.
+        // With past-end space the bottom-anchored branch effectively never
+        // activates and Enter behaves like Notepad: the caret line holds its
+        // screen position, content below pushes down.
+        scrollPastEnd(),
         // Pin the document line separator to the shadow-buffer '\n' so doc
         // serialization never re-introduces CR. EOL is re-applied by MAIN.
         EditorState.lineSeparator.of(SHADOW_EOL),
