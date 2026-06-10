@@ -92,22 +92,56 @@ export function lineNumberColumn(options: LineNumberColumnOptions): Extension {
   return ViewPlugin.define((view) => new LineNumberColumnPlugin(view, options));
 }
 
+/** One number cell's computed geometry, captured in the measure READ phase. */
+interface CellSnapshot {
+  lineNo: number;
+  /** Column-relative top (block.top − scrollTop + content padding-top), px. */
+  top: number;
+  /** The full line block height (covers wrapped lines), px. */
+  height: number;
+}
+
+/** Coherent read-phase snapshot the write phase paints from. */
+interface LayoutSnapshot {
+  /** Reserved column width for the current digit count, px. */
+  width: number;
+  /** Measured single-row line height (cells pin line-height to it), px. */
+  lineH: number;
+  /** 1-based active (cursor) line number, or -1 when not highlighted. */
+  activeLine: number;
+  cells: CellSnapshot[];
+}
+
 class LineNumberColumnPlugin implements PluginValue {
   private column: HTMLDivElement | null = null;
   /** Reused number elements, grown on demand (never shrunk — hidden when unused). */
   private cells: HTMLDivElement[] = [];
   private width = 0;
   private readonly onScroll: () => void;
+  /**
+   * Keyed measure request so multiple updates in one frame coalesce into a
+   * single read/write pass (CM6 dedupes by `key`).
+   */
+  private readonly measureRequest = {
+    key: this as unknown,
+    read: (): LayoutSnapshot => this.readLayout(),
+    write: (snap: LayoutSnapshot): void => this.writeLayout(snap)
+  };
 
   constructor(
     private readonly view: EditorView,
     private readonly opts: LineNumberColumnOptions
   ) {
+    // Pure vertical scroll: geometry (block tops, heights, scale) is stable, so
+    // a synchronous relayout with the fresh scrollTop is safe AND keeps the
+    // numbers glued to the text with zero frames of lag.
     this.onScroll = () => this.layout();
     this.mount();
     // Vertical scroll moves the numbers; horizontal scroll does NOT (the column is
     // outside the scroller). Listen on the scroller so the numbers track scrollTop.
     this.view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
+    // Initial paint synchronously: a fresh mount has no pending scroll-anchor
+    // compensation, and the jsdom-level tests read the cells right after create.
     this.layout();
   }
 
@@ -145,28 +179,38 @@ class LineNumberColumnPlugin implements PluginValue {
     this.view.scrollDOM.style.marginLeft = `${width}px`;
   }
 
+  /** Synchronous relayout (initial mount + pure scroll, where geometry is stable). */
   private layout(): void {
-    const col = this.column;
-    if (!col) return;
+    if (!this.column) return;
+    this.writeLayout(this.readLayout());
+  }
+
+  /**
+   * READ phase: one coherent snapshot of everything the cells are positioned
+   * from.
+   *
+   * Cell tops come from the RENDERED `.cm-line` rects, not from `block.top`
+   * math. For documents taller than ~7,000,000px CM6 swaps in its BigScaler:
+   * every `block.top` becomes a globally rescaled coordinate that (a) shifts
+   * on EVERY edit (any insert changes total height → changes scale) while the
+   * compensating scrollTop lands only later in the measure phase, and (b) is
+   * built from heightMap ESTIMATES, so it sits a few px off the real DOM rows
+   * even at rest (~0.06px/line of drift in a 500k-line doc). Both made the
+   * numbers detach from their lines ("大文件下插入行全坏了"). The rendered
+   * rects are what the user actually sees, by construction, under either
+   * scaler. Rect reads belong in a measure READ phase — see update() for how
+   * edits are routed through requestMeasure.
+   */
+  private readLayout(): LayoutSnapshot {
     const doc = this.view.state.doc;
-    const lineCount = doc.lines;
 
     // Width from the digit count of the last line, measured in the column's own
     // font via a ch-based estimate (monospace-friendly; proportional fonts get a
     // slight over-estimate, which only adds harmless left padding).
-    const digits = digitsFor(lineCount);
+    const digits = digitsFor(doc.lines);
     const charPx = this.measureCharWidth();
-    this.reserve(Math.ceil(digits * charPx) + COLUMN_PADDING);
+    const width = Math.ceil(digits * charPx) + COLUMN_PADDING;
 
-    const scrollTop = this.view.scrollDOM.scrollTop;
-    // `block.top` is a DOCUMENT coordinate (0 = top of the content region). The
-    // editor body adds `padding-top` on `.cm-content` (UWP content inset, 6px),
-    // which sits between this column's origin (view.dom top, shared with the
-    // scroller) and where line 1 actually paints. Omitting it rode every number
-    // ~6px above its text row — a constant misalignment at any scroll offset.
-    // documentPadding.top is CM6's authoritative value for that inset, so the
-    // numbers track their lines even if the padding changes.
-    const padTop = this.view.documentPadding.top;
     // CM6 advances each block by its MEASURED line height (read from a rendered
     // line via getBoundingClientRect), which for most fonts is NOT exactly
     // `1.2 × fontSize`. A naked cell (no height) draws its glyph in a CSS-ideal
@@ -176,24 +220,88 @@ class LineNumberColumnPlugin implements PluginValue {
     // the content's box exactly, so the number top-aligns to its first visual row —
     // matching CM6's own gutter and the UWP per-number measured-height TextBlock.
     const lineH = this.view.defaultLineHeight;
-    const blocks = this.view.viewportLineBlocks;
     // Active (cursor) line, for the brightened number when lineHighlighter is on.
     const head = this.view.state.selection.main.head;
     const activeLine = this.opts.lineHighlighter ? doc.lineAt(head).number : -1;
 
-    let i = 0;
-    for (const block of blocks) {
+    const cells: CellSnapshot[] = [];
+
+    // The column is pinned to view.dom's top, so a rendered line's
+    // column-relative top is its viewport rect against view.dom's — already
+    // incorporating live scrollTop, content padding and any scaler.
+    const originTop = this.view.dom.getBoundingClientRect().top;
+    // Fallback coordinates for lines without a rendered element yet (plugin
+    // construction runs before the DocView paints; a measure pass follows and
+    // re-runs this read). `block.top` is a DOCUMENT coordinate (0 = top of the
+    // content region); the body adds `padding-top` on `.cm-content` (UWP
+    // content inset, 6px) between this column's origin and where line 1 paints
+    // — documentPadding.top is CM6's authoritative value for that inset.
+    const scrollTop = this.view.scrollDOM.scrollTop;
+    const padTop = this.view.documentPadding.top;
+
+    for (const block of this.view.viewportLineBlocks) {
       const lineNo = doc.lineAt(block.from).number;
+      let top = block.top - scrollTop + padTop;
+      let height = block.height;
+      // Prefer the RENDERED `.cm-line` rect over block math. For documents
+      // taller than ~7,000,000px CM6 swaps in its BigScaler: every block.top
+      // becomes a globally rescaled coordinate that (a) shifts on EVERY edit
+      // (any insert changes total height → changes scale) while the
+      // compensating scrollTop lands only later in the measure phase, and
+      // (b) is built from heightMap estimates, so it sits a few px off the
+      // real DOM rows even at rest. Both made the numbers detach from their
+      // lines ("大文件下插入行全坏了"). The rendered rect is what the user
+      // actually sees, by construction, under either scaler.
+      const el = this.lineElementAt(block.from);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        top = rect.top - originTop;
+        height = rect.height;
+      }
+      cells.push({ lineNo, top, height });
+    }
+    return { width, lineH, activeLine, cells };
+  }
+
+  /** The rendered `.cm-line` element containing `pos`, or null if not painted. */
+  private lineElementAt(pos: number): HTMLElement | null {
+    try {
+      let node: Node | null = this.view.domAtPos(pos).node;
+      const content = this.view.contentDOM;
+      while (node && node !== content) {
+        if (node instanceof HTMLElement && node.parentNode === content) {
+          return node.classList.contains('cm-line') ? node : null;
+        }
+        node = node.parentNode;
+      }
+    } catch {
+      // domAtPos throws before the doc view exists (plugin construction) —
+      // the caller falls back to block-coordinate math for this pass.
+    }
+    return null;
+  }
+
+  /** WRITE phase: apply the snapshot to the DOM (no layout reads). */
+  private writeLayout(snap: LayoutSnapshot): void {
+    if (!this.column) return;
+    // marginLeft only moves on an ACTUAL width change (reserve() no-ops
+    // otherwise). Writing it from here — a write phase, not mid-update — keeps
+    // a digit-count growth from re-wrapping the content inside CM6's measure
+    // loop, which used to thrash it into "Viewport failed to stabilize".
+    this.reserve(snap.width);
+
+    let i = 0;
+    for (const c of snap.cells) {
       const cell = this.cellAt(i++);
-      cell.textContent = String(lineNo);
-      cell.style.top = `${block.top - scrollTop + padTop}px`;
+      cell.textContent = String(c.lineNo);
+      cell.style.top = `${c.top}px`;
       // Mirror the content's line box: a wrapped block is taller than one row, so
       // use the block height as the cell box but pin line-height to one measured
       // row — the single number then top-aligns to the block's first visual line.
-      cell.style.height = `${block.height}px`;
-      cell.style.lineHeight = `${lineH}px`;
+      cell.style.height = `${c.height}px`;
+      cell.style.lineHeight = `${snap.lineH}px`;
       cell.style.color =
-        lineNo === activeLine
+        c.lineNo === snap.activeLine
           ? activeNumberColor(this.opts.themeMode)
           : numberColor(this.opts.themeMode);
       cell.style.display = 'block';
@@ -232,7 +340,15 @@ class LineNumberColumnPlugin implements PluginValue {
       this.mount();
     }
     if (u.docChanged || u.viewportChanged || u.geometryChanged || u.selectionSet) {
-      this.layout();
+      // NOT a synchronous layout: during update() CM6 has new (possibly
+      // BigScaler-rescaled) block tops but has NOT yet applied its scroll-anchor
+      // scrollTop compensation — that lands in the measure phase. Deferring via
+      // requestMeasure reads blocks + scrollTop as one coherent snapshot after
+      // the compensation, and re-runs after geometryChanged (startup/zoom font
+      // re-measure), so the transient-default-line-height window self-heals
+      // exactly as before. Any later scrollTop adjustment also fires the
+      // scroller's scroll event, whose synchronous relayout re-glues the cells.
+      this.view.requestMeasure(this.measureRequest);
     }
   }
 
