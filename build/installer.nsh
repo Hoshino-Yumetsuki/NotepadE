@@ -12,6 +12,15 @@
 ;    stays "1" (default) and the link is kept — matching electron-builder's
 ;    default. The built-in `--no-desktop-shortcut` silent flag is unaffected.
 ;
+; 3. The chosen installation directory is created explicitly before the install
+;    section runs. electron-builder's section relies on `SetOutPath $INSTDIR`
+;    to materialize the folder right before extraction; when the user typed a
+;    path whose parents don't exist yet, creating it up-front (CreateDirectory
+;    is recursive and a no-op on an existing folder) guarantees the extraction
+;    CopyFiles never sees a missing destination. Best-effort: a per-machine
+;    target the outer (non-elevated) instance can't create is recreated by the
+;    elevated section's SetOutPath as before.
+;
 ; NOTE: this file is prepended BEFORE MUI2.nsh is included, so LogicLib / nsDialogs
 ; macros (${If}, ${NSD_*}) may only be used INSIDE macros — those bodies are
 ; expanded later, after MUI2 is loaded. Plain `Var` declarations are fine here.
@@ -65,12 +74,26 @@ Var CreateDesktopShortcutCheckbox
     ${Else}
       StrCpy $CreateDesktopShortcut "0"
     ${EndIf}
+
+    ; Auto-create the chosen installation directory (point 3 in the header).
+    ; This page is the last stop after the directory page, so $INSTDIR is the
+    ; user's pick; CreateDirectory builds the whole parent chain and is a
+    ; no-op when the folder already exists. (electron-builder's instFilesPre
+    ; may still append the app-name subfolder afterwards — the install
+    ; section's SetOutPath creates that final level on top of this chain.)
+    ClearErrors
+    CreateDirectory "$INSTDIR"
   FunctionEnd
 !macroend
 
 ; Runs after electron-builder's addDesktopLink. If the user opted out, remove the
 ; desktop shortcut it just created (and unregister its AppUserModelID).
 !macro customInstall
+  ; Point 3, defensive: by now the install section's SetOutPath/extraction has
+  ; materialized $INSTDIR; this re-assert only matters if a later step (or an
+  ; external tool) removed it mid-install. No-op when present.
+  CreateDirectory "$INSTDIR"
+
   ${If} $CreateDesktopShortcut != "1"
     WinShell::UninstShortcut "$newDesktopLink"
     Delete "$newDesktopLink"
