@@ -83,8 +83,10 @@ const darkHighlightStyle = HighlightStyle.define([
 /**
  * The theme-matched token-color extension. Light (and the fallback) uses CM6's
  * default light style; dark uses the palette above; HC returns NO style so
- * forced-colors' flat system palette is never fought by tinted tokens (the
- * parser itself is also not mounted under HC — see languageExtensionsFor).
+ * forced-colors' flat system palette is never fought by tinted tokens. The
+ * language PARSER is still mounted under HC (the language compartment doesn't
+ * gate on theme — see applyLanguageRef in CodeMirrorEditor): tokens are parsed
+ * but render uncolored, which is the intended flat-HC presentation.
  */
 export function highlightStyleFor(themeMode: 'light' | 'dark' | 'hc'): Extension {
   if (themeMode === 'hc') return [];

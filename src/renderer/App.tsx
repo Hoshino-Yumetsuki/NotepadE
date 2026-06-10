@@ -437,6 +437,10 @@ export function App(): JSX.Element {
       // but Electron pins V8. Matters on >100MB files).
       const normalized = normalizeToShadow(file.decodedText);
       const seedOpened = (): void => {
+        // Liveness abort: if the tab closed before its editor handle registered,
+        // stop retrying — an orphaned loop would spin forever, retaining the
+        // full doc string (same guard as openPathIntoTab's seed loop).
+        if (!store.get(id)) return;
         const handle = editorHandles.current.get(id);
         if (handle) handle.setDoc(normalized);
         else setTimeout(seedOpened, 0);
@@ -495,6 +499,13 @@ export function App(): JSX.Element {
       // rAF never fires in a non-compositing window (Playwright primary / occluded
       // window), which would starve the seed. setDoc tolerates an unmounted view.
       const seed = (): void => {
+        // Liveness abort: if the adopted tab was closed before its editor
+        // handle registered, stop retrying — an orphaned loop would spin
+        // forever, retaining the full doc string (same guard as the
+        // openPathIntoTab / onFileOpened seed loops). tabsStore is the same
+        // singleton `store` wraps; read it directly so this once-created ref
+        // never closes over a hook-render value.
+        if (!tabsStore.get(id)) return;
         const handle = editorHandles.current.get(id);
         if (handle) handle.setDoc(text);
         else setTimeout(seed, 0);
