@@ -22,7 +22,7 @@
  * lives in useSettings/useAppTheme). No fs/path/child_process here.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { Button, FluentProvider, type Theme } from '@fluentui/react-components';
 import {
@@ -122,26 +122,23 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   // fallback for skipped/instant animations). Under reduced motion we unmount at
   // once (no `closing` phase), preserving the historical instant close. `closing`
   // is the gate: render continues while it is true even though `open` is false.
+  //
+  // The open→false edge is detected DURING render (React's adjust-state-during-
+  // render pattern), not in an effect: an effect runs after commit, so the
+  // `open=false, closing=false` frame would commit `return null` first — tearing
+  // down the overlay (and its backdrop-filter layer) for one frame before the
+  // effect remounted it to play the exit slide. That destroy/recreate was visible
+  // as a blink at the start of the close.
   const reducedMotion = usePrefersReducedMotion();
   const [closing, setClosing] = useState(false);
-  // Tracks the previous `open` so we only START a close on a true→false edge (not
-  // on the initial false, and not while already closing).
-  const wasOpenRef = useRef(open);
-  useEffect(() => {
-    const wasOpen = wasOpenRef.current;
-    wasOpenRef.current = open;
-    if (wasOpen && !open) {
-      // Just requested a close.
-      if (reducedMotion) {
-        setClosing(false);
-      } else {
-        setClosing(true);
-      }
-    } else if (open) {
-      // Re-opened (possibly mid-close): cancel any pending close phase.
-      setClosing(false);
-    }
-  }, [open, reducedMotion]);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    // true→false edge starts the close phase; reopening (possibly mid-close)
+    // cancels it. React re-renders synchronously before commit, so the null
+    // frame never reaches the DOM.
+    setClosing(!open && !reducedMotion);
+  }
 
   // Fallback unmount timer for the close slide (animationend is the common path).
   useEffect(() => {
@@ -196,10 +193,13 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
         // anchor to the viewport correctly. The pane itself still themes normally.
         applyStylesToPortals={false}
         className={`np-acrylic ${closing ? 'np-settings-exit' : 'np-settings-enter'}`}
-        // While the slide is in flight the heavy backdrop blur is suppressed (see
-        // the `settled` gate above + acrylic.css). The attribute is omitted once
-        // settled, so the expensive blur only kicks in on the stationary pane.
-        data-acrylic-animating={settled && !closing ? undefined : ''}
+        // While the ENTER slide is in flight the heavy backdrop blur is
+        // suppressed (see the `settled` gate above + acrylic.css). The attribute
+        // is omitted once settled, so the expensive blur only kicks in on the
+        // stationary pane. The EXIT slide keeps the blur ON: dropping it while
+        // the pane still covers the app made the content behind snap from
+        // blurred to sharp in one frame — the visible flash on close.
+        data-acrylic-animating={settled || closing ? undefined : ''}
         // Switch the blur on the moment the slide keyframe finishes (the timeout
         // above is the belt-and-braces fallback for a skipped/instant animation).
         // The exit keyframe finishing unmounts the pane (close C2).

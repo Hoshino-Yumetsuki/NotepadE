@@ -38,13 +38,16 @@
 
 /*
  * Perf: defer the expensive backdrop blur until the pane has stopped moving.
- * While the settings pane slides in (transform: translateX over 160ms) it sets
+ * While the settings pane slides IN (transform: translateX over 160ms) it sets
  * `data-acrylic-animating`; without this Chromium re-samples + re-blurs the 30px
  * kernel over the full pane EVERY frame as it travels over changing content behind
- * it — the source of the slide-in stutter. During motion we drop the blur (the
- * translucent tint + luminosity still ride along, so it reads as a moving frosted
- * panel) and the host re-enables the blur once the slide settles (attribute removed
- * on animationend). The settled appearance is identical to the always-on blur.
+ * it — the source of the slide-in stutter. During the enter motion we drop the
+ * blur (the translucent tint + luminosity still ride along, so it reads as a
+ * moving frosted panel) and the host re-enables the blur once the slide settles
+ * (attribute removed on animationend). The settled appearance is identical to
+ * the always-on blur. The EXIT slide deliberately KEEPS the blur: snapping it
+ * off while the pane still covers the app flashed the content behind from
+ * blurred to sharp in one frame.
  */
 .np-acrylic[data-acrylic-animating] {
   -webkit-backdrop-filter: none;
