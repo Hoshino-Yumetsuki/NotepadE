@@ -11,6 +11,7 @@ import type { TextDirection } from './commands/direction';
 import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/wordWrap';
 import { lineNumberGlow } from './lineNumberGlow';
 import { lineNumberColumn } from './lineNumberColumn';
+import { matchLanguage, highlightStyleFor, MAX_HIGHLIGHT_DOC_LENGTH } from './syntaxHighlight';
 
 /**
  * Imperative handle the host (App) uses to drive the editor without owning the
@@ -93,6 +94,13 @@ export interface CodeMirrorEditorProps {
    * without CodeMirrorEditor importing any find types.
    */
   editorExtensions?: Extension[];
+  /**
+   * The document's file path (or null for untitled). Drives extension-matched
+   * syntax highlighting: a recognized extension mounts its language parser
+   * lazily; .txt / unknown / untitled stay plain (Notepad parity). Highlighting
+   * is also gated OFF for very large documents (see MAX_HIGHLIGHT_DOC_LENGTH).
+   */
+  filePath?: string | null;
   /**
    * Fired whenever the document content changes (CM6 `update.docChanged`). The
    * host (App) compares `getShadowText()` to the per-tab last-saved baseline to
@@ -252,6 +260,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       fontStyle = 'normal',
       fontWeight = 400,
       accentColor = DEFAULT_ACCENT,
+      filePath = null,
       editorExtensions,
       onDocChanged
     },
@@ -282,6 +291,20 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     // so the bloom matches the live theme + accent. Self-contained in
     // lineNumberGlow.ts; paints an inline-styled overlay (no CM6 theme selector).
     const lineNumberGlowCompartment = useRef(new Compartment());
+    // Syntax highlighting, split into two compartments:
+    //   - languageCompartment:  the (lazily loaded) language parser matched from
+    //                           the file extension; [] for plain/untitled/huge docs
+    //   - highlightCompartment: the theme-matched token-color HighlightStyle
+    // Both reconfigure live (open/save-as renames, theme switches) — no remount.
+    const languageCompartment = useRef(new Compartment());
+    const highlightCompartment = useRef(new Compartment());
+    // Monotonic token so a slow lazy language load can never apply over a newer
+    // match (rapid path changes, or path cleared while a parser chunk loads).
+    const languageLoadToken = useRef(0);
+    // Latest filePath, read by setDoc to re-run the size gate after an
+    // authoritative load lands a (possibly huge) document in the view.
+    const filePathRef = useRef<string | null>(filePath);
+    filePathRef.current = filePath;
     // The host-authoritative document. setDoc parks text here ONLY while no view
     // exists; once a live view holds the doc this is cleared and re-captured from
     // the view in the mount-effect cleanup, so a remount restores it. This matters
@@ -293,6 +316,42 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     // alongside the CM6 doc permanently retains a duplicate copy (~120MB extra on
     // a 120MB file). null = use initialDoc (or the view already owns the doc).
     const docRef = useRef<string | null>(null);
+
+    // Resolve + mount the language for the CURRENT filePath/doc-size into the
+    // language compartment. Reads only refs, so the one instance created on
+    // first render is safe to call from the mount-once effect, setDoc, and the
+    // filePath effect alike. Lazy: a recognized extension dynamically imports
+    // its parser chunk; the token guard discards a load that finishes after a
+    // newer call (rapid open/save-as, or the doc grew past the gate meanwhile).
+    const applyLanguageRef = useRef(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      const token = ++languageLoadToken.current;
+      const path = filePathRef.current;
+      // Perf gate: huge documents never mount a parser (protects the lean
+      // large-file path); plain/unknown/untitled files stay unhighlighted.
+      const desc =
+        view.state.doc.length <= MAX_HIGHLIGHT_DOC_LENGTH ? matchLanguage(path) : null;
+      if (!desc) {
+        view.dispatch({ effects: languageCompartment.current.reconfigure([]) });
+        return;
+      }
+      if (desc.support) {
+        view.dispatch({ effects: languageCompartment.current.reconfigure(desc.support) });
+        return;
+      }
+      void desc.load().then(
+        (support) => {
+          const live = viewRef.current;
+          if (!live || token !== languageLoadToken.current) return; // superseded
+          live.dispatch({ effects: languageCompartment.current.reconfigure(support) });
+        },
+        () => {
+          // Parser chunk failed to load (shouldn't happen in a packaged app) —
+          // stay plain rather than surfacing an error for cosmetic highlighting.
+        }
+      );
+    });
 
     useImperativeHandle(
       ref,
@@ -317,6 +376,10 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
             changes: { from: 0, to: view.state.doc.length, insert: normalized },
             annotations: Transaction.addToHistory.of(false)
           });
+          // Re-run the language match: the SIZE gate depends on the freshly
+          // loaded doc (a huge file must drop any mounted parser, and a small
+          // one may now qualify under an already-known path).
+          applyLanguageRef.current();
         },
         getShadowText(): string {
           const view = viewRef.current;
@@ -343,6 +406,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
 
       const extensions = [
         history(),
+        // Syntax highlighting: language parser (empty until the lazy match
+        // resolves — see applyLanguage) + theme-matched token colors. Mounted
+        // FIRST so every later keymap/theme extension wins any conflicts.
+        languageCompartment.current.of([]),
+        highlightCompartment.current.of(highlightStyleFor(themeMode)),
         // Dirty-tracking seam: fire the host's onDocChanged on any document edit
         // (NOT selection/viewport-only updates). Read through a ref so the
         // listener is mounted once and never forces a remount. setDoc dispatches
@@ -430,6 +498,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       viewRef.current = view;
       // Seed the zoom CSS variable so the initial font-size reflects 100%.
       initZoomVar(view);
+      // Match the language for a path known at mount (e.g. argv-open whose doc
+      // was parked in docRef before the editor existed).
+      applyLanguageRef.current();
 
       return () => {
         // Re-capture the live doc before destroying so a REMOUNT (StrictMode
@@ -503,6 +574,21 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         )
       });
     }, [showLineNumbers, themeMode, accentColor]);
+
+    // Language: re-match when the file path changes (open into this editor,
+    // Save As rename). The callback also re-checks the doc-size perf gate.
+    useEffect(() => {
+      applyLanguageRef.current();
+    }, [filePath]);
+
+    // Token colors follow the app theme (light/dark/hc) live.
+    useEffect(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: highlightCompartment.current.reconfigure(highlightStyleFor(themeMode))
+      });
+    }, [themeMode]);
 
     // Current-line highlight extension mount/unmount (theme rules are gated above).
     useEffect(() => {

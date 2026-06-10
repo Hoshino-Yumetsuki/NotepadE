@@ -1318,6 +1318,7 @@ export function App(): JSX.Element {
                     }}
                     editorExtensions={editorExtensionsWithMenu}
                     onDocChanged={() => recomputeDirty(tab.editorId)}
+                    filePath={tab.filePath}
                     settings={editorBehaviorSettings}
                     lineNumbers={settings.displayLineNumbers}
                     lineHighlighter={settings.displayLineHighlighter}
