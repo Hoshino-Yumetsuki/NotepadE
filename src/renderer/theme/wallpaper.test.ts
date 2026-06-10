@@ -5,12 +5,18 @@
  *   - no wallpaper → the root background is the translucent tint whose alpha
  *     is tintOpacity (the historical appBackgroundTint behavior),
  *   - wallpaper active → the root goes OPAQUE theme base and tintOpacity
- *     becomes the wallpaper layer's CSS opacity instead,
+ *     becomes the wallpaper layer's BLUR intensity instead (0..48px frost
+ *     converging on the acrylic look; the image itself stays fully opaque),
  *   - HC → no wallpaper layer ever; the root stays 'Canvas'.
  */
 
 import { describe, it, expect } from 'vitest';
-import { isWallpaperActive, appRootBackground, wallpaperLayerStyle } from './wallpaper';
+import {
+  isWallpaperActive,
+  appRootBackground,
+  wallpaperLayerStyle,
+  WALLPAPER_BLUR_MAX_PX
+} from './wallpaper';
 import { appBackgroundTint, LIGHT_APP_TOKENS, DARK_APP_TOKENS } from './tokens';
 
 describe('isWallpaperActive', () => {
@@ -43,13 +49,29 @@ describe('appRootBackground', () => {
 });
 
 describe('wallpaperLayerStyle', () => {
-  it('uses tintOpacity as the LAYER opacity (the semantics switch)', () => {
-    expect(wallpaperLayerStyle('data:image/png;base64,x', 0.7).opacity).toBe(0.7);
+  it('uses tintOpacity as the layer BLUR intensity (the semantics switch)', () => {
+    const s = wallpaperLayerStyle('data:image/png;base64,x', 0.5);
+    const blurPx = Math.round(0.5 * WALLPAPER_BLUR_MAX_PX);
+    expect(s.filter).toContain(`blur(${blurPx}px)`);
+    // Acrylic-style saturation lift accompanies the blur.
+    expect(s.filter).toContain('saturate(');
+    // The image itself stays fully opaque — blur replaces the old fade.
+    expect(s.opacity).toBeUndefined();
+    // Overscan by the blur radius so the edge falloff lands off-window.
+    expect(s.inset).toBe(-blurPx);
   });
 
-  it('clamps the opacity to [0,1] (defensive against a stale settings file)', () => {
-    expect(wallpaperLayerStyle('data:image/png;base64,x', 2).opacity).toBe(1);
-    expect(wallpaperLayerStyle('data:image/png;base64,x', -1).opacity).toBe(0);
+  it('skips the filter entirely at 0 (identity blur still costs a pass)', () => {
+    const s = wallpaperLayerStyle('data:image/png;base64,x', 0);
+    expect(s.filter).toBeUndefined();
+    expect(s.inset).toBe(-0);
+  });
+
+  it('clamps the blur to [0,max] (defensive against a stale settings file)', () => {
+    expect(wallpaperLayerStyle('data:image/png;base64,x', 2).filter).toContain(
+      `blur(${WALLPAPER_BLUR_MAX_PX}px)`
+    );
+    expect(wallpaperLayerStyle('data:image/png;base64,x', -1).filter).toBeUndefined();
   });
 
   it('paints the image as a decorative cover layer under the UI', () => {

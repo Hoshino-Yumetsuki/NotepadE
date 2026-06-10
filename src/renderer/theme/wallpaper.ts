@@ -15,8 +15,10 @@
  *     over the OS material (appBackgroundTint — the historical behavior),
  *   - wallpaper active: the root goes OPAQUE theme-base (the desktop must not
  *     show through anymore — the wallpaper replaces it) and `tintOpacity`
- *     becomes the CSS opacity of the WALLPAPER layer instead, fading the image
- *     into the solid base color (0 = plain base, 1 = full-strength image).
+ *     becomes the BLUR INTENSITY of the WALLPAPER layer instead: the image
+ *     stays fully opaque and the slider drives a CSS blur(0..48px) (plus a
+ *     mild saturation lift), so at 1 the frosted image visually converges on
+ *     the acrylic material look the window has when no wallpaper is set.
  *
  * Layering: the root element sets `isolation:'isolate'` (own stacking context)
  * and the wallpaper div sits at zIndex -1 — within an isolated context a
@@ -60,22 +62,36 @@ export function appRootBackground(
 }
 
 /**
+ * Max wallpaper blur radius (px) at slider value 1. 48px frosts a 4K-ish image
+ * into soft color fields — close enough to the Win11 acrylic backdrop that the
+ * slider's top end reads as "almost no wallpaper, just the material".
+ */
+export const WALLPAPER_BLUR_MAX_PX = 48;
+
+/**
  * Inline style for the wallpaper layer div. `cover` + center crops like an OS
  * desktop wallpaper; `pointerEvents:'none'` keeps it purely decorative; the
- * clamped `tintOpacity` IS the layer opacity while a wallpaper is active (the
- * semantics switch — see module header).
+ * clamped `tintOpacity` IS the layer's BLUR intensity while a wallpaper is
+ * active (the semantics switch — see module header): the image stays fully
+ * opaque and the slider maps 0..1 → blur(0..48px) with a mild saturation lift
+ * (acrylic-style) so the top end converges on the no-wallpaper material look.
+ * The layer is OVERSCANNED by the blur radius (negative inset) so the blur's
+ * transparent edge falloff lands outside the window instead of as a halo.
  */
 export function wallpaperLayerStyle(dataUrl: string, tintOpacity: number): CSSProperties {
   const clamped = Math.max(0, Math.min(1, tintOpacity));
+  const blurPx = Math.round(clamped * WALLPAPER_BLUR_MAX_PX);
   return {
     position: 'absolute',
-    inset: 0,
+    inset: -blurPx,
     zIndex: -1,
     backgroundImage: `url("${dataUrl}")`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
-    opacity: clamped,
+    // blur(0px) is an identity filter but still forces an extra compositing
+    // pass on a window-sized layer — skip the filter entirely at 0.
+    filter: blurPx > 0 ? `blur(${blurPx}px) saturate(${1 + 0.25 * clamped})` : undefined,
     pointerEvents: 'none'
   };
 }

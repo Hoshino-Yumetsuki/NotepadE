@@ -141,9 +141,9 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   },
   PersonalizationPage_Wallpaper_Description: {
     'en-US':
-      'Set a custom background image from a web address or a local file. The image is copied into the app data folder. It replaces the see-through window backdrop, and the tint opacity slider then controls the image opacity.',
+      'Set a custom background image from a web address or a local file. The image is copied into the app data folder. It replaces the see-through window backdrop, and the tint opacity slider then controls how much the image is blurred.',
     'zh-CN':
-      '从网址或本地文件设置自定义背景图片。图片会被复制到应用数据文件夹中。它将替代窗口的透视背景，此后“背景色调不透明度”滑块将控制图片的不透明度。'
+      '从网址或本地文件设置自定义背景图片。图片会被复制到应用数据文件夹中。它将替代窗口的透视背景，此后“背景色调不透明度”滑块将控制图片的模糊程度。'
   },
   PersonalizationPage_Wallpaper_UrlLabel: {
     'en-US': 'Image URL',
@@ -166,8 +166,8 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
     'zh-CN': '移除背景图片'
   },
   PersonalizationPage_Wallpaper_OpacityHint: {
-    'en-US': 'controls the background image opacity while one is set',
-    'zh-CN': '设置背景图片后，此滑块控制图片的不透明度'
+    'en-US': 'controls the background image blur while one is set — higher is blurrier',
+    'zh-CN': '设置背景图片后，此滑块控制图片的模糊程度，数值越高越模糊'
   },
   // Advanced — "Reset all settings" (web port only; UWP had no factory-reset
   // affordance — its settings store silently re-initialized defaults). en-US +

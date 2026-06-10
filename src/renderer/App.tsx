@@ -1179,7 +1179,7 @@ export function App(): JSX.Element {
       {/* Custom wallpaper layer (web-port-only personalization): a full-window
           image UNDER every UI surface, replacing the acrylic/vibrancy desktop
           sample. While active, the SAME tintOpacity slider drives THIS layer's
-          CSS opacity instead of the background tint alpha (the "Background
+          BLUR intensity instead of the background tint alpha (the "Background
           Tint Opacity" semantics switch — see theme/wallpaper.ts). */}
       {wallpaperOn && wallpaperStyle ? (
         <div data-testid="app-wallpaper" aria-hidden style={wallpaperStyle} />
