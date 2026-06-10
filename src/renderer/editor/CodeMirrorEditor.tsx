@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
-import { Compartment, EditorState, Transaction, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
 import { EditorView, keymap, highlightActiveLine, scrollPastEnd } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL, normalizeToShadow } from './eol';
@@ -315,7 +315,12 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     // is live matters for LARGE files: keeping the full normalized string here
     // alongside the CM6 doc permanently retains a duplicate copy (~120MB extra on
     // a 120MB file). null = use initialDoc (or the view already owns the doc).
-    const docRef = useRef<string | null>(null);
+    // The cleanup re-capture stores the CM6 Text ROPE (not a string): Text is
+    // immutable pure data that survives view.destroy(), EditorState.create
+    // accepts it directly, and referencing it is O(1) — materializing
+    // doc.toString() here instead built a full-size transient copy on EVERY
+    // unmount including the FINAL tab close (~+1.3GB spike closing a 1.2GB doc).
+    const docRef = useRef<string | Text | null>(null);
 
     // Resolve + mount the language for the CURRENT filePath/doc-size into the
     // language compartment. Reads only refs, so the one instance created on
@@ -504,10 +509,14 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
 
       return () => {
         // Re-capture the live doc before destroying so a REMOUNT (StrictMode
-        // double-mount, key change) restores it. Transient duplicate only: the
-        // next mount hands it back to a view and clears docRef again, and on a
-        // final unmount the ref is discarded with the component instance.
-        docRef.current = view.state.doc.toString();
+        // double-mount, key change) restores it. Keep the immutable CM6 Text
+        // rope itself — NOT doc.toString(), which materializes a full-size
+        // string copy on every unmount (on the FINAL close of a large tab that
+        // transient copy was the user-visible close-time memory spike). The
+        // rope is plain immutable data, valid after destroy(), and the next
+        // mount hands it straight back to EditorState.create. On a final
+        // unmount the ref is discarded with the component instance.
+        docRef.current = view.state.doc;
         view.destroy();
         viewRef.current = null;
       };

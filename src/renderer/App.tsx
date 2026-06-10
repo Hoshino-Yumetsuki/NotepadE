@@ -739,6 +739,24 @@ export function App(): JSX.Element {
     [store, settings.exitWhenLastTabClosed]
   );
 
+  // Sweep per-editor side maps for tabs that left the store via paths that do
+  // NOT go through performClose — closeOthers / closeToRight / closeSaved (the
+  // tab context menu calls the store directly), cross-window release, void-drop.
+  // Without this, lastSavedTextRef keeps each closed tab's FULL baseline text
+  // alive forever (a closed 100MB file retained ~100MB of heap — measured), and
+  // the file-status tracker leaks its mtime entry. Runs on every tabs-snapshot
+  // change; the live-id set build is O(tabs) and the maps are tiny (one entry
+  // per ever-open editor), so the sweep cost is negligible.
+  useEffect(() => {
+    const live = new Set(tabs.map((t) => t.editorId));
+    for (const id of Array.from(lastSavedTextRef.current.keys())) {
+      if (!live.has(id)) {
+        lastSavedTextRef.current.delete(id);
+        forgetEditor(id);
+      }
+    }
+  }, [tabs]);
+
   // Close-reminder dialog state (Issue 4, UWP SetCloseSaveReminderDialog). Non-null
   // while a MODIFIED tab is awaiting the user's Save / Don't Save / Cancel choice.
   const [pendingClose, setPendingClose] = useState<{ editorId: string; fileName: string } | null>(
