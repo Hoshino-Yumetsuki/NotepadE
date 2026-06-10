@@ -117,6 +117,60 @@ describe('TabsStore.close', () => {
   });
 });
 
+describe('TabsStore loading flag (open-in-flight placeholder)', () => {
+  let store: TabsStore;
+  beforeEach(() => {
+    store = new TabsStore();
+  });
+
+  it('defaults to not loading', () => {
+    const id = store.newTab();
+    expect(store.get(id)?.isLoading).toBe(false);
+  });
+
+  it('newTab can create a loading placeholder with a path', () => {
+    const id = store.newTab({ filePath: 'C:/big/file.txt', isLoading: true });
+    const tab = store.get(id);
+    expect(tab?.isLoading).toBe(true);
+    expect(tab?.filePath).toBe('C:/big/file.txt');
+    expect(tab?.isModified).toBe(false);
+  });
+
+  it('setLoading flips the flag and notifies subscribers exactly once per change', () => {
+    const id = store.newTab({ filePath: 'C:/big/file.txt', isLoading: true });
+    let notified = 0;
+    const off = store.subscribe(() => {
+      notified += 1;
+    });
+    store.setLoading(id, false);
+    expect(store.get(id)?.isLoading).toBe(false);
+    expect(notified).toBe(1);
+    // Idempotent: re-clearing does not commit a new snapshot.
+    store.setLoading(id, false);
+    expect(notified).toBe(1);
+    off();
+  });
+
+  it('setLoading on an unknown id is a no-op', () => {
+    store.newTab();
+    expect(() => store.setLoading('nope', true)).not.toThrow();
+  });
+
+  it('open-failure rollback on a reused seed restores the pristine untitled state', () => {
+    // Mirrors openPathIntoTab's failure path: seed claimed (path + loading),
+    // then rolled back when MAIN's read fails.
+    const id = store.newTab();
+    store.setFilePath(id, 'C:/gone/missing.txt');
+    store.setLoading(id, true);
+    store.setFilePath(id, null);
+    store.setLoading(id, false);
+    const tab = store.get(id);
+    expect(tab?.filePath).toBeNull();
+    expect(tab?.isLoading).toBe(false);
+    expect(tab?.untitledName).toMatch(/^Untitled \d+$/);
+  });
+});
+
 describe('TabsStore context-menu closes', () => {
   let store: TabsStore;
   let a: string;

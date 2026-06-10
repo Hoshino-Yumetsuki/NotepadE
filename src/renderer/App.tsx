@@ -1,4 +1,4 @@
-import { FluentProvider } from '@fluentui/react-components';
+import { FluentProvider, Spinner } from '@fluentui/react-components';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { keymap, EditorView } from '@codemirror/view';
@@ -552,63 +552,80 @@ export function App(): JSX.Element {
         store.activate(existing.editorId);
         return;
       }
+      // Create/flag the target tab BEFORE the IPC read so the UI reacts
+      // IMMEDIATELY (tab title = basename, spinner in the editor area) instead
+      // of sitting on the previous/new-file UI while MAIN reads + decodes a
+      // large file. The placeholder carries the path, so the duplicate check
+      // above also dedupes a second open of the same file mid-read.
+      //
+      // When the only tab is a pristine untitled seed buffer (created on
+      // mount), reuse it for the file instead of opening a new tab. This
+      // prevents a leftover empty "Untitled N" tab when the app is launched
+      // as a file handler (Open with / double-click in explorer). The claim is
+      // synchronous with placeholder creation, so simultaneous opens
+      // (multi-select Ctrl+O / multi-path activation) claim the seed at most
+      // once — the second open sees filePath/isLoading set and makes a new tab.
+      const s = store.tabs;
+      const seedTab =
+        s.length === 1 && s[0].filePath === null && !s[0].isModified && !s[0].isLoading
+          ? s[0]
+          : null;
+      let id: string;
+      if (seedTab) {
+        id = seedTab.editorId;
+        store.setFilePath(id, path);
+        store.setLoading(id, true);
+        store.activate(id);
+      } else {
+        id = store.newTab({ filePath: path, isLoading: true, activate: true });
+      }
       void window.notepads.file.open(path).then((res) => {
+        // The placeholder may have been closed while the read was in flight —
+        // bail so nothing below resurrects state for a dead tab (and the seed
+        // retry loop can never spin forever keeping the huge string alive).
+        if (!store.get(id)) return;
         if (!res.ok) {
           // Read failed (deleted / locked / permission denied). No renderer
           // notification surface exists yet (doSave/saveAs also surface nothing
           // on error — App.tsx); reporting is tracked separately by the lead.
+          // Roll the placeholder back: a reused seed reverts to its pristine
+          // untitled self; a fresh placeholder closes (re-seeding an untitled
+          // buffer if it was the last tab, mirroring performClose).
+          if (seedTab) {
+            store.setFilePath(id, null);
+            store.setLoading(id, false);
+          } else {
+            store.close(id);
+            if (store.count() === 0) store.newTab();
+          }
           return;
         }
-        // When the only tab is a pristine untitled seed buffer (created on
-        // mount), reuse it for the file instead of opening a new tab. This
-        // prevents a leftover empty "Untitled N" tab when the app is launched
-        // as a file handler (Open with / double-click in explorer). Re-checked
-        // inside .then() so races between multiple simultaneous opens are safe.
-        const s = store.tabs;
-        const seedTab = s.length === 1 && s[0].filePath === null && !s[0].isModified ? s[0] : null;
-        if (seedTab) {
-          const id = seedTab.editorId;
-          // Normalize ONCE; share the string between baseline and setDoc (whose
-          // internal normalize then matches nothing — V8 returns the receiver
-          // from a no-match String.replace, an engine behavior Electron pins,
-          // so no duplicate full-size copy is built).
-          const normalized = normalizeToShadow(res.data.decodedText);
-          const seedOpened = (): void => {
-            const handle = editorHandles.current.get(id);
-            if (handle) handle.setDoc(normalized);
-            else setTimeout(seedOpened, 0);
-          };
-          lastSavedTextRef.current.set(id, normalized);
-          seedOpened();
-          store.setLabels(id, res.data.encodingId, res.data.eolId);
-          store.setFilePath(id, res.data.filePath);
-          if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
-          return;
-        }
-        const id = store.newTab({
-          filePath: res.data.filePath,
-          encodingId: res.data.encodingId,
-          eolId: res.data.eolId,
-          activate: true
-        });
-        // The new tab's editor mounts on a later render; seed once its handle
-        // exists. Call synchronously first, then setTimeout(0)-retry while the
-        // handle is null — NOT rAF, which never fires in a non-compositing
-        // window (the Playwright primary window, or a minimized/occluded one)
-        // and would leave the doc empty. setDoc tolerates an unmounted view.
         // Normalize ONCE; share the string between baseline and setDoc (whose
         // internal normalize then matches nothing — V8 returns the receiver
         // from a no-match String.replace, an engine behavior Electron pins,
         // so no duplicate full-size copy is built).
         const normalized = normalizeToShadow(res.data.decodedText);
+        // The editor mounts only after isLoading clears below (the host shows
+        // a spinner while loading), so seed once its handle exists. Call
+        // synchronously first, then setTimeout(0)-retry while the handle is
+        // null — NOT rAF, which never fires in a non-compositing window (the
+        // Playwright primary window, or a minimized/occluded one) and would
+        // leave the doc empty. setDoc tolerates an unmounted view. The retry
+        // aborts if the tab is closed meanwhile (releases the retained string).
         const seedOpened = (): void => {
+          if (!store.get(id)) return;
           const handle = editorHandles.current.get(id);
           if (handle) handle.setDoc(normalized);
           else setTimeout(seedOpened, 0);
         };
         lastSavedTextRef.current.set(id, normalized);
-        seedOpened();
+        store.setLabels(id, res.data.encodingId, res.data.eolId);
+        store.setFilePath(id, res.data.filePath);
         if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
+        // Clear the flag BEFORE seeding: this mounts the editor whose handle
+        // the seed retry waits for.
+        store.setLoading(id, false);
+        seedOpened();
       });
     },
     [store]
@@ -1275,25 +1292,45 @@ export function App(): JSX.Element {
                   display: tab.viewMode.diff ? 'none' : 'block'
                 }}
               >
-                <CodeMirrorEditor
-                  ref={(h) => {
-                    if (h) editorHandles.current.set(tab.editorId, h);
-                    else editorHandles.current.delete(tab.editorId);
-                  }}
-                  editorExtensions={editorExtensionsWithMenu}
-                  onDocChanged={() => recomputeDirty(tab.editorId)}
-                  settings={editorBehaviorSettings}
-                  lineNumbers={settings.displayLineNumbers}
-                  lineHighlighter={settings.displayLineHighlighter}
-                  wordWrap={editorWordWrap}
-                  direction="ltr"
-                  fontFamily={settings.editorFontFamily}
-                  fontSize={settings.editorFontSize}
-                  fontStyle={settings.editorFontStyle}
-                  fontWeight={settings.editorFontWeight}
-                  accentColor={appTheme.accentHex}
-                  themeMode={appTheme.resolved}
-                />
+                {tab.isLoading ? (
+                  // Open in flight (MAIN still reading/decoding): show a
+                  // centered spinner INSTEAD of mounting the editor — the tab
+                  // appears instantly with its basename while a large file
+                  // loads, and no edits can land in a half-loaded buffer. The
+                  // editor mounts when openPathIntoTab clears the flag, and
+                  // the pending setDoc retry seeds it on the next tick.
+                  <div
+                    data-testid="editor-loading"
+                    style={{
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Spinner size="large" />
+                  </div>
+                ) : (
+                  <CodeMirrorEditor
+                    ref={(h) => {
+                      if (h) editorHandles.current.set(tab.editorId, h);
+                      else editorHandles.current.delete(tab.editorId);
+                    }}
+                    editorExtensions={editorExtensionsWithMenu}
+                    onDocChanged={() => recomputeDirty(tab.editorId)}
+                    settings={editorBehaviorSettings}
+                    lineNumbers={settings.displayLineNumbers}
+                    lineHighlighter={settings.displayLineHighlighter}
+                    wordWrap={editorWordWrap}
+                    direction="ltr"
+                    fontFamily={settings.editorFontFamily}
+                    fontSize={settings.editorFontSize}
+                    fontStyle={settings.editorFontStyle}
+                    fontWeight={settings.editorFontWeight}
+                    accentColor={appTheme.accentHex}
+                    themeMode={appTheme.resolved}
+                  />
+                )}
               </div>
               {paneOn && tab.viewMode.preview && (
                 <div

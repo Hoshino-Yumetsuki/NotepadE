@@ -49,6 +49,14 @@ export interface TabState {
   eolId: EolId;
   /** Dirty flag — drives the F127 accent dot in the tab header. */
   isModified: boolean;
+  /**
+   * True while the tab's file is being read/decoded in MAIN (open in flight).
+   * The editor host shows a spinner instead of mounting the editor, so a large
+   * file's tab appears IMMEDIATELY (title = basename) instead of the window
+   * sitting on the previous/new-file UI until the whole pipeline finishes.
+   * Transient UI state — never snapshotted (a restored tab is never loading).
+   */
+  isLoading: boolean;
   /** Alternate render mode (markdown preview / diff). */
   viewMode: ViewMode;
   /** Caret / selection offsets in the '\n' shadow buffer. */

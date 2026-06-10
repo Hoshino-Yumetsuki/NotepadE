@@ -61,6 +61,8 @@ export interface NewTabArgs {
   encodingId?: EncodingId;
   eolId?: EolId;
   isModified?: boolean;
+  /** Start in the loading state (file read in flight — see TabState.isLoading). */
+  isLoading?: boolean;
   /** Force a specific editorId (used by session restore). */
   editorId?: string;
   /** Override the untitled display name (else "Untitled {N}"). */
@@ -90,6 +92,7 @@ function makeTab(args: NewTabArgs): TabState {
     encodingId: args.encodingId ?? DEFAULT_ENCODING_ID,
     eolId: args.eolId ?? DEFAULT_EOL_ID,
     isModified: args.isModified ?? false,
+    isLoading: args.isLoading ?? false,
     viewMode: { ...DEFAULT_VIEW_MODE },
     caret: { ...ZERO_CARET },
     scroll: { ...ZERO_SCROLL },
@@ -309,6 +312,12 @@ export class TabsStore {
   setModified(editorId: string, isModified: boolean): void {
     if (this.get(editorId)?.isModified === isModified) return;
     this.patch(editorId, { isModified });
+  }
+
+  /** Flip the open-in-flight loading flag (see TabState.isLoading). */
+  setLoading(editorId: string, isLoading: boolean): void {
+    if (this.get(editorId)?.isLoading === isLoading) return;
+    this.patch(editorId, { isLoading });
   }
 
   /** Rename: set a new absolute filePath (clears untitled display). */
