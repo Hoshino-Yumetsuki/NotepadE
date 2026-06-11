@@ -12,9 +12,11 @@
  * this pane only triggers those actions; the persisted `wallpaperFileName`
  * flows back through the shared settings bag like every other field. While a
  * wallpaper is active the tint-opacity slider drives the WALLPAPER layer's
- * BLUR intensity instead of the background tint alpha (theme/wallpaper.ts) —
- * higher = blurrier, converging on the no-wallpaper acrylic material — so the
- * slider row swaps in an explanatory description.
+ * selected effect (theme/wallpaper.ts) — `wallpaperEffect` picks BLUR
+ * intensity (higher = blurrier, converging on the no-wallpaper acrylic
+ * material) or layer OPACITY (higher = more opaque image) via a toggle switch
+ * shown only while a wallpaper is set — so the slider row swaps in an
+ * explanatory description.
  *
  * PA-8: consumes the settings bag + update callback + the typed
  * window.notepads.wallpaper contract — no fs/path/child_process.
@@ -129,9 +131,10 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
           label={t('PersonalizationPage_BackgroundTintOpacitySettings_Title.Text')}
           description={
             // Semantics switch: with a wallpaper active this slider drives the
-            // WALLPAPER layer's BLUR intensity (theme/wallpaper.ts), not the
-            // tint alpha over the OS material — tell the user which one
-            // they're tuning.
+            // WALLPAPER layer's selected effect — blur intensity or layer
+            // opacity, per the wallpaperEffect toggle below (theme/wallpaper.ts)
+            // — not the tint alpha over the OS material. Tell the user which
+            // one they're tuning.
             wallpaperActive
               ? `${tintPct}% — ${t('PersonalizationPage_Wallpaper_OpacityHint')}`
               : `${tintPct}%`
@@ -209,6 +212,31 @@ export function PersonalizationPane({ settings, update }: PaneProps): JSX.Elemen
             </Label>
           ) : null}
         </SettingRow>
+        {wallpaperActive ? (
+          // Background-mode toggle: which wallpaper effect the tint-opacity
+          // slider drives (theme/wallpaper.ts). Checked = blur (the default,
+          // frost intensity), unchecked = opacity (layer transparency). Only
+          // rendered while a wallpaper is set — same gate as the Remove
+          // button — because the effect is meaningless without one.
+          <SettingRow
+            id="wallpaperEffect"
+            label={t('PersonalizationPage_Wallpaper_EffectLabel')}
+            description={t('PersonalizationPage_Wallpaper_EffectDescription')}
+          >
+            <Switch
+              data-testid="setting-wallpaperEffect-switch"
+              checked={settings.wallpaperEffect === 'blur'}
+              // The Switch's own label announces the CURRENT mode (the
+              // OnContent/OffContent pattern of the UWP toggle strings).
+              label={t(
+                settings.wallpaperEffect === 'blur'
+                  ? 'PersonalizationPage_Wallpaper_EffectBlur'
+                  : 'PersonalizationPage_Wallpaper_EffectOpacity'
+              )}
+              onChange={(_e, d) => update({ wallpaperEffect: d.checked ? 'blur' : 'opacity' })}
+            />
+          </SettingRow>
+        ) : null}
       </SettingGroup>
 
       <SettingGroup title={t('PersonalizationPage_AccentColorSettings_Title.Text')}>

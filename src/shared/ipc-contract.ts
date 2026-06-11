@@ -248,6 +248,15 @@ export type SearchEngineId = 'bing' | 'google' | 'duckDuckGo' | 'custom';
 /** Theme mode (UWP UseWindowsTheme=true → 'system', else the requested theme). */
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+/**
+ * Wallpaper presentation effect while a wallpaper is active (web-port-only):
+ * the SAME `tintOpacity` slider drives either the layer's BLUR intensity
+ * ('blur' — the image stays opaque and frosts toward the acrylic look) or the
+ * layer's CSS OPACITY ('opacity' — 1 = fully visible, 0 = invisible over the
+ * opaque theme base). See renderer theme/wallpaper.ts.
+ */
+export type WallpaperEffect = 'blur' | 'opacity';
+
 /** Tab-as-spaces width (UWP EditorDefaultTabIndents): -1 = real tab. */
 export type TabIndents = -1 | 2 | 4 | 8;
 
@@ -303,10 +312,17 @@ export interface Settings {
    * is deleted on replace/clear — see main/wallpaper.ts). When non-empty, the
    * renderer paints the image as a full-window layer UNDER all UI surfaces,
    * replacing the desktop see-through backdrop (acrylic/vibrancy), and
-   * `tintOpacity` then drives the WALLPAPER layer's CSS opacity instead of the
-   * background tint alpha. No UWP equivalent (web-port-only personalization).
+   * `tintOpacity` then drives the WALLPAPER layer's effect (blur intensity or
+   * opacity, per `wallpaperEffect`) instead of the background tint alpha. No
+   * UWP equivalent (web-port-only personalization).
    */
   wallpaperFileName: string;
+  /**
+   * Which wallpaper effect the tint-opacity slider drives while a wallpaper is
+   * active: 'blur' (frost intensity, image opaque) or 'opacity' (layer CSS
+   * opacity). Ignored when no wallpaper is set. No UWP equivalent.
+   */
+  wallpaperEffect: WallpaperEffect;
 }
 
 /**
@@ -345,7 +361,10 @@ export const DEFAULT_SETTINGS: Settings = {
   openWithContextMenu: false,
   // No wallpaper by default — the acrylic/vibrancy desktop see-through backdrop
   // is the out-of-box look; the wallpaper is an explicit opt-in personalization.
-  wallpaperFileName: ''
+  wallpaperFileName: '',
+  // 'blur' preserves the pre-existing wallpaper behavior (slider = frost
+  // intensity), so users upgrading from before the switch see no change.
+  wallpaperEffect: 'blur'
 };
 
 export interface SettingsApi {

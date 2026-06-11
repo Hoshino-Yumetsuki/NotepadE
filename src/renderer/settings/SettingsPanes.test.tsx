@@ -237,6 +237,57 @@ describe('PersonalizationPane', () => {
       'Download failed (HTTP 404)'
     );
   });
+
+  it('shows the background-mode switch only while a wallpaper is active', () => {
+    mockWallpaperApi();
+    const { rerender } = render(
+      <FluentProvider theme={webLightTheme}>
+        <PersonalizationPane settings={makeSettings()} update={vi.fn()} />
+      </FluentProvider>
+    );
+    // Meaningless without a wallpaper (the slider drives the acrylic tint).
+    expect(screen.queryByTestId('setting-wallpaperEffect-switch')).toBeNull();
+    rerender(
+      <FluentProvider theme={webLightTheme}>
+        <PersonalizationPane
+          settings={makeSettings({ wallpaperFileName: 'wallpaper-1.png' })}
+          update={vi.fn()}
+        />
+      </FluentProvider>
+    );
+    expect(screen.getByTestId('setting-wallpaperEffect-switch')).toBeInTheDocument();
+  });
+
+  it('toggles wallpaperEffect between blur (checked) and opacity (unchecked)', () => {
+    mockWallpaperApi();
+    const update = vi.fn();
+    const { rerender } = render(
+      <FluentProvider theme={webLightTheme}>
+        <PersonalizationPane
+          settings={makeSettings({ wallpaperFileName: 'wallpaper-1.png', wallpaperEffect: 'blur' })}
+          update={update}
+        />
+      </FluentProvider>
+    );
+    const sw = screen.getByTestId('setting-wallpaperEffect-switch');
+    expect(sw).toBeChecked();
+    fireEvent.click(sw);
+    expect(update).toHaveBeenCalledWith({ wallpaperEffect: 'opacity' });
+    rerender(
+      <FluentProvider theme={webLightTheme}>
+        <PersonalizationPane
+          settings={makeSettings({
+            wallpaperFileName: 'wallpaper-1.png',
+            wallpaperEffect: 'opacity'
+          })}
+          update={update}
+        />
+      </FluentProvider>
+    );
+    expect(sw).not.toBeChecked();
+    fireEvent.click(sw);
+    expect(update).toHaveBeenCalledWith({ wallpaperEffect: 'blur' });
+  });
 });
 
 describe('AdvancedPane', () => {

@@ -141,9 +141,9 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   },
   PersonalizationPage_Wallpaper_Description: {
     'en-US':
-      'Set a custom background image from a web address or a local file. The image is copied into the app data folder. It replaces the see-through window backdrop, and the tint opacity slider then controls how much the image is blurred.',
+      'Set a custom background image from a web address or a local file. The image is copied into the app data folder. It replaces the see-through window backdrop, and the tint opacity slider then controls the image blur or opacity, per the background mode below.',
     'zh-CN':
-      '从网址或本地文件设置自定义背景图片。图片会被复制到应用数据文件夹中。它将替代窗口的透视背景，此后“背景色调不透明度”滑块将控制图片的模糊程度。'
+      '从网址或本地文件设置自定义背景图片。图片会被复制到应用数据文件夹中。它将替代窗口的透视背景，此后“背景色调不透明度”滑块将根据下方的背景模式控制图片的模糊程度或不透明度。'
   },
   PersonalizationPage_Wallpaper_UrlLabel: {
     'en-US': 'Image URL',
@@ -166,8 +166,28 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
     'zh-CN': '移除背景图片'
   },
   PersonalizationPage_Wallpaper_OpacityHint: {
-    'en-US': 'controls the background image blur while one is set — higher is blurrier',
-    'zh-CN': '设置背景图片后，此滑块控制图片的模糊程度，数值越高越模糊'
+    'en-US':
+      'controls the background image blur or opacity while one is set, per the background mode',
+    'zh-CN': '设置背景图片后，根据背景模式设置，此滑块控制图片的模糊程度或不透明度'
+  },
+  // Background-mode toggle (blur vs opacity) — shown only while a wallpaper is
+  // active; the Switch's own label announces the CURRENT mode (the
+  // OnContent/OffContent pattern of the UWP toggle strings).
+  PersonalizationPage_Wallpaper_EffectLabel: {
+    'en-US': 'Background mode',
+    'zh-CN': '背景模式'
+  },
+  PersonalizationPage_Wallpaper_EffectDescription: {
+    'en-US': 'Choose whether the slider above controls the image blur or its opacity',
+    'zh-CN': '选择上方滑块控制图片的模糊程度还是不透明度'
+  },
+  PersonalizationPage_Wallpaper_EffectBlur: {
+    'en-US': 'Blur',
+    'zh-CN': '模糊'
+  },
+  PersonalizationPage_Wallpaper_EffectOpacity: {
+    'en-US': 'Opacity',
+    'zh-CN': '不透明度'
   },
   // Advanced — "Reset all settings" (web port only; UWP had no factory-reset
   // affordance — its settings store silently re-initialized defaults). en-US +

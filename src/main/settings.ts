@@ -98,7 +98,12 @@ function clampSettings(s: Settings): Settings {
   const tabIndents = ([-1, 2, 4, 8] as const).includes(s.tabIndents)
     ? s.tabIndents
     : DEFAULT_SETTINGS.tabIndents;
-  return { ...s, tintOpacity, editorFontSize, tabIndents };
+  // Enum guard (deepMerge only checks primitive typeof, so any string passes):
+  // an unknown effect from a hand-edited file falls back to the default.
+  const wallpaperEffect = (['blur', 'opacity'] as const).includes(s.wallpaperEffect)
+    ? s.wallpaperEffect
+    : DEFAULT_SETTINGS.wallpaperEffect;
+  return { ...s, tintOpacity, editorFontSize, tabIndents, wallpaperEffect };
 }
 
 /**

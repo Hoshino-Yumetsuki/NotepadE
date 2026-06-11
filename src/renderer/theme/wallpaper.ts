@@ -15,10 +15,14 @@
  *     over the OS material (appBackgroundTint — the historical behavior),
  *   - wallpaper active: the root goes OPAQUE theme-base (the desktop must not
  *     show through anymore — the wallpaper replaces it) and `tintOpacity`
- *     becomes the BLUR INTENSITY of the WALLPAPER layer instead: the image
- *     stays fully opaque and the slider drives a CSS blur(0..48px) (plus a
- *     mild saturation lift), so at 1 the frosted image visually converges on
- *     the acrylic material look the window has when no wallpaper is set.
+ *     drives the WALLPAPER layer's selected effect (`wallpaperEffect`) instead:
+ *       - 'blur': the image stays fully opaque and the slider maps to a CSS
+ *         blur(0..48px) (plus a mild saturation lift), so at 1 the frosted
+ *         image visually converges on the acrylic material look the window has
+ *         when no wallpaper is set,
+ *       - 'opacity': the slider IS the layer's CSS opacity — 1 = fully visible
+ *         wallpaper, 0 = invisible (the opaque theme base shows through). No
+ *         filter, no overscan.
  *
  * Layering: the root element sets `isolation:'isolate'` (own stacking context)
  * and the wallpaper div sits at zIndex -1 — within an isolated context a
@@ -33,6 +37,7 @@
  */
 
 import type { CSSProperties } from 'react';
+import type { WallpaperEffect } from '@shared/ipc-contract';
 import { appBackgroundTint, tokensForAppTheme, type AppTheme } from './tokens';
 
 /**
@@ -71,27 +76,44 @@ export const WALLPAPER_BLUR_MAX_PX = 48;
 /**
  * Inline style for the wallpaper layer div. `cover` + center crops like an OS
  * desktop wallpaper; `pointerEvents:'none'` keeps it purely decorative; the
- * clamped `tintOpacity` IS the layer's BLUR intensity while a wallpaper is
- * active (the semantics switch — see module header): the image stays fully
- * opaque and the slider maps 0..1 → blur(0..48px) with a mild saturation lift
- * (acrylic-style) so the top end converges on the no-wallpaper material look.
- * The layer is OVERSCANNED by the blur radius (negative inset) so the blur's
- * transparent edge falloff lands outside the window instead of as a halo.
+ * clamped `tintOpacity` drives the SELECTED EFFECT while a wallpaper is active
+ * (the semantics switch — see module header):
+ *   - effect 'blur': the image stays fully opaque and the slider maps
+ *     0..1 → blur(0..48px) with a mild saturation lift (acrylic-style) so the
+ *     top end converges on the no-wallpaper material look. The layer is
+ *     OVERSCANNED by the blur radius (negative inset) so the blur's
+ *     transparent edge falloff lands outside the window instead of as a halo.
+ *   - effect 'opacity': the slider IS the layer's CSS opacity (1 = fully
+ *     visible, 0 = invisible over the opaque theme base). No filter, no
+ *     overscan (inset 0).
  */
-export function wallpaperLayerStyle(dataUrl: string, tintOpacity: number): CSSProperties {
+export function wallpaperLayerStyle(
+  dataUrl: string,
+  tintOpacity: number,
+  effect: WallpaperEffect
+): CSSProperties {
   const clamped = Math.max(0, Math.min(1, tintOpacity));
-  const blurPx = Math.round(clamped * WALLPAPER_BLUR_MAX_PX);
-  return {
+  const base: CSSProperties = {
     position: 'absolute',
-    inset: -blurPx,
+    inset: 0,
     zIndex: -1,
     backgroundImage: `url("${dataUrl}")`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
+    pointerEvents: 'none'
+  };
+  if (effect === 'opacity') {
+    // Slider = layer opacity: higher = more opaque wallpaper. No filter and no
+    // overscan — the edges stay flush with the window.
+    return { ...base, opacity: clamped };
+  }
+  const blurPx = Math.round(clamped * WALLPAPER_BLUR_MAX_PX);
+  return {
+    ...base,
+    inset: -blurPx,
     // blur(0px) is an identity filter but still forces an extra compositing
     // pass on a window-sized layer — skip the filter entirely at 0.
-    filter: blurPx > 0 ? `blur(${blurPx}px) saturate(${1 + 0.25 * clamped})` : undefined,
-    pointerEvents: 'none'
+    filter: blurPx > 0 ? `blur(${blurPx}px) saturate(${1 + 0.25 * clamped})` : undefined
   };
 }

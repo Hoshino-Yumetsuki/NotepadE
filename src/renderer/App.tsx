@@ -214,11 +214,14 @@ export function App(): JSX.Element {
   const wallpaperDataUrl = useWallpaper(settings.wallpaperFileName);
   // Memoized: wallpaperLayerStyle re-concatenates `url("${dataUrl}")` — for a
   // 20MB image that's a ~27MB string build + an O(n) inline-style compare on
-  // EVERY App render if computed inline. Only the data URL and the opacity
-  // slider actually change the style, so key on exactly those.
+  // EVERY App render if computed inline. Only the data URL, the slider value
+  // and the selected effect actually change the style, so key on exactly those.
   const wallpaperStyle = useMemo(
-    () => (wallpaperDataUrl ? wallpaperLayerStyle(wallpaperDataUrl, settings.tintOpacity) : null),
-    [wallpaperDataUrl, settings.tintOpacity]
+    () =>
+      wallpaperDataUrl
+        ? wallpaperLayerStyle(wallpaperDataUrl, settings.tintOpacity, settings.wallpaperEffect)
+        : null,
+    [wallpaperDataUrl, settings.tintOpacity, settings.wallpaperEffect]
   );
 
   // Settings surface open/close state (entry point in the tab strip toolbar).
@@ -1228,8 +1231,9 @@ export function App(): JSX.Element {
       {/* Custom wallpaper layer (web-port-only personalization): a full-window
           image UNDER every UI surface, replacing the acrylic/vibrancy desktop
           sample. While active, the SAME tintOpacity slider drives THIS layer's
-          BLUR intensity instead of the background tint alpha (the "Background
-          Tint Opacity" semantics switch — see theme/wallpaper.ts). */}
+          selected effect — BLUR intensity or layer OPACITY, per the
+          wallpaperEffect setting — instead of the background tint alpha (the
+          "Background Tint Opacity" semantics switch — see theme/wallpaper.ts). */}
       {wallpaperOn && wallpaperStyle ? (
         <div data-testid="app-wallpaper" aria-hidden style={wallpaperStyle} />
       ) : null}
