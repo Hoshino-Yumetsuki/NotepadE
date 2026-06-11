@@ -487,12 +487,15 @@ export function App(): JSX.Element {
   // Tabs test seam (Phase 2 matrix harness).
   useEffect(() => installTabsTestHook(store), [store]);
 
-  // Cross-window transfer (Workstream 6.A). The text source reads the live CM6
-  // doc for an editor (last-saved baseline == pending doc in the renderer; MAIN
-  // re-validates the path) and seeds a freshly-adopted editor's document. Stable
-  // ref so the subscriptions + seam below don't re-bind every render.
+  // Cross-window transfer (Workstream 6.A). The text source reads the TRUE
+  // last-saved baseline from lastSavedTextRef (NOT the live doc — for a dirty
+  // tab baseline B ≠ doc D, and the adopted window re-derives isModified by
+  // comparing them; shipping D as the baseline would stomp the dirty flag) and
+  // the live CM6 doc as the pending text, and seeds a freshly-adopted editor's
+  // document. Stable ref so the subscriptions + seam below don't re-bind every
+  // render.
   const transferSource = useRef<TransferTextSource>({
-    getLastSavedText: (id) => editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
+    getLastSavedText: (id) => lastSavedTextRef.current.get(id) ?? '',
     getPendingText: (id) => editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
     seedAdoptedDoc: (id, text) => {
       // Seed once the adopted tab's editor handle exists. setTimeout(0), not rAF:
