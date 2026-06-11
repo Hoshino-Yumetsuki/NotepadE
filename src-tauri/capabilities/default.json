@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "NotepadE renderer capability — every app window runs the same renderer + bridge shim. Custom commands (file_*, settings_*, ...) are app commands and always allowed; the entries below cover core events + the plugin APIs the bridge/shim may touch from JS.",
+  "windows": ["*"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize",
+    "dialog:default",
+    "clipboard-manager:allow-write-text",
+    "opener:default",
+    "deep-link:default"
+  ]
+}

@@ -42,6 +42,7 @@
 
 import { ViewPlugin, type PluginValue, type ViewUpdate, EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
+import { zoomField } from './commands/zoom';
 
 /** Horizontal padding inside the column (px): gap before the separator + left inset. */
 const COLUMN_PADDING_RIGHT = 8;
@@ -119,6 +120,13 @@ class LineNumberColumnPlugin implements PluginValue {
   private width = 0;
   private readonly onScroll: () => void;
   /**
+   * Char-width anchor captured once at mount (100% zoom × base font-size).
+   * Zoom changes scale this proportionally so the column width is STABLE and
+   * REPRODUCIBLE across zoom-in→zoom-out cycles — no measurement noise drift.
+   * Null until first measure (the initial CM6 measure hasn't run yet at mount).
+   */
+  private baseCharWidth: number | null = null;
+  /**
    * Keyed measure request so multiple updates in one frame coalesce into a
    * single read/write pass (CM6 dedupes by `key`).
    */
@@ -132,16 +140,18 @@ class LineNumberColumnPlugin implements PluginValue {
     private readonly view: EditorView,
     private readonly opts: LineNumberColumnOptions
   ) {
-    // Pure vertical scroll: geometry (block tops, heights, scale) is stable, so
-    // a synchronous relayout with the fresh scrollTop is safe AND keeps the
-    // numbers glued to the text with zero frames of lag.
-    this.onScroll = () => this.layout();
+    // Coordinates through CM6's measure phase exclusively — both scroll and zoom.
+    // Synchronous layout (readLayout + writeLayout) conflicts with CM6's batched
+    // writes during measure passes triggered by font-size / geometry changes.
+    // The keyed requestMeasure dedupes per frame, so rapid scroll events still
+    // coalesce into a single read/write pass with zero cumulative lag.
+    this.onScroll = () => { this.view.requestMeasure(this.measureRequest); };
     this.mount();
     // Vertical scroll moves the numbers; horizontal scroll does NOT (the column is
     // outside the scroller). Listen on the scroller so the numbers track scrollTop.
     this.view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
-    // Initial paint synchronously: a fresh mount has no pending scroll-anchor
-    // compensation, and the jsdom-level tests read the cells right after create.
+    // Initial paint synchronously — no pending scroll-anchor compensation on a
+    // freshly-mounted view, so a direct readLayout+writeLayout is safe here.
     this.layout();
   }
 
@@ -326,9 +336,16 @@ class LineNumberColumnPlugin implements PluginValue {
   }
 
   private measureCharWidth(): number {
+    // Capture a stable base char-width on the first measure (CM6's
+    // defaultCharacterWidth is available by then). Subsequent zoom changes
+    // scale this base proportionally — NO re-measurement drift.
     const cw = this.view.defaultCharacterWidth;
-    if (cw && cw > 0) return cw * 1.12;
-    return this.view.defaultLineHeight * 0.5;
+    if (this.baseCharWidth === null && cw && cw > 0) {
+      this.baseCharWidth = cw;
+    }
+    const base = this.baseCharWidth ?? this.view.defaultLineHeight * 0.5;
+    const zoom = this.view.state.field(zoomField, false) ?? 100;
+    return base * (zoom / 100);
   }
 
   update(u: ViewUpdate): void {
@@ -339,7 +356,14 @@ class LineNumberColumnPlugin implements PluginValue {
       this.width = 0;
       this.mount();
     }
-    if (u.docChanged || u.viewportChanged || u.geometryChanged || u.selectionSet) {
+    // Detect zoom font-size changes so the column re-measures in the SAME frame.
+    // Without this, the CSS variable change from applyZoomFontSize resizes the
+    // text behind CM6's back, but the column's own measure only fires on the
+    // NEXT geometry-changed cycle — the numbers lag one frame behind the content.
+    const prevZoom = u.startState.field(zoomField, false);
+    const nowZoom  = u.state.field(zoomField, false);
+    const zoomChanged = prevZoom !== nowZoom;
+    if (u.docChanged || u.viewportChanged || u.geometryChanged || u.selectionSet || zoomChanged) {
       // NOT a synchronous layout: during update() CM6 has new (possibly
       // BigScaler-rescaled) block tops but has NOT yet applied its scroll-anchor
       // scrollTop compensation — that lands in the measure phase. Deferring via

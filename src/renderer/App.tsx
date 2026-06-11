@@ -197,10 +197,9 @@ export function App(): JSX.Element {
   // user prefers reduced motion the pane renders with no animation at all.
   const reducedMotion = usePrefersReducedMotion();
 
-  const isFrameless = useMemo(
-    () => navigator.userAgent.includes('Windows') || navigator.userAgent.includes('Mac'),
-    []
-  );
+  // Custom caption buttons render on ALL platforms (unified Windows design).
+  // Electron's isFrameless gating (Windows/Mac only) is removed — Tauri enables
+  // frameless windows everywhere via decorations:false in tauri.conf.json.
 
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
   // status-bar visibility (showStatusBar), and the theme resolution above.
@@ -701,38 +700,29 @@ export function App(): JSX.Element {
     return off;
   }, [openPathIntoTab]);
 
-  // Drag-drop open (UWP NotepadsMainPage Drop): dropping OS files onto the window
-  // opens each as a tab. The renderer can't read File.path under the sandbox, so
-  // each File is resolved to its absolute path via the preload webUtils helper
-  // (window.notepads.paths.forFile — PA-8: webUtils lives in preload, not here).
-  // CRITICAL: scope to OS-file drops only (dataTransfer.types includes 'Files')
-  // so this never intercepts the dnd-kit intra-strip reorder (pointer-driven, no
-  // dataTransfer) or the cross-window tab-transfer token drag (which carries
-  // 'application/x-notepads-token', NOT 'Files'). preventDefault on dragover so
-  // the browser's default "navigate to file" is suppressed and drop fires.
+  // Drag-drop open (Tauri native onDragDropEvent). Tauri provides absolute
+  // paths directly via native drag-drop — the web-level drop listener is
+  // replaced because Electron's webUtils.getPathForFile has no Tauri equivalent.
+  // The native event only fires for OS file drops; it does NOT intercept the
+  // dnd-kit intra-strip reorder (pointer-driven) or the cross-window tab-
+  // transfer token drag (which carries 'application/x-notepads-token').
   useEffect(() => {
-    const hasOsFiles = (e: DragEvent): boolean =>
-      Array.from(e.dataTransfer?.types ?? []).includes('Files');
-    const onDragOver = (e: DragEvent): void => {
-      if (!hasOsFiles(e)) return;
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-    };
-    const onDrop = (e: DragEvent): void => {
-      if (!hasOsFiles(e)) return;
-      e.preventDefault();
-      const files = e.dataTransfer?.files;
-      if (!files || files.length === 0) return;
-      for (const file of Array.from(files)) {
-        const path = window.notepads.paths.forFile(file);
-        if (path) openPathIntoTab(path);
-      }
-    };
-    window.addEventListener('dragover', onDragOver);
-    window.addEventListener('drop', onDrop);
+    let unlisten: (() => void) | null = null;
+    // Guard: only activate inside a Tauri webview. jsdom/vitest never enters here.
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      getCurrentWindow().onDragDropEvent((event) => {
+        if (event.payload.type === 'drop') {
+          for (const path of event.payload.paths) {
+            openPathIntoTab(path);
+          }
+        }
+      }).then((fn) => {
+        unlisten = fn;
+      });
+    });
     return () => {
-      window.removeEventListener('dragover', onDragOver);
-      window.removeEventListener('drop', onDrop);
+      unlisten?.();
     };
   }, [openPathIntoTab]);
 
@@ -1248,7 +1238,7 @@ export function App(): JSX.Element {
         onBeginTransfer={onBeginTransfer}
         onVoidDrop={onVoidDrop}
         menu={menuCommands}
-        captionSlot={isFrameless ? <CaptionButtons theme={resolvedTheme} /> : undefined}
+        captionSlot={<CaptionButtons theme={resolvedTheme} />}
         onActiveTabGeometry={setActiveTabRect}
       />
       <div

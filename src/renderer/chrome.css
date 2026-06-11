@@ -15,15 +15,16 @@ body,
   background: transparent;
 }
 
-/* Frameless drag region: the tab strip background drags the window; interactive
-   controls inside it opt back out so clicks/tabs still work. */
-[data-drag-region] {
-  -webkit-app-region: drag;
+/* Frameless drag region: elements with data-tauri-drag-region let the user
+   drag the window. Interactive controls inside opt out so clicks still work. */
+[data-tauri-drag-region] {
+  /* Tauri v2: the attribute alone enables native window dragging via
+     onDragWindow / start_dragging under the hood. The CSS is decorative. */
 }
-[data-drag-region] button,
-[data-drag-region] [role='tab'],
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] [role='tab'],
 [data-no-drag] {
-  -webkit-app-region: no-drag;
+  /* No CSS needed — Tauri handles the hit-test via the attribute. */
 }
 
 /*

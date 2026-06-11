@@ -15,7 +15,7 @@
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-yellow.svg?style=flat-square" alt="Platform" />
   </a>
   <a style="text-decoration:none">
-    <img src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React%20%2B%20Fluent%20UI-blue.svg?style=flat-square" alt="Stack" />
+    <img src="https://img.shields.io/badge/built%20with-Tauri%20%2B%20React%20%2B%20Fluent%20UI-blue.svg?style=flat-square" alt="Stack" />
   </a>
 </p>
 
@@ -26,7 +26,7 @@
 
 ## 什么是 NotepadE？
 
-[Notepads](https://github.com/0x7c13/Notepads) 是一款出色的现代记事本应用，但它是基于 UWP 的，仅在 Windows 上运行。NotepadE 是在 Web 技术之上对 Notepads 的忠实 1:1 重写，因此相同的简洁外观和使用体验可以在任何支持 Electron 的平台上运行：Windows、macOS 和 Linux。
+[Notepads](https://github.com/0x7c13/Notepads) 是一款出色的现代记事本应用，但它是基于 UWP 的，仅在 Windows 上运行。NotepadE 是在 Web 技术和 Tauri 之上对 Notepads 的忠实 1:1 重写，因此相同的简洁外观和使用体验可以在任何平台上运行：Windows、macOS 和 Linux。
 
 目标很简单：保留让 Notepads 使用起来愉快的一切——Fluent 风格、内建的标签页系统、极快的响应体验——同时使其跨平台并易于扩展。如果你喜欢 Notepads，但希望它能在你的 Mac 或 Linux 上运行，NotepadE 就是为你准备的。
 
@@ -69,14 +69,14 @@
 
 ## 从源码构建：
 
-NotepadE 使用 Electron、React、Fluent UI v9、TypeScript、CodeMirror 6 和 Vite 构建。你需要 Node.js 20+ 和 [Yarn](https://yarnpkg.com/) 4。
+NotepadE 使用 Tauri、React、Fluent UI v9、TypeScript、CodeMirror 6 和 Vite 构建。你需要 Node.js 20+、[Yarn](https://yarnpkg.com/) 4 以及 [Rust 工具链](https://rustup.rs/)。
 
 ```bash
 # 安装依赖
 yarn install
 
 # 在开发模式下运行应用
-yarn dev
+yarn tauri dev
 
 # 类型检查、代码风格校验和测试
 yarn typecheck
@@ -84,12 +84,12 @@ yarn lint
 yarn test
 
 # 为当前平台构建发行包
-yarn dist
+yarn tauri build
 ```
 
 ## 平台说明：
 
-- NotepadE 可通过 Electron 在 Windows、macOS 和 Linux 上运行。
+- NotepadE 可通过 Tauri 在 Windows、macOS 和 Linux 上运行。
 - 某些与平台相关的功能（如跳转菜单、文件关联）取决于宿主操作系统及打包后的构建。
 - 非常大的文件可能影响响应速度；编辑器针对日常笔记与配置文件编辑进行了优化。
 
@@ -114,7 +114,7 @@ NotepadE 是完全开源的。欢迎查看源码或自行构建。
 
 ## 依赖与参考：
 
-- [Electron](https://www.electronjs.org/)
+- [Tauri](https://tauri.app/)
 - [React](https://react.dev/)
 - [Fluent UI](https://github.com/microsoft/fluentui)
 - [CodeMirror 6](https://codemirror.net/)

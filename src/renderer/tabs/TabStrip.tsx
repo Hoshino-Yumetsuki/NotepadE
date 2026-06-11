@@ -660,10 +660,9 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           type="button"
           data-testid="main-menu-button"
           aria-label={t('MainMenuButton.AutomationProperties.Name')}
-          // No app-region opt-out needed here: chrome.css already sets
-          // `-webkit-app-region: no-drag` on every <button> inside the
-          // [data-drag-region] strip (same as AddTabButton / scroll buttons), so
-          // the click opens the flyout instead of starting a window move.
+          // Buttons inside the drag region are non-drag by default in Tauri
+          // (only elements with data-tauri-drag-region start drags), so the
+          // click opens the flyout instead of starting a window move.
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           style={{
@@ -1537,7 +1536,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       ref={stripRef}
       data-testid="tab-strip"
       data-theme={resolvedTheme}
-      data-drag-region
+      data-tauri-drag-region
       style={
         {
           display: 'flex',

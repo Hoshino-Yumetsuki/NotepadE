@@ -15,7 +15,7 @@
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-yellow.svg?style=flat-square" alt="Platform" />
   </a>
   <a style="text-decoration:none">
-    <img src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React%20%2B%20Fluent%20UI-blue.svg?style=flat-square" alt="Stack" />
+    <img src="https://img.shields.io/badge/built%20with-Tauri%20%2B%20React%20%2B%20Fluent%20UI-blue.svg?style=flat-square" alt="Stack" />
   </a>
 </p>
 
@@ -26,7 +26,7 @@ English | [简体中文](./README.zh-CN.md)
 
 ## What is NotepadE and why do I care?
 
-[Notepads](https://github.com/0x7c13/Notepads) is a wonderful modern notepad app, but it is a UWP application and only runs on Windows. NotepadE is a faithful, 1:1 rewrite of Notepads on top of web technology, so the same clean look and feel can run anywhere Electron does: Windows, macOS, and Linux.
+[Notepads](https://github.com/0x7c13/Notepads) is a wonderful modern notepad app, but it is a UWP application and only runs on Windows. NotepadE is a faithful, 1:1 rewrite of Notepads on top of web technology and Tauri, so the same clean look and feel can run anywhere: Windows, macOS, and Linux.
 
 The goal is simple: keep everything that made Notepads pleasant to use — the Fluent design, the built-in tab system, the blazingly fast feel — while making it cross-platform and easy to extend. If you liked Notepads but wished it ran on your Mac or your Linux box, this is for you.
 
@@ -69,14 +69,14 @@ The preview scrolls in lock-step with the editor, so the rendered output always 
 
 ## Building from source:
 
-NotepadE is built with Electron, React, Fluent UI v9, TypeScript, CodeMirror 6, and Vite. You will need Node.js 20+ and [Yarn](https://yarnpkg.com/) 4.
+NotepadE is built with Tauri, React, Fluent UI v9, TypeScript, CodeMirror 6, and Vite. You will need Node.js 20+, [Yarn](https://yarnpkg.com/) 4, and the [Rust toolchain](https://rustup.rs/).
 
 ```bash
 # Install dependencies
 yarn install
 
 # Run the app in development
-yarn dev
+yarn tauri dev
 
 # Type-check, lint, and test
 yarn typecheck
@@ -84,12 +84,12 @@ yarn lint
 yarn test
 
 # Build a distributable for the current platform
-yarn dist
+yarn tauri build
 ```
 
 ## Platform notes:
 
-- NotepadE runs on Windows, macOS, and Linux via Electron.
+- NotepadE runs on Windows, macOS, and Linux via Tauri.
 - Some platform-specific niceties (jump lists, file associations) depend on the host OS and the packaged build.
 - Very large files may affect responsiveness; the editor is tuned for everyday note-taking and config editing.
 
@@ -114,7 +114,7 @@ NotepadE is 100% open source. Feel free to review the source code or build your 
 
 ## Dependencies and References:
 
-- [Electron](https://www.electronjs.org/)
+- [Tauri](https://tauri.app/)
 - [React](https://react.dev/)
 - [Fluent UI](https://github.com/microsoft/fluentui)
 - [CodeMirror 6](https://codemirror.net/)

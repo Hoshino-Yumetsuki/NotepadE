@@ -1,13 +1,9 @@
 node_modules/
 out/
 dist/
-dist-electron/
 release/
 .vite/
 coverage/
-build/*
-!build/icon.png
-!build/installer.nsh
 playwright-report/
 test-results/
 *.log
