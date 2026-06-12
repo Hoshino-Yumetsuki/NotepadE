@@ -12,7 +12,7 @@ import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/
 import { lineNumberGlow } from './lineNumberGlow';
 import { lineNumberColumn } from './lineNumberColumn';
 import { matchLanguage, highlightStyleFor, MAX_HIGHLIGHT_DOC_LENGTH } from './syntaxHighlight';
-import { bigDocScrollStabilizer } from './bigDocScroll';
+import { bigDocDispatchTransactions } from './bigDocScroll';
 
 /**
  * Imperative handle the host (App) uses to drive the editor without owning the
@@ -458,13 +458,6 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // activates and Enter behaves like Notepad: the caret line holds its
         // screen position, content below pushes down.
         scrollPastEnd(),
-        // Big-document scroll stabilizer: in ~410k+ line docs CM6's BigScaler
-        // rescales the whole height model on every edit, so its single-anchor
-        // scrollTop correction jumps the viewport on a mid-file insert. This
-        // forces large-doc user edits onto CM6's deterministic cursor-scroll
-        // path (scrollIntoView y:"nearest"), pinning the caret line. See
-        // bigDocScroll.ts. A no-op below the line threshold.
-        bigDocScrollStabilizer,
         // Pin the document line separator to the shadow-buffer '\n' so doc
         // serialization never re-introduces CR. EOL is re-applied by MAIN.
         EditorState.lineSeparator.of(SHADOW_EOL),
@@ -503,7 +496,16 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           doc: docRef.current ?? normalizeToShadow(initialDoc),
           extensions
         }),
-        parent: hostRef.current
+        parent: hostRef.current,
+        // Big-document scroll stabilizer: in ~410k+ line docs CM6's BigScaler
+        // rescales the whole height model on every edit, and the anchor-diff
+        // correction CM6 would apply is skipped whenever the transaction
+        // carries a scroll target (typing always does). This wrapper captures
+        // a pixel-exact pre-edit scroll snapshot for big-doc user edits and
+        // re-applies it after the edit, pinning the caret line and everything
+        // above it at their exact screen y. See bigDocScroll.ts. A pass-
+        // through below the line threshold.
+        dispatchTransactions: bigDocDispatchTransactions
       });
       // The view owns the document now. Drop the parked string so a large file
       // is retained ONCE (inside CM6's rope), not twice (see docRef comment).

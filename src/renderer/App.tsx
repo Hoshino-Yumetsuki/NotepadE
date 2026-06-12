@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { ReactNode } from 'react';
 import { keymap, EditorView } from '@codemirror/view';
 import type { OpenedFile } from '@shared/ipc-contract';
+import { isMac } from '@shared/platform';
 import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
@@ -1203,7 +1204,7 @@ export function App(): JSX.Element {
   return (
     <FluentProvider
       theme={appTheme.theme}
-      className="np-theme-transition"
+      className={`np-theme-transition${isMac ? ' np-mac' : ''}`}
       style={{
         height: '100vh',
         display: 'flex',

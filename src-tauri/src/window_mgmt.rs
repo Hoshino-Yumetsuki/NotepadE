@@ -138,15 +138,21 @@ pub fn setup_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow, apply
         }
         #[cfg(target_os = "macos")]
         {
-            use window_vibrancy::{NSVisualEffectMaterial, NSVisualEffectState};
-            if let Err(e) = window_vibrancy::apply_vibrancy(
-                window,
-                NSVisualEffectMaterial::UnderWindowBackground,
-                Some(NSVisualEffectState::Active),
-                None,
-            ) {
-                log::warn!("apply_vibrancy failed: {e}");
-            }
+            // window-vibrancy's apply_vibrancy asserts the main thread
+            // (MainThreadMarker::new); broker spawns run setup_window off the
+            // Tauri async runtime, so hop to the main thread first.
+            let win = window.clone();
+            let _ = window.run_on_main_thread(move || {
+                use window_vibrancy::{NSVisualEffectMaterial, NSVisualEffectState};
+                if let Err(e) = window_vibrancy::apply_vibrancy(
+                    &win,
+                    NSVisualEffectMaterial::UnderWindowBackground,
+                    Some(NSVisualEffectState::Active),
+                    None,
+                ) {
+                    log::warn!("apply_vibrancy failed: {e}");
+                }
+            });
         }
         #[cfg(not(any(target_os = "windows", target_os = "macos")))]
         let _ = window;
@@ -173,29 +179,36 @@ pub fn setup_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow, apply
 #[cfg(target_os = "macos")]
 pub fn hide_traffic_lights(window: &tauri::WebviewWindow) {
     use objc2_app_kit::{NSWindow, NSWindowButton};
-    let ptr = match window.ns_window() {
-        Ok(p) => p as *const NSWindow,
-        Err(e) => {
-            log::warn!("ns_window() failed; cannot hide traffic lights: {e}");
+    // standardWindowButton/setHidden are AppKit calls (main-thread-only); both
+    // callers (setup_window off the broker async runtime, the Resized event
+    // handler) can run off-main, so marshal the whole AppKit block to the main
+    // thread — calling it off-main aborts the process on macOS.
+    let win = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        let ptr = match win.ns_window() {
+            Ok(p) => p as *const NSWindow,
+            Err(e) => {
+                log::warn!("ns_window() failed; cannot hide traffic lights: {e}");
+                return;
+            }
+        };
+        if ptr.is_null() {
             return;
         }
-    };
-    if ptr.is_null() {
-        return;
-    }
-    // Safety: ptr is a live NSWindow for the lifetime of this call (the webview
-    // window owns it); we only read it on the main thread (the Tauri setup hook
-    // and window-event callbacks both run there) and issue setHidden:.
-    let ns_window: &NSWindow = unsafe { &*ptr };
-    for button in [
-        NSWindowButton::CloseButton,
-        NSWindowButton::MiniaturizeButton,
-        NSWindowButton::ZoomButton,
-    ] {
-        if let Some(b) = ns_window.standardWindowButton(button) {
-            b.setHidden(true);
+        // Safety: ptr is a live NSWindow for the lifetime of this call (the
+        // webview window owns it); we read it only on the main thread (this
+        // closure) and issue setHidden:.
+        let ns_window: &NSWindow = unsafe { &*ptr };
+        for button in [
+            NSWindowButton::CloseButton,
+            NSWindowButton::MiniaturizeButton,
+            NSWindowButton::ZoomButton,
+        ] {
+            if let Some(b) = ns_window.standardWindowButton(button) {
+                b.setHidden(true);
+            }
         }
-    }
+    });
 }
 
 /// Set the runtime window icon from the embedded 128x128 PNG. tauri-build does

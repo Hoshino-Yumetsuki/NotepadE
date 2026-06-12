@@ -21,6 +21,8 @@ import {
 } from './findTokens';
 import { useT } from '../../i18n';
 import { useAppTheme } from '../../theme/useAppTheme';
+import { acrylicVars } from '../../theme/tokens';
+import { isMac } from '@shared/platform';
 
 /**
  * Find/Replace bar (RENDERER, Lane B) — 1:1 with the UWP FindAndReplaceControl.
@@ -247,12 +249,15 @@ export function FindBar(props: FindBarProps): JSX.Element {
       data-testid="find-bar"
       role="search"
       aria-label="Find and replace"
+      // `data-theme` lets the macOS panel CSS (.np-mac .np-findbar, acrylic.css)
+      // pick the light vs dark diffuse shadow without a global theme attribute.
+      data-theme={resolved}
       // Mount entrance (opacity + translateY slide-down). The bar is conditionally
       // rendered by the host, so it mounts fresh each open and the np-findbar-enter
       // keyframe plays once. translateY is allowed here (no geometry-measurement
       // constraint, unlike the tab strip). Reduced motion is handled by the CSS
       // @media guard on the keyframe (instant show).
-      className="np-findbar-enter"
+      className={`np-findbar-enter${isMac ? ' np-findbar' : ''}`}
       style={{
         // Float as a square panel in the editor's TOP-RIGHT corner (UWP
         // FindAndReplacePlaceHolder: HorizontalAlignment=Right / VerticalAlignment=
@@ -261,6 +266,14 @@ export function FindBar(props: FindBarProps): JSX.Element {
         // (position:relative) so it overlays the editor rather than docking at the
         // bottom. zIndex 100 sits above the editor host (1) but below the settings
         // modal (1000).
+        //
+        // On macOS the `.np-findbar` class (acrylic.css, gated by the root
+        // `.np-mac`) re-skins the CONTAINER ONLY — rounder corners, an in-page
+        // acrylic blur/tint reusing acrylicVars, a soft diffuse shadow and a
+        // hairline border — so the panel reads as a native mac floating surface
+        // instead of a Fluent box. The acrylic CSS vars below feed that blur/tint;
+        // they are inert (unreferenced) on Windows/Linux where the class is absent.
+        ...(isMac ? acrylicVars(resolved) : null),
         position: 'absolute',
         top: FindDimensions.overlayTop,
         right: FindDimensions.overlayRight,

@@ -73,3 +73,98 @@
     backdrop-filter: none;
   }
 }
+
+/*
+ * ============================================================================
+ *  macOS floating-panel treatment (platform-gated by the root `.np-mac` class)
+ * ============================================================================
+ *
+ * The app's chrome is Fluent/UWP-styled — correct on Windows, but its small
+ * 4–8px-radius boxes with tight dark drop shadows read as foreign on macOS. On
+ * macOS only (root `.np-mac`, set in App.tsx from @shared/platform isMac) the
+ * find/replace overlay panel gets a HIG-appropriate skin — CONTAINER STYLING
+ * ONLY, no control resizing, no component rewrites:
+ *
+ *   .np-findbar  → the find/replace overlay panel (FindBar.tsx). It is
+ *                  inline-styled, so these rules use !important to win over its
+ *                  inline box background/border/radius/shadow. It carries
+ *                  data-theme + the acrylicVars CSS vars (set in FindBar.tsx).
+ *
+ * Treatment:
+ *   - ~10px corner radius (mac panels are rounder than Fluent's 4–8px),
+ *   - in-page acrylic material: high-alpha per-theme tint (--acrylic-tint) +
+ *     backdrop blur+saturate (reuses the acrylicVars tokens passed as CSS vars
+ *     by the panel — no new colors invented),
+ *   - a soft, larger DIFFUSE shadow (light/dark variants via [data-theme]),
+ *   - a 1px hairline rgba border, plus a subtle inner light edge in dark mode
+ *     (the highlight mac panels carry along their top in dark material).
+ *
+ * The control sizes (Fluent inputs/buttons) are untouched; only the panel
+ * container is reskinned. HC + reduced-transparency drop the blur to a flat
+ * opaque surface, matching the existing .np-acrylic guards.
+ *
+ * NOTE: the Go To Line dialog (GoToLineDialog.tsx, a Fluent DialogSurface) is in
+ * the same family but is a CENTERED, SCRIMMED modal that already reads acceptably
+ * native; it was intentionally left on the stock Fluent surface to keep this
+ * change surgical and avoid coupling that component to the theme bridge. If it is
+ * reskinned later, add a `.np-mac-panel` class here mirroring `.np-findbar`.
+ */
+.np-mac .np-findbar {
+  border-radius: 10px !important;
+  /* Hairline border: a subtle dark line on light surfaces, a faint light line on
+     dark surfaces (set per-theme below). */
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  /* In-page acrylic: per-theme tint over a blurred, saturated backdrop. The tint
+     already carries its alpha (theme/tokens.ts); luminosity layers the frosted
+     depth on top. */
+  background-color: var(--acrylic-tint, rgba(46, 46, 46, 0.8)) !important;
+  background-image: linear-gradient(
+    var(--acrylic-luminosity, transparent),
+    var(--acrylic-luminosity, transparent)
+  ) !important;
+  -webkit-backdrop-filter: blur(var(--acrylic-blur, 30px)) saturate(180%);
+  backdrop-filter: blur(var(--acrylic-blur, 30px)) saturate(180%);
+  /* Comfortable padding on the container (FindBar's own inline padding is 4px;
+     the rounder panel benefits from a touch more breathing room without moving
+     the controls themselves). */
+  padding: 6px !important;
+}
+.np-mac .np-findbar[data-theme='dark'] {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Soft, larger diffuse shadow — replaces the harsh small Fluent shadow. Light
+   mode stays gentle; dark mode goes stronger so the panel still detaches from a
+   dark editor. Keyed off the panel's own data-theme. */
+.np-mac .np-findbar,
+.np-mac .np-findbar[data-theme='light'] {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+}
+.np-mac .np-findbar[data-theme='dark'] {
+  /* Stronger diffuse cast + a faint inner top highlight for the dark mac edge. */
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* High-contrast: flat opaque surface, no blur, no soft shadow — mirror the
+   existing .np-acrylic HC behaviour. */
+@media (forced-colors: active) {
+  .np-mac .np-findbar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: Canvas !important;
+    background-image: none !important;
+    border-color: CanvasText !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Reduced-transparency: keep the rounded mac shape + shadow, but drop the blur
+   so the surface stays legible for users who disable transparency. */
+@media (prefers-reduced-transparency: reduce) {
+  .np-mac .np-findbar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
