@@ -18,7 +18,13 @@
  * Exposes `window.view` for the Playwright driver.
  */
 import { EditorState } from '@codemirror/state';
-import { EditorView, keymap, highlightActiveLine, scrollPastEnd } from '@codemirror/view';
+import {
+  EditorView,
+  keymap,
+  highlightActiveLine,
+  scrollPastEnd,
+  lineNumbers
+} from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { editorCommandExtensions } from '../../src/renderer/editor/commands/keymap';
 import { initZoomVar, setZoom } from '../../src/renderer/editor/commands/zoom';
@@ -32,6 +38,73 @@ const FIX = params.get('fix') !== '0';
 const WRAP = params.get('wrap') === '1';
 const ZOOM = Number(params.get('zoom') ?? 100);
 const VARIED = params.get('varied') === '1';
+// Bisection toggles for the frozen-viewport bug (?gutter=0 / ?spe=0 / ?cmds=0):
+// drop the line-number column / scrollPastEnd / the command bundle to find the
+// extension responsible for the measure-loop livelock deep in BigScaler docs.
+// ?gutter accepts a part list too: gutter=numbers | numbers,theme | numbers,clip
+// to bisect INSIDE lineNumberColumn (default: the full app extension). With
+// `theme`, ?rules=gutters,content,layer,cell,active picks individual theme rules.
+const GUTTER = params.get('gutter') !== '0';
+const GUTTER_PARTS = (params.get('gutter') ?? '').split(',');
+const RULES = (params.get('rules') ?? 'gutters,content,layer,cell,active').split(',');
+const SPE = params.get('spe') !== '0';
+const CMDS = params.get('cmds') !== '0';
+
+/**
+ * Rule-by-rule rebuild of lineNumberTheme (lineNumberColumn.ts) for bisecting
+ * which CSS rule livelocks CM6's measure loop deep in BigScaler docs.
+ */
+function bisectTheme(rules: string[]) {
+  const spec: Record<string, Record<string, string>> = {};
+  if (rules.includes('gutters')) {
+    spec['.cm-gutters'] = {
+      backgroundColor: 'transparent',
+      color: 'rgba(0, 0, 0, 0.6)',
+      border: 'none',
+      position: 'sticky',
+      left: '0',
+      zIndex: '200',
+      fontFamily: 'monospace',
+      fontSize: 'var(--cm-zoom-font-size)'
+    };
+  }
+  if (rules.includes('gutters-nofont')) {
+    spec['.cm-gutters'] = {
+      backgroundColor: 'transparent',
+      color: 'rgba(0, 0, 0, 0.6)',
+      border: 'none',
+      position: 'sticky',
+      left: '0',
+      zIndex: '200'
+    };
+  }
+  if (rules.includes('content')) {
+    spec['.cm-content'] = { clipPath: 'inset(0 0 0 var(--np-hclip, 0px))' };
+  }
+  if (rules.includes('line')) {
+    spec['.cm-line'] = { clipPath: 'var(--np-content-clip, none)' };
+  }
+  if (rules.includes('layer')) {
+    spec['.cm-layer'] = {
+      clipPath: 'inset(0 0 0 calc(var(--np-hclip, 0px) + var(--np-gutter-w, 0px)))'
+    };
+  }
+  if (rules.includes('cell')) {
+    spec['.cm-lineNumbers .cm-gutterElement'] = {
+      padding: '0 8px 0 6px',
+      minWidth: '2ch',
+      textAlign: 'right',
+      color: 'rgba(0, 0, 0, 0.6)'
+    };
+  }
+  if (rules.includes('active')) {
+    spec['.cm-lineNumbers .cm-activeLineGutter'] = {
+      backgroundColor: 'transparent',
+      color: 'rgba(0, 0, 0, 0.95)'
+    };
+  }
+  return EditorView.theme(spec);
+}
 
 function makeDoc(lines: number): string {
   const parts = new Array<string>(lines);
@@ -52,12 +125,12 @@ function makeDoc(lines: number): string {
 
 const extensions = [
   history(),
-  editorCommandExtensions({}),
+  CMDS ? editorCommandExtensions({}) : [],
   keymap.of(
     defaultKeymap.filter((b) => b.key !== 'Mod-z' && b.key !== 'Mod-y' && b.mac !== 'Mod-z')
   ),
   highlightActiveLine(),
-  scrollPastEnd(),
+  SPE ? scrollPastEnd() : [],
   EditorState.lineSeparator.of(SHADOW_EOL),
   // Match the app's editor metrics (CodeMirrorEditor.tsx buildEditorTheme).
   EditorView.theme({
@@ -70,7 +143,11 @@ const extensions = [
     '.cm-line': { padding: '0 6px' },
     '.cm-scroller': { overflow: 'auto', lineHeight: '1.2' }
   }),
-  lineNumberColumn({ themeMode: 'light', fontFamily: 'monospace', lineHighlighter: true }),
+  GUTTER
+    ? GUTTER_PARTS.includes('numbers')
+      ? [lineNumbers(), GUTTER_PARTS.includes('theme') ? bisectTheme(RULES) : []]
+      : lineNumberColumn({ themeMode: 'light', fontFamily: 'monospace', lineHighlighter: true })
+    : [],
   WRAP ? EditorView.lineWrapping : []
 ];
 

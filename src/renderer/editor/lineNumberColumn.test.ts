@@ -97,32 +97,44 @@ describe('lineNumberColumn — native gutter wiring (jsdom)', () => {
     view.destroy();
   });
 
-  it('keeps the gutter sticky and clips content/layers at the gutter edge (transparent gutter + clip = no overlap)', () => {
+  it('keeps the gutter sticky and clips lines/layers via CONDITIONAL vars (no standing clip)', () => {
     const { view } = mount('light');
     // CM6 injects the theme as a StyleModule <style>. The no-overlap guarantee
-    // for the TRANSPARENT gutter is the clip-path pair: .cm-content clipped at
-    // --np-hclip (= scrollLeft) and .cm-layer (selection/cursor, whose origin
-    // includes the gutter width) at --np-hclip + --np-gutter-w. The gutter
-    // itself stays sticky above the content.
+    // for the TRANSPARENT gutter is the conditional clip-path pair: every
+    // .cm-line clipped by --np-content-clip and the selection/cursor .cm-layer
+    // by --np-layer-clip, BOTH falling back to `none` when unset. The fallback
+    // is load-bearing: a standing clip-path on the ~7M-px-tall .cm-content
+    // (or any always-on mask) breaks compositing deep in BigScaler docs.
     const css = Array.from(document.querySelectorAll('style'))
       .map((s) => s.textContent ?? '')
       .join('\n');
     expect(css).toContain('position: sticky');
-    expect(css).toContain('inset(0 0 0 var(--np-hclip, 0px))');
-    expect(css).toContain('inset(0 0 0 calc(var(--np-hclip, 0px) + var(--np-gutter-w, 0px)))');
+    expect(css).toContain('var(--np-content-clip, none)');
+    expect(css).toContain('var(--np-layer-clip, none)');
+    // No rule may clip .cm-content itself (the huge surface).
+    expect(css).not.toMatch(/\.cm-content[^{]*\{[^}]*clip-path/);
     view.destroy();
   });
 
-  it('mirrors scrollLeft into --np-hclip on horizontal scroll', () => {
+  it('publishes the clip vars only while horizontally scrolled; removes them at 0', () => {
     const { view } = mount('light', 'a very long line\n'.repeat(3));
     const scroller = view.scrollDOM;
-    // Initial sync (jsdom scrollLeft = 0).
-    expect(scroller.style.getPropertyValue('--np-hclip')).toBe('0px');
+    // Initial sync (jsdom scrollLeft = 0): resting state has NO vars → the
+    // var() fallback `none` applies and nothing is masked.
+    expect(scroller.style.getPropertyValue('--np-content-clip')).toBe('');
+    expect(scroller.style.getPropertyValue('--np-layer-clip')).toBe('');
     // Simulate a horizontal scroll: jsdom doesn't lay out, but scrollLeft is
     // assignable and the plugin reads it on the scroll event.
-    Object.defineProperty(scroller, 'scrollLeft', { value: 42, configurable: true });
+    Object.defineProperty(scroller, 'scrollLeft', { value: 42, configurable: true, writable: true });
     scroller.dispatchEvent(new Event('scroll'));
-    expect(scroller.style.getPropertyValue('--np-hclip')).toBe('42px');
+    expect(scroller.style.getPropertyValue('--np-content-clip')).toBe('inset(0 0 0 42px)');
+    // jsdom reports gutter offsetWidth = 0, so the layer inset equals scrollLeft.
+    expect(scroller.style.getPropertyValue('--np-layer-clip')).toBe('inset(0 0 0 42px)');
+    // Back to 0 → vars removed (clip-path: none again).
+    Object.defineProperty(scroller, 'scrollLeft', { value: 0, configurable: true, writable: true });
+    scroller.dispatchEvent(new Event('scroll'));
+    expect(scroller.style.getPropertyValue('--np-content-clip')).toBe('');
+    expect(scroller.style.getPropertyValue('--np-layer-clip')).toBe('');
     view.destroy();
   });
 

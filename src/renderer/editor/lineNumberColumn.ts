@@ -32,16 +32,27 @@
  *   - no-overlap on horizontal scroll is guaranteed by CLIPPING, not masking:
  *     the native gutter is `position: sticky; left: 0; z-index: 200` inside the
  *     scroller, so with word-wrap off a long line scrolled right slides the
- *     content LEFT, UNDER the gutter. A tiny ViewPlugin mirrors
- *     `scrollDOM.scrollLeft` into the `--np-hclip` CSS variable (and the gutter
- *     width into `--np-gutter-w`); `.cm-content` is clipped at
- *     `inset(0 0 0 var(--np-hclip))` (content-local x < scrollLeft is exactly
- *     the part that slid under the sticky gutter) and the selection/cursor
- *     `.cm-layer`s — whose local origin is the scroller's content origin,
- *     INCLUDING the gutter width — at `inset(0 0 0 calc(--np-hclip +
- *     --np-gutter-w))`. Text, selection rects and the caret are therefore never
- *     RENDERED under the gutter at all, so the transparent strip never shows
- *     them.
+ *     content LEFT, UNDER the gutter. A tiny ViewPlugin watches
+ *     `scrollDOM.scrollLeft` and, while it is > 0, publishes two ready-made
+ *     clip-path values on `.cm-scroller`: `--np-content-clip` =
+ *     `inset(0 0 0 scrollLeft)` applied to EVERY `.cm-line` (line-local x <
+ *     scrollLeft is exactly the part that slid under the sticky gutter) and
+ *     `--np-layer-clip` = `inset(0 0 0 scrollLeft + gutterWidth)` applied to
+ *     the selection/cursor `.cm-layer`s — whose local origin is the scroller's
+ *     content origin, INCLUDING the gutter width. Text, selection rects and
+ *     the caret are therefore never RENDERED under the gutter at all, so the
+ *     transparent strip never shows them.
+ *
+ *     CRITICAL — the clip is per-LINE and conditional, NEVER on `.cm-content`:
+ *     in a BigScaler document `.cm-content` is ~7,000,000px tall, and ANY
+ *     `clip-path` on it (even a no-op `inset(0)`) makes Chromium rasterize a
+ *     clip mask for the whole element. Past ~5–6M px that mask exceeds the
+ *     compositor's limits: everything deeper simply stops painting AND CM6's
+ *     measure loop destabilizes ("Measure loop restarted more than 5 times"),
+ *     freezing the viewport — text and line numbers vanish when scrolling deep
+ *     into a 100MB+ file. A `.cm-line` is one line tall, so its mask is tiny;
+ *     and with no horizontal scroll the vars are unset → `clip-path: none`
+ *     (the `var()` fallback), so the common path pays nothing at all.
  *   - width grows with the digit count automatically (CM6 sizes the gutter to
  *     its widest element).
  *
@@ -132,21 +143,28 @@ export function lineNumberTheme(options: LineNumberColumnOptions): Extension {
       fontSize: 'var(--cm-zoom-font-size)'
     },
     // No-overlap guarantee for the TRANSPARENT gutter: never render content
-    // under the sticky strip. Content-local x < scrollLeft is exactly the part
-    // that slid under the gutter (the content box starts at the gutter's right
-    // edge), so clipping there hides it. --np-hclip is mirrored from
-    // scrollDOM.scrollLeft by horizontalClipPlugin; with the var unset/0 the
-    // inset is 0 and nothing is clipped.
-    '.cm-content': {
-      clipPath: 'inset(0 0 0 var(--np-hclip, 0px))'
+    // under the sticky strip. Line-local x < scrollLeft is exactly the part
+    // that slid under the gutter (each line's box starts at the gutter's right
+    // edge), so clipping there hides it. --np-content-clip is published by
+    // horizontalClipPlugin ONLY while scrollLeft > 0; with the var unset the
+    // fallback is `none` and nothing is clipped.
+    //
+    // NEVER move this clip to `.cm-content`: in a BigScaler document that
+    // element is ~7,000,000px tall and any clip-path on it forces Chromium to
+    // rasterize a full-element clip mask, which blows the compositor's limits
+    // past ~5–6M px — content deeper in the file stops painting entirely and
+    // CM6's measure loop livelocks (frozen viewport). Per-line masks are tiny.
+    '.cm-line': {
+      clipPath: 'var(--np-content-clip, none)'
     },
     // Selection rectangles + the caret live in .cm-layer elements whose local
     // origin is the scroller CONTENT origin (left edge INCLUDING the gutter, per
     // @codemirror/view getBase: marker.left = clientX - (scrollerRect.left -
     // scrollLeft)), so their under-gutter region is [scrollLeft, scrollLeft +
-    // gutterWidth] — clip at the sum.
+    // gutterWidth] — the published clip insets by the sum. Same conditional
+    // var: unset → `none`.
     '.cm-layer': {
-      clipPath: 'inset(0 0 0 calc(var(--np-hclip, 0px) + var(--np-gutter-w, 0px)))'
+      clipPath: 'var(--np-layer-clip, none)'
     },
     '.cm-lineNumbers .cm-gutterElement': {
       // Right-aligned numbers with UWP-style insets; min-width keeps a stable
@@ -171,55 +189,78 @@ export function lineNumberTheme(options: LineNumberColumnOptions): Extension {
 }
 
 /**
- * Mirrors the scroller's horizontal scroll offset into `--np-hclip` and the
- * gutter's current width into `--np-gutter-w` (both on `.cm-scroller`), feeding
- * the clip-path rules in `lineNumberTheme`. Scroll writes are guarded (only on
- * change) and read nothing but `scrollLeft`; the gutter width is read in CM6's
- * measure phase (geometry changes: digit growth, zoom) to avoid layout thrash.
+ * Publishes the two ready-made clip-path values (`--np-content-clip` on every
+ * `.cm-line`, `--np-layer-clip` on the selection/cursor layers) on
+ * `.cm-scroller` while the editor is horizontally scrolled, and REMOVES them at
+ * scrollLeft = 0 so the resting state is `clip-path: none` (no mask at all —
+ * see the module header for why a standing clip on huge surfaces is fatal).
+ * Scroll writes are guarded (only on change) and read nothing but `scrollLeft`.
+ *
+ * The gutter width is re-read on geometry changes (digit growth, zoom) in the
+ * plugin's OWN requestAnimationFrame — deliberately NOT via view.requestMeasure:
+ * deep in a BigScaler document every measure iteration itself produces a
+ * geometryChanged update (the scaler re-pins scrollTop each pass), so a plugin
+ * that re-requests a measure from update() re-enters the measure loop on every
+ * iteration until CM6 aborts with "Measure loop restarted more than 5 times" —
+ * leaving the viewport half-updated (blank bands / missing lines when scrolling
+ * deep into a 100MB+ file). One rAF read after CM6's cycle finishes is outside
+ * that loop entirely and costs at most one layout read per frame.
  */
 const horizontalClipPlugin = ViewPlugin.fromClass(
   class {
     private lastLeft = -1;
-    private lastGutterWidth = -1;
+    private gutterWidth = 0;
+    private rafId: number | null = null;
     private readonly onScroll: () => void;
-    private readonly measureReq: { read: () => number; write: (width: number) => void };
 
     constructor(private readonly view: EditorView) {
       this.onScroll = () => this.syncScrollLeft();
       view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
-      this.measureReq = {
-        read: () => {
-          const gutters = this.view.scrollDOM.querySelector('.cm-gutters');
-          return gutters instanceof HTMLElement ? gutters.offsetWidth : 0;
-        },
-        write: (width: number) => this.writeGutterWidth(width)
-      };
       this.syncScrollLeft();
-      view.requestMeasure(this.measureReq);
+      this.scheduleWidthRead();
     }
 
     update(update: ViewUpdate): void {
       if (update.geometryChanged) {
-        this.view.requestMeasure(this.measureReq);
+        this.scheduleWidthRead();
         this.syncScrollLeft();
       }
     }
 
     destroy(): void {
       this.view.scrollDOM.removeEventListener('scroll', this.onScroll);
+      if (this.rafId != null) cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+
+    /** Coalesced width read, OUTSIDE CM6's measure loop (see class docs). */
+    private scheduleWidthRead(): void {
+      if (this.rafId != null || typeof requestAnimationFrame !== 'function') return;
+      this.rafId = requestAnimationFrame(() => {
+        this.rafId = null;
+        const gutters = this.view.scrollDOM.querySelector('.cm-gutters');
+        const width = gutters instanceof HTMLElement ? gutters.offsetWidth : 0;
+        if (width === this.gutterWidth) return;
+        this.gutterWidth = width;
+        // Re-publish the layer clip with the new width if currently scrolled.
+        this.lastLeft = -1;
+        this.syncScrollLeft();
+      });
     }
 
     private syncScrollLeft(): void {
       const left = this.view.scrollDOM.scrollLeft;
       if (left === this.lastLeft) return;
       this.lastLeft = left;
-      this.view.scrollDOM.style.setProperty('--np-hclip', `${left}px`);
-    }
-
-    private writeGutterWidth(width: number): void {
-      if (width === this.lastGutterWidth) return;
-      this.lastGutterWidth = width;
-      this.view.scrollDOM.style.setProperty('--np-gutter-w', `${width}px`);
+      const style = this.view.scrollDOM.style;
+      if (left > 0) {
+        style.setProperty('--np-content-clip', `inset(0 0 0 ${left}px)`);
+        style.setProperty('--np-layer-clip', `inset(0 0 0 ${left + this.gutterWidth}px)`);
+      } else {
+        // Resting state: no clip-path AT ALL (the var() fallback is `none`).
+        style.removeProperty('--np-content-clip');
+        style.removeProperty('--np-layer-clip');
+      }
     }
   }
 );
