@@ -182,12 +182,14 @@ fn corpus_utf32_bom_families() {
 }
 
 #[test]
-fn utf7_round_trip_via_reopen() {
-    let text = "Hi Mom -☺-! +plus+ A‽Z";
-    let bytes = encode_text(text, "UTF-7").unwrap();
-    let d = decode_bytes_with(&bytes, "UTF-7");
-    assert_eq!(d.decoded_text, text);
-    assert_eq!(encode_text(&d.decoded_text, "UTF-7").unwrap(), bytes);
+fn utf7_decode_only_via_reopen() {
+    // UTF-7 is decode-only now (no maintained encode crate). Decoding a
+    // known UTF-7 byte sequence still works via the charset crate; encoding
+    // the "UTF-7" label is rejected.
+    let bytes = b"Hi Mom -+Jjo--!"; // "Hi Mom -\u{263A}-!"
+    let d = decode_bytes_with(bytes, "UTF-7");
+    assert_eq!(d.decoded_text, "Hi Mom -\u{263A}-!");
+    assert!(encode_text("anything", "UTF-7").is_err());
 }
 
 #[test]
@@ -425,21 +427,24 @@ fn decode_with_strips_matching_physical_bom_only() {
 
 #[test]
 fn list_ansi_returns_verbatim_table() {
-    // encoding.ts ANSI_CODECS order, verbatim (41 rows: the documented UWP 40
-    // + the appended ibm850 — the .ts source is the spec).
+    // encoding.ts ANSI_CODECS order, minus x-mac-ce (cp 10029) which was
+    // dropped (no maintained crate covers it — see encoding/mod.rs docs).
+    // 40 rows remain: the documented UWP 40 + appended ibm850 - x-mac-ce.
     let list = list_ansi_encodings();
-    assert_eq!(list.len(), 41);
+    assert_eq!(list.len(), 40);
     assert_eq!(list[0].code_page, 1252);
     assert_eq!(list[0].label, "Western (windows-1252)");
     assert_eq!(list[5].code_page, 437);
     assert_eq!(list[5].label, "DOS (IBM437)");
-    assert_eq!(list[39].code_page, 1258);
-    assert_eq!(list[39].label, "Vietnamese (windows-1258)");
-    assert_eq!(list[40].code_page, 850);
-    assert_eq!(list[40].label, "Western European DOS (ibm850)");
+    assert_eq!(list[38].code_page, 1258);
+    assert_eq!(list[38].label, "Vietnamese (windows-1258)");
+    assert_eq!(list[39].code_page, 850);
+    assert_eq!(list[39].label, "Western European DOS (ibm850)");
+    // x-mac-ce must be gone
+    assert!(list.iter().all(|e| e.code_page != 10029));
     // every label is unique
     let set: std::collections::HashSet<_> = list.iter().map(|e| &e.label).collect();
-    assert_eq!(set.len(), 41);
+    assert_eq!(set.len(), 40);
 }
 
 #[test]

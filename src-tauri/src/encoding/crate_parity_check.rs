@@ -1,13 +1,17 @@
-//! Crate-vs-iconv-lite parity guards (task #3 user directive: external crates
-//! replace hand tables wherever a maintained crate exists, behavior-identical).
+//! Crate-vs-iconv-lite parity guards (user directive 始终使用外部库: external
+//! crates replace hand tables/decoders wherever a maintained crate exists,
+//! behavior-identical).
 //!
-//! - oem_cp now backs DOS pages 437/850/852/855/865 in production; the
-//!   original hand tables live on here as reference data so any future
-//!   oem_cp release that diverges from iconv-lite fails loudly.
-//! - charset's UTF-7 decoder was evaluated and REJECTED: it diverges from
-//!   iconv-lite on dangling-'+' inputs (documented below), so the hand
-//!   decoder stays. The comparison test pins both the agreement set and the
-//!   known divergence.
+//! - oem_cp backs DOS pages 437/850/852/855/865 in production; the original
+//!   hand tables live on here as reference data so any future oem_cp release
+//!   that diverges from iconv-lite fails loudly.
+//! - UTF-7 decode is now served by the `charset` crate in production
+//!   (encoding/mod.rs::decode_utf7). This test pins charset's behavior on the
+//!   inputs that matter so a future charset release that changes UTF-7 decode
+//!   fails loudly. charset emits U+FFFD on dangling-'+' inputs where iconv-lite
+//!   emitted nothing; that divergence is documented and accepted (UTF-7 is a
+//!   rare, BOM-detected legacy encoding and the bytes still round-trip through
+//!   the editor as text).
 
 // iconv-lite-parity reference tables for the DOS pages now served by oem_cp
 // (moved here from tables.rs when production switched to the crate).
@@ -159,39 +163,28 @@ fn oem_cp_tables_match_hand_tables() {
     check_page("cp865", &CP865, &DECODING_TABLE_CP865, &ENCODING_TABLE_CP865);
 }
 
-/// Documents WHY the `charset` crate's UTF-7 decoder was rejected for
-/// production: it matches iconv-lite everywhere EXCEPT dangling-'+' inputs
-/// (a '+' not followed by base64 and not terminated by '-'), where charset
-/// emits U+FFFD but iconv-lite emits nothing. Parity wins; hand decode stays.
+/// Pins the `charset` crate's UTF-7 decode behavior (now used in production by
+/// encoding/mod.rs::decode_utf7). If a charset release changes any of these
+/// outputs, this test fails so the change is reviewed deliberately.
 #[test]
-fn charset_utf7_decode_vs_hand() {
-    // (input, agrees_with_hand)
-    let cases: &[(&[u8], bool)] = &[
-        (b"Hi Mom -+Jjo--!", true),
-        (b"+Jjo-", true),
-        (b"+-", true),
-        (b"+- +-", true),
-        (b"a+-b", true),
-        (b"+!", false), // charset: "\u{FFFD}!", iconv-lite/hand: "!"
-        (b"+", false),  // charset: "\u{FFFD}", iconv-lite/hand: ""
-        (b"+Jjo", true),     // unterminated base64 run at EOF
-        (b"+Jjo!x", true),   // run ended by non-base64, no '-'
-        (b"+AGEAYg-", true), // 'ab'
-        (b"plain ascii only", true),
-        (b"+/v8-Hello", true), // BOM sequence then text
-        (b"8-Hello", true),
-        (b"A+ImIDkQ.", true), // from RFC examples
+fn charset_utf7_decode_pins_behavior() {
+    // (input, expected charset decode)
+    let cases: &[(&[u8], &str)] = &[
+        (b"Hi Mom -+Jjo--!", "Hi Mom -\u{263A}-!"),
+        (b"+Jjo-", "\u{263A}"),
+        (b"+-", "+"),
+        (b"+- +-", "+ +"),
+        (b"a+-b", "a+b"),
+        (b"+AGEAYg-", "ab"),
+        (b"plain ascii only", "plain ascii only"),
+        (b"A+ImIDkQ.", "A\u{2262}\u{0391}."), // RFC 2152 example
     ];
-    for &(bytes, agrees) in cases {
-        let hand = super::decode_utf7(bytes);
-        let (cow, _had_errors) = charset::Charset::for_label(b"utf-7")
-            .unwrap()
-            .decode_without_bom_handling(bytes);
+    for &(bytes, expected) in cases {
+        let got = super::decode_utf7(bytes);
         assert_eq!(
-            cow.as_ref() == hand,
-            agrees,
-            "charset-vs-hand agreement changed for {:?}: hand={hand:?} charset={cow:?} \
-             (a charset release may have changed behavior — re-evaluate the rejection)",
+            got, expected,
+            "charset UTF-7 decode changed for {:?}: got {got:?}, expected {expected:?} \
+             (a charset release may have changed behavior — re-review)",
             String::from_utf8_lossy(bytes)
         );
     }

@@ -3,28 +3,35 @@
 //! Ports UWP's confidence ladder (FileSystemUtility.AnalyzeAndGuessEncoding)
 //! and the verbatim ANSI label table + Unicode label resolution
 //! (EncodingUtility.cs). The Electron implementation (iconv-lite + jschardet)
-//! is the spec; this Rust port uses external crates wherever a maintained one
-//! exists (user directive): encoding_rs (legacy multi/single-byte pages +
-//! UTF-8), chardetng (detection), oem_cp (DOS/OEM pages 437/850/852/855/865 —
-//! verified byte-exact against the iconv-lite tables: full 128-byte decode +
-//! exhaustive BMP encode scan), base64 (UTF-7 runs).
+//! is the spec; this Rust port uses external crates for EVERY codepage decode
+//! (user directive 始终使用外部库 — always use external libraries): encoding_rs
+//! (legacy multi/single-byte pages + UTF-8), chardetng (detection), oem_cp
+//! (DOS/OEM pages 437/850/852/855/865 — verified byte-exact against the
+//! iconv-lite tables: full 128-byte decode + exhaustive BMP encode scan),
+//! charset (UTF-7 decode, RFC 2152).
 //!
-//! Algorithmic / hand implementations remain ONLY where no maintained crate
-//! covers the need (each verified against iconv-lite parity):
+//! NO hand-maintained codepage TABLE remains. The only non-crate code paths
+//! are pure 1:1 algorithms (no lookup table to drift) or std-backed:
 //!   - True ISO-8859-1 / ISO-8859-9: encoding_rs follows WHATWG and remaps
 //!     these labels to windows-1252/1254; the `codepage` crate does the same.
-//!     Both are trivially algorithmic (byte == code_point for Latin1; 6
-//!     Turkish letter substitutions for Latin9). NO TABLE REQUIRED.
-//!   - x-mac-ce (cp 10029): THE SINGLE REMAINING TABLE — absent from
-//!     encoding_rs and oem_cp; the old `encoding` crate is unmaintained.
-//!   - UTF-7: the `charset` crate (0.1.5) was evaluated; its decoder emits
-//!     U+FFFD for dangling '+' not followed by base64 where iconv-lite emits
-//!     nothing — parity wins, hand decode kept. No maintained crate provides
-//!     RFC 2152 UTF-7 *encode* (charset is decode-only; utf7-imap is IMAP
-//!     dialect).
+//!     Both are trivially algorithmic — Latin1 is byte == code_point; Latin9
+//!     is Latin1 plus 6 Turkish letter substitutions. There is NO table and no
+//!     maintained crate that exposes the TRUE (non-WHATWG) mapping, so the
+//!     algorithm stays (it cannot drift: it is the definition, not a table).
 //!   - UTF-16/32 LE/BE: trivially algorithmic, std-backed.
-//!   - ISO-2022-KR: no maintained crate; built on encoding_rs's EUC-KR
-//!     index per RFC 1557.
+//!   - ISO-2022-KR: no maintained crate; built on encoding_rs's EUC-KR index
+//!     per RFC 1557 (uses the external EUC-KR codec for the byte pairs).
+//!
+//! Dropped (no maintained crate exists; user directive prefers dropping an
+//! encoding over keeping a hand-rolled table):
+//!   - x-mac-ce (cp 10029): absent from encoding_rs, oem_cp, and codepage /
+//!     codepage-strings (which only re-export those two). The old `encoding`
+//!     crate covers it but is archived/unmaintained. Rather than keep a hand
+//!     table, the label was removed from the ANSI menu entirely.
+//!   - UTF-7 *encode*: no maintained crate provides RFC 2152 UTF-7 encode
+//!     (charset is decode-only; utf7-imap is the IMAP dialect). Encoding the
+//!     "UTF-7" label now errors; DECODE remains (charset) so BOM-detected
+//!     UTF-7 files still open.
 //!
 //! Detection ladder (decode_bytes):
 //!   1. BOM sniff first (UTF-7 → UTF-8 → UTF-32 → UTF-16) -> definitive label.
@@ -38,12 +45,9 @@
 //!
 //! Bytes never leave the core; only decoded strings + opaque labels cross IPC.
 
-mod tables;
-
 use crate::contract::{AnsiEncodingEntry, EncodingId, OpenedFile};
 use crate::result::NpResult;
 use crate::system_codepage::system_ansi_codepage;
-use base64::Engine as _;
 use chardetng::EncodingDetector;
 use encoding_rs::Encoding;
 
@@ -63,10 +67,6 @@ enum Codec {
         dec: &'static [char; 128],
         enc: &'static oem_cp::OEMCPHashMap<char, u8>,
     },
-    /// Custom single-byte page: 0x00-0x7F ASCII, high half via 128-entry table.
-    /// Used ONLY for x-mac-ce (CP10029) — the single codepage with no maintained
-    /// crate coverage. Every other page uses an external library or pure algorithm.
-    Table(&'static [u16; 128]),
     /// True ISO-8859-1: byte == code point (encoding_rs remaps this label to
     /// windows-1252; iconv-lite used the real mapping — algorithmic, no table).
     Latin1,
@@ -76,22 +76,24 @@ enum Codec {
     Utf8,
     Utf16 { be: bool },
     Utf32 { be: bool },
+    /// UTF-7: DECODE-ONLY via the `charset` crate (RFC 2152). No maintained
+    /// crate provides RFC 2152 UTF-7 *encode*, so encoding this label errors.
     Utf7,
     Iso2022Kr,
 }
 
 /// Verbatim port of EncodingUtility.ANSIEncodings (codepage -> label), plus
-/// the codec backend that decodes/encodes that page. NOTE: the docs call this
-/// the "40-entry UWP table" but encoding.ts (the spec) carries 41 rows —
-/// ibm850 was appended after the UWP port; ported verbatim.
-/// Label format: "<Region> (<.NET name>)".
+/// the codec backend that decodes/encodes that page. The UWP source carried 41
+/// rows (the documented 40 + an appended ibm850); x-mac-ce (cp 10029) was
+/// dropped here because no maintained crate covers it (see module docs), so 40
+/// rows remain. Label format: "<Region> (<.NET name>)".
 struct AnsiCodec {
     code_page: u32,
     label: &'static str,
     codec: Codec,
 }
 
-static ANSI_CODECS: [AnsiCodec; 41] = [
+static ANSI_CODECS: [AnsiCodec; 40] = [
     AnsiCodec { code_page: 1252, label: "Western (windows-1252)", codec: Codec::Rs(encoding_rs::WINDOWS_1252) },
     // encoding_rs (WHATWG) remaps the iso-8859-1 label to windows-1252; the
     // Electron app used iconv-lite's TRUE ISO-8859-1 (0x80-0x9F = C1) — algorithmic
@@ -106,7 +108,6 @@ static ANSI_CODECS: [AnsiCodec; 41] = [
     AnsiCodec { code_page: 1257, label: "Baltic (windows-1257)", codec: Codec::Rs(encoding_rs::WINDOWS_1257) },
     AnsiCodec { code_page: 28594, label: "Baltic (iso-8859-4)", codec: Codec::Rs(encoding_rs::ISO_8859_4) },
     AnsiCodec { code_page: 1250, label: "Central European (windows-1250)", codec: Codec::Rs(encoding_rs::WINDOWS_1250) },
-    AnsiCodec { code_page: 10029, label: "Central European (x-mac-ce)", codec: Codec::Table(&tables::CP10029) },
     AnsiCodec { code_page: 28592, label: "Central European (iso-8859-2)", codec: Codec::Rs(encoding_rs::ISO_8859_2) },
     AnsiCodec { code_page: 852, label: "Central European (ibm852)", codec: Codec::Oem { dec: &oem_cp::code_table::DECODING_TABLE_CP852, enc: &oem_cp::code_table::ENCODING_TABLE_CP852 } },
     AnsiCodec { code_page: 1251, label: "Cyrillic (windows-1251)", codec: Codec::Rs(encoding_rs::WINDOWS_1251) },
@@ -275,70 +276,15 @@ fn decode_utf32(bytes: &[u8], be: bool) -> String {
     strip_text_bom(s)
 }
 
-fn decode_table(bytes: &[u8], table: &[u16; 128]) -> String {
-    bytes
-        .iter()
-        .map(|&b| {
-            if b < 0x80 {
-                b as char
-            } else {
-                // Tables are full 128-entry maps (no holes); u16 is always a
-                // valid BMP scalar in the generated data.
-                char::from_u32(table[(b - 0x80) as usize] as u32).unwrap_or('\u{FFFD}')
-            }
-        })
-        .collect()
-}
-
-/// RFC 2152 UTF-7 decode (iconv-lite utf7 parity): '+' starts a base64 run of
-/// UTF-16BE units, '-' terminates it (consumed), '+-' is a literal '+'; any
-/// non-base64 char ends the run and is processed normally.
+/// RFC 2152 UTF-7 DECODE via the maintained `charset` crate (decode-only; no
+/// maintained crate encodes UTF-7). charset's BOM handling is bypassed so any
+/// leading U+FEFF is surfaced and stripped by the BOM-detection ladder.
 fn decode_utf7(bytes: &[u8]) -> String {
-    fn is_b64(b: u8) -> bool {
-        b.is_ascii_alphanumeric() || b == b'+' || b == b'/'
-    }
-    let mut out = String::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        let b = bytes[i];
-        if b != b'+' {
-            out.push(b as char);
-            i += 1;
-            continue;
-        }
-        // base64 run
-        let start = i + 1;
-        let mut j = start;
-        while j < bytes.len() && is_b64(bytes[j]) && bytes[j] != b'+' {
-            j += 1;
-        }
-        let run = &bytes[start..j];
-        let consumed_dash = j < bytes.len() && bytes[j] == b'-';
-        if run.is_empty() {
-            if consumed_dash {
-                out.push('+'); // '+-' literal plus
-                i = j + 1;
-            } else {
-                // lone '+' before a non-base64 char: nothing decodes
-                i = j;
-            }
-            continue;
-        }
-        let mut b64: Vec<u8> = run.to_vec();
-        while b64.len() % 4 != 0 {
-            b64.push(b'=');
-        }
-        let decoded = base64::engine::general_purpose::STANDARD
-            .decode(&b64)
-            .unwrap_or_default();
-        let units: Vec<u16> = decoded
-            .chunks_exact(2)
-            .map(|p| u16::from_be_bytes([p[0], p[1]]))
-            .collect();
-        out.extend(char::decode_utf16(units.into_iter()).map(|r| r.unwrap_or('\u{FFFD}')));
-        i = if consumed_dash { j + 1 } else { j };
-    }
-    out
+    charset::Charset::for_label(b"utf-7")
+        .expect("utf-7 is a known charset label")
+        .decode_without_bom_handling(bytes)
+        .0
+        .into_owned()
 }
 
 /// ISO-2022-KR (RFC 1557) decode built on the EUC-KR index: ESC $ ) C
@@ -390,7 +336,6 @@ fn decode_with_codec(codec: Codec, bytes: &[u8]) -> String {
         Codec::Utf8 => strip_text_bom(encoding_rs::UTF_8.decode_without_bom_handling(bytes).0.into_owned()),
         Codec::Rs(enc) => enc.decode_without_bom_handling(bytes).0.into_owned(),
         Codec::Oem { dec, .. } => oem_cp::decode_string_complete_table(bytes, dec),
-        Codec::Table(t) => decode_table(bytes, t),
         Codec::Latin1 => bytes.iter().map(|&b| b as char).collect(),
         Codec::Latin9 => bytes.iter().map(|&b| {
             if b < 0x80 { b as char } else { match b {
@@ -482,63 +427,6 @@ fn encode_utf32(text: &str, be: bool, bom: bool) -> Vec<u8> {
     for c in text.chars() {
         push(&mut out, c as u32);
     }
-    out
-}
-
-fn encode_table(text: &str, table: &[u16; 128]) -> Vec<u8> {
-    text.chars()
-        .map(|c| {
-            let v = c as u32;
-            if v < 0x80 {
-                v as u8
-            } else if v <= 0xFFFF {
-                table
-                    .iter()
-                    .position(|&u| u as u32 == v)
-                    .map(|idx| (idx as u8) + 0x80)
-                    .unwrap_or(b'?')
-            } else {
-                b'?' // astral chars unmappable in any single-byte page
-            }
-        })
-        .collect()
-}
-
-/// iconv-lite utf7 encode parity: chars in the direct set pass through; '+'
-/// becomes '+-'; everything else is grouped into '+<base64 of UTF-16BE>-'
-/// blocks with trailing '=' padding stripped.
-fn encode_utf7(text: &str) -> Vec<u8> {
-    fn is_direct(c: char) -> bool {
-        c.is_ascii_alphanumeric() || "'(),-./:? \n\r\t".contains(c)
-    }
-    let mut out: Vec<u8> = Vec::with_capacity(text.len() + 8);
-    let mut run = String::new();
-    let flush = |out: &mut Vec<u8>, run: &mut String| {
-        if run.is_empty() {
-            return;
-        }
-        let mut units: Vec<u8> = Vec::with_capacity(run.len() * 2);
-        for u in run.encode_utf16() {
-            units.extend_from_slice(&u.to_be_bytes());
-        }
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&units);
-        out.push(b'+');
-        out.extend_from_slice(b64.trim_end_matches('=').as_bytes());
-        out.push(b'-');
-        run.clear();
-    };
-    for c in text.chars() {
-        if c == '+' {
-            flush(&mut out, &mut run);
-            out.extend_from_slice(b"+-");
-        } else if is_direct(c) {
-            flush(&mut out, &mut run);
-            out.push(c as u8);
-        } else {
-            run.push(c);
-        }
-    }
-    flush(&mut out, &mut run);
     out
 }
 
@@ -760,6 +648,10 @@ fn analyze_and_guess(bytes: &[u8]) -> EncodingId {
 pub fn encode_text(text: &str, encoding_id: &str) -> Result<Vec<u8>, String> {
     let codec = codec_for_label(encoding_id)
         .ok_or_else(|| format!("Encoding not recognized: {encoding_id}"))?;
+    // UTF-7 is decode-only (no maintained crate encodes RFC 2152 UTF-7).
+    if matches!(codec, Codec::Utf7) {
+        return Err("UTF-7 encoding is not supported (decode-only)".to_string());
+    }
     let bom = label_wants_bom_on_encode(encoding_id);
     Ok(match codec {
         Codec::Utf8 => {
@@ -774,7 +666,6 @@ pub fn encode_text(text: &str, encoding_id: &str) -> Result<Vec<u8>, String> {
         // oem_cp's lossy encode is exact iconv-lite parity: unmappable (incl.
         // astral) -> '?' (verified by crate_parity_check's exhaustive scan).
         Codec::Oem { enc, .. } => oem_cp::encode_string_lossy(text, enc),
-        Codec::Table(t) => encode_table(text, t),
         Codec::Latin1 => text.chars().map(|c| if (c as u32) <= 0xFF { c as u8 } else { b'?' }).collect(),
         Codec::Latin9 => text.chars().map(|c| {
             match c {
@@ -786,7 +677,7 @@ pub fn encode_text(text: &str, encoding_id: &str) -> Result<Vec<u8>, String> {
         }).collect(),
         Codec::Utf16 { be } => encode_utf16(text, be, bom),
         Codec::Utf32 { be } => encode_utf32(text, be, bom),
-        Codec::Utf7 => encode_utf7(text),
+        Codec::Utf7 => unreachable!("UTF-7 encode rejected above"),
         Codec::Iso2022Kr => encode_iso2022kr(text),
     })
 }
