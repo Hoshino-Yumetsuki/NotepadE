@@ -25,6 +25,7 @@
  *   InitializeAppBackgroundPanelTintOpacity → default 0.75
  */
 
+
 /** Resolved theme bucket used app-wide ('hc' = Windows forced-colors). */
 export type AppTheme = 'light' | 'dark' | 'hc';
 

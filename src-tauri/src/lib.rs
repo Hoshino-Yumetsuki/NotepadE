@@ -73,15 +73,31 @@ pub fn run() {
                 .get_webview_window("main")
                 .expect("main window declared in tauri.conf.json");
 
-            // Material unification: Windows acrylic is the single target.
-            // macOS/Linux get NO native vibrancy — the renderer's CSS acrylic
-            // layer produces the same look on a transparent frameless window;
-            // where the compositor can't do transparency the renderer paints
-            // its opaque theme base (#2E2E2E dark / #F0F0F0 light) itself.
+            // Native window material: Windows acrylic / macOS vibrancy. Each
+            // backs the transparent frameless window with a real blurred
+            // surface so the renderer's CSS tint rides on actual translucency.
+            // Linux gets no native backing — the renderer paints its opaque
+            // theme base (#2E2E2E dark / #F0F0F0 light) itself.
             #[cfg(target_os = "windows")]
             {
                 if let Err(e) = window_vibrancy::apply_acrylic(&main_window, None) {
                     log::warn!("apply_acrylic failed (pre-Win10 1809?): {e}");
+                }
+            }
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{NSVisualEffectMaterial, NSVisualEffectState};
+                // UnderWindowBackground + Active mirrors the Electron build
+                // (vibrancy:'under-window', visualEffectState:'active'); the
+                // window keeps native decorations (rounded corners + traffic
+                // lights pushed off-screen) per tauri.macos.conf.json.
+                if let Err(e) = window_vibrancy::apply_vibrancy(
+                    &main_window,
+                    NSVisualEffectMaterial::UnderWindowBackground,
+                    Some(NSVisualEffectState::Active),
+                    None,
+                ) {
+                    log::warn!("apply_vibrancy failed: {e}");
                 }
             }
 

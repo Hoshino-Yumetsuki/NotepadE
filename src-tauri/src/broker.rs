@@ -122,15 +122,30 @@ fn spawn_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         Ok(mut s) => s.next_label(),
         Err(_) => return None,
     };
-    let built = tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::default())
+    let mut builder = tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::default())
         .title("NotepadE")
         .inner_size(1100.0, 720.0)
         .min_inner_size(480.0, 320.0)
         .visible(false)
-        .decorations(false)
         .transparent(true)
-        .resizable(true)
-        .build();
+        .resizable(true);
+    // macOS keeps native decorations (rounded corners + native shadow) with the
+    // title bar overlaid + title hidden; setup_window then HIDES the native
+    // traffic lights so the renderer's custom CaptionButtons are the only
+    // controls — matching the main window's tauri.macos.conf.json and the
+    // pre-refactor Electron build. Windows/Linux stay frameless (decorations off).
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .decorations(true)
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        builder = builder.decorations(false);
+    }
+    let built = builder.build();
     match built {
         Ok(win) => {
             crate::window_mgmt::setup_window(app, &win, true);

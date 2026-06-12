@@ -85,6 +85,11 @@ pub fn install_window_hooks(window: &tauri::WebviewWindow) {
             let _ = win.emit_to(label.as_str(), EVT_CLOSE_REQUESTED, ());
         }
         tauri::WindowEvent::Resized(_) => {
+            // macOS restores the standard window buttons after a fullscreen
+            // enter/exit (both fire Resized) — re-hide so the renderer's own
+            // caption controls stay the only set.
+            #[cfg(target_os = "macos")]
+            hide_traffic_lights(&win);
             // Diff the maximized flag — covers our button, drag-region
             // double-click, Aero Snap, Win+Up (window-factory sendMaxState).
             let now = win.is_maximized().unwrap_or(false);
@@ -122,23 +127,74 @@ pub fn install_window_hooks(window: &tauri::WebviewWindow) {
 /// show. `apply_acrylic` is false for "main" (lib.rs already applied it).
 pub fn setup_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow, apply_acrylic: bool) {
     if apply_acrylic {
-        // Material unification: Windows acrylic is the single target; other
-        // platforms get the renderer's CSS acrylic layer only.
+        // Native window material per platform; mirrors the frozen lib.rs setup
+        // hook (Windows acrylic / macOS vibrancy). Linux gets the renderer's
+        // CSS layer only.
         #[cfg(target_os = "windows")]
         {
             if let Err(e) = window_vibrancy::apply_acrylic(window, None) {
                 log::warn!("apply_acrylic failed (pre-Win10 1809?): {e}");
             }
         }
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "macos")]
+        {
+            use window_vibrancy::{NSVisualEffectMaterial, NSVisualEffectState};
+            if let Err(e) = window_vibrancy::apply_vibrancy(
+                window,
+                NSVisualEffectMaterial::UnderWindowBackground,
+                Some(NSVisualEffectState::Active),
+                None,
+            ) {
+                log::warn!("apply_vibrancy failed: {e}");
+            }
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "macos")))]
         let _ = window;
     }
     install_window_hooks(window);
+    #[cfg(target_os = "macos")]
+    hide_traffic_lights(window);
     // Restore the last session's bounds + maximized state before first paint;
     // no-op under e2e / first run so the default-sized window stays identical.
     crate::window_bounds::restore_bounds(app, window);
     crate::window_bounds::track_bounds(app, window);
     let _ = window.show();
+}
+
+/// Hide the three native macOS traffic-light buttons (close / minimize / zoom)
+/// while keeping native decorations (rounded corners + native shadow). The
+/// window uses titleBarStyle Overlay so the buttons would otherwise show; the
+/// renderer draws its OWN caption controls (CaptionButtons.tsx), so the native
+/// trio is hidden to avoid a double set — the Electron build did the same by
+/// pushing them off-screen. ns_window() hands back an autoreleased NSWindow
+/// pointer (Tauri retains+autoreleases it); we borrow it for this synchronous
+/// AppKit call only and never free it.
+#[cfg(target_os = "macos")]
+pub fn hide_traffic_lights(window: &tauri::WebviewWindow) {
+    use objc2_app_kit::{NSWindow, NSWindowButton};
+    let ptr = match window.ns_window() {
+        Ok(p) => p as *const NSWindow,
+        Err(e) => {
+            log::warn!("ns_window() failed; cannot hide traffic lights: {e}");
+            return;
+        }
+    };
+    if ptr.is_null() {
+        return;
+    }
+    // Safety: ptr is a live NSWindow for the lifetime of this call (the webview
+    // window owns it); we only read it on the main thread (the Tauri setup hook
+    // and window-event callbacks both run there) and issue setHidden:.
+    let ns_window: &NSWindow = unsafe { &*ptr };
+    for button in [
+        NSWindowButton::CloseButton,
+        NSWindowButton::MiniaturizeButton,
+        NSWindowButton::ZoomButton,
+    ] {
+        if let Some(b) = ns_window.standardWindowButton(button) {
+            b.setHidden(true);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
