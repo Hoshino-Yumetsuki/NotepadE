@@ -72,11 +72,20 @@ pub fn resolve_cwd_relative(token: &str, cwd: &str) -> String {
     }
 }
 
+/// Strip the Windows extended-length path prefix (`\\?\`) that
+/// `std::env::current_exe()` returns but `std::env::args()` does not.
+/// No-op on non-Windows or if the prefix is absent.
+fn strip_extended_prefix(p: &str) -> &str {
+    p.strip_prefix(r"\\?\").unwrap_or(p)
+}
+
 /// Case-insensitive path equality on Windows (the OS may hand the second
-/// instance's exe path in a different case); exact elsewhere.
+/// instance's exe path in a different case); exact elsewhere. Also
+/// normalises away the `\\?\` extended-length prefix that `current_exe()`
+/// produces on Windows but `env::args()` does not.
 fn same_path(a: &str, b: &str) -> bool {
     if cfg!(windows) {
-        a.eq_ignore_ascii_case(b)
+        strip_extended_prefix(a).eq_ignore_ascii_case(strip_extended_prefix(b))
     } else {
         a == b
     }
@@ -88,7 +97,13 @@ pub fn parse_argv_with_env(argv: &[String], cwd: &str, env: &ArgvEnv) -> ParsedA
     let proto_prefix = format!("{PROTOCOL_SCHEME}://");
     let mut paths: Vec<String> = Vec::new();
     let mut protocol_url: Option<String> = None;
-    for token in argv {
+    // argv[0] is ALWAYS the executable (OS convention on every platform).
+    // Skip it positionally — string comparison against current_exe() can
+    // fail in many ways on Windows: \\?\ prefix mismatch, relative vs
+    // absolute in dev mode, 8.3 short paths, symlink resolution, etc.
+    // The env.exec_path fallback below still catches duplicates deeper in
+    // the list (unlikely but harmless).
+    for token in argv.iter().skip(1) {
         if token.is_empty() || token.starts_with('-') {
             continue;
         }
@@ -96,7 +111,7 @@ pub fn parse_argv_with_env(argv: &[String], cwd: &str, env: &ArgvEnv) -> ParsedA
             protocol_url = Some(token.clone());
             continue;
         }
-        // Skip the executable and any bundled entry script on cold start.
+        // Safety net: skip any later occurrence of the executable path.
         if !env.exec_path.is_empty() && same_path(token, &env.exec_path) {
             continue;
         }
@@ -294,5 +309,44 @@ mod tests {
         let cwd = abs("w");
         let out = parse(&[&env().exec_path, &a, &b, "c.txt"], &cwd);
         assert_eq!(out.paths, vec![a, b, resolved(&cwd, "c.txt")]);
+    }
+
+    // -- Windows extended-length prefix (\\?\) ----------------------------------
+
+    #[test]
+    fn skips_exe_with_extended_prefix_mismatch() {
+        // Simulates Windows: current_exe() returns \\?\C:\..., but argv[0]
+        // arrives without the prefix. The parser must still recognise it as
+        // the executable and skip it.
+        let canonical = r"\\?\C:\Program Files\NotepadE\NotepadE.exe";
+        let argv_exe = r"C:\Program Files\NotepadE\NotepadE.exe";
+        let env = ArgvEnv { exec_path: canonical.to_string(), app_path: String::new() };
+        let keep = abs("notes.txt");
+        let argv: Vec<String> = vec![argv_exe.to_string(), keep.clone()];
+        let out = parse_argv_with_env(&argv, &abs("cwd"), &env);
+        assert_eq!(out.paths, vec![keep]);
+    }
+
+    #[test]
+    fn skips_exe_when_argv_has_prefix_but_env_does_not() {
+        // Reverse mismatch: argv carries the prefix, env does not.
+        let argv_exe = r"\\?\C:\Program Files\NotepadE\NotepadE.exe";
+        let env_exe = r"C:\Program Files\NotepadE\NotepadE.exe";
+        let env = ArgvEnv { exec_path: env_exe.to_string(), app_path: String::new() };
+        let keep = abs("readme.md");
+        let argv: Vec<String> = vec![argv_exe.to_string(), keep.clone()];
+        let out = parse_argv_with_env(&argv, &abs("cwd"), &env);
+        assert_eq!(out.paths, vec![keep]);
+    }
+
+    #[test]
+    fn bare_launch_with_prefixed_exe_yields_empty() {
+        // A bare double-click (no file) with \\?\ exe must produce no paths.
+        let canonical = r"\\?\C:\Program Files\NotepadE\NotepadE.exe";
+        let argv_exe = r"C:\Program Files\NotepadE\NotepadE.exe";
+        let env = ArgvEnv { exec_path: canonical.to_string(), app_path: String::new() };
+        let argv: Vec<String> = vec![argv_exe.to_string()];
+        let out = parse_argv_with_env(&argv, &abs("cwd"), &env);
+        assert_eq!(out, ParsedArgv { paths: vec![], protocol_url: None });
     }
 }
