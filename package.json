@@ -1,12 +1,12 @@
 {
   "name": "notepade",
-  "version": "1.0.0-beta.11",
+  "version": "1.0.0-beta.12",
   "private": true,
   "description": "Tauri + Fluent UI v9 + React + TypeScript 1:1 rewrite of the UWP Notepads app",
   "type": "module",
   "main": "out/renderer/index.html",
   "author": "Notepads-next team",
-  "license": "MIT",
+  "license": "GPL-3.0",
   "engines": {
     "node": ">=20"
   },
@@ -74,7 +74,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/diff": "^8.0.0",
     "@types/markdown-it": "^14.1.2",
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",

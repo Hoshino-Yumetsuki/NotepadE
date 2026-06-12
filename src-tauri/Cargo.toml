@@ -1,9 +1,9 @@
 [package]
 name = "notepade"
-version = "1.0.0-beta.11"
+version = "1.0.0"
 description = "Tauri rewrite of NotepadE — UWP Notepads 1:1 port"
-authors = ["Notepads-next team"]
-license = "MIT"
+authors = ["Hoshino-Yumetsuki"]
+license = "GPL-3.0"
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"

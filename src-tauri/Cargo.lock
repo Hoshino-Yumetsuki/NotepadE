@@ -2521,7 +2521,7 @@ dependencies = [
 
 [[package]]
 name = "notepade"
-version = "1.0.0-beta.11"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "chardetng",
