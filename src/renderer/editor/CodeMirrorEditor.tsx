@@ -9,7 +9,7 @@ import { tryInsertLogEntry } from './commands/datetime';
 import { initZoomVar } from './commands/zoom';
 import type { TextDirection } from './commands/direction';
 import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/wordWrap';
-import { lineNumberGlow } from './lineNumberGlow';
+import { lineNumberGlow, parseHexColor } from './lineNumberGlow';
 import { lineNumberColumn } from './lineNumberColumn';
 import { matchLanguage, highlightStyleFor, MAX_HIGHLIGHT_DOC_LENGTH } from './syntaxHighlight';
 import { bigDocDispatchTransactions } from './bigDocScroll';
@@ -168,6 +168,31 @@ function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
 }
 
 /**
+ * Per-theme selection tint built from the accent color. The accent is applied
+ * as an rgba wash whose alpha differs by theme: light surfaces need LESS accent
+ * (a saturated accent over white reads as a heavy block that crushes text
+ * contrast), dark surfaces need MORE (the same alpha sinks into the dark
+ * background and the selection becomes barely visible). rgba is used instead of
+ * an `opacity` rule because `opacity` does not apply to the `::selection`
+ * pseudo-element at all, and an explicit alpha also stops Chromium from
+ * force-halving fully-opaque ::selection backgrounds. HC keeps the opaque
+ * accent — forced-colors mode repaints selection with system Highlight anyway.
+ */
+function selectionColors(
+  themeMode: 'light' | 'dark' | 'hc',
+  accentColor: string
+): { focused: string; unfocused: string } {
+  const rgb = parseHexColor(accentColor);
+  if (!rgb || themeMode === 'hc') {
+    return { focused: accentColor, unfocused: accentColor };
+  }
+  const alpha =
+    themeMode === 'dark' ? { focused: 0.55, unfocused: 0.38 } : { focused: 0.28, unfocused: 0.18 };
+  const tint = (a: number) => `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
+  return { focused: tint(alpha.focused), unfocused: tint(alpha.unfocused) };
+}
+
+/**
  * Build the editor `EditorView.theme`. Pure in its options so it can be rebuilt
  * inside a Compartment and dispatched via `reconfigure` when any typography /
  * accent / line-highlighter / theme prop changes on an already-open editor (no
@@ -182,6 +207,7 @@ function themeOverlays(themeMode: 'light' | 'dark' | 'hc'): {
 function buildEditorTheme(opts: EditorThemeOptions): Extension {
   const { fontFamily, fontStyle, fontWeight, accentColor, lineHighlighter, themeMode } = opts;
   const overlay = themeOverlays(themeMode);
+  const selection = selectionColors(themeMode, accentColor);
   return EditorView.theme({
     // Transparent surface so the window's acrylic material (single tint layer on
     // the app root) shows through the editor — matching upstream Notepads, whose
@@ -221,14 +247,19 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
     // aligned by construction at any zoom and any document size. Gutter color/
     // background/font rules live with that extension, not here.
     // Selection = system accent (UWP painted selection with the accent, not a
-    // muted grey). Color BOTH focused and unfocused selection layers so a blurred
-    // editor (e.g. while a find box has focus) still shows it. The FOCUSED layer
-    // uses ~0.4 alpha so saturated accents never crush selected-text contrast on
-    // light themes; the unfocused layer is fainter still. (`&.cm-focused` and
-    // `&:not(.cm-focused)` are root+class selectors CM6 DOES support.)
-    '.cm-selectionBackground, .cm-content ::selection': { backgroundColor: accentColor },
-    '&.cm-focused .cm-selectionBackground': { backgroundColor: accentColor, opacity: 0.4 },
-    '&:not(.cm-focused) .cm-selectionBackground': { backgroundColor: accentColor, opacity: 0.3 },
+    // muted grey). The tint is an rgba wash from selectionColors(): lighter
+    // alpha on light themes (so a saturated accent never crushes selected-text
+    // contrast over white) and heavier alpha on dark themes (so the same accent
+    // doesn't sink into the dark surface and vanish). rgba — not an `opacity`
+    // rule — because opacity never applies to `::selection`, which previously
+    // left the native selection layer fully opaque on light themes. Both the
+    // focused and unfocused layers are colored so a blurred editor (e.g. while
+    // the find box has focus) still shows its selection, slightly fainter.
+    // (`&.cm-focused` / `&:not(.cm-focused)` are root+class selectors CM6 DOES
+    // support.)
+    '.cm-content ::selection': { backgroundColor: selection.focused },
+    '&.cm-focused .cm-selectionBackground': { backgroundColor: selection.focused },
+    '&:not(.cm-focused) .cm-selectionBackground': { backgroundColor: selection.unfocused },
     // Thin always-visible scrollbar thumb (webkit). Transparent track, ~6px
     // visible thumb that darkens on hover.
     '.cm-scroller::-webkit-scrollbar': { width: '12px', height: '12px' },
