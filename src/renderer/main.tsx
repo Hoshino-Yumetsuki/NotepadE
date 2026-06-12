@@ -16,7 +16,9 @@ import './theme/acrylic.css';
 // ---------------------------------------------------------------------------
 if ('__TAURI_INTERNALS__' in window) {
   const { installBridge } = await import('./bridge/index');
-  installBridge();
+  // Await: the bridge's eager activation listener must be registered BEFORE
+  // renderer-ready, or the broker's flushed cold-start file open is dropped.
+  await installBridge();
 
   // Emit renderer-ready signal: the broker queues activations (cold-start
   // file opens) until this event arrives. Window label = payload so the

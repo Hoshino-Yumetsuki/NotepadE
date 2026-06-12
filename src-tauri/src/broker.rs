@@ -271,26 +271,58 @@ pub fn init_broker(app: &tauri::AppHandle) {
         });
     }
 
-    // macOS: protocol urls arrive via the deep-link plugin, not argv.
+    // macOS: file-association opens AND protocol urls both arrive via
+    // RunEvent::Opened (forwarded by the deep-link plugin), never argv.
+    // `file://` urls are Finder "open with" documents — route them as paths
+    // so the renderer's onActivation (which only reads event.paths) opens
+    // them; anything else is a real notepads:// protocol url.
+    //
+    // Cold start: the OS may deliver the open-document event BEFORE our
+    // on_open_url listener is registered — the plugin then only stashes the
+    // urls in its `current` state. Drain get_current() once here (documented
+    // cold-start pattern); on_open_url covers everything after.
     #[cfg(target_os = "macos")]
     {
         use tauri_plugin_deep_link::DeepLinkExt;
-        let handle = app.clone();
-        app.deep_link().on_open_url(move |event| {
+
+        fn route_urls(app: &tauri::AppHandle, urls: Vec<url::Url>) {
             let cwd = std::env::current_dir()
                 .map(|p| p.to_string_lossy().into_owned())
                 .unwrap_or_default();
-            for url in event.urls() {
+            let mut paths: Vec<String> = Vec::new();
+            for url in urls {
+                if url.scheme() == "file" {
+                    if let Ok(p) = url.to_file_path() {
+                        paths.push(p.to_string_lossy().into_owned());
+                    }
+                    continue;
+                }
                 let ev = ActivationEvent {
                     paths: Vec::new(),
                     cwd: cwd.clone(),
                     protocol_url: Some(url.to_string()),
                 };
-                let app = handle.clone();
+                let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     route_activation(&app, ev).await;
                 });
             }
+            if !paths.is_empty() {
+                let ev = ActivationEvent { paths, cwd, protocol_url: None };
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    route_activation(&app, ev).await;
+                });
+            }
+        }
+
+        if let Ok(Some(urls)) = app.deep_link().get_current() {
+            route_urls(app, urls);
+        }
+
+        let handle = app.clone();
+        app.deep_link().on_open_url(move |event| {
+            route_urls(&handle, event.urls());
         });
     }
 

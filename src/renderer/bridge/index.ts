@@ -165,6 +165,27 @@ const C = {
 };
 
 // ---------------------------------------------------------------------------
+//  Cold-start activation buffer
+// ---------------------------------------------------------------------------
+// The broker flushes queued activations the moment the renderer emits
+// `notepads:renderer:ready` (main.tsx), but App.tsx only subscribes via
+// app.onActivation AFTER React mounts — and Tauri events with no registered
+// listener are dropped. Listen eagerly at bridge install and buffer events
+// until the app subscribes, so cold-start file-association opens are never
+// lost. installBridge() resolves once this listener is registered; main.tsx
+// awaits it BEFORE emitting renderer-ready.
+
+let activationSink: ((event: ActivationEvent) => void) | null = null;
+const bufferedActivations: ActivationEvent[] = [];
+
+function installActivationBuffer(): Promise<void> {
+  return listen<ActivationEvent>(C.EvtAppActivation, (evt) => {
+    if (activationSink) activationSink(evt.payload);
+    else bufferedActivations.push(evt.payload);
+  }).then(() => undefined);
+}
+
+// ---------------------------------------------------------------------------
 //  API implementation
 // ---------------------------------------------------------------------------
 
@@ -243,8 +264,16 @@ const api: NotepadsApi = {
     onAccentChanged: (cb) => subscribe<string>(C.EvtThemeAccentChanged, cb)
   },
   app: {
-    onActivation: (cb: (event: ActivationEvent) => void) =>
-      subscribe<ActivationEvent>(C.EvtAppActivation, cb),
+    onActivation: (cb: (event: ActivationEvent) => void) => {
+      // Drain anything that arrived before the app subscribed (cold start).
+      activationSink = cb;
+      while (bufferedActivations.length > 0) {
+        cb(bufferedActivations.shift() as ActivationEvent);
+      }
+      return () => {
+        if (activationSink === cb) activationSink = null;
+      };
+    },
     onProtocol: (cb) => subscribe<string>(C.EvtAppProtocol, cb)
   },
   shell: {
@@ -284,16 +313,22 @@ const api: NotepadsApi = {
  * Install the bridge onto window.notepads. Must be called BEFORE React mounts
  * (from src/renderer/main.tsx) so every renderer consumer sees the live API.
  *
+ * Resolves once the eager activation listener is registered — the caller must
+ * await this BEFORE emitting `notepads:renderer:ready`, otherwise the broker
+ * may flush cold-start activations into a window with no listener yet.
+ *
  * Guarded by '__TAURI_INTERNALS__' check in the caller — this function assumes
  * it only runs inside a Tauri webview.
  */
-export function installBridge(): void {
+export function installBridge(): Promise<void> {
   (window as unknown as Record<string, unknown>).notepads = Object.freeze(api);
 
   // Wire Tauri drag region manually — the `data-tauri-drag-region` attribute
   // depends on Tauri's core init which may not have set up the delegated
   // listener yet (or was missed with the CSP / module load order).
   setupTauriDragRegion();
+
+  return installActivationBuffer();
 }
 
 /**
