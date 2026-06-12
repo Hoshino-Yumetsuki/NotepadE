@@ -12,6 +12,7 @@ import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/
 import { lineNumberGlow } from './lineNumberGlow';
 import { lineNumberColumn } from './lineNumberColumn';
 import { matchLanguage, highlightStyleFor, MAX_HIGHLIGHT_DOC_LENGTH } from './syntaxHighlight';
+import { bigDocScrollStabilizer } from './bigDocScroll';
 
 /**
  * Imperative handle the host (App) uses to drive the editor without owning the
@@ -457,6 +458,13 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // activates and Enter behaves like Notepad: the caret line holds its
         // screen position, content below pushes down.
         scrollPastEnd(),
+        // Big-document scroll stabilizer: in ~410k+ line docs CM6's BigScaler
+        // rescales the whole height model on every edit, so its single-anchor
+        // scrollTop correction jumps the viewport on a mid-file insert. This
+        // forces large-doc user edits onto CM6's deterministic cursor-scroll
+        // path (scrollIntoView y:"nearest"), pinning the caret line. See
+        // bigDocScroll.ts. A no-op below the line threshold.
+        bigDocScrollStabilizer,
         // Pin the document line separator to the shadow-buffer '\n' so doc
         // serialization never re-introduces CR. EOL is re-applied by MAIN.
         EditorState.lineSeparator.of(SHADOW_EOL),
