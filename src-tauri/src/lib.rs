@@ -30,6 +30,7 @@ mod settings_reset;
 mod shell_integration;
 mod system_codepage;
 mod theme;
+mod updater;
 mod wallpaper;
 mod window_bounds;
 mod window_mgmt;
@@ -157,6 +158,9 @@ pub fn run() {
             shell_integration::shell_share,
             // theme (task #3)
             theme::theme_get,
+            // updater
+            updater::update_check,
+            updater::update_install,
             // wallpaper (task #3)
             wallpaper::wallpaper_get,
             wallpaper::wallpaper_set_from_path,

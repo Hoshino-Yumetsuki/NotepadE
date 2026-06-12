@@ -409,7 +409,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
                 {section === 'advanced' ? (
                   <AdvancedPane settings={settings} update={update} />
                 ) : null}
-                {section === 'about' ? <AboutPane /> : null}
+                {section === 'about' ? <AboutPane settings={settings} update={update} /> : null}
               </div>
             </div>
           </div>

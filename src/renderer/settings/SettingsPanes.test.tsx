@@ -386,7 +386,8 @@ describe('AdvancedPane', () => {
 
 describe('AboutPane', () => {
   it('shows the version and the source-code link', () => {
-    renderPane(<AboutPane />);
+    const update = vi.fn();
+    renderPane(<AboutPane settings={makeSettings()} update={update} />);
     expect(screen.getByTestId('about-version')).toHaveTextContent('Version');
     expect(screen.getByRole('link', { name: 'Source code' })).toHaveAttribute(
       'href',

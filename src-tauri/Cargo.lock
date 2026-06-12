@@ -2532,6 +2532,7 @@ dependencies = [
  "objc2-app-kit",
  "oem_cp",
  "reqwest",
+ "semver",
  "serde",
  "serde_json",
  "tauri",

@@ -34,6 +34,7 @@ import type {
   ThemeState,
   WallpaperState,
   AdoptPayload,
+  UpdateInfo,
   Unsubscribe
 } from '@shared/ipc-contract';
 
@@ -147,6 +148,9 @@ const C = {
   WallpaperSetFromUrl: 'notepads:wallpaper:setFromUrl',
   WallpaperPick: 'notepads:wallpaper:pick',
   WallpaperClear: 'notepads:wallpaper:clear',
+  // updater
+  UpdateCheck: 'notepads:update:check',
+  UpdateInstall: 'notepads:update:install',
   // push events
   EvtEditorAdopt: 'notepads:evt:editor:adopt',
   EvtEditorRelease: 'notepads:evt:editor:release',
@@ -264,6 +268,11 @@ const api: NotepadsApi = {
     setFromUrl: (url) => call<WallpaperState>(channelToCommand(C.WallpaperSetFromUrl), { url }),
     pick: () => call<WallpaperState | null>(channelToCommand(C.WallpaperPick)),
     clear: () => call<void>(channelToCommand(C.WallpaperClear))
+  },
+  updates: {
+    check: () => call<UpdateInfo>(channelToCommand(C.UpdateCheck)),
+    install: (assetUrl, assetName, htmlUrl) =>
+      call<void>(channelToCommand(C.UpdateInstall), { assetUrl, assetName, htmlUrl })
   }
 };
 

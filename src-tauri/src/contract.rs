@@ -211,6 +211,7 @@ pub struct Settings {
     pub wallpaper_file_name: String,
     /// 'blur' | 'opacity'
     pub wallpaper_effect: String,
+    pub auto_check_updates: bool,
 }
 
 impl Default for Settings {
@@ -244,6 +245,7 @@ impl Default for Settings {
             open_with_context_menu: false,
             wallpaper_file_name: String::new(),
             wallpaper_effect: "blur".into(),
+            auto_check_updates: true,
         }
     }
 }
@@ -353,6 +355,24 @@ pub struct ActivationEvent {
 }
 
 // ---------------------------------------------------------------------------
+//  updater
+// ---------------------------------------------------------------------------
+
+/// Update check result payload returned by `update_check`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateInfo {
+    pub available: bool,
+    pub version: String,
+    pub notes: String,
+    pub html_url: String,
+    /// Download URL for the platform-specific installer asset (Windows .exe).
+    /// Empty string on macOS/Linux — the renderer opens `htmlUrl` instead.
+    pub asset_url: String,
+    pub asset_name: String,
+}
+
+// ---------------------------------------------------------------------------
 //  shell
 // ---------------------------------------------------------------------------
 
@@ -412,7 +432,8 @@ mod tests {
                 "appLanguage": "",
                 "openWithContextMenu": false,
                 "wallpaperFileName": "",
-                "wallpaperEffect": "blur"
+                "wallpaperEffect": "blur",
+                "autoCheckUpdates": true
             })
         );
     }

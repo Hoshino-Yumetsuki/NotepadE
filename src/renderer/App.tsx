@@ -38,6 +38,8 @@ import { useEditorContextMenu } from './editor/EditorContextMenu';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
 import { CloseReminderDialog } from './CloseReminderDialog';
 import { AppCloseReminderDialog } from './AppCloseReminderDialog';
+import { UpdatePromptDialog } from './UpdatePromptDialog';
+import type { UpdateInfo } from '@shared/ipc-contract';
 import { CaptionButtons } from './chrome/CaptionButtons';
 import { useT } from './i18n';
 import { usePrefersReducedMotion } from './theme/usePrefersReducedMotion';
@@ -998,6 +1000,30 @@ export function App(): JSX.Element {
     });
   }, [settings, resolvedTheme]);
 
+  // Startup auto-update check: after a 5s delay (avoid contention with cold-
+  // start IO), read settings and, if autoCheckUpdates is on, call update_check.
+  // Shows a dialog once per session if a new version is found.
+  const [updatePromptOpen, setUpdatePromptOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const startupCheckDone = useRef(false);
+  useEffect(() => {
+    if (startupCheckDone.current) return;
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    startupCheckDone.current = true;
+    const timer = setTimeout(() => {
+      void window.notepads.settings.get().then((r) => {
+        if (!r.ok || !r.data.autoCheckUpdates) return;
+        void window.notepads.updates.check().then((ur) => {
+          if (ur.ok && ur.data.available) {
+            setUpdateInfo(ur.data);
+            setUpdatePromptOpen(true);
+          }
+        });
+      });
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Settings entry point — Ctrl+, opens the settings surface (UWP parity: the
   // app menu's Settings command). The toolbar gear (below) is the mouse path.
   useEffect(() => {
@@ -1458,6 +1484,15 @@ export function App(): JSX.Element {
         onSaveAllAndExit={onAppCloseSaveAll}
         onDiscardAndExit={onAppCloseDiscard}
         onCancel={onAppCloseCancel}
+      />
+      <UpdatePromptDialog
+        open={updatePromptOpen}
+        info={updateInfo}
+        onInstall={() => {
+          setUpdatePromptOpen(false);
+          if (updateInfo) void window.notepads.updates.install(updateInfo.assetUrl, updateInfo.assetName, updateInfo.htmlUrl);
+        }}
+        onDismiss={() => setUpdatePromptOpen(false)}
       />
       {editorContextMenu.menu}
     </FluentProvider>

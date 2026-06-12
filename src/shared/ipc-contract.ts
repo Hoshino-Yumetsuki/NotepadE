@@ -323,6 +323,8 @@ export interface Settings {
    * opacity). Ignored when no wallpaper is set. No UWP equivalent.
    */
   wallpaperEffect: WallpaperEffect;
+  /** Whether to automatically check for updates on app startup. */
+  autoCheckUpdates: boolean;
 }
 
 /**
@@ -364,7 +366,8 @@ export const DEFAULT_SETTINGS: Settings = {
   wallpaperFileName: '',
   // 'blur' preserves the pre-existing wallpaper behavior (slider = frost
   // intensity), so users upgrading from before the switch see no change.
-  wallpaperEffect: 'blur'
+  wallpaperEffect: 'blur',
+  autoCheckUpdates: true
 };
 
 export interface SettingsApi {
@@ -581,6 +584,25 @@ export interface WallpaperApi {
 }
 
 // ---------------------------------------------------------------------------
+//  updater — GitHub Releases update checker
+// ---------------------------------------------------------------------------
+
+export interface UpdateInfo {
+  available: boolean;
+  version: string;
+  notes: string;
+  htmlUrl: string;
+  /** Platform-specific installer asset download URL (empty on macOS/Linux). */
+  assetUrl: string;
+  assetName: string;
+}
+
+export interface UpdatesApi {
+  check(): Promise<Result<UpdateInfo>>;
+  install(assetUrl: string, assetName: string, htmlUrl: string): Promise<Result<void>>;
+}
+
+// ---------------------------------------------------------------------------
 //  The frozen window.notepads object
 // ---------------------------------------------------------------------------
 
@@ -598,6 +620,7 @@ export interface NotepadsApi {
   app: AppApi;
   shell: ShellApi;
   wallpaper: WallpaperApi;
+  updates: UpdatesApi;
 }
 
 declare global {

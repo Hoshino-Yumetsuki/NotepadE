@@ -55,7 +55,7 @@ mod tests {
             "useWindowsAccentColor", "customAccentColor", "showStatusBar",
             "smartCopy", "sessionSnapshot", "alwaysOpenNewWindow",
             "exitWhenLastTabClosed", "appLanguage", "openWithContextMenu",
-            "wallpaperFileName", "wallpaperEffect",
+            "wallpaperFileName", "wallpaperEffect", "autoCheckUpdates",
         ];
         for key in expected_keys {
             assert!(obj.contains_key(*key), "Missing key: {key}");

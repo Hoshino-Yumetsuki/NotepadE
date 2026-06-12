@@ -254,5 +254,42 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
     'en-US': 'Version {0}',
     'de-DE': 'Version {0}',
     'ja-JP': 'バージョン {0}'
+  },
+  // Updater — auto-check toggle + check button + dialog labels (web-port-only).
+  Updates_AutoCheckToggle: {
+    'en-US': 'Automatically check for updates',
+    'zh-CN': '自动检查更新'
+  },
+  Updates_CheckButton: {
+    'en-US': 'Check for updates',
+    'zh-CN': '检查更新'
+  },
+  Updates_UpToDate: {
+    'en-US': 'You are up to date!',
+    'zh-CN': '已是最新版本！'
+  },
+  Updates_Available: {
+    'en-US': 'A new version {0} is available.',
+    'zh-CN': '发现新版本 {0}。'
+  },
+  Updates_InstallNow: {
+    'en-US': 'Update now',
+    'zh-CN': '立即更新'
+  },
+  Updates_Later: {
+    'en-US': 'Later',
+    'zh-CN': '稍后'
+  },
+  Updates_CheckFailed: {
+    'en-US': 'Failed to check for updates.',
+    'zh-CN': '检查更新失败。'
+  },
+  Updates_Checking: {
+    'en-US': 'Checking for updates…',
+    'zh-CN': '正在检查更新…'
+  },
+  Updates_DialogTitle: {
+    'en-US': 'Update Available',
+    'zh-CN': '发现更新'
   }
 };
