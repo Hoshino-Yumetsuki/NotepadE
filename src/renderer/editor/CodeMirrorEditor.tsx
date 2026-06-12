@@ -199,15 +199,14 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
     // Active line: the CM6 default highlight is invisible on our transparent
     // surface, so paint an explicit subtle overlay (per-theme tint from
     // themeOverlays). Gated on lineHighlighter so the "Highlight current line"
-    // toggle is honored. The active line's NUMBER is brightened by the external
-    // line-number column itself (see lineNumberColumn.ts), not a gutter rule.
+    // toggle is honored. The active line's NUMBER is brightened by the gutter
+    // theme (see lineNumberColumn.ts), not a rule here.
     ...(lineHighlighter ? { '.cm-activeLine': { backgroundColor: overlay.activeLine } } : {}),
-    // Line numbers are NOT a CM6 gutter here — they render in a separate external
-    // column (lineNumberColumn.ts) positioned OUTSIDE the horizontal scroller, so
-    // document text never travels behind them. That is the only structure where the
-    // column can be transparent (acrylic shows through) AND never overlap text; a
-    // sticky in-scroller gutter cannot be both. See lineNumberColumn.ts for the full
-    // rationale. Consequently there are no `.cm-gutters` / `.cm-lineNumbers` rules.
+    // Line numbers are CM6's native gutter, themed in lineNumberColumn.ts
+    // (transparent on light/dark so acrylic shows through; opaque Canvas under
+    // HC). The gutter is laid out per-line by CM6 itself, so the numbers stay
+    // aligned by construction at any zoom and any document size. Gutter color/
+    // background/font rules live with that extension, not here.
     // Selection = system accent (UWP painted selection with the accent, not a
     // muted grey). Color BOTH focused and unfocused selection layers so a blurred
     // editor (e.g. while a find box has focus) still shows it. The FOCUSED layer
@@ -474,8 +473,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           })
         ),
         // Line numbers gated on the prop, in a compartment so toggling the setting
-        // mounts/unmounts the external column live. NOT CM6's lineNumbers() — an
-        // out-of-scroller column so it stays transparent without text overlap.
+        // mounts/unmounts the gutter live. CM6's native lineNumbers() gutter,
+        // themed in lineNumberColumn.ts — structurally aligned per line at any
+        // zoom and any document size.
         lineNumbersCompartment.current.of(
           showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : []
         ),
@@ -558,7 +558,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       initZoomVar(view);
     }, [fontSize]);
 
-    // Line-number column mount/unmount + live rebuild. The external column bakes in
+    // Line-number gutter mount/unmount + live rebuild. The gutter theme bakes in
     // themeMode/fontFamily/lineHighlighter (number color, font face, active-line
     // emphasis), so a change to any of those rebuilds it — same lane as the glow.
     useEffect(() => {

@@ -3,6 +3,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import {
   lineNumberColumn,
+  lineNumberTheme,
   numberColor,
   activeNumberColor,
   columnBackground,
@@ -22,7 +23,10 @@ describe('lineNumberColumn — pure helpers', () => {
     expect(activeNumberColor('hc')).toBe('CanvasText');
   });
 
-  it('columnBackground is transparent for light/dark (acrylic shows through), opaque for HC', () => {
+  it('columnBackground is transparent (gutter = app material; clip prevents overlap); flat Canvas under HC', () => {
+    // The gutter strip shows the app root tint → window material directly and
+    // follows the transparency slider with no double-tint. Safe ONLY because
+    // the horizontal clip (tested below) never renders content under it.
     expect(columnBackground('light')).toBe('transparent');
     expect(columnBackground('dark')).toBe('transparent');
     expect(columnBackground('hc')).toBe('Canvas');
@@ -36,91 +40,110 @@ describe('lineNumberColumn — pure helpers', () => {
     expect(digitsFor(1000)).toBe(4);
     expect(digitsFor(0)).toBe(2); // empty doc → line 1
   });
+
+  it('lineNumberTheme builds without throwing for every theme bucket', () => {
+    // Plain `.cm-*` selectors only — `&dark`/`&light` ancestor selectors would
+    // make EditorView.theme throw RangeError at construction.
+    for (const themeMode of ['light', 'dark', 'hc'] as const) {
+      expect(() =>
+        lineNumberTheme({ themeMode, fontFamily: 'monospace', lineHighlighter: true })
+      ).not.toThrow();
+      expect(() =>
+        lineNumberTheme({ themeMode, fontFamily: 'monospace', lineHighlighter: false })
+      ).not.toThrow();
+    }
+  });
 });
 
-describe('lineNumberColumn — live EditorView wiring (jsdom)', () => {
+describe('lineNumberColumn — native gutter wiring (jsdom)', () => {
   function mount(
     themeMode: 'light' | 'dark' | 'hc',
     doc = 'a\nb\nc',
     lineHighlighter = false
-  ): EditorView {
+  ): { view: EditorView; parent: HTMLElement } {
     const parent = document.createElement('div');
     document.body.appendChild(parent);
-    return new EditorView({
+    const view = new EditorView({
       state: EditorState.create({
         doc,
         extensions: [lineNumberColumn({ themeMode, fontFamily: 'monospace', lineHighlighter })]
       }),
       parent
     });
+    return { view, parent };
   }
 
-  it('mounts the column OUTSIDE the scroller (a direct child of view.dom, sibling of .cm-scroller)', () => {
-    const view = mount('dark');
-    const col = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn');
-    expect(col).not.toBeNull();
-    // Critical structural invariant: the column is NOT inside the horizontal
-    // scroller, so document text never travels behind it.
-    expect(col!.closest('.cm-scroller')).toBeNull();
-    expect(col!.parentElement).toBe(view.dom);
+  it('mounts CM6\'s native gutter INSIDE the scroller (structural per-line layout)', () => {
+    const { view } = mount('dark');
+    const gutters = view.dom.querySelector<HTMLElement>('.cm-gutters');
+    expect(gutters).not.toBeNull();
+    // The native gutter is owned by CM6 and lives inside .cm-scroller, so each
+    // number cell is laid out by CM6 next to its line — aligned by construction.
+    expect(gutters!.closest('.cm-scroller')).not.toBeNull();
+    expect(view.dom.querySelector('.cm-lineNumbers')).not.toBeNull();
     view.destroy();
-  });
-
-  it('is transparent on dark/light and opaque Canvas under HC', () => {
-    const dark = mount('dark');
-    expect(dark.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!.style.background).toBe(
-      'transparent'
-    );
-    dark.destroy();
-    const hc = mount('hc');
-    // jsdom lowercases CSS system-color keywords (Canvas → canvas); compare loosely.
-    expect(
-      hc.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!.style.background.toLowerCase()
-    ).toBe('canvas');
-    hc.destroy();
   });
 
   it('renders one number cell per line with the right text', () => {
-    const view = mount('light', 'one\ntwo\nthree\nfour');
-    const col = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!;
-    const cells = Array.from(col.children).filter(
-      (c) => (c as HTMLElement).style.display !== 'none'
-    );
-    expect(cells.map((c) => c.textContent)).toEqual(['1', '2', '3', '4']);
+    const { view } = mount('light', 'one\ntwo\nthree\nfour');
+    const cells = Array.from(
+      view.dom.querySelectorAll<HTMLElement>('.cm-lineNumbers .cm-gutterElement')
+    )
+      // CM6 prepends a hidden spacer element (visibility:hidden) sized to the
+      // widest number to reserve a stable gutter width; skip it.
+      .filter((c) => c.style.visibility !== 'hidden')
+      .map((c) => c.textContent);
+    expect(cells).toEqual(['1', '2', '3', '4']);
     view.destroy();
   });
 
-  it('reserves the column width as a left margin on the scroller (text starts to its right)', () => {
-    const view = mount('dark');
-    const marginLeft = view.scrollDOM.style.marginLeft;
-    expect(marginLeft).toMatch(/^\d+px$/);
-    expect(parseInt(marginLeft, 10)).toBeGreaterThan(0);
+  it('keeps the gutter sticky and clips content/layers at the gutter edge (transparent gutter + clip = no overlap)', () => {
+    const { view } = mount('light');
+    // CM6 injects the theme as a StyleModule <style>. The no-overlap guarantee
+    // for the TRANSPARENT gutter is the clip-path pair: .cm-content clipped at
+    // --np-hclip (= scrollLeft) and .cm-layer (selection/cursor, whose origin
+    // includes the gutter width) at --np-hclip + --np-gutter-w. The gutter
+    // itself stays sticky above the content.
+    const css = Array.from(document.querySelectorAll('style'))
+      .map((s) => s.textContent ?? '')
+      .join('\n');
+    expect(css).toContain('position: sticky');
+    expect(css).toContain('inset(0 0 0 var(--np-hclip, 0px))');
+    expect(css).toContain('inset(0 0 0 calc(var(--np-hclip, 0px) + var(--np-gutter-w, 0px)))');
     view.destroy();
   });
 
-  it('releases the scroller margin on destroy', () => {
-    const view = mount('dark');
-    expect(view.scrollDOM.style.marginLeft).not.toBe('');
+  it('mirrors scrollLeft into --np-hclip on horizontal scroll', () => {
+    const { view } = mount('light', 'a very long line\n'.repeat(3));
     const scroller = view.scrollDOM;
+    // Initial sync (jsdom scrollLeft = 0).
+    expect(scroller.style.getPropertyValue('--np-hclip')).toBe('0px');
+    // Simulate a horizontal scroll: jsdom doesn't lay out, but scrollLeft is
+    // assignable and the plugin reads it on the scroll event.
+    Object.defineProperty(scroller, 'scrollLeft', { value: 42, configurable: true });
+    scroller.dispatchEvent(new Event('scroll'));
+    expect(scroller.style.getPropertyValue('--np-hclip')).toBe('42px');
     view.destroy();
-    expect(scroller.style.marginLeft).toBe('');
   });
 
-  it('removes the column element on destroy', () => {
-    const view = mount('light');
-    expect(view.dom.querySelector('.cm-lineNumberColumn')).not.toBeNull();
+  it('does NOT mount the active-line gutter highlighter when lineHighlighter is off', () => {
+    const { view } = mount('dark', 'a\nb\nc', false);
+    expect(view.dom.querySelector('.cm-activeLineGutter')).toBeNull();
     view.destroy();
-    expect(document.querySelector('.cm-lineNumberColumn')).toBeNull();
   });
 
-  it('brightens the cursor line number when lineHighlighter is on', () => {
-    const view = mount('dark', 'a\nb\nc', true);
-    // Cursor defaults to doc start (line 1). The first cell should carry the
-    // brightened active color; the others the resting color.
-    const col = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!;
-    const cells = Array.from(col.children) as HTMLElement[];
-    expect(cells[0].style.color).toBe(activeNumberColor('dark'));
-    expect(cells[1].style.color).toBe(numberColor('dark'));
+  it('mounts the active-line gutter highlighter when lineHighlighter is on', () => {
+    const { view } = mount('dark', 'a\nb\nc', true);
+    // Cursor defaults to doc start (line 1) → its gutter cell is tagged active.
+    expect(view.dom.querySelector('.cm-activeLineGutter')).not.toBeNull();
     view.destroy();
+  });
+
+  it('removes the gutter on destroy', () => {
+    const { view, parent } = mount('light');
+    expect(view.dom.querySelector('.cm-gutters')).not.toBeNull();
+    view.destroy();
+    // Scope to this view's own parent — other tests leave their parents on body.
+    expect(parent.querySelector('.cm-gutters')).toBeNull();
   });
 });

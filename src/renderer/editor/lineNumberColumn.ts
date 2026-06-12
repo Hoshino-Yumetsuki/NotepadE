@@ -1,58 +1,64 @@
 /**
  * ============================================================================
- *  External line-number column — UWP-faithful, horizontal-scroll-proof gutter
+ *  Line-number gutter — STRUCTURAL alignment via CodeMirror 6's native gutter
  * ============================================================================
  *
- * CodeMirror's built-in `lineNumbers()` gutter is `position: sticky` INSIDE the
- * `.cm-scroller`. With word-wrap off, scrolling a long line to the right slides
- * the document text LEFT *under* the sticky gutter. That forces an impossible
- * choice: a transparent gutter lets the scrolled text show through and overlap
- * the numbers, while an opaque gutter hides the acrylic surface behind it (the
- * "不透明 / opaque block" complaint). The two requirements are contradictory in a
- * single scroller.
+ * This replaces the former measure-and-follow external column. That column
+ * mounted OUTSIDE `.cm-scroller` and absolutely positioned one number cell per
+ * visible line by reading rendered `.cm-line` rects every frame. The approach
+ * could never FORCE alignment — it could only chase it:
+ *   - Zoom (the `--cm-zoom-font-size` variable) resized the text behind CM6's
+ *     back, so the column re-measured a frame late and the numbers drifted
+ *     (zoom-out especially: numbers slid left-down while lines shrank correctly).
+ *   - In a ~920k-line document CM6's BigScaler rescales every `block.top` on
+ *     EVERY edit (total height changes → global scale changes); the measured
+ *     column lagged or broke outright on a mid-file insert.
  *
- * UWP never had this problem because its line numbers live in a SEPARATE,
- * non-horizontally-scrolling grid column (TextEditorCore.LineNumbers.cs renders
- * number TextBlocks into their own Canvas beside the text ScrollViewer). This
- * module reproduces that structure: a line-number column rendered OUTSIDE the
- * scroller, synced to the editor's VERTICAL scroll only. Because no document text
- * ever travels behind it, the column can be fully transparent (acrylic shows
- * through) AND never overlaps text — the conflict is gone by construction.
+ * CM6's built-in `lineNumbers()` gutter is laid out by CM6 itself, per line,
+ * inside the same scroll DOM as the content. The numbers are therefore aligned
+ * to their lines BY CONSTRUCTION at any zoom and any document size — including
+ * BigScaler docs — with no measurement, no rect reads, and no per-frame catch-up.
+ * That is the structural guarantee the re-implementation requires.
  *
- * How it works:
- *   - A `<div class="cm-lineNumberColumn">` is appended to `view.dom` (NOT the
- *     scroller), absolutely positioned at the editor's left edge, transparent,
- *     `overflow: hidden`, `pointer-events: none`.
- *   - `view.scrollDOM` gets a left margin equal to the column width, so the text
- *     content starts to the RIGHT of the column and the freed strip is the
- *     column's home. Horizontal scroll moves the text within the scroller; the
- *     column, being outside it, does not move horizontally → no overlap, ever.
- *   - On every geometry/viewport/scroll update, one right-aligned number element
- *     per visible line block is positioned at `block.top - scrollTop`. A wrapped
- *     line is one block carrying ONE number at its top — correct under word-wrap.
+ * Visual parity with the old column is reproduced purely through gutter THEMING
+ * (EditorView.theme on `.cm-gutters` / `.cm-lineNumbers` / `.cm-gutterElement`):
+ *   - font-size tracks `--cm-zoom-font-size` so zoom stays live; font-family is
+ *     the editor body face; numbers are right-aligned and muted (~0.6α body
+ *     color), brightened on the active line when the line highlighter is on.
+ *   - the gutter background is fully TRANSPARENT (HC: opaque `Canvas`), so the
+ *     strip shows exactly the app root tint → window acrylic/vibrancy and
+ *     follows the transparency slider with no double-tint — the gutter reads as
+ *     the SAME material as the rest of the app.
+ *   - no-overlap on horizontal scroll is guaranteed by CLIPPING, not masking:
+ *     the native gutter is `position: sticky; left: 0; z-index: 200` inside the
+ *     scroller, so with word-wrap off a long line scrolled right slides the
+ *     content LEFT, UNDER the gutter. A tiny ViewPlugin mirrors
+ *     `scrollDOM.scrollLeft` into the `--np-hclip` CSS variable (and the gutter
+ *     width into `--np-gutter-w`); `.cm-content` is clipped at
+ *     `inset(0 0 0 var(--np-hclip))` (content-local x < scrollLeft is exactly
+ *     the part that slid under the sticky gutter) and the selection/cursor
+ *     `.cm-layer`s — whose local origin is the scroller's content origin,
+ *     INCLUDING the gutter width — at `inset(0 0 0 calc(--np-hclip +
+ *     --np-gutter-w))`. Text, selection rects and the caret are therefore never
+ *     RENDERED under the gutter at all, so the transparent strip never shows
+ *     them.
+ *   - width grows with the digit count automatically (CM6 sizes the gutter to
+ *     its widest element).
  *
- * THEME: light/dark use a transparent column (acrylic shows through) with a muted
- * ~0.6α number color matching the editor body; HC uses an opaque `Canvas` column
- * (forced-colors paints flat system colors, no material), mirroring the
- * `.np-acrylic` high-contrast guard. Font family + size match the editor body
- * (size via the `--cm-zoom-font-size` variable so zoom tracks live).
+ * The line-number reveal glow (lineNumberGlow.ts) reads `.cm-gutters` for the
+ * boundary it lights; the gutter is a stable CM6-owned element, so the glow
+ * tracks it without any measure plumbing.
  *
- * PA-8: pure renderer + DOM. No fs/path/child_process, no IPC.
+ * PA-8: pure renderer + CM6 extension. No fs/path/child_process, no IPC.
  */
 
-import { ViewPlugin, type PluginValue, type ViewUpdate, EditorView } from '@codemirror/view';
+import { EditorView, ViewPlugin, lineNumbers, highlightActiveLineGutter } from '@codemirror/view';
+import type { ViewUpdate } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
-import { zoomField } from './commands/zoom';
 
-/** Horizontal padding inside the column (px): gap before the separator + left inset. */
-const COLUMN_PADDING_RIGHT = 8;
-const COLUMN_PADDING_LEFT = 6;
-/** Minimum digit slots so single-digit docs still get a comfortable column. */
-const MIN_DIGITS = 2;
-
-/** Options threaded from the host so the column matches the live theme + font. */
+/** Options threaded from the host so the gutter matches the live theme + font. */
 export interface LineNumberColumnOptions {
-  /** Resolved theme bucket — picks number color; `hc` makes the column opaque. */
+  /** Resolved theme bucket — picks number color; `hc` makes the gutter opaque. */
   themeMode: 'light' | 'dark' | 'hc';
   /** Editor body font family (numbers render in the same face, like UWP). */
   fontFamily: string;
@@ -72,316 +78,167 @@ export function activeNumberColor(themeMode: 'light' | 'dark' | 'hc'): string {
   return themeMode === 'dark' ? 'rgba(238, 238, 238, 0.95)' : 'rgba(0, 0, 0, 0.95)';
 }
 
-/** Column background per theme: transparent (acrylic) for light/dark, opaque for HC. */
+/**
+ * Gutter background per theme. Fully TRANSPARENT for light/dark so the strip
+ * shows the app root tint → window acrylic/vibrancy directly — the gutter is
+ * the SAME live material as the rest of the app (slider included), with no
+ * double-tint. Safe because nothing is ever rendered under the strip: the
+ * horizontal-clip plugin (see module header) clips `.cm-content` and the
+ * selection/cursor layers at the gutter edge. HC stays the flat system
+ * `Canvas` (opaque — no material in high contrast).
+ */
 export function columnBackground(themeMode: 'light' | 'dark' | 'hc'): string {
   return themeMode === 'hc' ? 'Canvas' : 'transparent';
 }
+
+/** Minimum digit slots so single-digit docs still get a comfortable column. */
+const MIN_DIGITS = 2;
 
 /** Digit slots needed for a document of `lineCount` lines (>= MIN_DIGITS). */
 export function digitsFor(lineCount: number): number {
   return Math.max(MIN_DIGITS, String(Math.max(1, lineCount)).length);
 }
 
-export const COLUMN_PADDING = COLUMN_PADDING_LEFT + COLUMN_PADDING_RIGHT;
+/** Horizontal padding inside the gutter cell (px): left inset + right gap. */
+const CELL_PADDING_LEFT = 6;
+const CELL_PADDING_RIGHT = 8;
 
 /**
- * Build the external line-number column extension. Mount it in place of CM6's
- * `lineNumbers()` (gate on the same showLineNumbers prop). Rebuild it (via a
- * Compartment.reconfigure) when themeMode / fontFamily / lineHighlighter change.
+ * Theme the native gutter to the live app theme + zoom. Kept separate from the
+ * extension factory so it can be unit-tested in isolation and so the selectors
+ * stay PLAIN `.cm-*` (no `&dark`/`&light` ancestor selectors, which CM6's
+ * EditorView.theme rejects at construction — the host chooses colors in JS).
+ */
+export function lineNumberTheme(options: LineNumberColumnOptions): Extension {
+  const { themeMode, fontFamily, lineHighlighter } = options;
+  return EditorView.theme({
+    '.cm-gutters': {
+      // Transparent (HC: Canvas) — the strip IS the app material; see
+      // columnBackground. The clip rules below guarantee nothing renders
+      // beneath it during horizontal scroll.
+      backgroundColor: columnBackground(themeMode),
+      color: numberColor(themeMode),
+      border: 'none',
+      // Keep CM6's fixed gutter intact: sticky at the scroller's left edge, above
+      // the content. CM6 already sets these, but we restate them so the no-overlap
+      // guarantee can't be silently lost by another extension's gutter theme.
+      position: 'sticky',
+      left: '0',
+      zIndex: '200',
+      fontFamily,
+      // Size tracks the editor body via the zoom variable (Ctrl+/Ctrl-/Ctrl0 +
+      // wheel) so the numbers scale in lockstep with the content — structurally,
+      // because CM6 lays out the gutter cells AFTER this size is resolved.
+      fontSize: 'var(--cm-zoom-font-size)'
+    },
+    // No-overlap guarantee for the TRANSPARENT gutter: never render content
+    // under the sticky strip. Content-local x < scrollLeft is exactly the part
+    // that slid under the gutter (the content box starts at the gutter's right
+    // edge), so clipping there hides it. --np-hclip is mirrored from
+    // scrollDOM.scrollLeft by horizontalClipPlugin; with the var unset/0 the
+    // inset is 0 and nothing is clipped.
+    '.cm-content': {
+      clipPath: 'inset(0 0 0 var(--np-hclip, 0px))'
+    },
+    // Selection rectangles + the caret live in .cm-layer elements whose local
+    // origin is the scroller CONTENT origin (left edge INCLUDING the gutter, per
+    // @codemirror/view getBase: marker.left = clientX - (scrollerRect.left -
+    // scrollLeft)), so their under-gutter region is [scrollLeft, scrollLeft +
+    // gutterWidth] — clip at the sum.
+    '.cm-layer': {
+      clipPath: 'inset(0 0 0 calc(var(--np-hclip, 0px) + var(--np-gutter-w, 0px)))'
+    },
+    '.cm-lineNumbers .cm-gutterElement': {
+      // Right-aligned numbers with UWP-style insets; min-width keeps a stable
+      // column for short docs (CM6 grows it past this as the digit count rises).
+      padding: `0 ${CELL_PADDING_RIGHT}px 0 ${CELL_PADDING_LEFT}px`,
+      minWidth: `${MIN_DIGITS}ch`,
+      textAlign: 'right',
+      color: numberColor(themeMode)
+    },
+    // Active (cursor) line number: brightened only when the line highlighter is
+    // on, mirroring the old column's active-line emphasis. highlightActiveLine-
+    // Gutter() (mounted below) tags the active cell with .cm-activeLineGutter.
+    ...(lineHighlighter
+      ? {
+          '.cm-lineNumbers .cm-activeLineGutter': {
+            backgroundColor: 'transparent',
+            color: activeNumberColor(themeMode)
+          }
+        }
+      : {})
+  });
+}
+
+/**
+ * Mirrors the scroller's horizontal scroll offset into `--np-hclip` and the
+ * gutter's current width into `--np-gutter-w` (both on `.cm-scroller`), feeding
+ * the clip-path rules in `lineNumberTheme`. Scroll writes are guarded (only on
+ * change) and read nothing but `scrollLeft`; the gutter width is read in CM6's
+ * measure phase (geometry changes: digit growth, zoom) to avoid layout thrash.
+ */
+const horizontalClipPlugin = ViewPlugin.fromClass(
+  class {
+    private lastLeft = -1;
+    private lastGutterWidth = -1;
+    private readonly onScroll: () => void;
+    private readonly measureReq: { read: () => number; write: (width: number) => void };
+
+    constructor(private readonly view: EditorView) {
+      this.onScroll = () => this.syncScrollLeft();
+      view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
+      this.measureReq = {
+        read: () => {
+          const gutters = this.view.scrollDOM.querySelector('.cm-gutters');
+          return gutters instanceof HTMLElement ? gutters.offsetWidth : 0;
+        },
+        write: (width: number) => this.writeGutterWidth(width)
+      };
+      this.syncScrollLeft();
+      view.requestMeasure(this.measureReq);
+    }
+
+    update(update: ViewUpdate): void {
+      if (update.geometryChanged) {
+        this.view.requestMeasure(this.measureReq);
+        this.syncScrollLeft();
+      }
+    }
+
+    destroy(): void {
+      this.view.scrollDOM.removeEventListener('scroll', this.onScroll);
+    }
+
+    private syncScrollLeft(): void {
+      const left = this.view.scrollDOM.scrollLeft;
+      if (left === this.lastLeft) return;
+      this.lastLeft = left;
+      this.view.scrollDOM.style.setProperty('--np-hclip', `${left}px`);
+    }
+
+    private writeGutterWidth(width: number): void {
+      if (width === this.lastGutterWidth) return;
+      this.lastGutterWidth = width;
+      this.view.scrollDOM.style.setProperty('--np-gutter-w', `${width}px`);
+    }
+  }
+);
+
+/**
+ * Build the line-number gutter extension. Mount it gated on the showLineNumbers
+ * prop (a Compartment in CodeMirrorEditor.tsx). Rebuild it via
+ * Compartment.reconfigure when themeMode / fontFamily / lineHighlighter change.
+ *
+ * Composes CM6's native `lineNumbers()` (structural per-line gutter) with the
+ * theme above, the horizontal clip plugin (transparent gutter + content clip =
+ * no overlap), plus `highlightActiveLineGutter()` when the line highlighter is
+ * on so the active number can be brightened.
  */
 export function lineNumberColumn(options: LineNumberColumnOptions): Extension {
-  return ViewPlugin.define((view) => new LineNumberColumnPlugin(view, options));
-}
-
-/** One number cell's computed geometry, captured in the measure READ phase. */
-interface CellSnapshot {
-  lineNo: number;
-  /** Column-relative top (block.top − scrollTop + content padding-top), px. */
-  top: number;
-  /** The full line block height (covers wrapped lines), px. */
-  height: number;
-}
-
-/** Coherent read-phase snapshot the write phase paints from. */
-interface LayoutSnapshot {
-  /** Reserved column width for the current digit count, px. */
-  width: number;
-  /** Measured single-row line height (cells pin line-height to it), px. */
-  lineH: number;
-  /** 1-based active (cursor) line number, or -1 when not highlighted. */
-  activeLine: number;
-  cells: CellSnapshot[];
-}
-
-class LineNumberColumnPlugin implements PluginValue {
-  private column: HTMLDivElement | null = null;
-  /** Reused number elements, grown on demand (never shrunk — hidden when unused). */
-  private cells: HTMLDivElement[] = [];
-  private width = 0;
-  private readonly onScroll: () => void;
-  /**
-   * Char-width anchor captured once at mount (100% zoom × base font-size).
-   * Zoom changes scale this proportionally so the column width is STABLE and
-   * REPRODUCIBLE across zoom-in→zoom-out cycles — no measurement noise drift.
-   * Null until first measure (the initial CM6 measure hasn't run yet at mount).
-   */
-  private baseCharWidth: number | null = null;
-  /**
-   * Keyed measure request so multiple updates in one frame coalesce into a
-   * single read/write pass (CM6 dedupes by `key`).
-   */
-  private readonly measureRequest = {
-    key: this as unknown,
-    read: (): LayoutSnapshot => this.readLayout(),
-    write: (snap: LayoutSnapshot): void => this.writeLayout(snap)
-  };
-
-  constructor(
-    private readonly view: EditorView,
-    private readonly opts: LineNumberColumnOptions
-  ) {
-    // Coordinates through CM6's measure phase exclusively — both scroll and zoom.
-    // Synchronous layout (readLayout + writeLayout) conflicts with CM6's batched
-    // writes during measure passes triggered by font-size / geometry changes.
-    // The keyed requestMeasure dedupes per frame, so rapid scroll events still
-    // coalesce into a single read/write pass with zero cumulative lag.
-    this.onScroll = () => { this.view.requestMeasure(this.measureRequest); };
-    this.mount();
-    // Vertical scroll moves the numbers; horizontal scroll does NOT (the column is
-    // outside the scroller). Listen on the scroller so the numbers track scrollTop.
-    this.view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
-    // Initial paint synchronously — no pending scroll-anchor compensation on a
-    // freshly-mounted view, so a direct readLayout+writeLayout is safe here.
-    this.layout();
-  }
-
-  private mount(): void {
-    const el = document.createElement('div');
-    el.className = 'cm-lineNumberColumn';
-    el.setAttribute('aria-hidden', 'true');
-    el.style.position = 'absolute';
-    el.style.top = '0';
-    el.style.bottom = '0';
-    el.style.left = '0';
-    el.style.overflow = 'hidden';
-    el.style.pointerEvents = 'none';
-    el.style.boxSizing = 'border-box';
-    el.style.zIndex = '1';
-    el.style.background = columnBackground(this.opts.themeMode);
-    el.style.fontFamily = this.opts.fontFamily;
-    // Size tracks the editor body via the zoom variable (Ctrl+/Ctrl-/Ctrl0 + wheel).
-    el.style.fontSize = 'var(--cm-zoom-font-size)';
-    el.style.lineHeight = '1.2';
-    el.style.textAlign = 'right';
-    el.style.color = numberColor(this.opts.themeMode);
-    this.view.dom.appendChild(el);
-    this.column = el;
-  }
-
-  /** Reserve the column's width on the scroller so text starts to its right. */
-  private reserve(width: number): void {
-    if (width === this.width) return;
-    this.width = width;
-    if (this.column) this.column.style.width = `${width}px`;
-    // The scroller (and thus .cm-content) is inset by the column width; the column
-    // overlays the freed strip. marginLeft (not padding) so horizontal scroll math
-    // inside the scroller is unaffected.
-    this.view.scrollDOM.style.marginLeft = `${width}px`;
-  }
-
-  /** Synchronous relayout (initial mount + pure scroll, where geometry is stable). */
-  private layout(): void {
-    if (!this.column) return;
-    this.writeLayout(this.readLayout());
-  }
-
-  /**
-   * READ phase: one coherent snapshot of everything the cells are positioned
-   * from.
-   *
-   * Cell tops come from the RENDERED `.cm-line` rects, not from `block.top`
-   * math. For documents taller than ~7,000,000px CM6 swaps in its BigScaler:
-   * every `block.top` becomes a globally rescaled coordinate that (a) shifts
-   * on EVERY edit (any insert changes total height → changes scale) while the
-   * compensating scrollTop lands only later in the measure phase, and (b) is
-   * built from heightMap ESTIMATES, so it sits a few px off the real DOM rows
-   * even at rest (~0.06px/line of drift in a 500k-line doc). Both made the
-   * numbers detach from their lines ("大文件下插入行全坏了"). The rendered
-   * rects are what the user actually sees, by construction, under either
-   * scaler. Rect reads belong in a measure READ phase — see update() for how
-   * edits are routed through requestMeasure.
-   */
-  private readLayout(): LayoutSnapshot {
-    const doc = this.view.state.doc;
-
-    // Width from the digit count of the last line, measured in the column's own
-    // font via a ch-based estimate (monospace-friendly; proportional fonts get a
-    // slight over-estimate, which only adds harmless left padding).
-    const digits = digitsFor(doc.lines);
-    const charPx = this.measureCharWidth();
-    const width = Math.ceil(digits * charPx) + COLUMN_PADDING;
-
-    // CM6 advances each block by its MEASURED line height (read from a rendered
-    // line via getBoundingClientRect), which for most fonts is NOT exactly
-    // `1.2 × fontSize`. A naked cell (no height) draws its glyph in a CSS-ideal
-    // `1.2em` box, so its half-leading differs from the content's and every number
-    // sits a constant `(measured − 1.2·fontSize)/2` off its row. Giving each cell
-    // the measured line-height (and the block's full height as the box) reproduces
-    // the content's box exactly, so the number top-aligns to its first visual row —
-    // matching CM6's own gutter and the UWP per-number measured-height TextBlock.
-    const lineH = this.view.defaultLineHeight;
-    // Active (cursor) line, for the brightened number when lineHighlighter is on.
-    const head = this.view.state.selection.main.head;
-    const activeLine = this.opts.lineHighlighter ? doc.lineAt(head).number : -1;
-
-    const cells: CellSnapshot[] = [];
-
-    // The column is pinned to view.dom's top, so a rendered line's
-    // column-relative top is its viewport rect against view.dom's — already
-    // incorporating live scrollTop, content padding and any scaler.
-    const originTop = this.view.dom.getBoundingClientRect().top;
-    // Fallback coordinates for lines without a rendered element yet (plugin
-    // construction runs before the DocView paints; a measure pass follows and
-    // re-runs this read). `block.top` is a DOCUMENT coordinate (0 = top of the
-    // content region); the body adds `padding-top` on `.cm-content` (UWP
-    // content inset, 6px) between this column's origin and where line 1 paints
-    // — documentPadding.top is CM6's authoritative value for that inset.
-    const scrollTop = this.view.scrollDOM.scrollTop;
-    const padTop = this.view.documentPadding.top;
-
-    for (const block of this.view.viewportLineBlocks) {
-      const lineNo = doc.lineAt(block.from).number;
-      let top = block.top - scrollTop + padTop;
-      let height = block.height;
-      // Prefer the RENDERED `.cm-line` rect over block math. For documents
-      // taller than ~7,000,000px CM6 swaps in its BigScaler: every block.top
-      // becomes a globally rescaled coordinate that (a) shifts on EVERY edit
-      // (any insert changes total height → changes scale) while the
-      // compensating scrollTop lands only later in the measure phase, and
-      // (b) is built from heightMap estimates, so it sits a few px off the
-      // real DOM rows even at rest. Both made the numbers detach from their
-      // lines ("大文件下插入行全坏了"). The rendered rect is what the user
-      // actually sees, by construction, under either scaler.
-      const el = this.lineElementAt(block.from);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        top = rect.top - originTop;
-        height = rect.height;
-      }
-      cells.push({ lineNo, top, height });
-    }
-    return { width, lineH, activeLine, cells };
-  }
-
-  /** The rendered `.cm-line` element containing `pos`, or null if not painted. */
-  private lineElementAt(pos: number): HTMLElement | null {
-    try {
-      let node: Node | null = this.view.domAtPos(pos).node;
-      const content = this.view.contentDOM;
-      while (node && node !== content) {
-        if (node instanceof HTMLElement && node.parentNode === content) {
-          return node.classList.contains('cm-line') ? node : null;
-        }
-        node = node.parentNode;
-      }
-    } catch {
-      // domAtPos throws before the doc view exists (plugin construction) —
-      // the caller falls back to block-coordinate math for this pass.
-    }
-    return null;
-  }
-
-  /** WRITE phase: apply the snapshot to the DOM (no layout reads). */
-  private writeLayout(snap: LayoutSnapshot): void {
-    if (!this.column) return;
-    // marginLeft only moves on an ACTUAL width change (reserve() no-ops
-    // otherwise). Writing it from here — a write phase, not mid-update — keeps
-    // a digit-count growth from re-wrapping the content inside CM6's measure
-    // loop, which used to thrash it into "Viewport failed to stabilize".
-    this.reserve(snap.width);
-
-    let i = 0;
-    for (const c of snap.cells) {
-      const cell = this.cellAt(i++);
-      cell.textContent = String(c.lineNo);
-      cell.style.top = `${c.top}px`;
-      // Mirror the content's line box: a wrapped block is taller than one row, so
-      // use the block height as the cell box but pin line-height to one measured
-      // row — the single number then top-aligns to the block's first visual line.
-      cell.style.height = `${c.height}px`;
-      cell.style.lineHeight = `${snap.lineH}px`;
-      cell.style.color =
-        c.lineNo === snap.activeLine
-          ? activeNumberColor(this.opts.themeMode)
-          : numberColor(this.opts.themeMode);
-      cell.style.display = 'block';
-    }
-    // Hide any leftover cells from a previously larger viewport.
-    for (; i < this.cells.length; i++) this.cells[i].style.display = 'none';
-  }
-
-  /** A reusable absolutely-positioned number cell at index `i`. */
-  private cellAt(i: number): HTMLDivElement {
-    let cell = this.cells[i];
-    if (!cell) {
-      cell = document.createElement('div');
-      cell.style.position = 'absolute';
-      cell.style.right = `${COLUMN_PADDING_RIGHT}px`;
-      cell.style.left = `${COLUMN_PADDING_LEFT}px`;
-      cell.style.textAlign = 'right';
-      this.column!.appendChild(cell);
-      this.cells[i] = cell;
-    }
-    return cell;
-  }
-
-  private measureCharWidth(): number {
-    // Capture a stable base char-width on the first measure (CM6's
-    // defaultCharacterWidth is available by then). Subsequent zoom changes
-    // scale this base proportionally — NO re-measurement drift.
-    const cw = this.view.defaultCharacterWidth;
-    if (this.baseCharWidth === null && cw && cw > 0) {
-      this.baseCharWidth = cw;
-    }
-    const base = this.baseCharWidth ?? this.view.defaultLineHeight * 0.5;
-    const zoom = this.view.state.field(zoomField, false) ?? 100;
-    return base * (zoom / 100);
-  }
-
-  update(u: ViewUpdate): void {
-    // Re-attach if CM6 / React rebuilt the host DOM under us.
-    if (!this.column || !this.column.isConnected) {
-      this.column = null;
-      this.cells = [];
-      this.width = 0;
-      this.mount();
-    }
-    // Detect zoom font-size changes so the column re-measures in the SAME frame.
-    // Without this, the CSS variable change from applyZoomFontSize resizes the
-    // text behind CM6's back, but the column's own measure only fires on the
-    // NEXT geometry-changed cycle — the numbers lag one frame behind the content.
-    const prevZoom = u.startState.field(zoomField, false);
-    const nowZoom  = u.state.field(zoomField, false);
-    const zoomChanged = prevZoom !== nowZoom;
-    if (u.docChanged || u.viewportChanged || u.geometryChanged || u.selectionSet || zoomChanged) {
-      // NOT a synchronous layout: during update() CM6 has new (possibly
-      // BigScaler-rescaled) block tops but has NOT yet applied its scroll-anchor
-      // scrollTop compensation — that lands in the measure phase. Deferring via
-      // requestMeasure reads blocks + scrollTop as one coherent snapshot after
-      // the compensation, and re-runs after geometryChanged (startup/zoom font
-      // re-measure), so the transient-default-line-height window self-heals
-      // exactly as before. Any later scrollTop adjustment also fires the
-      // scroller's scroll event, whose synchronous relayout re-glues the cells.
-      this.view.requestMeasure(this.measureRequest);
-    }
-  }
-
-  destroy(): void {
-    this.view.scrollDOM.removeEventListener('scroll', this.onScroll);
-    // Release the reserved strip so a later mount without the column starts clean.
-    this.view.scrollDOM.style.marginLeft = '';
-    this.column?.remove();
-    this.column = null;
-    this.cells = [];
-  }
+  return [
+    lineNumbers(),
+    options.lineHighlighter ? highlightActiveLineGutter() : [],
+    lineNumberTheme(options),
+    horizontalClipPlugin
+  ];
 }

@@ -122,7 +122,7 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
   it('drives glow opacity and position from pointer proximity (rAF-coalesced)', async () => {
     const view = mount('dark');
     const overlay = view.dom.querySelector<HTMLElement>(':scope > .cm-lineNumberGlow')!;
-    const gutters = view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn')!;
+    const gutters = view.dom.querySelector<HTMLElement>('.cm-gutters')!;
     gutters.getBoundingClientRect = () =>
       ({ top: 0, right: 40, left: 0, bottom: 100, width: 40, height: 100 }) as DOMRect;
     const scroller = view.scrollDOM;

@@ -132,7 +132,10 @@ class LineNumberGlowPlugin implements PluginValue {
   }
 
   private gutters(): HTMLElement | null {
-    return this.view.dom.querySelector<HTMLElement>('.cm-lineNumberColumn');
+    // The native CM6 gutter (lineNumberColumn.ts mounts lineNumbers() now). It
+    // lives inside .cm-scroller, sticky at the left edge — its right edge is the
+    // boundary this glow lights.
+    return this.view.dom.querySelector<HTMLElement>('.cm-gutters');
   }
 
   private mountOverlay(): void {
