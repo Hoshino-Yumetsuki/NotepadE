@@ -152,6 +152,7 @@ pub fn setup_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow, apply
         let _ = window;
     }
     install_window_hooks(window);
+    apply_window_icon(window);
     #[cfg(target_os = "macos")]
     hide_traffic_lights(window);
     // Restore the last session's bounds + maximized state before first paint;
@@ -194,6 +195,25 @@ pub fn hide_traffic_lights(window: &tauri::WebviewWindow) {
         if let Some(b) = ns_window.standardWindowButton(button) {
             b.setHidden(true);
         }
+    }
+}
+
+/// Set the runtime window icon from the embedded 128x128 PNG. tauri-build does
+/// not inject a default-window-icon here (the "icon" feature is off), so the
+/// bundle icon never reaches the live window; this applies it explicitly so the
+/// taskbar (Windows) / app window + taskbar (Linux) show the real icon. On
+/// macOS the dock uses the bundled .icns; set_icon is a harmless no-op-ish call
+/// for the window itself. The PNG is embedded at compile time (include_bytes!),
+/// so a missing file is a build error, never a runtime path lookup.
+pub fn apply_window_icon(window: &tauri::WebviewWindow) {
+    const ICON_PNG: &[u8] = include_bytes!("../icons/128x128.png");
+    match tauri::image::Image::from_bytes(ICON_PNG) {
+        Ok(icon) => {
+            if let Err(e) = window.set_icon(icon) {
+                log::warn!("set_icon failed: {e}");
+            }
+        }
+        Err(e) => log::warn!("decode embedded window icon failed: {e}"),
     }
 }
 
