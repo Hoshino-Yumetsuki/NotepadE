@@ -105,6 +105,10 @@ export interface StatusBarProps {
   onSetZoom(percent: number): void;
   /** Column 4: restore the default 100% zoom. */
   onResetZoom(): void;
+  /** Column 4: the zoom slider drag began (pauses the poll's zoom read). */
+  onZoomDragStart(): void;
+  /** Column 4: the zoom slider drag ended (resumes + settles the zoom read). */
+  onZoomDragEnd(): void;
   /** Column 5: re-apply a new EOL style to the active buffer. */
   onChangeEol(eol: EolId): void;
   /** Column 6: re-open the active file decoded with a different encoding. */
@@ -490,10 +494,24 @@ function ZoomColumn(props: {
   zoomPercent: number;
   onSetZoom: (percent: number) => void;
   onResetZoom: () => void;
+  onZoomDragStart: () => void;
+  onZoomDragEnd: () => void;
 }): JSX.Element {
-  const { tokens, zoomPercent, onSetZoom, onResetZoom } = props;
+  const { tokens, zoomPercent, onSetZoom, onResetZoom, onZoomDragStart, onZoomDragEnd } = props;
   const { t } = useT();
   const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(zoomPercent)));
+
+  // Begin a drag on pointer-down and end it on the NEXT pointer-up anywhere —
+  // the up can land outside the thumb (fast drags) or the flyout, so it must be
+  // a one-shot window listener rather than the slider's own onPointerUp.
+  const beginZoomDrag = () => {
+    onZoomDragStart();
+    const end = () => {
+      window.removeEventListener('pointerup', end);
+      onZoomDragEnd();
+    };
+    window.addEventListener('pointerup', end);
+  };
 
   return (
     <Menu positioning="above-end">
@@ -530,6 +548,7 @@ function ZoomColumn(props: {
             max={ZOOM_MAX}
             value={clamped}
             onChange={(_, data) => onSetZoom(data.value)}
+            onPointerDown={beginZoomDrag}
             style={{ minWidth: 160 }}
           />
           <button
@@ -795,6 +814,8 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
           zoomPercent={props.zoomPercent}
           onSetZoom={props.onSetZoom}
           onResetZoom={props.onResetZoom}
+          onZoomDragStart={props.onZoomDragStart}
+          onZoomDragEnd={props.onZoomDragEnd}
         />
         <EolColumn tokens={tokens} eolId={props.eolId} onChangeEol={props.onChangeEol} />
         <EncodingColumn

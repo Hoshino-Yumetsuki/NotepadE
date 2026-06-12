@@ -38,6 +38,8 @@ function makeProps(overrides: Partial<StatusBarProps> = {}): StatusBarProps {
     onGoToLine: vi.fn(),
     onSetZoom: vi.fn(),
     onResetZoom: vi.fn(),
+    onZoomDragStart: vi.fn(),
+    onZoomDragEnd: vi.fn(),
     onChangeEol: vi.fn(),
     onReopenWithEncoding: vi.fn(),
     onSaveWithEncoding: vi.fn(),

@@ -42,6 +42,10 @@ export function useStatusBarModel(args: {
     selectedCount: 0
   });
   const [zoomPercent, setZoomPercent] = useState(100);
+  // True while the zoom slider is being dragged. Pauses the 250ms poll's zoom
+  // read (refreshZoom) so it can't clobber the optimistic per-move percentage
+  // with a stale field read mid-drag.
+  const zoomDraggingRef = useRef(false);
   const [ansiEncodings, setAnsiEncodings] = useState<readonly AnsiEncodingEntry[]>([]);
   // Column-0 external-modification state machine (Gate-4 line 3).
   const [fileModificationState, setFileModificationState] = useState<FileModificationState>('none');
@@ -85,6 +89,11 @@ export function useStatusBarModel(args: {
   // activeEditorId below). setState with an identical number is a React no-op,
   // so the poll never causes render churn while zoom is unchanged.
   const refreshZoom = useCallback(() => {
+    // While the user is dragging the zoom slider, the optimistic applyZoom write
+    // already holds the live percentage; a poll read here can lag a frame behind
+    // the in-flight CM6 dispatch and would clobber the drag value back to a stale
+    // field read (the visible lag). Skip the poll until the drag ends.
+    if (zoomDraggingRef.current) return;
     const view = getActiveHandle()?.getView();
     if (!view) return;
     setZoomPercent(view.state.field(zoomField, false) ?? DEFAULT_ZOOM);
@@ -209,6 +218,18 @@ export function useStatusBarModel(args: {
     [getActiveHandle]
   );
 
+  // Slider drag lifecycle: while dragging, the poll's zoom read is paused (see
+  // refreshZoom) so the per-move optimistic percentage is never clobbered. On
+  // release, settle once on the authoritative clamped field value.
+  const onZoomDragStart = useCallback(() => {
+    zoomDraggingRef.current = true;
+  }, []);
+  const onZoomDragEnd = useCallback(() => {
+    zoomDraggingRef.current = false;
+    const view = getActiveHandle()?.getView();
+    if (view) setZoomPercent(view.state.field(zoomField, false) ?? DEFAULT_ZOOM);
+  }, [getActiveHandle]);
+
   return useMemo<StatusBarProps>(
     () => ({
       theme,
@@ -249,6 +270,8 @@ export function useStatusBarModel(args: {
       },
       onSetZoom: applyZoom,
       onResetZoom: () => applyZoom(DEFAULT_ZOOM),
+      onZoomDragStart,
+      onZoomDragEnd,
       onChangeEol: (eol: EolId) => {
         if (activeEditorId) store.setLabels(activeEditorId, encodingId, eol);
       },
@@ -280,7 +303,9 @@ export function useStatusBarModel(args: {
       store,
       onReopenWithEncoding,
       reloadAndRebaseline,
-      applyZoom
+      applyZoom,
+      onZoomDragStart,
+      onZoomDragEnd
     ]
   );
 }
