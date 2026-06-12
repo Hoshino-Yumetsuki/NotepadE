@@ -168,8 +168,8 @@ const api: NotepadsApi = {
   file: {
     open: (path) => call<OpenedFile>(channelToCommand(C.FileOpen), { path }),
     openDialog: () => call<string[]>(channelToCommand(C.FileOpenDialog)),
-    save: (args: SaveArgs) => call<SaveResult>(channelToCommand(C.FileSave), args as unknown as Record<string, unknown>),
-    saveAs: (args: SaveAsArgs) => call<SaveResult>(channelToCommand(C.FileSaveAs), args as unknown as Record<string, unknown>),
+    save: (args: SaveArgs) => call<SaveResult>(channelToCommand(C.FileSave), { args }),
+    saveAs: (args: SaveAsArgs) => call<SaveResult>(channelToCommand(C.FileSaveAs), { args }),
     reloadFromDisk: (path) => call<OpenedFile>(channelToCommand(C.FileReloadFromDisk), { path }),
     revalidatePath: (path) =>
       call<{ exists: boolean; dateModifiedMs: number }>(channelToCommand(C.FileRevalidatePath), { path })
@@ -208,7 +208,7 @@ const api: NotepadsApi = {
   },
   window: {
     brokerRequest: (args) =>
-      call<void>(channelToCommand(C.WindowBrokerRequest), args as unknown as Record<string, unknown>),
+      call<void>(channelToCommand(C.WindowBrokerRequest), { args }),
     setFullScreen: (enabled) =>
       call<{ isFullScreen: boolean }>(channelToCommand(C.WindowSetFullScreen), { enabled }),
     setCompactOverlay: (enabled) =>
@@ -256,7 +256,7 @@ const api: NotepadsApi = {
       window.print();
       return { ok: true as const, data: undefined };
     },
-    share: (args) => call<void>(channelToCommand(C.ShellShare), args as unknown as Record<string, unknown>)
+    share: (args) => call<void>(channelToCommand(C.ShellShare), { args })
   },
   wallpaper: {
     get: () => call<WallpaperState>(channelToCommand(C.WallpaperGet)),

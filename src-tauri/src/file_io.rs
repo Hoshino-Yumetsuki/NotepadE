@@ -272,6 +272,9 @@ pub async fn file_save_as(
             .file()
             .set_title("Save As")
             .add_filter("Text Documents (*.txt)", &["txt"])
+            .add_filter("Markdown (*.md)", &["md"])
+            .add_filter("Log (*.log)", &["log"])
+            .add_filter("All Files (*.*)", &["*"])
             .set_parent(&window);
         if let Some(dir) = dir {
             b = b.set_directory(dir);
