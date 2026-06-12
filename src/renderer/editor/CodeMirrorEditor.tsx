@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import { Compartment, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
-import { EditorView, keymap, highlightActiveLine, scrollPastEnd } from '@codemirror/view';
+import { EditorView, keymap, highlightActiveLine } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL, normalizeToShadow } from './eol';
 import { editorSettings, type EditorSettings } from './editorSettings';
@@ -115,6 +115,18 @@ export interface CodeMirrorEditorProps {
 const DEFAULT_FONT_FAMILY = 'Consolas, "Cascadia Code", "Cascadia Mono", monospace';
 const DEFAULT_FONT_SIZE = 14;
 const DEFAULT_ACCENT = '#0078D4';
+
+/**
+ * Ensure the CSS font-family always ends with a generic monospace fallback.
+ * Settings stores bare names like "Consolas"; on systems where that font is
+ * absent (macOS ships no Consolas) the browser falls back to the default
+ * serif/sans — producing 宋体 on Chinese locales. Appending the fallback chain
+ * guarantees a monospace face even when the primary is unavailable.
+ */
+function withMonospaceFallback(family: string): string {
+  if (family.includes('monospace')) return family;
+  return `${family}, "SF Mono", Menlo, Monaco, Consolas, "Cascadia Mono", "Courier New", monospace`;
+}
 
 /** The typography/selection/scrollbar inputs the editor theme is built from. */
 interface EditorThemeOptions {
@@ -255,7 +267,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       wordWrap = false,
       lineHighlighter = true,
       themeMode = 'light',
-      fontFamily = DEFAULT_FONT_FAMILY,
+      fontFamily: fontFamilyRaw = DEFAULT_FONT_FAMILY,
       fontSize = DEFAULT_FONT_SIZE,
       fontStyle = 'normal',
       fontWeight = 400,
@@ -266,6 +278,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     },
     ref
   ) {
+    // Ensure the font-family always has a monospace fallback so systems missing
+    // the primary face (e.g. macOS without Consolas) fall back to a monospace
+    // font instead of the browser default serif (宋体 on CJK locales).
+    const fontFamily = withMonospaceFallback(fontFamilyRaw);
+
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
     // Latest onDocChanged callback, read by the mount-once updateListener below.
@@ -448,16 +465,6 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         // highlightActiveLine() gated on lineHighlighter, in a compartment so the
         // "Highlight current line" toggle reconfigures it live.
         activeLineCompartment.current.of(lineHighlighter ? highlightActiveLine() : []),
-        // Scroll-past-end: virtual space below the last line so the document can
-        // be scrolled until the last line reaches the top. Crucially this defuses
-        // CM6's bottom scroll anchor: with only 10px content bottom padding the
-        // scroller is almost always "scrolledToBottom" (within 4px) while editing
-        // at EOF, so viewState anchored scroll to the document END — pressing
-        // Enter then pinned the BOTTOM and shifted everything ABOVE the caret up.
-        // With past-end space the bottom-anchored branch effectively never
-        // activates and Enter behaves like Notepad: the caret line holds its
-        // screen position, content below pushes down.
-        scrollPastEnd(),
         // Pin the document line separator to the shadow-buffer '\n' so doc
         // serialization never re-introduces CR. EOL is re-applied by MAIN.
         EditorState.lineSeparator.of(SHADOW_EOL),
