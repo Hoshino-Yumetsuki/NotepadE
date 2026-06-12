@@ -16,6 +16,7 @@ Thumbs.db
 .omo
 plan
 superpowers
+.playwright-mcp
 
 # dependencies
 /node_modules
