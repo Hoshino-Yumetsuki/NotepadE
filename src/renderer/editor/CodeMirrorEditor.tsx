@@ -110,19 +110,18 @@ export interface CodeMirrorEditorProps {
 }
 
 /** UWP RichEditBox defaults (Consolas 14, normal/400) — used when no setting. */
-const DEFAULT_FONT_FAMILY = 'Consolas, "Cascadia Code", "Cascadia Mono", monospace';
+const DEFAULT_FONT_FAMILY = '"Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif';
 const DEFAULT_FONT_SIZE = 14;
 const DEFAULT_ACCENT = '#0078D4';
 
 /**
- * Ensure the CSS font-family always ends with a generic monospace fallback.
- * Settings stores bare names like "Consolas"; on systems where that font is
- * absent (macOS ships no Consolas) the browser falls back to the default
- * serif/sans — producing 宋体 on Chinese locales. Appending the fallback chain
- * guarantees a monospace face even when the primary is unavailable.
+ * Resolve the stored font-family to a full CSS value with fallbacks.
+ * Empty string (system default) → system UI font stack.
+ * Named font → append generic monospace/sans fallback chain.
  */
-function withMonospaceFallback(family: string): string {
-  if (family.includes('monospace')) return family;
+function resolveFontFamily(family: string): string {
+  if (!family) return DEFAULT_FONT_FAMILY;
+  if (family.includes('monospace') || family.includes('sans-serif')) return family;
   return `${family}, "SF Mono", Menlo, Monaco, Consolas, "Cascadia Mono", "Courier New", monospace`;
 }
 
@@ -310,7 +309,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
     // Ensure the font-family always has a monospace fallback so systems missing
     // the primary face (e.g. macOS without Consolas) fall back to a monospace
     // font instead of the browser default serif (宋体 on CJK locales).
-    const fontFamily = withMonospaceFallback(fontFamilyRaw);
+    const fontFamily = resolveFontFamily(fontFamilyRaw);
 
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);

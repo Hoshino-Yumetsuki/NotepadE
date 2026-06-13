@@ -153,14 +153,14 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
         >
           <Dropdown
             data-testid="setting-editorFontFamily-dropdown"
-            value={settings.editorFontFamily}
+            value={settings.editorFontFamily || t('TextAndEditorPage_FontFamily_SystemDefault')}
             selectedOptions={[settings.editorFontFamily]}
-            onOptionSelect={(_e, d) => d.optionValue && update({ editorFontFamily: d.optionValue })}
+            onOptionSelect={(_e, d) => d.optionValue != null && update({ editorFontFamily: d.optionValue })}
             style={{ width: '100%' }}
           >
             {FONT_FAMILIES.map((f) => (
               <Option key={f} value={f}>
-                {f}
+                {f || t('TextAndEditorPage_FontFamily_SystemDefault')}
               </Option>
             ))}
           </Dropdown>

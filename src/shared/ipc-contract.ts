@@ -401,7 +401,7 @@ export interface Settings {
  * there is a single source of truth (pure data — PA-8 clean, no fs).
  */
 export const DEFAULT_SETTINGS: Settings = {
-  editorFontFamily: 'Consolas',
+  editorFontFamily: '',
   editorFontSize: 14,
   editorFontStyle: 'normal',
   editorFontWeight: 400,

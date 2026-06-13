@@ -100,8 +100,9 @@ export const ENCODING_OPTIONS: readonly { id: EncodingId; label: string }[] = UN
   (id) => ({ id, label: id })
 );
 
-/** Common monospace font families offered for the editor. */
+/** Font families offered for the editor. Empty string = system default. */
 export const FONT_FAMILIES: readonly string[] = [
+  '',
   'Consolas',
   'Cascadia Code',
   'Cascadia Mono',

@@ -229,6 +229,12 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
     'de-DE': 'Schriftartfamilie',
     'ja-JP': 'フォント ファミリ'
   },
+  TextAndEditorPage_FontFamily_SystemDefault: {
+    'en-US': 'System Default',
+    'zh-CN': '系统默认',
+    'de-DE': 'Systemstandard',
+    'ja-JP': 'システム既定'
+  },
   TextAndEditorPage_WebSearch_GroupTitle: {
     'en-US': 'Web search',
     'de-DE': 'Websuche',
