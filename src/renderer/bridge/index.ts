@@ -229,6 +229,9 @@ const api: NotepadsApi = {
   hash: {
     compute: (text) => call<number>('compute_text_hash', { text })
   },
+  diff: {
+    compute: (original, modified) => call<import('@shared/ipc-contract').DiffModelDto>('compute_diff', { original, modified })
+  },
   session: {
     snapshot: (data: SessionSnapshot) =>
       call<{ written: boolean }>(channelToCommand(C.SessionSnapshot), { data } as unknown as Record<string, unknown>),

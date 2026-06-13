@@ -1,5 +1,5 @@
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
-import { buildDiffModel, type DiffRow } from './diffModel';
+import { buildDiffModel, type DiffRow, type DiffModel } from './diffModel';
 import { rowBackground, pieceBackground } from './diffColors';
 
 /**
@@ -201,7 +201,14 @@ export function DiffViewer({
   fontFamily = MONO_FALLBACK,
   fontSize = 14
 }: DiffViewerProps): JSX.Element {
-  const model = useMemo(() => buildDiffModel(original, modified), [original, modified]);
+  const [model, setModel] = useState<DiffModel>({ left: [], right: [] });
+  useEffect(() => {
+    let cancelled = false;
+    buildDiffModel(original, modified).then((m) => {
+      if (!cancelled) setModel(m);
+    });
+    return () => { cancelled = true; };
+  }, [original, modified]);
 
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);

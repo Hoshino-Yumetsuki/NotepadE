@@ -219,6 +219,31 @@ export interface HashApi {
 }
 
 // ---------------------------------------------------------------------------
+//  diff — Rust-side diff computation
+// ---------------------------------------------------------------------------
+
+export interface DiffPieceDto {
+  text: string;
+  kind: 'unchanged' | 'inserted' | 'deleted';
+}
+
+export interface DiffRowDto {
+  kind: 'unchanged' | 'inserted' | 'deleted' | 'modified' | 'imaginary';
+  text: string;
+  pieces?: DiffPieceDto[];
+}
+
+export interface DiffModelDto {
+  left: DiffRowDto[];
+  right: DiffRowDto[];
+}
+
+export interface DiffApi {
+  /** Compute a line-level + char-level two-column diff model in Rust. */
+  compute(original: string, modified: string): Promise<Result<DiffModelDto>>;
+}
+
+// ---------------------------------------------------------------------------
 //  session — snapshot / loadLast / clearRecovered  (Phase 4)
 // ---------------------------------------------------------------------------
 
@@ -655,6 +680,7 @@ export interface NotepadsApi {
   paths: PathsApi;
   encoding: EncodingApi;
   hash: HashApi;
+  diff: DiffApi;
   session: SessionApi;
   settings: SettingsApi;
   window: WindowApi;

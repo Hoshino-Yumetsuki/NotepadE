@@ -17,6 +17,7 @@ mod broker;
 mod compact_overlay;
 mod context_menu;
 mod contract;
+mod diff;
 mod dragout;
 mod encoding;
 mod eol;
@@ -136,6 +137,8 @@ pub fn run() {
             eol::encoding_convert_eol,
             // hash
             hash::compute_text_hash,
+            // diff
+            diff::compute_diff,
             // session (task #3)
             session::session_snapshot,
             session::session_load_last,
