@@ -157,6 +157,7 @@ async fn update_install_impl(
     // Windows: download the installer and launch it, then exit.
     #[cfg(target_os = "windows")]
     {
+        let _ = html_url;
         if asset_url.is_empty() {
             return Err("No installer asset available for this release".into());
         }
