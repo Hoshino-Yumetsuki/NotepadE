@@ -34,7 +34,9 @@ describe('applyAdopt cross-window editorId collision', () => {
         eolId: 'lf',
         dateModifiedMs: 0,
         filePath: '/work/note.txt',
-        hasBom: false
+        hasBom: false,
+        baselineHash: 0,
+        baselineLength: 0
       },
       pendingText: null,
       isModified: false,

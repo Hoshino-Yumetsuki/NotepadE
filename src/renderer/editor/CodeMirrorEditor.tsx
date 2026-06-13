@@ -300,7 +300,6 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       fontStyle = 'normal',
       fontWeight = 400,
       accentColor = DEFAULT_ACCENT,
-      filePath = null,
       editorExtensions,
       onDocChanged
     },
