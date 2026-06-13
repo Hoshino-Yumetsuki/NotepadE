@@ -410,8 +410,14 @@ export function App(): JSX.Element {
   }, [untitledBase]);
 
   // Seed an initial untitled tab once (after the base name is set above).
+  // Deferred by one microtask so the activation listener (Effect below) has a
+  // chance to drain cold-start file-association events first. If an activation
+  // opens a file tab, store.count() > 0 and no blank tab is created — preventing
+  // the orphan blank tab alongside the opened file (Issue #6).
   useEffect(() => {
-    if (store.count() === 0) store.newTab();
+    queueMicrotask(() => {
+      if (store.count() === 0) store.newTab();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
