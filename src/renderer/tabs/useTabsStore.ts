@@ -93,6 +93,7 @@ function makeTab(args: NewTabArgs): TabState {
     eolId: args.eolId ?? DEFAULT_EOL_ID,
     isModified: args.isModified ?? false,
     isLoading: args.isLoading ?? false,
+    isStreaming: false,
     viewMode: { ...DEFAULT_VIEW_MODE },
     caret: { ...ZERO_CARET },
     scroll: { ...ZERO_SCROLL },
@@ -318,6 +319,12 @@ export class TabsStore {
   setLoading(editorId: string, isLoading: boolean): void {
     if (this.get(editorId)?.isLoading === isLoading) return;
     this.patch(editorId, { isLoading });
+  }
+
+  /** Flip the streaming flag (large file chunks in flight). */
+  setStreaming(editorId: string, isStreaming: boolean): void {
+    if (this.get(editorId)?.isStreaming === isStreaming) return;
+    this.patch(editorId, { isStreaming });
   }
 
   /** Rename: set a new absolute filePath (clears untitled display). */

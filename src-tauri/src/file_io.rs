@@ -16,6 +16,7 @@ use crate::contract::{
 };
 use crate::encoding::{decode_bytes, decode_bytes_with, encode_text};
 use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
+use crate::hash::hash_text;
 use crate::mru;
 use crate::result::NpResult;
 
@@ -96,23 +97,25 @@ fn open_file_inner(app: Option<&tauri::AppHandle>, path: &str) -> Result<OpenedF
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     let decoded = decode_bytes(&bytes);
     let eol_id = detect_eol(&decoded.decoded_text);
+    let normalized = normalize_to_lf(&decoded.decoded_text);
+    let bl_hash = hash_text(&normalized);
+    let bl_length = crate::hash::utf16_len(&normalized);
     let meta = std::fs::metadata(path).map_err(|e| e.to_string())?;
     meta_set(path, &decoded.encoding_id, eol_id);
-    // Mirror into the in-app MRU (UWP MRUService). Best-effort: the recent
-    // list is a nicety and must never delay/break the open. (OS jump-list
-    // recents land with shell_integration — task #3.)
     if let Some(app) = app {
         if let Ok(root) = mru::user_data_root(app) {
             mru::add_recent(&root, path);
         }
     }
     Ok(OpenedFile {
-        decoded_text: decoded.decoded_text,
+        decoded_text: normalized,
         encoding_id: decoded.encoding_id,
         eol_id,
         date_modified_ms: mtime_ms(&meta),
         file_path: Some(path.to_string()),
         has_bom: decoded.has_bom,
+        baseline_hash: bl_hash,
+        baseline_length: bl_length,
     })
 }
 
@@ -123,15 +126,20 @@ pub fn decode_with_encoding(path: &str, encoding_id: &str) -> Result<OpenedFile,
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     let decoded = decode_bytes_with(&bytes, encoding_id);
     let eol_id = detect_eol(&decoded.decoded_text);
+    let normalized = normalize_to_lf(&decoded.decoded_text);
+    let bl_hash = hash_text(&normalized);
+    let bl_length = crate::hash::utf16_len(&normalized);
     let meta = std::fs::metadata(path).map_err(|e| e.to_string())?;
     meta_set(path, &decoded.encoding_id, eol_id);
     Ok(OpenedFile {
-        decoded_text: decoded.decoded_text,
+        decoded_text: normalized,
         encoding_id: decoded.encoding_id,
         eol_id,
         date_modified_ms: mtime_ms(&meta),
         file_path: Some(path.to_string()),
         has_bom: decoded.has_bom,
+        baseline_hash: bl_hash,
+        baseline_length: bl_length,
     })
 }
 
@@ -179,6 +187,8 @@ fn write_shadow_to_path(
         date_modified_ms: mtime_ms(&meta),
         encoding_id,
         eol_id,
+        baseline_hash: hash_text(&lf_text),
+        baseline_length: crate::hash::utf16_len(&lf_text),
     })
 }
 
@@ -444,7 +454,7 @@ mod tests {
         let opened = open_file_inner(None, &path).unwrap();
         assert_eq!(opened.encoding_id, "Western (windows-1252)");
         assert_eq!(opened.eol_id, EolId::Crlf);
-        assert_eq!(opened.decoded_text, "caf\u{e9}\r\nfin");
+        assert_eq!(opened.decoded_text, "caf\u{e9}\nfin");
         assert!(!opened.has_bom);
 
         // save '\n'-normalized shadow text; encoding+eol come from the cache

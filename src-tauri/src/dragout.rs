@@ -118,6 +118,8 @@ fn build_adopted_file(envelope: &DragEnvelope) -> OpenedFile {
         date_modified_ms,
         file_path: envelope.file_path.clone(),
         has_bom: false,
+        baseline_hash: crate::hash::hash_text(&envelope.last_saved_text),
+        baseline_length: crate::hash::utf16_len(&envelope.last_saved_text),
     }
 }
 

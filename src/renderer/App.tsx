@@ -2,6 +2,7 @@ import { FluentProvider, Spinner } from '@fluentui/react-components';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { keymap, EditorView } from '@codemirror/view';
+import { Transaction } from '@codemirror/state';
 import type { OpenedFile } from '@shared/ipc-contract';
 import { isMac } from '@shared/platform';
 import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
@@ -30,7 +31,6 @@ import {
   type TransferTextSource
 } from './tabs/transferWiring';
 import type { TabState } from './tabs/types';
-import { normalizeToShadow } from './editor/eol';
 import { wordWrapToggleRef } from './editor/commands/wordWrap';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
@@ -261,6 +261,9 @@ export function App(): JSX.Element {
   // a raw CRLF baseline there instead would re-build a full copy of the string
   // per keystroke (~190ms + ~120MB transient on a 120MB file — measured).
   const lastSavedTextRef = useRef<Map<string, string>>(new Map());
+  // Hash-based dirty detection: avoids materializing the full doc string on every
+  // keystroke when lengths happen to match. The hash is computed in Rust (xxh3_64).
+  const baselineRef = useRef<Map<string, { hash: number; length: number }>>(new Map());
   // A no-value re-render pulse: while a content pane (preview/diff) is open we bump
   // this on every doc change so the pane re-reads the live shadow text (CM6 owns
   // the doc, so App otherwise doesn't re-render on keystrokes). The bump is
@@ -440,7 +443,7 @@ export function App(): JSX.Element {
       // in V8, which returns the receiver from a no-match String.replace — builds
       // no second full-size copy; that's an engine behavior, not ECMAScript spec,
       // but Electron pins V8. Matters on >100MB files).
-      const normalized = normalizeToShadow(file.decodedText);
+      const normalized = file.decodedText;
       const seedOpened = (): void => {
         // Liveness abort: if the tab closed before its editor handle registered,
         // stop retrying — an orphaned loop would spin forever, retaining the
@@ -454,6 +457,7 @@ export function App(): JSX.Element {
       // setDoc dispatch fires the doc-change listener → recomputeDirty, which must
       // read the just-loaded text as the baseline so an open is "clean", not dirty.
       lastSavedTextRef.current.set(id, normalized);
+      baselineRef.current.set(id, { hash: file.baselineHash, length: file.baselineLength });
       seedOpened();
       store.setLabels(id, file.encodingId, file.eolId);
       store.setFilePath(id, file.filePath);
@@ -531,7 +535,8 @@ export function App(): JSX.Element {
       // by the returned local id, not payload.editorId — normalized at set time
       // (lastSavedTextRef invariant: entries are always '\n'-shadow form).
       const localId = applyAdopt(store, transferSource.current, payload);
-      lastSavedTextRef.current.set(localId, normalizeToShadow(payload.file.decodedText));
+      lastSavedTextRef.current.set(localId, payload.file.decodedText);
+      baselineRef.current.set(localId, { hash: payload.file.baselineHash, length: payload.file.baselineLength });
     });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
       applyRelease(store, editorId)
@@ -558,9 +563,6 @@ export function App(): JSX.Element {
   // submenu, and drag-drop — every path that opens a file on disk.
   const openPathIntoTab = useCallback(
     (path: string): void => {
-      // Focus an existing tab on the same path before opening a duplicate.
-      // Windows paths are case-insensitive, so compare case-folded there; the
-      // platform is read from navigator.userAgent (PA-8: no node `process`).
       const winNT = navigator.userAgent.includes('Windows');
       const norm = (p: string): string => (winNT ? p.toLowerCase() : p);
       const target = norm(path);
@@ -571,19 +573,7 @@ export function App(): JSX.Element {
         store.activate(existing.editorId);
         return;
       }
-      // Create/flag the target tab BEFORE the IPC read so the UI reacts
-      // IMMEDIATELY (tab title = basename, spinner in the editor area) instead
-      // of sitting on the previous/new-file UI while MAIN reads + decodes a
-      // large file. The placeholder carries the path, so the duplicate check
-      // above also dedupes a second open of the same file mid-read.
-      //
-      // When the only tab is a pristine untitled seed buffer (created on
-      // mount), reuse it for the file instead of opening a new tab. This
-      // prevents a leftover empty "Untitled N" tab when the app is launched
-      // as a file handler (Open with / double-click in explorer). The claim is
-      // synchronous with placeholder creation, so simultaneous opens
-      // (multi-select Ctrl+O / multi-path activation) claim the seed at most
-      // once — the second open sees filePath/isLoading set and makes a new tab.
+
       const s = store.tabs;
       const seedTab =
         s.length === 1 && s[0].filePath === null && !s[0].isModified && !s[0].isLoading
@@ -598,53 +588,91 @@ export function App(): JSX.Element {
       } else {
         id = store.newTab({ filePath: path, isLoading: true, activate: true });
       }
-      void window.notepads.file.open(path).then((res) => {
-        // The placeholder may have been closed while the read was in flight —
-        // bail so nothing below resurrects state for a dead tab (and the seed
-        // retry loop can never spin forever keeping the huge string alive).
+
+      const STREAM_THRESHOLD = 1_048_576; // 1MB
+
+      void window.notepads.file.getSize(path).then((sizeRes) => {
         if (!store.get(id)) return;
-        if (!res.ok) {
-          // Read failed (deleted / locked / permission denied). No renderer
-          // notification surface exists yet (doSave/saveAs also surface nothing
-          // on error — App.tsx); reporting is tracked separately by the lead.
-          // Roll the placeholder back: a reused seed reverts to its pristine
-          // untitled self; a fresh placeholder closes (re-seeding an untitled
-          // buffer if it was the last tab, mirroring performClose).
-          if (seedTab) {
-            store.setFilePath(id, null);
+        const fileSize = sizeRes.ok ? sizeRes.data : 0;
+
+        if (fileSize < STREAM_THRESHOLD) {
+          // Direct load path (small files)
+          void window.notepads.file.open(path).then((res) => {
+            if (!store.get(id)) return;
+            if (!res.ok) {
+              if (seedTab) {
+                store.setFilePath(id, null);
+                store.setLoading(id, false);
+              } else {
+                store.close(id);
+                if (store.count() === 0) store.newTab();
+              }
+              return;
+            }
+            const normalized = res.data.decodedText;
+            const seedOpened = (): void => {
+              if (!store.get(id)) return;
+              const handle = editorHandles.current.get(id);
+              if (handle) handle.setDoc(normalized);
+              else setTimeout(seedOpened, 0);
+            };
+            lastSavedTextRef.current.set(id, normalized);
+            baselineRef.current.set(id, { hash: res.data.baselineHash, length: res.data.baselineLength });
+            store.setLabels(id, res.data.encodingId, res.data.eolId);
+            store.setFilePath(id, res.data.filePath);
+            if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
             store.setLoading(id, false);
-          } else {
-            store.close(id);
-            if (store.count() === 0) store.newTab();
-          }
-          return;
+            seedOpened();
+          });
+        } else {
+          // Streaming load path (large files)
+          void (async () => {
+            // Subscribe to chunk events BEFORE requesting streamed open
+            const unlisten = await window.notepads.file.onChunk((chunk) => {
+              if (!store.get(id)) { unlisten(); return; }
+              const handle = editorHandles.current.get(id);
+              if (!handle) return;
+              const view = handle.getView();
+              if (!view) return;
+              view.dispatch({
+                changes: { from: view.state.doc.length, insert: chunk.text },
+                annotations: Transaction.addToHistory.of(false)
+              });
+              if (chunk.isLast) {
+                unlisten();
+                // Snapshot the fully-loaded text as the saved baseline for diff
+                lastSavedTextRef.current.set(id, handle.getShadowText());
+                // Enable editing now that the full document is loaded
+                store.setStreaming(id, false);
+                // Re-check dirty now that the doc is complete (streaming suppressed earlier checks)
+                recomputeDirty(id);
+              }
+            });
+
+            const res = await window.notepads.file.openStreamed(path);
+            if (!store.get(id)) { unlisten(); return; }
+            if (!res.ok) {
+              unlisten();
+              if (seedTab) {
+                store.setFilePath(id, null);
+                store.setLoading(id, false);
+              } else {
+                store.close(id);
+                if (store.count() === 0) store.newTab();
+              }
+              return;
+            }
+            const header = res.data;
+            baselineRef.current.set(id, { hash: header.baselineHash, length: header.baselineLength });
+            lastSavedTextRef.current.set(id, ''); // placeholder; re-read from disk for diff
+            store.setLabels(id, header.encodingId, header.eolId);
+            store.setFilePath(id, header.filePath);
+            if (header.filePath) recordLastSaved(id, header.filePath, header.dateModifiedMs);
+            // Show editor immediately (empty doc), mark as streaming (readOnly)
+            store.setLoading(id, false);
+            store.setStreaming(id, true);
+          })();
         }
-        // Normalize ONCE; share the string between baseline and setDoc (whose
-        // internal normalize then matches nothing — V8 returns the receiver
-        // from a no-match String.replace, an engine behavior Electron pins,
-        // so no duplicate full-size copy is built).
-        const normalized = normalizeToShadow(res.data.decodedText);
-        // The editor mounts only after isLoading clears below (the host shows
-        // a spinner while loading), so seed once its handle exists. Call
-        // synchronously first, then setTimeout(0)-retry while the handle is
-        // null — NOT rAF, which never fires in a non-compositing window (the
-        // Playwright primary window, or a minimized/occluded one) and would
-        // leave the doc empty. setDoc tolerates an unmounted view. The retry
-        // aborts if the tab is closed meanwhile (releases the retained string).
-        const seedOpened = (): void => {
-          if (!store.get(id)) return;
-          const handle = editorHandles.current.get(id);
-          if (handle) handle.setDoc(normalized);
-          else setTimeout(seedOpened, 0);
-        };
-        lastSavedTextRef.current.set(id, normalized);
-        store.setLabels(id, res.data.encodingId, res.data.eolId);
-        store.setFilePath(id, res.data.filePath);
-        if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
-        // Clear the flag BEFORE seeding: this mounts the editor whose handle
-        // the seed retry waits for.
-        store.setLoading(id, false);
-        seedOpened();
       });
     },
     [store]
@@ -740,6 +768,7 @@ export function App(): JSX.Element {
     (id: string): void => {
       forgetEditor(id);
       lastSavedTextRef.current.delete(id);
+      baselineRef.current.delete(id);
       store.close(id);
       if (store.count() === 0) {
         if (settings.exitWhenLastTabClosed) void window.notepads.window.quit();
@@ -762,6 +791,7 @@ export function App(): JSX.Element {
     for (const id of Array.from(lastSavedTextRef.current.keys())) {
       if (!live.has(id)) {
         lastSavedTextRef.current.delete(id);
+        baselineRef.current.delete(id);
         forgetEditor(id);
       }
     }
@@ -819,20 +849,27 @@ export function App(): JSX.Element {
     (editorId: string): void => {
       const handle = editorHandles.current.get(editorId);
       if (!handle) return;
-      const baseline = lastSavedTextRef.current.get(editorId) ?? '';
-      // Length fast-path: getShadowText() materializes the WHOLE document as a
-      // fresh string (doc.toString() — ~46ms + a full-size allocation per call on
-      // a 120MB doc, measured), and this runs on EVERY doc change. Most edits
-      // change the length, so compare doc.length (the CM6 rope tracks it in O(1);
-      // the line separator is pinned to '\n', matching the baseline's shadow
-      // form) and only materialize + compare content when the lengths tie.
+      const bl = baselineRef.current.get(editorId);
+      // Untitled buffers have no baseline → any content makes them dirty.
+      if (!bl) {
+        const view = handle.getView();
+        store.setModified(editorId, view ? view.state.doc.length > 0 : false);
+        return;
+      }
+      // Length fast-path (O(1) via CM6 rope): most edits change length.
       const view = handle.getView();
-      if (view && view.state.doc.length !== baseline.length) {
+      if (!view) return;
+      if (view.state.doc.length !== bl.length) {
         store.setModified(editorId, true);
         return;
       }
-      const dirty = handle.getShadowText() !== baseline;
-      store.setModified(editorId, dirty);
+      // Same length: compute hash in Rust to avoid full-string materialization
+      // in the common case. This is async but only fires when lengths tie (rare).
+      const text = handle.getShadowText();
+      window.notepads.hash.compute(text).then((res) => {
+        if (!res.ok) return;
+        store.setModified(editorId, res.data !== bl.hash);
+      });
     },
     [store]
   );
@@ -885,6 +922,7 @@ export function App(): JSX.Element {
       // Re-baseline to the JUST-saved shadow text so the doc is clean again, and
       // adopt the authoritative path + labels MAIN echoes back.
       lastSavedTextRef.current.set(editorId, shadowText);
+      baselineRef.current.set(editorId, { hash: res.data.baselineHash, length: res.data.baselineLength });
       store.setFilePath(editorId, res.data.filePath);
       store.setLabels(editorId, res.data.encodingId, res.data.eolId);
       recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
@@ -1370,7 +1408,7 @@ export function App(): JSX.Element {
                       else editorHandles.current.delete(tab.editorId);
                     }}
                     editorExtensions={editorExtensionsWithMenu}
-                    onDocChanged={() => recomputeDirty(tab.editorId)}
+                    onDocChanged={() => { if (!tab.isStreaming) recomputeDirty(tab.editorId); }}
                     filePath={tab.filePath}
                     settings={editorBehaviorSettings}
                     lineNumbers={settings.displayLineNumbers}

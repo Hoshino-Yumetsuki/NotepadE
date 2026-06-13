@@ -197,7 +197,15 @@ const api: NotepadsApi = {
     saveAs: (args: SaveAsArgs) => call<SaveResult>(channelToCommand(C.FileSaveAs), { args }),
     reloadFromDisk: (path) => call<OpenedFile>(channelToCommand(C.FileReloadFromDisk), { path }),
     revalidatePath: (path) =>
-      call<{ exists: boolean; dateModifiedMs: number }>(channelToCommand(C.FileRevalidatePath), { path })
+      call<{ exists: boolean; dateModifiedMs: number }>(channelToCommand(C.FileRevalidatePath), { path }),
+    getSize: (path) => call<number>('file_get_size', { path }),
+    openStreamed: (path) => call<import('@shared/ipc-contract').StreamedFileHeader>('file_open_streamed', { path }),
+    onChunk: async (cb) => {
+      const unlisten = await listen<import('@shared/ipc-contract').FileChunk>('notepads:evt:file:chunk', (evt) => {
+        cb(evt.payload);
+      });
+      return unlisten;
+    }
   },
   recent: {
     list: () => call<RecentEntry[]>(channelToCommand(C.RecentList)),
@@ -217,6 +225,9 @@ const api: NotepadsApi = {
       call<OpenedFile>(channelToCommand(C.EncodingDecodeWith), { path, encodingId }),
     convertEol: (text, eolId) =>
       call<string>(channelToCommand(C.EncodingConvertEol), { text, eolId })
+  },
+  hash: {
+    compute: (text) => call<number>('compute_text_hash', { text })
   },
   session: {
     snapshot: (data: SessionSnapshot) =>

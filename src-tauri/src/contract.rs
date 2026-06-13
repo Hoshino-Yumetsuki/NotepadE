@@ -40,6 +40,8 @@ pub struct OpenedFile {
     pub date_modified_ms: f64,
     pub file_path: Option<String>,
     pub has_bom: bool,
+    pub baseline_hash: u64,
+    pub baseline_length: u64,
 }
 
 /// Arguments for `file.save`. shadowText is the renderer's '\n'-normalized doc.
@@ -78,6 +80,8 @@ pub struct SaveResult {
     pub date_modified_ms: f64,
     pub encoding_id: EncodingId,
     pub eol_id: EolId,
+    pub baseline_hash: u64,
+    pub baseline_length: u64,
 }
 
 /// `file.revalidatePath` payload.
@@ -463,6 +467,8 @@ mod tests {
             date_modified_ms: 1234.0,
             file_path: None,
             has_bom: false,
+            baseline_hash: 42,
+            baseline_length: 2,
         };
         let json = serde_json::to_value(&f).unwrap();
         assert_eq!(
@@ -473,7 +479,9 @@ mod tests {
                 "eolId": "lf",
                 "dateModifiedMs": 1234.0,
                 "filePath": null,
-                "hasBom": false
+                "hasBom": false,
+                "baselineHash": 42,
+                "baselineLength": 2
             })
         );
     }

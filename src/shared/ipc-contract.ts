@@ -64,6 +64,10 @@ export interface OpenedFile {
   filePath: string | null;
   /** True when a BOM was present/written for the detected encoding. */
   hasBom: boolean;
+  /** xxh3_64 hash of the LF-normalized text (for dirty detection). */
+  baselineHash: number;
+  /** Byte length of the LF-normalized text. */
+  baselineLength: number;
 }
 
 /** Arguments for `file.save`. shadowText is the renderer's '\n'-normalized doc. */
@@ -89,6 +93,10 @@ export interface SaveResult {
   dateModifiedMs: number;
   encodingId: EncodingId;
   eolId: EolId;
+  /** xxh3_64 hash of the saved LF-normalized text (for dirty detection reset). */
+  baselineHash: number;
+  /** Byte length of the saved LF-normalized text. */
+  baselineLength: number;
 }
 
 export interface FileApi {
@@ -109,6 +117,32 @@ export interface FileApi {
   reloadFromDisk(path: string): Promise<Result<OpenedFile>>;
   /** Re-validate a stored absolute path via fs.stat (session/FAL substitute). */
   revalidatePath(path: string): Promise<Result<{ exists: boolean; dateModifiedMs: number }>>;
+  /** Get file size in bytes (used to decide streaming vs direct load). */
+  getSize(path: string): Promise<Result<number>>;
+  /** Open a large file via streaming: returns header, then emits chunk events. */
+  openStreamed(path: string): Promise<Result<StreamedFileHeader>>;
+  /** Subscribe to file chunk events (streaming load). Returns unsubscribe function. */
+  onChunk(cb: (chunk: FileChunk) => void): Promise<Unsubscribe>;
+}
+
+/** Header returned by file.openStreamed before chunk events begin. */
+export interface StreamedFileHeader {
+  encodingId: EncodingId;
+  eolId: EolId;
+  dateModifiedMs: number;
+  filePath: string;
+  hasBom: boolean;
+  baselineHash: number;
+  baselineLength: number;
+  chunkCount: number;
+  totalBytes: number;
+}
+
+/** A single chunk emitted via the `notepads:evt:file:chunk` event. */
+export interface FileChunk {
+  index: number;
+  text: string;
+  isLast: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,6 +207,15 @@ export interface EncodingApi {
   decodeWith(path: string, encodingId: EncodingId): Promise<Result<OpenedFile>>;
   /** Convert EOL of a '\n'-normalized text to the target style (preview only). */
   convertEol(text: string, eolId: EolId): Promise<Result<string>>;
+}
+
+// ---------------------------------------------------------------------------
+//  hash — content hash for dirty detection
+// ---------------------------------------------------------------------------
+
+export interface HashApi {
+  /** Compute xxh3_64 hash of the given text (for dirty detection comparison). */
+  compute(text: string): Promise<Result<number>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -611,6 +654,7 @@ export interface NotepadsApi {
   recent: RecentApi;
   paths: PathsApi;
   encoding: EncodingApi;
+  hash: HashApi;
   session: SessionApi;
   settings: SettingsApi;
   window: WindowApi;

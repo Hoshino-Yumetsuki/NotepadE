@@ -38,6 +38,7 @@ oem_cp = "2.1.2"
 charset = "0.1.5"
 url = "2.5.8"
 semver = "1"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 [target."cfg(windows)".dependencies]
 windows = { version = "0.61.3", features = ["Win32_Globalization", "Win32_Foundation", "UI_ViewManagement", "Win32_UI_Accessibility"] }

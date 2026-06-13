@@ -21,6 +21,8 @@ mod dragout;
 mod encoding;
 mod eol;
 mod file_io;
+mod file_stream;
+mod hash;
 mod mru;
 mod result;
 mod search_url;
@@ -122,6 +124,9 @@ pub fn run() {
             file_io::file_save_as,
             file_io::file_reload_from_disk,
             file_io::file_revalidate_path,
+            // file streaming (large files)
+            file_stream::file_get_size,
+            file_stream::file_open_streamed,
             // recent (task #2)
             mru::recent_list,
             mru::recent_clear,
@@ -129,6 +134,8 @@ pub fn run() {
             encoding::encoding_list_ansi,
             encoding::encoding_decode_with,
             eol::encoding_convert_eol,
+            // hash
+            hash::compute_text_hash,
             // session (task #3)
             session::session_snapshot,
             session::session_load_last,

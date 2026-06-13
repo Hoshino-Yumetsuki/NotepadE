@@ -57,6 +57,11 @@ export interface TabState {
    * Transient UI state — never snapshotted (a restored tab is never loading).
    */
   isLoading: boolean;
+  /**
+   * True while a large file is being streamed in chunks. The editor is mounted
+   * but readOnly until all chunks arrive. Transient UI state.
+   */
+  isStreaming: boolean;
   /** Alternate render mode (markdown preview / diff). */
   viewMode: ViewMode;
   /** Caret / selection offsets in the '\n' shadow buffer. */
