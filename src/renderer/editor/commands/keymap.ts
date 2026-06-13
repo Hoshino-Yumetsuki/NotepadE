@@ -124,6 +124,7 @@ export const undoRedoExtension = Prec.highest(
   keymap.of([
     {
       any(view: EditorView, event: KeyboardEvent): boolean {
+        if (event.isComposing) return false;
         if ((event.ctrlKey || event.metaKey) && !event.altKey) {
           const k = event.key.toLowerCase();
           if (k === 'z') {
@@ -160,6 +161,7 @@ export const altCommandExtension = Prec.highest(
   keymap.of([
     {
       any(view: EditorView, event: KeyboardEvent): boolean {
+        if (event.isComposing) return false;
         if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
           if (event.code === 'KeyZ') {
             event.preventDefault();
@@ -201,6 +203,7 @@ export const viewModeCommandExtension = Prec.highest(
   keymap.of([
     {
       any(_view: EditorView, event: KeyboardEvent): boolean {
+        if (event.isComposing) return false;
         if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
           const cb = viewModeCallbacksRef.current;
           if (event.code === 'KeyP') {
