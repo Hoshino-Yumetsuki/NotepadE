@@ -2,7 +2,7 @@ import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import { Compartment, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
 import { EditorView, keymap, highlightActiveLine } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
-import { SHADOW_EOL, normalizeToShadow } from './eol';
+import { SHADOW_EOL } from './eol';
 import { editorSettings, type EditorSettings } from './editorSettings';
 import { editorCommandExtensions } from './commands/keymap';
 import { tryInsertLogEntry } from './commands/datetime';
@@ -410,7 +410,6 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       ref,
       (): CodeMirrorHandle => ({
         setDoc(text: string): void {
-          const normalized = normalizeToShadow(text);
           // A host setDoc is always an AUTHORITATIVE load (open / activation /
           // cross-window adopt / reload), applied WITHOUT a history entry: a
           // freshly loaded or adopted document must have undoDepth 0 so Ctrl+Z
@@ -421,12 +420,12 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           // retained copy doubles memory on large files (see docRef comment).
           const view = viewRef.current;
           if (!view) {
-            docRef.current = normalized; // applied on mount from docRef
+            docRef.current = text;
             return;
           }
           docRef.current = null;
           view.dispatch({
-            changes: { from: 0, to: view.state.doc.length, insert: normalized },
+            changes: { from: 0, to: view.state.doc.length, insert: text },
             annotations: Transaction.addToHistory.of(false)
           });
           // Re-run the language match: the SIZE gate depends on the freshly
@@ -531,7 +530,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           // by the previous cleanup) if present, so a remount — incl. the
           // StrictMode double-mount — never loses seeded text. The doc enters as
           // the INITIAL state, carrying no history (undoDepth 0).
-          doc: docRef.current ?? normalizeToShadow(initialDoc),
+          doc: docRef.current ?? initialDoc,
           extensions
         }),
         parent: hostRef.current,

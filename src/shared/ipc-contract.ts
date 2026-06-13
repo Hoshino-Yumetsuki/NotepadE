@@ -52,7 +52,7 @@ export type EolId = 'crlf' | 'cr' | 'lf';
 
 /** Authoritative file descriptor produced by MAIN after reading + decoding. */
 export interface OpenedFile {
-  /** Decoded text. May contain CRLF; renderer normalizes to '\n' for its shadow buffer. */
+  /** Decoded text, already LF-normalized by Rust (shadow-buffer ready). */
   decodedText: string;
   /** Opaque encoding label (see EncodingId). */
   encodingId: EncodingId;
