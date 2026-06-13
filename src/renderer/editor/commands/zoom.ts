@@ -14,7 +14,7 @@
  * `editorSettings` facet.
  */
 
-import { EditorView } from '@codemirror/view';
+import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { StateField, StateEffect, type Extension } from '@codemirror/state';
 import { editorSettings } from '../editorSettings';
 
@@ -76,36 +76,52 @@ function zoomTheme(view: EditorView): Extension {
 }
 
 /**
- * Write the zoom font-size variable and schedule a measure.
+ * Write the zoom font-size and schedule a measure.
  *
- * The variable resizes `.cm-content`/`.cm-gutters` behind CM6's back: an inline
- * style write is not a document/theme change, so the view schedules no
- * re-measure of its own and keeps stale line metrics until the next user
- * interaction. Anything positioned off those metrics (the external line-number
- * column) then lags at the old scale — numbers ghosting over each other — until
- * a click forces a measure. Request one explicitly so the height oracle re-reads
- * the new font in the same frame the variable lands.
+ * Sets the font-size in THREE places so there is zero timing ambiguity:
+ *   1. The CSS variable `--cm-zoom-font-size` on `view.dom` (theme consumers).
+ *   2. An inline `fontSize` on `view.contentDOM` — overrides the theme rule so
+ *      the content never reads a stale/unresolved CSS variable.
+ *   3. An inline `fontSize` on `.cm-gutters` (if mounted) — keeps the native
+ *      line-number gutter in lock-step with the content without relying on CSS
+ *      variable inheritance, which has construction-order timing gaps for new
+ *      (empty) tabs whose editors never receive a `setDoc` remeasure. CM6 owns
+ *      the gutter's per-line layout, so matching the font-size is all that is
+ *      needed — vertical alignment holds at any zoom by construction.
  */
 export function applyZoomFontSize(view: EditorView, px: number): void {
   view.dom.style.setProperty('--cm-zoom-font-size', `${px}px`);
+  view.contentDOM.style.fontSize = `${px}px`;
+  const gutters = view.dom.querySelector<HTMLElement>('.cm-gutters');
+  if (gutters) gutters.style.fontSize = `${px}px`;
   view.requestMeasure();
 }
 
 /**
- * A ViewPlugin that keeps an inline font-size style on `.cm-scroller` in sync
- * with the zoom field. Using an inline style (not a regenerated theme) keeps the
- * update cheap and avoids reconfiguration churn on every wheel tick.
+ * ViewPlugin that keeps the `--cm-zoom-font-size` CSS variable on `view.dom` in
+ * sync with the zoom field AND the base font-size facet. Must run as a
+ * ViewPlugin (not an updateListener) so the variable is set BEFORE sibling
+ * ViewPlugins read DOM geometry in the same update cycle — updateListeners fire
+ * after all ViewPlugin updates.
  */
-export const zoomStyle = EditorView.updateListener.of((update) => {
-  const prev = update.startState.field(zoomField, false);
-  const now = update.state.field(zoomField, false);
-  if (prev === now) return;
-  const base = update.state.facet(editorSettings).fontSize;
-  const px = ((now ?? DEFAULT_ZOOM) * base) / 100;
-  applyZoomFontSize(update.view, px);
+export const zoomStyle = ViewPlugin.define((view) => {
+  const base = view.state.facet(editorSettings).fontSize;
+  const percent = view.state.field(zoomField, false) ?? DEFAULT_ZOOM;
+  applyZoomFontSize(view, (base * percent) / 100);
+  return {
+    update(u: ViewUpdate) {
+      const prevZoom = u.startState.field(zoomField, false);
+      const nowZoom = u.state.field(zoomField, false);
+      const prevBase = u.startState.facet(editorSettings).fontSize;
+      const nowBase = u.state.facet(editorSettings).fontSize;
+      if (prevZoom === nowZoom && prevBase === nowBase) return;
+      const px = ((nowZoom ?? DEFAULT_ZOOM) * nowBase) / 100;
+      applyZoomFontSize(u.view, px);
+    }
+  };
 });
 
-/** Base theme binding `.cm-content` to the zoom CSS variable. */
+/** Base theme binding `.cm-content` + gutter to the zoom CSS variable. */
 export const zoomBaseTheme = EditorView.theme({
   '.cm-content': { fontSize: 'var(--cm-zoom-font-size)' },
   '.cm-gutters': { fontSize: 'var(--cm-zoom-font-size)' }

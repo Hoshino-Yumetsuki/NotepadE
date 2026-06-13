@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
-import { lineNumberColumn } from './lineNumberColumn';
+import { EditorView, lineNumbers } from '@codemirror/view';
 import {
   parseHexColor,
   glowColor,
@@ -78,7 +77,7 @@ describe('lineNumberGlow — live EditorView wiring (jsdom)', () => {
       state: EditorState.create({
         doc: 'a\nb\nc',
         extensions: [
-          lineNumberColumn({ themeMode, fontFamily: 'monospace', lineHighlighter: false }),
+          lineNumbers(),
           lineNumberGlow({ themeMode, accentColor: accent })
         ]
       }),

@@ -1,16 +1,15 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import { Compartment, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
-import { EditorView, keymap, highlightActiveLine } from '@codemirror/view';
+import { EditorView, keymap, highlightActiveLine, lineNumbers } from '@codemirror/view';
 import { history, defaultKeymap } from '@codemirror/commands';
 import { SHADOW_EOL } from './eol';
 import { editorSettings, type EditorSettings } from './editorSettings';
 import { editorCommandExtensions } from './commands/keymap';
 import { tryInsertLogEntry } from './commands/datetime';
-import { initZoomVar } from './commands/zoom';
 import type { TextDirection } from './commands/direction';
 import { setWordWrap, wordWrapCompartment, wordWrapExtension } from './commands/wordWrap';
 import { lineNumberGlow, parseHexColor } from './lineNumberGlow';
-import { lineNumberColumn } from './lineNumberColumn';
+import { buildGutterTheme, gutterMaterial } from './lineNumberColumn';
 import { bigDocDispatchTransactions } from './bigDocScroll';
 
 /**
@@ -211,7 +210,7 @@ function buildEditorTheme(opts: EditorThemeOptions): Extension {
     // Transparent surface so the window's acrylic material (single tint layer on
     // the app root) shows through the editor — matching upstream Notepads, whose
     // TextEditor RootGrid is Background="Transparent".
-    '&': { height: '100%', backgroundColor: 'transparent' },
+    '&': { height: '100%', backgroundColor: 'transparent', position: 'relative', isolation: 'isolate' },
     // Typography: UWP RichEditBox was Consolas 14 with a TIGHT line-height (≈ the
     // font size) and content padding 6/6/10/6 (L/T/R/B). font-size is owned by
     // the zoom variable — set only family/style/weight/line-height/padding here.
@@ -452,10 +451,17 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
         ),
         // Line numbers gated on the prop, in a compartment so toggling the setting
         // mounts/unmounts the gutter live. CM6's native lineNumbers() gutter,
-        // themed in lineNumberColumn.ts — structurally aligned per line at any
+        // themed in lineNumberColumn.ts (transparent + frosted so acrylic shows
+        // through; opaque Canvas under HC) — structurally aligned per line at any
         // zoom and any document size.
         lineNumbersCompartment.current.of(
-          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : []
+          showLineNumbers
+            ? [
+                lineNumbers(),
+                buildGutterTheme({ themeMode, lineHighlighter }),
+                gutterMaterial(themeMode)
+              ]
+            : []
         ),
         // Line-number reveal glow, mounted iff the gutter is shown. Empty when off
         // so there is no overlay/listeners without a gutter to light.
@@ -463,6 +469,15 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
           showLineNumbers ? lineNumberGlow({ themeMode, accentColor }) : []
         )
       ];
+
+      // Pre-seed the zoom CSS variable on the host so the zoomBaseTheme's
+      // `var(--cm-zoom-font-size)` resolves correctly during CM6's initial
+      // font measurement (which runs before ViewPlugin constructors). Without
+      // this, new-tab editors measure against the browser default (~16px)
+      // instead of the actual base font-size, and the cached metrics stay
+      // wrong until a setDoc remeasure (which opened-file tabs get but new
+      // tabs never do).
+      hostRef.current.style.setProperty('--cm-zoom-font-size', `${fontSize}px`);
 
       const view = new EditorView({
         state: EditorState.create({
@@ -488,11 +503,16 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       // is retained ONCE (inside CM6's rope), not twice (see docRef comment).
       docRef.current = null;
       viewRef.current = view;
-      // Seed the zoom CSS variable so the initial font-size reflects 100%.
-      initZoomVar(view);
-      // Match the language for a path known at mount (e.g. argv-open whose doc
-      // was parked in docRef before the editor existed).
-      applyLanguageRef.current();
+
+      // Force a deferred remeasure so the CSS variable `--cm-zoom-font-size`
+      // is fully resolved before CM6 reads font metrics. For opened files
+      // this happens naturally when setDoc() dispatches a transaction; for
+      // new (empty) tabs no setDoc arrives, so without this nudge the initial
+      // measurement uses a stale/unresolved font-size and the line-number
+      // column drifts out of sync on zoom.
+      requestAnimationFrame(() => {
+        if (viewRef.current === view) view.requestMeasure();
+      });
 
       return () => {
         // Re-capture the live doc before destroying so a REMOUNT (StrictMode
@@ -542,21 +562,26 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorHandle, CodeMirrorEditorPro
       view.dispatch({
         effects: fontSizeCompartment.current.reconfigure(editorSettings.of({ fontSize }))
       });
-      initZoomVar(view);
     }, [fontSize]);
 
     // Line-number gutter mount/unmount + live rebuild. The gutter theme bakes in
-    // themeMode/fontFamily/lineHighlighter (number color, font face, active-line
-    // emphasis), so a change to any of those rebuilds it — same lane as the glow.
+    // themeMode/lineHighlighter (number color, active-line emphasis), so a change
+    // to either rebuilds it — same lane as the glow.
     useEffect(() => {
       const view = viewRef.current;
       if (!view) return;
       view.dispatch({
         effects: lineNumbersCompartment.current.reconfigure(
-          showLineNumbers ? lineNumberColumn({ themeMode, fontFamily, lineHighlighter }) : []
+          showLineNumbers
+            ? [
+                lineNumbers(),
+                buildGutterTheme({ themeMode, lineHighlighter }),
+                gutterMaterial(themeMode)
+              ]
+            : []
         )
       });
-    }, [showLineNumbers, themeMode, fontFamily, lineHighlighter]);
+    }, [showLineNumbers, themeMode, lineHighlighter]);
 
     // Line-number reveal glow: re-derive when the gutter is toggled OR the theme/
     // accent changes (the glow tint is baked in at build time to keep the

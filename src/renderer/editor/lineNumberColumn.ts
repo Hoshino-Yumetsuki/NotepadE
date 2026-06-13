@@ -1,78 +1,54 @@
 /**
  * ============================================================================
- *  Line-number gutter — STRUCTURAL alignment via CodeMirror 6's native gutter
+ *  Native line-number gutter theme — acrylic-faithful, horizontal-scroll-proof
  * ============================================================================
  *
- * This replaces the former measure-and-follow external column. That column
- * mounted OUTSIDE `.cm-scroller` and absolutely positioned one number cell per
- * visible line by reading rendered `.cm-line` rects every frame. The approach
- * could never FORCE alignment — it could only chase it:
- *   - Zoom (the `--cm-zoom-font-size` variable) resized the text behind CM6's
- *     back, so the column re-measured a frame late and the numbers drifted
- *     (zoom-out especially: numbers slid left-down while lines shrank correctly).
- *   - In a ~920k-line document CM6's BigScaler rescales every `block.top` on
- *     EVERY edit (total height changes → global scale changes); the measured
- *     column lagged or broke outright on a mid-file insert.
+ * CodeMirror's built-in `lineNumbers()` gutter is `position: sticky` INSIDE the
+ * `.cm-scroller`. CM6 owns its per-line layout, so the numbers stay vertically
+ * aligned with the text at ANY zoom and ANY document size by construction — the
+ * reason we use the native gutter rather than a hand-positioned external column.
  *
- * CM6's built-in `lineNumbers()` gutter is laid out by CM6 itself, per line,
- * inside the same scroll DOM as the content. The numbers are therefore aligned
- * to their lines BY CONSTRUCTION at any zoom and any document size — including
- * BigScaler docs — with no measurement, no rect reads, and no per-frame catch-up.
- * That is the structural guarantee the re-implementation requires.
+ * The native gutter cannot carry the OS acrylic material itself: it is
+ * `position: sticky`, which Chromium promotes to its own compositing layer, and
+ * on Windows that layer composites WITHOUT the window vibrancy
+ * (window_vibrancy::apply_acrylic) — so any background painted on the gutter
+ * renders flat/solid with NO material (true for transparent, tinted, or blurred).
+ * The content area shows material only because it is NOT promoted.
  *
- * Visual parity with the old column is reproduced purely through gutter THEMING
- * (EditorView.theme on `.cm-gutters` / `.cm-lineNumbers` / `.cm-gutterElement`):
- *   - font-size tracks `--cm-zoom-font-size` so zoom stays live; font-family is
- *     the editor body face; numbers are right-aligned and muted (~0.6α body
- *     color), brightened on the active line when the line highlighter is on.
- *   - the gutter background is fully TRANSPARENT (HC: opaque `Canvas`), so the
- *     strip shows exactly the app root tint → window acrylic/vibrancy and
- *     follows the transparency slider with no double-tint — the gutter reads as
- *     the SAME material as the rest of the app.
- *   - no-overlap on horizontal scroll is guaranteed by CLIPPING, not masking:
- *     the native gutter is `position: sticky; left: 0; z-index: 200` inside the
- *     scroller, so with word-wrap off a long line scrolled right slides the
- *     content LEFT, UNDER the gutter. A tiny ViewPlugin watches
- *     `scrollDOM.scrollLeft` and, while it is > 0, publishes two ready-made
- *     clip-path values on `.cm-scroller`: `--np-content-clip` =
- *     `inset(0 0 0 scrollLeft)` applied to EVERY `.cm-line` (line-local x <
- *     scrollLeft is exactly the part that slid under the sticky gutter) and
- *     `--np-layer-clip` = `inset(0 0 0 scrollLeft + gutterWidth)` applied to
- *     the selection/cursor `.cm-layer`s — whose local origin is the scroller's
- *     content origin, INCLUDING the gutter width. Text, selection rects and
- *     the caret are therefore never RENDERED under the gutter at all, so the
- *     transparent strip never shows them.
+ * So the gutter stays TRANSPARENT (light/dark) and the material is supplied by a
+ * separate full-height background strip (`gutterMaterial`) mounted on `view.dom`
+ * — a plain, NON-promoted absolutely positioned element that DOES sample the
+ * acrylic (the same trick the old external column used, minus the per-line cells
+ * that caused the zoom drift). The strip sits behind the scroller at z-index -1,
+ * so the transparent gutter above reveals it; a translucent dark wash tints it a
+ * touch darker than the editor surface so the column reads as its own panel.
  *
- *     CRITICAL — the clip is per-LINE and conditional, NEVER on `.cm-content`:
- *     in a BigScaler document `.cm-content` is ~7,000,000px tall, and ANY
- *     `clip-path` on it (even a no-op `inset(0)`) makes Chromium rasterize a
- *     clip mask for the whole element. Past ~5–6M px that mask exceeds the
- *     compositor's limits: everything deeper simply stops painting AND CM6's
- *     measure loop destabilizes ("Measure loop restarted more than 5 times"),
- *     freezing the viewport — text and line numbers vanish when scrolling deep
- *     into a 100MB+ file. A `.cm-line` is one line tall, so its mask is tiny;
- *     and with no horizontal scroll the vars are unset → `clip-path: none`
- *     (the `var()` fallback), so the common path pays nothing at all.
- *   - width grows with the digit count automatically (CM6 sizes the gutter to
- *     its widest element).
+ * NOTE: we deliberately do NOT use `backdrop-filter`. Chromium's backdrop-filter
+ * samples only in-page paint and cannot reproduce the OS vibrancy either.
  *
- * The line-number reveal glow (lineNumberGlow.ts) reads `.cm-gutters` for the
- * boundary it lights; the gutter is a stable CM6-owned element, so the glow
- * tracks it without any measure plumbing.
+ * THEME: light/dark use the transparent gutter + acrylic strip (slightly darker)
+ * with a muted ~0.6α number color matching the editor body; HC uses an opaque
+ * `Canvas` gutter and NO strip (forced-colors paints flat system colors, no
+ * material), mirroring the `.np-acrylic` high-contrast guard. The gutter font size
+ * follows the `--cm-zoom-font-size` variable (see commands/zoom.ts) so zoom tracks
+ * live; the font family is inherited from the editor body.
  *
- * PA-8: pure renderer + CM6 extension. No fs/path/child_process, no IPC.
+ * PA-8: pure renderer theme. No fs/path/child_process, no IPC.
  */
 
-import { EditorView, ViewPlugin, lineNumbers, highlightActiveLineGutter } from '@codemirror/view';
-import type { ViewUpdate } from '@codemirror/view';
+import { EditorView, ViewPlugin, type PluginValue, type ViewUpdate } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 
-/** Options threaded from the host so the gutter matches the live theme + font. */
-export interface LineNumberColumnOptions {
+/** Horizontal padding inside the gutter (px): gap before the separator + inset. */
+const COLUMN_PADDING_RIGHT = 8;
+const COLUMN_PADDING_LEFT = 6;
+/** Minimum digit slots so single-digit docs still get a comfortable column. */
+const MIN_DIGITS = 2;
+
+/** Options threaded from the host so the gutter matches the live theme. */
+export interface GutterThemeOptions {
   /** Resolved theme bucket — picks number color; `hc` makes the gutter opaque. */
   themeMode: 'light' | 'dark' | 'hc';
-  /** Editor body font family (numbers render in the same face, like UWP). */
-  fontFamily: string;
   /** When true, the cursor's line number is brightened (active-line emphasis). */
   lineHighlighter: boolean;
 }
@@ -90,196 +66,158 @@ export function activeNumberColor(themeMode: 'light' | 'dark' | 'hc'): string {
 }
 
 /**
- * Gutter background per theme. Fully TRANSPARENT for light/dark so the strip
- * shows the app root tint → window acrylic/vibrancy directly — the gutter is
- * the SAME live material as the rest of the app (slider included), with no
- * double-tint. Safe because nothing is ever rendered under the strip: the
- * horizontal-clip plugin (see module header) clips `.cm-content` and the
- * selection/cursor layers at the gutter edge. HC stays the flat system
- * `Canvas` (opaque — no material in high contrast).
+ * Gutter background per theme. Light/dark use a TRANSLUCENT dark wash: the OS
+ * acrylic shows through (so the gutter is still "material"), but tinted a little
+ * darker than the editor surface so the column reads as its own panel. HC uses an
+ * opaque system `Canvas` (forced-colors paints flat, no material).
  */
 export function columnBackground(themeMode: 'light' | 'dark' | 'hc'): string {
-  return themeMode === 'hc' ? 'Canvas' : 'transparent';
+  if (themeMode === 'hc') return 'Canvas';
+  // Black wash over the acrylic: subtle on light, stronger on dark, so in both
+  // cases the gutter is a touch darker than the input area without going opaque.
+  return themeMode === 'dark' ? 'rgba(0, 0, 0, 0.22)' : 'rgba(0, 0, 0, 0.06)';
 }
-
-/** Minimum digit slots so single-digit docs still get a comfortable column. */
-const MIN_DIGITS = 2;
 
 /** Digit slots needed for a document of `lineCount` lines (>= MIN_DIGITS). */
 export function digitsFor(lineCount: number): number {
   return Math.max(MIN_DIGITS, String(Math.max(1, lineCount)).length);
 }
 
-/** Horizontal padding inside the gutter cell (px): left inset + right gap. */
-const CELL_PADDING_LEFT = 6;
-const CELL_PADDING_RIGHT = 8;
+export const COLUMN_PADDING = COLUMN_PADDING_LEFT + COLUMN_PADDING_RIGHT;
 
 /**
- * Theme the native gutter to the live app theme + zoom. Kept separate from the
- * extension factory so it can be unit-tested in isolation and so the selectors
- * stay PLAIN `.cm-*` (no `&dark`/`&light` ancestor selectors, which CM6's
- * EditorView.theme rejects at construction — the host chooses colors in JS).
+ * Build the native line-number gutter theme. Mount it ALONGSIDE CM6's
+ * `lineNumbers()` (gate both on the same showLineNumbers prop). Rebuild it (via a
+ * Compartment.reconfigure) when themeMode / lineHighlighter change.
+ *
+ * Only plain `.cm-*` descendant selectors are used — CM6's EditorView.theme
+ * throws on `&dark`-style ancestor selectors, so per-theme colors are chosen in
+ * JS (numberColor / columnBackground).
  */
-export function lineNumberTheme(options: LineNumberColumnOptions): Extension {
-  const { themeMode, fontFamily, lineHighlighter } = options;
+export function buildGutterTheme(opts: GutterThemeOptions): Extension {
+  const { themeMode, lineHighlighter } = opts;
+  const rest = numberColor(themeMode);
+  const active = activeNumberColor(themeMode);
+
   return EditorView.theme({
+    // The gutter container is TRANSPARENT on light/dark so the material strip
+    // behind it (gutterMaterial, mounted on view.dom — a NON-promoted element that
+    // samples the OS acrylic) shows through. The gutter itself is `position:
+    // sticky`, which Chromium promotes to its own compositing layer; on Windows
+    // that layer composites WITHOUT the OS vibrancy, so any background painted
+    // directly on the gutter renders flat/solid. Keeping the gutter transparent
+    // lets the promoted layer reveal the acrylic strip beneath it. HC has no
+    // material, so it paints an opaque Canvas panel on the gutter directly.
+    //
+    // No border — the reveal glow (lineNumberGlow.ts) owns the divider; the default
+    // CM6 gutter border would read as an opaque seam.
     '.cm-gutters': {
-      // Transparent (HC: Canvas) — the strip IS the app material; see
-      // columnBackground. The clip rules below guarantee nothing renders
-      // beneath it during horizontal scroll.
-      backgroundColor: columnBackground(themeMode),
-      color: numberColor(themeMode),
+      backgroundColor: themeMode === 'hc' ? columnBackground('hc') : 'transparent',
       border: 'none',
-      // Keep CM6's fixed gutter intact: sticky at the scroller's left edge, above
-      // the content. CM6 already sets these, but we restate them so the no-overlap
-      // guarantee can't be silently lost by another extension's gutter theme.
-      position: 'sticky',
-      left: '0',
-      zIndex: '200',
-      fontFamily,
-      // Size tracks the editor body via the zoom variable (Ctrl+/Ctrl-/Ctrl0 +
-      // wheel) so the numbers scale in lockstep with the content — structurally,
-      // because CM6 lays out the gutter cells AFTER this size is resolved.
+      color: rest,
+      // Font size follows the zoom variable so numbers scale with the content;
+      // CM6 positions each number per line-block, so vertical alignment holds.
       fontSize: 'var(--cm-zoom-font-size)'
     },
-    // No-overlap guarantee for the TRANSPARENT gutter: never render content
-    // under the sticky strip. Line-local x < scrollLeft is exactly the part
-    // that slid under the gutter (each line's box starts at the gutter's right
-    // edge), so clipping there hides it. --np-content-clip is published by
-    // horizontalClipPlugin ONLY while scrollLeft > 0; with the var unset the
-    // fallback is `none` and nothing is clipped.
-    //
-    // NEVER move this clip to `.cm-content`: in a BigScaler document that
-    // element is ~7,000,000px tall and any clip-path on it forces Chromium to
-    // rasterize a full-element clip mask, which blows the compositor's limits
-    // past ~5–6M px — content deeper in the file stops painting entirely and
-    // CM6's measure loop livelocks (frozen viewport). Per-line masks are tiny.
-    '.cm-line': {
-      clipPath: 'var(--np-content-clip, none)'
-    },
-    // Selection rectangles + the caret live in .cm-layer elements whose local
-    // origin is the scroller CONTENT origin (left edge INCLUDING the gutter, per
-    // @codemirror/view getBase: marker.left = clientX - (scrollerRect.left -
-    // scrollLeft)), so their under-gutter region is [scrollLeft, scrollLeft +
-    // gutterWidth] — the published clip insets by the sum. Same conditional
-    // var: unset → `none`.
-    '.cm-layer': {
-      clipPath: 'var(--np-layer-clip, none)'
-    },
     '.cm-lineNumbers .cm-gutterElement': {
-      // Right-aligned numbers with UWP-style insets; min-width keeps a stable
-      // column for short docs (CM6 grows it past this as the digit count rises).
-      padding: `0 ${CELL_PADDING_RIGHT}px 0 ${CELL_PADDING_LEFT}px`,
-      minWidth: `${MIN_DIGITS}ch`,
-      textAlign: 'right',
-      color: numberColor(themeMode)
+      color: rest,
+      padding: `0 ${COLUMN_PADDING_RIGHT}px 0 ${COLUMN_PADDING_LEFT}px`
     },
-    // Active (cursor) line number: brightened only when the line highlighter is
-    // on, mirroring the old column's active-line emphasis. highlightActiveLine-
-    // Gutter() (mounted below) tags the active cell with .cm-activeLineGutter.
+    // Active-line number emphasis, gated on the "Highlight current line" toggle.
+    // The gutter element's own background stays transparent so the acrylic is
+    // never blocked behind the active line.
     ...(lineHighlighter
       ? {
-          '.cm-lineNumbers .cm-activeLineGutter': {
+          '.cm-activeLineGutter': {
             backgroundColor: 'transparent',
-            color: activeNumberColor(themeMode)
+            color: active
           }
         }
       : {})
   });
 }
 
+// ---------------------------------------------------------------------------
+//  Gutter material strip
+// ---------------------------------------------------------------------------
+
 /**
- * Publishes the two ready-made clip-path values (`--np-content-clip` on every
- * `.cm-line`, `--np-layer-clip` on the selection/cursor layers) on
- * `.cm-scroller` while the editor is horizontally scrolled, and REMOVES them at
- * scrollLeft = 0 so the resting state is `clip-path: none` (no mask at all —
- * see the module header for why a standing clip on huge surfaces is fatal).
- * Scroll writes are guarded (only on change) and read nothing but `scrollLeft`.
+ * The native gutter can't carry the OS acrylic itself: `position: sticky`
+ * promotes it to its own compositing layer, which on Windows composites WITHOUT
+ * the window vibrancy and paints flat/solid. So instead we mount a full-height
+ * background strip on `view.dom` (the `.cm-editor` root) — a plain absolutely
+ * positioned, NON-promoted element that DOES sample the acrylic (exactly like the
+ * old external column did, minus the per-line cells that caused the zoom drift).
  *
- * The gutter width is re-read on geometry changes (digit growth, zoom) in the
- * plugin's OWN requestAnimationFrame — deliberately NOT via view.requestMeasure:
- * deep in a BigScaler document every measure iteration itself produces a
- * geometryChanged update (the scaler re-pins scrollTop each pass), so a plugin
- * that re-requests a measure from update() re-enters the measure loop on every
- * iteration until CM6 aborts with "Measure loop restarted more than 5 times" —
- * leaving the viewport half-updated (blank bands / missing lines when scrolling
- * deep into a 100MB+ file). One rAF read after CM6's cycle finishes is outside
- * that loop entirely and costs at most one layout read per frame.
+ * The strip sits at `z-index: -1` behind the scroller, so the transparent gutter
+ * above reveals it; its translucent wash tints the acrylic a touch darker than the
+ * editor surface. It tracks the live gutter width so it always lines up with the
+ * numbers. HC has no material → no strip (the gutter paints an opaque Canvas).
+ *
+ * Requires the editor root to be an isolated stacking context (position: relative
+ * + isolation: isolate; set in buildEditorTheme) so the negative z-index stays
+ * behind the content but in front of the editor's transparent background.
  */
-const horizontalClipPlugin = ViewPlugin.fromClass(
-  class {
-    private lastLeft = -1;
-    private gutterWidth = 0;
-    private rafId: number | null = null;
-    private readonly onScroll: () => void;
+export function gutterMaterial(themeMode: 'light' | 'dark' | 'hc'): Extension {
+  if (themeMode === 'hc') return [];
+  const wash = columnBackground(themeMode);
+  return ViewPlugin.define((view) => new GutterMaterialPlugin(view, wash));
+}
 
-    constructor(private readonly view: EditorView) {
-      this.onScroll = () => this.syncScrollLeft();
-      view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
-      this.syncScrollLeft();
-      this.scheduleWidthRead();
-    }
+class GutterMaterialPlugin implements PluginValue {
+  private strip: HTMLDivElement | null = null;
+  private width = -1;
 
-    update(update: ViewUpdate): void {
-      if (update.geometryChanged) {
-        this.scheduleWidthRead();
-        this.syncScrollLeft();
+  constructor(
+    private readonly view: EditorView,
+    private readonly wash: string
+  ) {
+    this.mount();
+  }
+
+  private gutters(): HTMLElement | null {
+    return this.view.dom.querySelector<HTMLElement>('.cm-gutters');
+  }
+
+  private mount(): void {
+    const gutters = this.gutters();
+    if (!gutters) return;
+    this.width = gutters.getBoundingClientRect().width;
+    const el = document.createElement('div');
+    el.className = 'cm-gutterMaterial';
+    el.setAttribute('aria-hidden', 'true');
+    el.style.position = 'absolute';
+    el.style.left = '0';
+    el.style.top = '0';
+    el.style.bottom = '0';
+    el.style.width = `${this.width}px`;
+    el.style.background = this.wash;
+    el.style.pointerEvents = 'none';
+    // Behind the scroller (which paints the numbers) but in front of the editor's
+    // transparent background, so the OS acrylic shows through the wash.
+    el.style.zIndex = '-1';
+    // Prepend so it never paints over later siblings (e.g. the reveal glow).
+    this.view.dom.insertBefore(el, this.view.dom.firstChild);
+    this.strip = el;
+  }
+
+  update(_update: ViewUpdate): void {
+    const gutters = this.gutters();
+    if (gutters && this.strip) {
+      const w = gutters.getBoundingClientRect().width;
+      if (w !== this.width) {
+        this.width = w;
+        this.strip.style.width = `${w}px`;
       }
     }
-
-    destroy(): void {
-      this.view.scrollDOM.removeEventListener('scroll', this.onScroll);
-      if (this.rafId != null) cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-
-    /** Coalesced width read, OUTSIDE CM6's measure loop (see class docs). */
-    private scheduleWidthRead(): void {
-      if (this.rafId != null || typeof requestAnimationFrame !== 'function') return;
-      this.rafId = requestAnimationFrame(() => {
-        this.rafId = null;
-        const gutters = this.view.scrollDOM.querySelector('.cm-gutters');
-        const width = gutters instanceof HTMLElement ? gutters.offsetWidth : 0;
-        if (width === this.gutterWidth) return;
-        this.gutterWidth = width;
-        // Re-publish the layer clip with the new width if currently scrolled.
-        this.lastLeft = -1;
-        this.syncScrollLeft();
-      });
-    }
-
-    private syncScrollLeft(): void {
-      const left = this.view.scrollDOM.scrollLeft;
-      if (left === this.lastLeft) return;
-      this.lastLeft = left;
-      const style = this.view.scrollDOM.style;
-      if (left > 0) {
-        style.setProperty('--np-content-clip', `inset(0 0 0 ${left}px)`);
-        style.setProperty('--np-layer-clip', `inset(0 0 0 ${left + this.gutterWidth}px)`);
-      } else {
-        // Resting state: no clip-path AT ALL (the var() fallback is `none`).
-        style.removeProperty('--np-content-clip');
-        style.removeProperty('--np-layer-clip');
-      }
+    if (this.strip && !this.strip.isConnected) {
+      this.strip = null;
+      this.mount();
     }
   }
-);
 
-/**
- * Build the line-number gutter extension. Mount it gated on the showLineNumbers
- * prop (a Compartment in CodeMirrorEditor.tsx). Rebuild it via
- * Compartment.reconfigure when themeMode / fontFamily / lineHighlighter change.
- *
- * Composes CM6's native `lineNumbers()` (structural per-line gutter) with the
- * theme above, the horizontal clip plugin (transparent gutter + content clip =
- * no overlap), plus `highlightActiveLineGutter()` when the line highlighter is
- * on so the active number can be brightened.
- */
-export function lineNumberColumn(options: LineNumberColumnOptions): Extension {
-  return [
-    lineNumbers(),
-    options.lineHighlighter ? highlightActiveLineGutter() : [],
-    lineNumberTheme(options),
-    horizontalClipPlugin
-  ];
+  destroy(): void {
+    this.strip?.remove();
+    this.strip = null;
+  }
 }
