@@ -246,7 +246,14 @@ async fn route_activation(app: &tauri::AppHandle, event: ActivationEvent) -> Res
 /// Second-instance hook wired from lib.rs (tauri-plugin-single-instance).
 /// Parses the SECOND instance's argv against ITS cwd and routes.
 pub fn on_second_instance(app: &tauri::AppHandle, argv: Vec<String>, cwd: String) {
+    // TEMP: pending #5 live-verification (does argv carry the file path?).
+    log::info!("broker[2nd-instance]: argv={argv:?} cwd={cwd}");
     let parsed = parse_argv(&argv, &cwd);
+    log::info!(
+        "broker[2nd-instance]: parsed paths={:?} protocol={:?}",
+        parsed.paths,
+        parsed.protocol_url
+    );
     let event = ActivationEvent { paths: parsed.paths, cwd, protocol_url: parsed.protocol_url };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -345,7 +352,14 @@ pub fn init_broker(app: &tauri::AppHandle) {
     // routing; the ready-queue defers delivery until the renderer is up.
     let argv: Vec<String> = std::env::args().collect();
     let cwd = std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+    // TEMP: pending #5 live-verification (does cold-start argv carry the path?).
+    log::info!("broker[cold-start]: argv={argv:?} cwd={cwd}");
     let parsed = parse_argv(&argv, &cwd);
+    log::info!(
+        "broker[cold-start]: parsed paths={:?} protocol={:?}",
+        parsed.paths,
+        parsed.protocol_url
+    );
     if !parsed.paths.is_empty() || parsed.protocol_url.is_some() {
         let event =
             ActivationEvent { paths: parsed.paths, cwd, protocol_url: parsed.protocol_url };
