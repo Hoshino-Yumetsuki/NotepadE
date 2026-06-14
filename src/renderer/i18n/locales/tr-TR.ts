@@ -34,13 +34,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Son sekme kapatıldığında uygulamadan çık.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Başlatma Tercihleri',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Notepads şu anki oturumu sonraki açılışta hatırlayacak ve olası veri kayıpları için periyodik yedeklemeler yapacak. Notepads bu seçenek etkinken size uygulama kapanırken çalışmalarınızı kaydetmenizle alakalı bir hatırlatma YAPMAYACAK.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Oturum yedekleme ve geri yüklemeyi etkinleştir',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Oturum yedekleme ve geri yüklemeyi etkinleştir',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Oturum Yedekleme Ayarları',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Etkinleştirildiğinde, Notepads seçilen metni panoya kopyalamadan önce baştaki ve sondaki boşlukları, satır aralarını ve boş satırları akıllıca kırpar.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -267,11 +260,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'İçeren Klasörü Aç',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Yeniden Adlandır',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Görüntü',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Sadece yeni dosyaya uygula.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Varsayılan Çözücü',
   'TextAndEditorPage_FontSettings_Title.Text': 'Varsayılan Font ve Büyüklüğü',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Sadece yeni dosyaya uygula.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Varsayılan Satır Sonu Karakteri',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Bulunan satırı vurgula',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Bulunan satırı vurgula',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Belgede satır numaralarını görüntüle.',

@@ -31,11 +31,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Thoát ứng dụng nếu đóng hết tab',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Khi mở app',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Ghi nhớ vị trí hiện tại cho lần mở tệp tiếp theo và thực hiện sao lưu định kỳ để tránh sự cố mất dữ liệu không thể đoán trước. Notepads sẽ KHÔNG nhắc bạn lưu công việc của mình khi đóng ứng dụng, nếu tính năng này được bật. Lưu ý rằng sao lưu chỉ áp dụng trong cửa sổ đầu tiên hoặc cửa sổ chính của Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Sao lưu định kỳ',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'Bật sao lưu',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Sao lưu',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Tự động bỏ các khoảng trống ở đầu và cuối, các tab và các dòng trống một cách thông minh khi sao chép văn bản vào bộ nhớ tạm.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'Sao chép thông minh',
@@ -258,11 +253,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Mở thư mục chứa',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Đổi tên',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Hiển thị',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Chỉ áp dụng cho tài liệu mới.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Mã hóa mặc định',
   'TextAndEditorPage_FontSettings_Title.Text': 'Phông & kích cỡ',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Chỉ áp dụng cho tài liệu mới.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Kết thúc dòng',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Làm nổi bật dòng hiện tại',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Đánh dấu dòng hiện tại',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Hiện số thứ tự dòng ở đầu dòng.',

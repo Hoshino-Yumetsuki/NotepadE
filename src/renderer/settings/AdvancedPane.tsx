@@ -121,19 +121,6 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
             onChange={(_e, d) => update({ smartCopy: d.checked })}
           />
         </SettingRow>
-      </SettingGroup>
-
-      <SettingGroup title={t('AdvancedPage_SessionSnapshotSettings_Title.Text')}>
-        <SettingRow
-          id="sessionSnapshot"
-          label={t('AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent')}
-          description={t('AdvancedPage_SessionSnapshotSettings_Description.Text')}
-        >
-          <Switch
-            checked={settings.sessionSnapshot}
-            onChange={(_e, d) => update({ sessionSnapshot: d.checked })}
-          />
-        </SettingRow>
         <SettingRow
           id="alwaysOpenNewWindow"
           label={t(

@@ -31,15 +31,18 @@ export interface EditorSettings {
   smartCopy: boolean;
   /** Active web-search engine for Ctrl+E (MAIN resolves the URL template). */
   searchEngine: SearchEngineId;
+  /** Custom search URL template (e.g. https://example.com/search?q={0}). */
+  customSearchUrl: string;
   /** Base editor font size in px; zoom is applied as a multiple of this. */
   fontSize: number;
 }
 
-/** UWP defaults: real tab, smart-copy off, Bing, 14px editor font. */
+/** UWP defaults: real tab, smart-copy off, Bing, '', 14px editor font. */
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   tabAsSpaces: -1,
   smartCopy: false,
   searchEngine: 'bing',
+  customSearchUrl: '',
   fontSize: 14
 };
 

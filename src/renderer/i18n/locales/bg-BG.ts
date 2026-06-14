@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Изход от приложението при затваряне на последния таблет',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Предпочитания за стартиране',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'След като бъде активирано, Notepads ще запомни текущата сесия за следващо стартиране и ще прави периодично архивиране на моментни снимки на сесията, за да се предотврати случайна загуба на данни за неотправени промени. Notepads НЯМА да ви напомня да запазите работата си при затваряне на приложението, ако тази функция е активирана. Моля, не забравяйте също, че моментната снимка на сесията работи само в първия или основния прозорец на Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Активиране на моментна снимка',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Активиране на моментна снимка',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Настройки за моментна сесия',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'След активиране, Notepads интелигентно ще премахва началните и крайните интервали, табулациите и празните редове преди копиране на избрания текст в клипборда.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -271,11 +264,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Отвори съдържащата папка',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Преименувам',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Дисплей',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Кандидатствайте само за нов документ.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Кодиране по подразбиране',
   'TextAndEditorPage_FontSettings_Title.Text': 'Шрифт и размер по подразбиране',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Кандидатствайте само за нов документ.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Краен ред по подразбиране',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Маркирайте текущата линия',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Маркирайте текущата линия',
   'TextAndEditorPage_LineNumbersSettings_Description.Text':

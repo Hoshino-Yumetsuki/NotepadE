@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Salir de la aplicación al cerrar la última pestaña',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Preferencias de Inicio',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Una vez activado, Notepads recordará la sesión actual para el siguiente inicio y hará un respaldo periódico para prevenir pérdidas accidentales de datos. Notepads NO le recordará guardar su trabajo al cerrar la aplicación, si esta opción es activada. Recuerde que el respaldo de la sesión sólo funciona en la ventana principal de Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Habilitar respaldo y restauración de sesión',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Habilitar respaldo y restauración de sesión',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Ajustes de Respaldo de Sesión',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Una vez habilitado, Notepads recortará inteligentemente los espacios en blanco iniciales y finales, las tabulaciones y las líneas en blanco antes de copiar el texto seleccionado en el portapapeles.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -272,11 +265,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Abrir Carpeta Contenedora',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Renombrar',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Visualización',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Solo aplica para nuevos documentos.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Codificación Predeterminada',
   'TextAndEditorPage_FontSettings_Title.Text': 'Fuente y Tamaño Predeterminados',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Solo aplicar a documentos nuevos.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Terminación de Línea',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Resaltar línea actual',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Resaltar línea actual',
   'TextAndEditorPage_LineNumbersSettings_Description.Text':

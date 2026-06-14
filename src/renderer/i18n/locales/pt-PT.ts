@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Sair ao fechar o último separador',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Preferências de início',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Após a ativação, o Notepads memoriza a sessão atual para o próximo lançamento e fará periodicamente uma cópia de segurança do instantâneo da sessão para prevenir a perda acidental de dados não guardados. NÃO será lembrado de guardar as suas alterações ao fechar a aplicação. Lembre-se de que o instantâneo da sessão só funciona na primeira ou janela principal do Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Ativar instantâneo da sessão',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Ativar instantâneo da sessão',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Instantâneo da sessão',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Após ativação, antes de copiar o texto selecionado para a área de transferência o Notepads irá inteligentemente cortar os espaços no início ou no fim, tabulações e as linhas em branco.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -273,11 +266,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Abrir a pasta do ficheiro',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Mudar o nome',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Apresentação',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Aplica-se apenas a novos documentos.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Codificação predefinida',
   'TextAndEditorPage_FontSettings_Title.Text': 'Tipo de letra e tamanho',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Aplica-se apenas a novos documentos.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Quebra de linha predefinida',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Realçar a linha atual',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Realçar a linha atual',
   'TextAndEditorPage_LineNumbersSettings_Description.Text':

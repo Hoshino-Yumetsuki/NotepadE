@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Ukončit aplikaci při zavírání poslední karty.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Předvolby spuštění',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Notepads si bude pamatovat aktuální session pro příští spuštění a bude dělat pravidelné zálohy proti možné ztrátě neuložených dat. Notepads vás při vypínání aplikace NEBUDE vyzývat k uložení souborů, pokud je tato funkce zapnutá.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Povolit zaznamenávání session',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Povolit zaznamenávání  session',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Nastavení zaznamenávání session',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Jakmile je jednou povolen, Notepads zkrátí text o přebývající počáteční a koncové mezery, tabulátory a prázdné řádky před tím, než je vybraný text nakopírován do schránky.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'Povolit Smart Copy',
@@ -265,11 +258,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otevřít složku obsahující soubor',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Přejmenovat',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Aplikuje se pouze na nové dokumenty.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Výchozí kódování',
   'TextAndEditorPage_FontSettings_Title.Text': 'Výchozí Font a Velikost',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Aplikuje se pouze na nové dokumenty.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Výchozí zakončení řádků',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Zvýraznit aktuální řádek',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Zvýraznit aktuální řádek',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Zobrazit čísla řádků v dokumentu.',

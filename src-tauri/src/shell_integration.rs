@@ -10,6 +10,15 @@
 use crate::contract::ShareArgs;
 use crate::result::NpResult;
 use crate::search_url;
+use serde::Deserialize;
+
+/// Args for the web-search IPC command (renderer-driven, fully symmetric).
+#[derive(Debug, Clone, Deserialize)]
+pub struct WebSearchArgs {
+    pub query: String,
+    pub search_engine: String,
+    pub custom_search_url: String,
+}
 
 #[tauri::command]
 pub async fn shell_open_containing_folder(
@@ -80,16 +89,9 @@ pub async fn shell_copy_path(
 #[tauri::command]
 pub async fn shell_web_search(
     app: tauri::AppHandle,
-    query: String,
+    args: WebSearchArgs,
 ) -> NpResult<()> {
-    // Read current settings to get the configured search engine.
-    let settings = crate::settings::settings_get_internal(&app);
-    let (engine, custom_url) = match &settings {
-        Ok(s) => (s.search_engine.clone(), s.custom_search_url.clone()),
-        Err(e) => return NpResult::Err(e.clone()),
-    };
-
-    let url = search_url::build_search_url(&query, &engine, &custom_url);
+    let url = search_url::build_search_url(&args.query, &args.search_engine, &args.custom_search_url);
     match url {
         Some(url) => {
             // Use tauri-plugin-opener to open the URL in the default browser.

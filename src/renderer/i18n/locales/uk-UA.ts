@@ -33,14 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Вийти з програми при закритті останньої вкладки.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Налаштування запуску',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    "Notepads запам'ятає список відкритих файлів до наступного запуску та робитиме періодичне резервне копіювання відкритих документів щоб уникнути втрати незбережених змін. Notepads НЕ пропонуватиме вам зберігати ваші файли коли ви закриваєте Notepads, якщо ця опція увімкнена. Зверніть увагу, ця функція працює тільки в першому/основному вікні Notepads.",
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Вимкнути збереження і відновлення відкритих документів',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Увімкнути збереження і відновлення відкритих документів',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text':
-    'Збереження і відновлення відкритих документів',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Якщо увімкнено, Notepads буде розумно обрізати початкові та кінцеві пробіли, таби і порожні рядки перед копіюванням вибраного тексту в буфер обміну.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -271,11 +263,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Відкрити папку з файлом',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Перейменувати',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Відображення',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Тільки для нових файлів.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Стандартне кодування',
   'TextAndEditorPage_FontSettings_Title.Text': 'Стандартний шрифт і розмір тексту',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Тільки для нових файлів.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Стандартний кінець рядків',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent':
     'Підсвічувати вибраний рядок',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Підсвічувати вибраний рядок',

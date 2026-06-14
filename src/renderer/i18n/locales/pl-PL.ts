@@ -32,11 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Zamknij aplikację przy zamykaniu ostatniej karty.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Uruchamianie',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Gdy włączone, Notepads zapamięta obecną sesję do następnego uruchomienia programu. Zrobi także kopię okresowej migawki sesji aby zapobiec przypadkowej utracie danych w przypadku niezapisania zmian. Notepads NIE BĘDZIE przypominał o zapisie Twojej pracy przy zamykaniu aplikacji gdy ta opcja jest włączona. UWAGA: Migawka sesji działa tylko w pierwszym lub głównym oknie Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Włącz migawkę sesji',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'Włącz migawkę sesji',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Migawka sesji',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Gdy włączone, Notepads będzie inteligentnie przycinał wiodące i końcowe spacje, wcięcia, oraz puste linie przed skopiowaniem zaznaczonego tekstu do schowka.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -267,11 +262,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otwórz lokalizację pliku',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Zmień nazwę',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Wyświetlanie',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Wybierz sposób domyślnego kodowania.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Domyślne kodowanie',
   'TextAndEditorPage_FontSettings_Title.Text': 'Rozmiar i rodzaj czcionki',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Wybierz domyślne kończenie linii.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Kończenie linii',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Pokaż prowadnice wierszy',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Pokaż prowadnice wierszy',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Pokazuj numery wierszy w dokumencie.',

@@ -49,11 +49,10 @@ mod tests {
         let expected_keys = &[
             "editorFontFamily", "editorFontSize",
             "textWrapping", "displayLineHighlighter",
-            "displayLineNumbers", "defaultLineEnding",
-            "defaultEncoding", "tabIndents",
+            "displayLineNumbers", "tabIndents",
             "searchEngine", "customSearchUrl", "themeMode", "tintOpacity",
             "useWindowsAccentColor", "customAccentColor", "showStatusBar",
-            "smartCopy", "sessionSnapshot", "alwaysOpenNewWindow",
+            "smartCopy", "alwaysOpenNewWindow",
             "exitWhenLastTabClosed", "appLanguage", "openWithContextMenu",
             "wallpaperFileName", "wallpaperEffect", "autoCheckUpdates",
         ];

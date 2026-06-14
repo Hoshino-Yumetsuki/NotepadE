@@ -33,12 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'გასვლა აპლიკაციიდან, როდესაც ბოლო ჩანართი იქნება დახურული',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'გაშვების პრეფერენციები',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'ერთხელ გააქტიურდება, Notepads დაიმახსოვრებს მიმდინარე სესიას შემდეგი გახსნისთვის და გააკეთებს პერიოდულ სესიის აღბეჭვდის ბექაფებს, რომ თავიდან აირიდოთ შემთხვევითი მონაცემების დაკარგვა შეუნახავი ცვლილებებისტვის. Notepads არ შეგახსენებს, რომ შეინახო შენი სამუშაო აპლიკაციის შენახვისთვის თუ ეს ფიჩერი გააქტიურებულია. გთხოვთ ასევე დაიმახსოვროთ, სესიის აღბეჭვდა მხოლოდ იმუშავებს Notepads-ის პრიველი ან მთავარი ფანჯრებისთვის.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'გააქტიურე სესიების აღბეჭვდა',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'გააქტიურე სესიების აღბეჭვდა',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'სესიების აღბეჭვდის სეთინგები',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'ერთხელ ჩართულის შემდეგ, Notepads ჭკვიანად დაჭერს წინა და უკანა ცარიელებს, ტაბულაციებს და ცარიელ ხაზებს სანამ არჩეული ტექსტი დააკოპირებს ბუფერში.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -267,11 +261,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'გახსენი შემცვლელი ფოლდერი',
   Tab_ContextFlyout_RenameButtonDisplayText: 'გადარქმევა',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'ჩვენება',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'გავრცელდება მხოლოდ ახალ დოკუმენტებზე.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'საწყისი ენკოდირება',
   'TextAndEditorPage_FontSettings_Title.Text': 'საწყისი ფონტი & ზომა',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'გავრცელდება მხოლოდ ახალ დოკუმენტებზე.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'საწყისი ხაზის ენკოდინგი',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'აღნიშნე მიმდინარე ხაზი',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'აღნიშნე მიმდინარე ხაზი',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'დოკუმენტში ხაზების ნომრების ჩვენება.',

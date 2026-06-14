@@ -86,25 +86,6 @@ describe('TextEditorPane', () => {
     expect(update).toHaveBeenCalledWith({ tabIndents: 4 });
   });
 
-  it('writes defaultLineEnding when a line-ending radio is chosen', () => {
-    const update = vi.fn();
-    renderPane(
-      <TextEditorPane settings={makeSettings({ defaultLineEnding: 'crlf' })} update={update} />
-    );
-    const row = screen.getByTestId('setting-defaultLineEnding');
-    fireEvent.click(within(row).getByRole('radio', { name: 'Unix (LF)' }));
-    expect(update).toHaveBeenCalledWith({ defaultLineEnding: 'lf' });
-  });
-
-  it('writes defaultEncoding when an encoding radio is chosen (was free-text input)', () => {
-    const update = vi.fn();
-    renderPane(
-      <TextEditorPane settings={makeSettings({ defaultEncoding: 'UTF-8' })} update={update} />
-    );
-    const row = screen.getByTestId('setting-defaultEncoding');
-    fireEvent.click(within(row).getByRole('radio', { name: 'UTF-8-BOM' }));
-    expect(update).toHaveBeenCalledWith({ defaultEncoding: 'UTF-8-BOM' });
-  });
 });
 
 describe('PersonalizationPane', () => {

@@ -30,11 +30,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     '关闭最后一个标签时退出应用',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': '启动偏好设置',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    '开启此设置后，Notepads会定期保存当前应用状态并在下一次启动时自动恢复。当此设置打开后，关闭应用时Notepads将不会提醒你保存文件。另外请注意，快照备份在影子窗口中将会被禁用，此设置只会作用于第一个被打开的窗口。',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': '开启快照备份与还原',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': '开启快照备份与还原',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': '快照备份设置',
   'AdvancedPage_SmartCopySettings_Description.Text':
     '开启后，当复制选中文字时（Ctrl+C），Notepads会智能的帮你剪裁起始和结尾处的多余空格，制表符以及空白行。',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': '开启智能复制功能',
@@ -255,12 +250,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '打开文件所在文件夹',
   Tab_ContextFlyout_RenameButtonDisplayText: '重命名',
   'TextAndEditorPage_DisplaySettings_Title.Text': '显示设置',
-  'TextAndEditorPage_EncodingSettings_Description.Text': '改变设置后只会影响新打开或者创建的文件。',
-  'TextAndEditorPage_EncodingSettings_Title.Text': '默认写入编码',
   'TextAndEditorPage_FontSettings_Title.Text': '默认字体和大小',
-  'TextAndEditorPage_LineEndingSettings_Description.Text':
-    '改变设置后只会影响新打开或者创建的文件。',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': '默认换行符',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '高亮光标所在行',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': '高亮光标所在行',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': '在当前文本中显示行号栏。',

@@ -32,13 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Kilépés az alkalmazásból az utolsó fül bezárásakor',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Indítási Beállítások',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'A Notepads emlékezni fog a jelenlegi munkamenetre a következő indításkor, és időközönként készít biztonsági mentést az esetleges adatvesztés elkerülése érdekében. Notepads NEM fog emlékeztetni hogy mentsd el a munkádat az alkalmazás bezárásakor, ha ez az opció be van kapcsolva. A munkamenet mentés csak az első vagy fő Notepads ablakban működik.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Munkamenet mentés és visszaállítás bekapcsolása',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Munkamenet mentés és visszaállítás bekapcsolása',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Munkamenet Mentési Beállítások',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Bekapcsolva a Notepads kiszedi a felesleges szóközöket, tabokat és az üres  sorokat, majd vágolapra másolja.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'Okos másolás',
@@ -266,11 +259,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Tartalmazó Mappa Megnyitása',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Átnevezés',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Megjelenítés',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Csak új dokumentumokra alkalmazva.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Alapértelmezett Kódolás',
   'TextAndEditorPage_FontSettings_Title.Text': 'Alapértelmezett Szövegtipus & Méret',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Csak új dokumentumokra alkalmazva.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Alapértelmezett Sor Végződés',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Aktuális sor kiemelése',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Aktuális sor kiemelése',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Sorszámok mutatása a dokumentumban.',

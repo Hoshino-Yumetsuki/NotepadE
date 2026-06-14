@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Sulje sovellus viimeisen välilehden sulkemisen yhteydessä',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Käynnistysasetukset',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Kun tämä on aktivoitu, Notepads muistaa nykyisen istunnon seuraavaa käynnistystä varten ja tekee säännöllisen istunnon tilannevedoksen varmuuskopioinnin vahingossa tapahtuvien muutosten tietojen menetyksen estämiseksi. Notepads EI muistuta sinua tallentamaan työtäsi sovelluksen sulkemisen yhteydessä, jos tämä ominaisuus on aktivoitu. Muista myös, että istunnon tilannevedos toimii vain ensimmäisessä tai pääikkunassa Notepadsissa.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Aktivoi istunnon varmuuskopiointi ja palautus',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Aktivoi istunnon varmuuskopiointi ja palautus',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Istunnon varmuuskopioinnin asetukset',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Kun tämä on aktivoitu, Notepads poistaa älykkäästi alussa ja lopussa olevat välilyönnit, välilehdet ja tyhjät rivit ennen valitun tekstin kopioimista leikepöydälle.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -268,11 +261,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Avaa sisältävä kansio',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Nimeä uudelleen',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Näyttö',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Soveltuu vain uuteen asiakirjaan.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Oletuskoodaus',
   'TextAndEditorPage_FontSettings_Title.Text': 'Oletus Fontti & Koko',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Soveltuu vain uuteen asiakirjaan.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Oletus Rivinvaihto',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Korosta nykyinen rivi',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Korosta nykyinen rivi',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Näytä rivinumerot asiakirjassa.',

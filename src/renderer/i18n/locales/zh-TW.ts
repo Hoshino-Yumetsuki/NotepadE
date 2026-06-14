@@ -30,11 +30,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     '關閉最後一個標簽時退出應用程式',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': '啟動偏好',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    '一旦啟用後，Notepads 將會定時備份儲存當前的工作階段供下次啟動時使用，避免意外損失尚未儲存的資料。每當關閉應用程式時，Notepads 將不會提醒您儲存文件。此外請注意工作階段快照僅會在 Notepads 第一個視窗或者主視窗中啟用。',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': '啟用工作階段快照',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': '啟用工作階段快照',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': '工作階段快照設定',
   'AdvancedPage_SmartCopySettings_Description.Text':
     '一旦啟用後，Notepads 會在複製已選取文字到剪貼簿之前智慧地修剪開頭和尾端的空格、Tab 字元以及空白行。',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': '啟用智慧複製',
@@ -256,11 +251,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '開啟檔案所在之資料夾',
   Tab_ContextFlyout_RenameButtonDisplayText: '重新命名',
   'TextAndEditorPage_DisplaySettings_Title.Text': '顯示',
-  'TextAndEditorPage_EncodingSettings_Description.Text': '僅會套用至新的文件。',
-  'TextAndEditorPage_EncodingSettings_Title.Text': '預設寫入編碼',
   'TextAndEditorPage_FontSettings_Title.Text': '預設字型和大小',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': '僅會套用至新的文件。',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': '預設行尾',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '強調顯示當前行',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': '強調顯示當前行',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': '在文件當中顯示行數。',

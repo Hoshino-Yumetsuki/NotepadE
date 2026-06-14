@@ -32,13 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'App afsluiten bij het sluiten van laatste tabblad',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Opstartvoorkeuren',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Indien ingeschakeld, onthoudt Notepads de huidige sessie voor de volgende keer opstarten en wordt er periodiek een momentopname van de sessie gemaakt om onbedoeld gegevensverlies door niet-vastgelegde wijzigingen te voorkomen. Notepads herinnert u er NIET aan om uw werk op te slaan bij het sluiten van de app als deze functie is ingeschakeld. Houd er ook rekening mee dat een sessie-momentopname alleen werkt in het eerste of hoofdvenster van Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Sessie-momentopname inschakelen',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Sessie-momentopname inschakelen',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Sessie-momentopname',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Eenmaal ingeschakeld, zal Notepads voorloop- en achterliggende spaties, tabs en lege regels slim inkorten voordat de geselecteerde tekst naar het klembord wordt gekopieerd.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -268,11 +261,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Onderliggende map openen',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Hernoemen',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Weergave',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Van toepassing op nieuwe documenten.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Standaard-codering',
   'TextAndEditorPage_FontSettings_Title.Text': 'Standaard lettertype en -grootte',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Van toepassing op nieuwe documenten.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Standaard regeleinde',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Huidige regel markeren',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Huidige regel markeren',
   'TextAndEditorPage_LineNumbersSettings_Description.Text':

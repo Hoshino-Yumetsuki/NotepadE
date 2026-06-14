@@ -288,7 +288,7 @@ const api: NotepadsApi = {
     openContainingFolder: (path) =>
       call<void>(channelToCommand(C.ShellOpenContainingFolder), { path }),
     copyPath: (path) => call<void>(channelToCommand(C.ShellCopyPath), { path }),
-    webSearch: (query) => call<void>(channelToCommand(C.ShellWebSearch), { query }),
+    webSearch: (args) => call<void>(channelToCommand(C.ShellWebSearch), args),
     /**
      * shell.print: implement as window.print() — no Tauri command needed.
      * Resolves with {ok:true, data:undefined} per the Result envelope contract.

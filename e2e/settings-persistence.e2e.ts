@@ -35,7 +35,6 @@ import type { Settings } from '../src/shared/ipc-contract';
  * Matrix (one representative field per pane + the live-affect surface each owns):
  *   - showStatusBar       (Advanced)        → the Phase-4 status bar mounts/unmounts
  *   - tabIndents          (Text & Editor)   → indent width the editor inserts
- *   - defaultLineEnding   (Text & Editor)   → default EOL for new files
  *   - themeMode           (Personalization) → resolved theme bucket / root surface
  *   - tintOpacity         (Personalization) → background tint opacity
  *   - alwaysOpenNewWindow (Advanced)        → broker redirect-vs-spawn policy
@@ -45,7 +44,6 @@ import type { Settings } from '../src/shared/ipc-contract';
 const MATRIX: Partial<Settings> = {
   showStatusBar: false, // default true
   tabIndents: 4, // default -1 (real tab)
-  defaultLineEnding: 'lf', // default 'crlf'
   themeMode: 'dark', // default 'system'
   tintOpacity: 0.4, // default 0.75
   alwaysOpenNewWindow: true // default false
@@ -89,7 +87,6 @@ test.describe('Gate 5 — settings persistence + live-affect across restart', ()
         .toBe('dark');
       //   the remaining rows reconcile into the live bag the UI renders from.
       await expectSetting(page, 'tabIndents', 4);
-      await expectSetting(page, 'defaultLineEnding', 'lf');
       await expectSetting(page, 'tintOpacity', 0.4);
       await expectSetting(page, 'alwaysOpenNewWindow', true);
 
@@ -117,7 +114,6 @@ test.describe('Gate 5 — settings persistence + live-affect across restart', ()
       });
       expect(persisted.showStatusBar).toBe(false);
       expect(persisted.tabIndents).toBe(4);
-      expect(persisted.defaultLineEnding).toBe('lf');
       expect(persisted.themeMode).toBe('dark');
       expect(persisted.tintOpacity).toBe(0.4);
       expect(persisted.alwaysOpenNewWindow).toBe(true);

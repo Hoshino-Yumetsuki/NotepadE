@@ -33,11 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Izađite iz aplikacije prilikom zatvaranja poslednjeg taba.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Postavke pokretanja',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Kad je aktivno, Notepads će pamtiti trenutnu sesiju za sledeće pokretanje i redovno čuvati sigurnosne kopije snimaka sesija, da bi se sprečio slučajni gubitak podataka zbog nespremljenih promena. Notepads vas NEĆE podsećati da spremite svoj rad kad se program zatvara, ako je ova funkcija aktivirana. Imajte u vidu da snimanje sesije radi samo u prvom ili glavnom prozoru programa.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Omogući snimanje sesije',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'Omogući snimanje sesije',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Podešavanja snimaka sesije',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Kada je aktivno, Notepads će pametno opseći razmake, tabulatore i prazne redove na početku i kraju pre kopiranja teksta u ostavu.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -267,11 +262,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otvori fasciklu',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Preimenuj',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Prikaz',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Važi samo za nove dokumente.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Podrazumevano kodiranje',
   'TextAndEditorPage_FontSettings_Title.Text': 'Podrazumevani font i veličina',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Važi samo za nove dokumente.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Podrazumevani završetak redova',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Označi trenutni red',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Označi trenutni red',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Prikaži brojeve redova u dokumentu.',

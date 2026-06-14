@@ -32,11 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'आखिरी टैब बंद करते समय ऐप से बाहर निकलें',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'लॉन्च प्राथमिकताएं',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'एक बार सक्षम होने के बाद, Notepads अगले लॉन्च के लिए वर्तमान सत्र को याद रखेगा और अप्रतिबद्ध परिवर्तनों के लिए आकस्मिक डेटा हानि को रोकने के लिए एक आवधिक सत्र स्नैपशॉट बैकअप करेगा। यदि यह सुविधा सक्षम है तो Notepads आपको ऐप क्लोज पर अपने काम को बचाने के लिए याद नहीं दिलाएंगे। कृपया यह भी याद रखें कि सत्र स्नैपशॉट केवल Notepads की पहली या मुख्य खिड़की में काम करता है।',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'सत्र स्नैपशॉट को सक्षम करें',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'सत्र स्नैपशॉट को सक्षम करें',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'सत्र स्नैपशॉट सेटिंग्स',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'एक बार सक्षम होने के बाद, Notepads चयनित टेक्स्ट को क्लिपबोर्ड पर कॉपी करने से पहले प्रमुख और अनुगामी रिक्त स्थान, टैब और खाली लाइनों को स्मार्ट ट्रिम करेगा।',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'स्मार्ट कॉपी सक्षम करें',
@@ -259,11 +254,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'धारक फोल्डर को खोलें',
   Tab_ContextFlyout_RenameButtonDisplayText: 'नाम बदलें',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'देखाव',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'केवल नए दस्तावेज पर लागू होते हैं।',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'डिफ़ॉल्ट एन्कोडिंग',
   'TextAndEditorPage_FontSettings_Title.Text': 'डिफ़ॉल्ट फ़ॉन्ट और आकार',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'केवल नए दस्तावेज पर लागू होते हैं।',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'डिफ़ॉल्ट लाइन एंडींग',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'वर्तमान लाइन हाइलाइट करें',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'वर्तमान लाइन हाइलाइट करें',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'दस्तावेज़ में लाइन नंबर प्रदर्शित करें।',

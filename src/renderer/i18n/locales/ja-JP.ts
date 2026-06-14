@@ -32,13 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     '最後のタブを閉じる時にアプリを終了する',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': '起動時の設定',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Notepads は次回起動時に備えて現在の状態を保存し、また定期的に内容をバックアップして明示的にファイルに保存されていないデータの消失を防ぎます。この機能を使用する場合、Notepads はアプリ終了時にファイル保存の警告を行いません。またこの機能はアプリの最初のウィンドウのみで動作し、シャドウ ウィンドウ（2番目以降のウィンドウ）では使用できません。',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'セッション スナップショットを使用する',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'セッション スナップショットを使用する',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'セッション スナップショット設定',
   'AdvancedPage_SmartCopySettings_Description.Text':
     '有効にすると、Notepads は選択したテキストをクリップボードにコピーする前に、先頭や末尾のスペース、タブ、空行などをスマートにトリミングします。',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -268,11 +261,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '保存フォルダーを開く',
   Tab_ContextFlyout_RenameButtonDisplayText: '名前の変更',
   'TextAndEditorPage_DisplaySettings_Title.Text': '表示',
-  'TextAndEditorPage_EncodingSettings_Description.Text': '新規文書にのみ適用されます。',
-  'TextAndEditorPage_EncodingSettings_Title.Text': '既定のエンコード',
   'TextAndEditorPage_FontSettings_Title.Text': '既定のフォントとサイズ',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': '新規文書にのみ適用されます。',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': '既定の行末',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '現在行をハイライト',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': '現在行をハイライト',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': '文書内の行番号を表示します。',

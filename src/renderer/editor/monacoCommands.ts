@@ -255,7 +255,7 @@ export function tryInsertLogEntry(editor: Editor, ctx: MonacoCommandContext): bo
   return true;
 }
 
-function runWebSearch(editor: Editor): void {
+function runWebSearch(editor: Editor, ctx: MonacoCommandContext): void {
   const model = editor.getModel();
   if (!model) return;
   const sel = editor.getSelection();
@@ -265,8 +265,12 @@ function runWebSearch(editor: Editor): void {
   if (query === null) return;
   // Renderer-only test observation (no-op in production); never alters the call.
   emitWebSearchQuery(query);
-  // Fire-and-forget; MAIN owns the URL/search-engine decision (PA-8).
-  void window.notepads?.shell.webSearch(query);
+  const s = ctx.getSettings();
+  void window.notepads?.shell.webSearch({
+    query,
+    searchEngine: s.searchEngine ?? 'bing',
+    customSearchUrl: s.customSearchUrl ?? ''
+  });
 }
 
 function setDirection(editor: Editor, dir: 'ltr' | 'rtl'): void {
@@ -302,7 +306,7 @@ export function wireCommands(editor: Editor, ctx: MonacoCommandContext): () => v
 
   // F5 datetime / Ctrl+E web search.
   editor.addCommand(KC.F5, () => runDateTime(editor, ctx));
-  editor.addCommand(KM.CtrlCmd | KC.KeyE, () => runWebSearch(editor));
+  editor.addCommand(KM.CtrlCmd | KC.KeyE, () => runWebSearch(editor, ctx));
 
   // Duplicate / join.
   editor.addCommand(KM.CtrlCmd | KC.KeyD, () => runDuplicate(editor));

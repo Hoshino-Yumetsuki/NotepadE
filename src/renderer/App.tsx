@@ -357,6 +357,8 @@ export function App(): JSX.Element {
   const editorContextMenu = useEditorContextMenu({
     // Preview offered for every file type (see useViewModeKeyboard above).
     isPreviewEligible: store.activeEditorId != null,
+    searchEngine: settings.searchEngine,
+    customSearchUrl: settings.customSearchUrl,
     onTogglePreview: () => {
       const id = store.activeEditorId;
       const tb = id ? store.get(id) : undefined;
@@ -1212,16 +1214,16 @@ export function App(): JSX.Element {
   );
 
   // Map the MAIN-owned persisted Settings bag onto the editor-behavior settings
-  // MonacoEditor consumes (forwarded to the command wiring). Only the four fields
-  // EditorSettings exposes are forwarded; the rest of Settings is theme/IO state.
+  // MonacoEditor consumes (forwarded to the command wiring).
   const editorBehaviorSettings = useMemo(
     () => ({
       tabAsSpaces: settings.tabIndents,
       smartCopy: settings.smartCopy,
       searchEngine: settings.searchEngine,
+      customSearchUrl: settings.customSearchUrl,
       fontSize: settings.editorFontSize
     }),
-    [settings.tabIndents, settings.smartCopy, settings.searchEngine, settings.editorFontSize]
+    [settings.tabIndents, settings.smartCopy, settings.searchEngine, settings.customSearchUrl, settings.editorFontSize]
   );
   // word-wrap derives from the persisted TextWrapMode ('wrap' | 'noWrap').
   const editorWordWrap = settings.textWrapping === 'wrap';

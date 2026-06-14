@@ -32,11 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'إغلاق التطبيق عند إغلاق آخر علامة تبويب',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'خيارات التشغيل',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'عند التفعيل سيقوم Notepads بتذكر الجلسة الحالية لفتحها في المرة القائمة تلقائياً وسيقوم بعمل نسخ إحتياطية تلقائياً بشكل دوري لتفادي فقدان البيانات المفاجئ لما لم يتم حفظه. لن يقوم Notepads بتذكيرك لحفظ عملك عند إغلاق البرنامج إذا كانت هذه الميزة مفعلة. يرجى تذكر أن النسخ الإحتياطي للجلسات تعمل في أو أو النافذة الرئيسية في Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'تفعيل النسخ الإحتياطي',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'تفعيل النسخ الإحتياطي',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'إعدادات النسخ الإحتياطي',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'عند التفعيل سيقوم Notepads بشكل ذكي التخلص من المسافات الموجودة في بداية ونهاية النص و حروف Tabs والأسطر الفارغة قبل نسخ النص المحدد إلى الحافظة.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'تفعيل النسخ الذكي',
@@ -259,11 +254,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'فتح المجلد المحتوي على المستند',
   Tab_ContextFlyout_RenameButtonDisplayText: 'إعادة تسمية',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'العرض',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'تطبيق فقط على المستندات الجديدة.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'الترميز الإفتراضي',
   'TextAndEditorPage_FontSettings_Title.Text': 'الخط والحجم الإفتراضي',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'تطبق فقط على المستند الجديد.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'نهاية السطر الإفتراضي',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'تعليم السطر الحالي',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'تعليم السطر الحالي',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'عرض أرقام الأسطر في المستند.',

@@ -328,9 +328,6 @@ export interface Settings {
   textWrapping: TextWrapMode;
   displayLineHighlighter: boolean;
   displayLineNumbers: boolean;
-  defaultLineEnding: EolId;
-  /** Default write encoding as an opaque EncodingId (UWP EditorDefaultEncoding). */
-  defaultEncoding: EncodingId;
   tabIndents: TabIndents;
   searchEngine: SearchEngineId;
   customSearchUrl: string;
@@ -344,7 +341,6 @@ export interface Settings {
   // --- Advanced ---
   showStatusBar: boolean;
   smartCopy: boolean;
-  sessionSnapshot: boolean;
   alwaysOpenNewWindow: boolean;
   exitWhenLastTabClosed: boolean;
   /** BCP-47 language tag, or '' = follow the OS UI language (29-locale set, Phase 6). */
@@ -389,8 +385,6 @@ export const DEFAULT_SETTINGS: Settings = {
   textWrapping: 'noWrap',
   displayLineHighlighter: true,
   displayLineNumbers: true,
-  defaultLineEnding: 'crlf',
-  defaultEncoding: 'UTF-8',
   tabIndents: -1,
   searchEngine: 'bing',
   customSearchUrl: '',
@@ -403,7 +397,6 @@ export const DEFAULT_SETTINGS: Settings = {
   customAccentColor: '',
   showStatusBar: true,
   smartCopy: false,
-  sessionSnapshot: false,
   alwaysOpenNewWindow: false,
   exitWhenLastTabClosed: false,
   appLanguage: '',
@@ -576,7 +569,7 @@ export interface AppApi {
 export interface ShellApi {
   openContainingFolder(path: string): Promise<Result<void>>;
   copyPath(path: string): Promise<Result<void>>;
-  webSearch(query: string): Promise<Result<void>>;
+  webSearch(args: { query: string; searchEngine: SearchEngineId; customSearchUrl: string }): Promise<Result<void>>;
   print(): Promise<Result<void>>;
   share(args: { title: string; text: string }): Promise<Result<void>>;
 }

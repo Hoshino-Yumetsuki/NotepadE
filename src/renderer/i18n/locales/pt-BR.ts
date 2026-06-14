@@ -33,12 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Fechar o aplicativo ao fechar a última aba.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Preferências de Inicialização',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Quando ativada, o Notepads irá lembrar a sessão atual na próxima utilização do aplicativo e fará um backup periódico para prevenir perda acidental de dados das alterações não salvas. O aplicativo não irá te lembrar de salvar o seu trabalho se essa opção estiver ativada. Lembre-se também que a sessão instantânea funciona somente na primeira/principal janela do Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Ativar sessão instantânea',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Desativar sessão instantânea',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Configurações de sessão instantânea',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Após ativado, o Notepads removerá inteligentemente espaços iniciais e finais, tabulações e linhas vazias antes de copiar o texto selecionado para a área de transferência.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -272,11 +266,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Abrir pasta do arquivo',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Renomear',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Exibição',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Se aplica apenas a novos documentos.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Codificação padrão',
   'TextAndEditorPage_FontSettings_Title.Text': 'Fonte e tamanho padrão',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Se aplica apenas a novos documentos.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Terminação de linha padrão',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Destacar linha atual',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Destacar linha atual',
   'TextAndEditorPage_LineNumbersSettings_Description.Text':

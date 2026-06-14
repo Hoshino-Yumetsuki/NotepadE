@@ -92,6 +92,10 @@ export interface EditorContextMenuHostProps {
   isPreviewEligible: boolean;
   onTogglePreview: () => void;
   onShare: (selectionOnly: boolean) => void;
+  /** Active web search engine for Ctrl+E / context menu search. */
+  searchEngine: string;
+  /** Custom search URL template for 'custom' engine (empty if not custom). */
+  customSearchUrl: string;
 }
 
 export interface EditorContextMenuHost {
@@ -207,14 +211,18 @@ function isWordWrapOn(editor: monacoApi.editor.IStandaloneCodeEditor): boolean {
   ) === 'on';
 }
 
-function webSearch(editor: monacoApi.editor.IStandaloneCodeEditor): void {
+function webSearch(
+  editor: monacoApi.editor.IStandaloneCodeEditor,
+  searchEngine: string,
+  customSearchUrl: string
+): void {
   const model = editor.getModel();
   const sel = editor.getSelection();
   if (!model || !sel || sel.isEmpty()) return;
   const raw = model.getValueInRange(sel);
   const query = buildWebSearchQuery(raw);
   if (!query) return;
-  void window.notepads?.shell.webSearch(query);
+  void window.notepads?.shell.webSearch({ query, searchEngine: searchEngine as 'bing' | 'google' | 'duckDuckGo' | 'custom', customSearchUrl });
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +232,7 @@ function webSearch(editor: monacoApi.editor.IStandaloneCodeEditor): void {
 export function useEditorContextMenu(
   props: EditorContextMenuHostProps
 ): EditorContextMenuHost {
-  const { isPreviewEligible, onTogglePreview, onShare } = props;
+  const { isPreviewEligible, onTogglePreview, onShare, searchEngine, customSearchUrl } = props;
   const { t } = useT();
   const [ctx, setCtx] = useState<MenuContext | null>(null);
 
@@ -351,7 +359,7 @@ export function useEditorContextMenu(
                 data-testid="ctx-websearch"
                 icon={<Glyph icon={CtxGlyph.webSearch} />}
                 secondaryContent={`${modKey}+E`}
-                onClick={run(webSearch)}
+                onClick={run((e) => webSearch(e, searchEngine, customSearchUrl))}
               >
                 {t('TextEditor_ContextFlyout_WebSearchButtonDisplayText')}
               </MenuItem>

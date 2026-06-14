@@ -32,11 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     '마지막 탭을 닫을 때 앱 종료',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': '실행 설정',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    '활성화되면 메모장은 다음 실행을 위해 현재 세션을 기억하고 저장되지 않은 변경으로 인한 우발적인 데이터 손실을 방지하기 위해 주기적으로 세션 스냅샷을 백업합니다. 이 기능이 활성화 된 경우 종료 시에 변경 사항을 저장하라는 메시지를 표시하지 않습니다. 세션 스냅샷은 메모장의 첫 번째 또는 기본 창에서만 작동합니다.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': '세션 스냅샷 사용',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': '세션 스냅샷 사용',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': '세션 스냅샷 설정',
   'AdvancedPage_SmartCopySettings_Description.Text':
     '사용하면 메모장에서는 선택한 글자를 클립보드로 복사하기 전에 앞뒤의 공백, 탭, 빈 줄을 제거합니다.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': '스마트 복사 사용',
@@ -260,11 +255,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '저장된 폴더 열기',
   Tab_ContextFlyout_RenameButtonDisplayText: '이름 변경',
   'TextAndEditorPage_DisplaySettings_Title.Text': '표시',
-  'TextAndEditorPage_EncodingSettings_Description.Text': '새 문서에만 적용됩니다.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': '기본 인코딩',
   'TextAndEditorPage_FontSettings_Title.Text': '기본 글꼴 및 크기',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': '새 문서에만 적용됩니다.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': '기본 줄바꿈',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '선택한 줄 강조 표시',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': '선택한 줄 강조 표시',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': '문서에 줄 번호를 표시합니다.',

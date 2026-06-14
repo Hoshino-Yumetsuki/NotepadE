@@ -33,11 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     "Esci dall'applicazione alla chiusura dell'ultima scheda",
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Gestione file',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Consente di memorizzare la sessione corrente per il prossimo avvio ed eseguire periodicamente un backup dei file aperti per prevenire la perdita accidentale di dati in caso di modifiche non salvate.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Backup della sessione',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'Backup della sessione',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Backup',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Consente di eliminare autonomamente tutti gli spazi, le tabulazioni e le righe inutili prima di copiare un qualsiasi testo selezionato.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -271,11 +266,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Mostra nella cartella',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Rinomina',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Righe',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Si applica solo ai nuovi documenti.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Codifica predefinita',
   'TextAndEditorPage_FontSettings_Title.Text': 'Carattere e dimensione',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Si applica solo ai nuovi documenti.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Fine riga predefinito',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Evidenzia riga corrente',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Evidenzia riga corrente',
   'TextAndEditorPage_LineNumbersSettings_Description.Text':

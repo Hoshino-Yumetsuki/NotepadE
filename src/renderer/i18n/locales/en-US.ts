@@ -33,11 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Exit app when closing last tab',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Launch Preferences',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Once enabled, Notepads will remember the current session for next launch and do a periodic session snapshot backup to prevent accidental data loss for uncommitted changes. Notepads will NOT remind you to save your work on app close if this feature is enabled. Please also remember that session snapshot only works in the first or main window of Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Enable session snapshot',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'Enable session snapshot',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Session Snapshot Settings',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Once enabled, Notepads will smartly trim leading and trailing spaces, tabs, and empty lines before copying the selected text to the clipboard.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'Enable Smart Copy',
@@ -262,11 +257,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Open Containing Folder',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Rename',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Only apply to new document.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Default Encoding',
   'TextAndEditorPage_FontSettings_Title.Text': 'Default Font & Size',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Only apply to new document.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Default Line Ending',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Highlight current line',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Highlight current line',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Display line numbers in the document.',

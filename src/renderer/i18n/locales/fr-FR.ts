@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     "Quitter l'application à la \r\nfermeture du dernier onglet",
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Préférences de lancement',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    "Une fois activé, Notepads mémorisera la session en cours pour le prochain lancement et effectuera une sauvegarde périodique de la session pour éviter toute perte de données accidentelle liée à des modifications non validées. Notepads NE vous rappellera PAS d'enregistrer votre travail à la fermeture de l'application si cette fonctionnalité est activée. N'oubliez pas non plus que l'instantané de session ne fonctionne que dans la première fenêtre ou dans la fenêtre principale de Notepads.",
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Activer la sauvegarde & \r\nla restauration de session',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Activer la sauvegarde & \r\nla restauration de session',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Paramètres de sauvegarde de session',
   'AdvancedPage_SmartCopySettings_Description.Text':
     "Une fois activé, Notepads supprimera les espaces, tabulations et lignes vides en début et fin avant l'envoi au presse-papier.",
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -279,13 +272,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Ouvrir le dossier',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Renommer',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Affichage',
-  'TextAndEditorPage_EncodingSettings_Description.Text':
-    "S'applique uniquement aux nouveaux documents.",
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Encodage par défaut',
   'TextAndEditorPage_FontSettings_Title.Text': 'Police & taille par défaut',
-  'TextAndEditorPage_LineEndingSettings_Description.Text':
-    "S'applique uniquement aux nouveaux documents.",
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Fin de ligne par défaut',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent':
     'Mettre en surbrillance la ligne actuelle',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent':

@@ -20,21 +20,17 @@ import {
 } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
 import type {
-  EolId,
   TabIndents,
-  SearchEngineId,
-  EncodingId
+  SearchEngineId
 } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
   FONT_FAMILIES,
   TAB_INDENTS,
   SEARCH_ENGINES,
-  ENCODING_OPTIONS,
   FONT_SIZE_MIN,
   FONT_SIZE_MAX
 } from './settingsOptions';
-import { EOL_MENU_ROWS } from '../statusbar/statusModel';
 import { useT } from '../i18n/I18nProvider';
 
 export interface PaneProps {
@@ -141,41 +137,6 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
             max={FONT_SIZE_MAX}
             onChange={onFontSize}
           />
-        </SettingRow>
-      </SettingGroup>
-
-      <SettingGroup title={t('TextAndEditorPage_EncodingSettings_Title.Text')}>
-        <SettingRow
-          id="defaultLineEnding"
-          layout="stack"
-          label={t('TextAndEditorPage_LineEndingSettings_Title.Text')}
-          description={t('TextAndEditorPage_LineEndingSettings_Description.Text')}
-        >
-          <RadioGroup
-            data-testid="setting-defaultLineEnding-group"
-            value={settings.defaultLineEnding}
-            onChange={(_e, d) => update({ defaultLineEnding: d.value as EolId })}
-          >
-            {EOL_MENU_ROWS.map((r) => (
-              <Radio key={r.eol} value={r.eol} label={r.text} />
-            ))}
-          </RadioGroup>
-        </SettingRow>
-        <SettingRow
-          id="defaultEncoding"
-          layout="stack"
-          label={t('TextAndEditorPage_EncodingSettings_Title.Text')}
-          description={t('TextAndEditorPage_EncodingSettings_Description.Text')}
-        >
-          <RadioGroup
-            data-testid="setting-defaultEncoding-group"
-            value={settings.defaultEncoding}
-            onChange={(_e, d) => update({ defaultEncoding: d.value as EncodingId })}
-          >
-            {ENCODING_OPTIONS.map((o) => (
-              <Radio key={o.id} value={o.id} label={o.label} />
-            ))}
-          </RadioGroup>
         </SettingRow>
       </SettingGroup>
 

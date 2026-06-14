@@ -32,11 +32,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'आखरी टैब बंद करते समय ऐप बंद करें',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'ପସନ୍ଦଗୁଡିକ ଆରମ୍ଭ କରନ୍ତୁ',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'ଥରେ ସକ୍ଷମ ହୋଇଗଲେ, Notepads ପରବର୍ତ୍ତୀ ଉନ୍ମୋଚନ ପାଇଁ ସାମ୍ପ୍ରତିକ ଅଧିବେଶନକୁ ମନେ ରଖିବ ଏବଂ ଅନାବଶ୍ୟକ ପରିବର୍ତ୍ତନଗୁଡ଼ିକ ପାଇଁ ଆକସ୍ମିକ ତଥ୍ୟ ନଷ୍ଟକୁ ରୋକିବା ପାଇଁ ଏକ ପର୍ଯ୍ୟାୟ ଅଧିବେଶନ ସ୍ନାପସଟ୍ ବ୍ୟାକଅପ୍ କରିବ| ଯଦି ଏହି ବୈଶିଷ୍ଟ୍ୟ ସକ୍ଷମ ହୋଇଛି, Notepads ଆପଣଙ୍କୁ ଆପ୍ ବନ୍ଦରେ ଆପଣଙ୍କର କାର୍ଯ୍ୟ ସଞ୍ଚୟ କରିବାକୁ ମନେ ପକାଇବ ନାହିଁ| ଦୟାକରି ଏହା ମଧ୍ୟ ମନେରଖନ୍ତୁ ଯେ ଅଧିବେଶନ ସ୍ନାପସଟ୍ କେବଳ Notepads ପ୍ରଥମ କିମ୍ବା ମୁଖ୍ୟ ୱିଣ୍ଡୋରେ କାମ କରେ|',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'ଅଧିବେଶନ ସ୍ନାପସଟ୍ ସକ୍ଷମ କରନ୍ତୁ',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'ଅଧିବେଶନ ସ୍ନାପସଟ୍ ସକ୍ଷମ କରନ୍ତୁ',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'ଅଧିବେଶନ ସ୍ନାପସଟ୍ ସେଟିଙ୍ଗ୍ସ',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'ଥରେ ସକ୍ଷମ ହୋଇଗଲେ, Notepads ଚତୁରତାର ସହିତ ଅଗ୍ରଣୀ ଏବଂ ଟ୍ରେଲିଂ ସ୍ପେସ୍, ଟ୍ୟାବ୍, ଏବଂ ଖାଲି ରେଖାଗୁଡ଼ିକୁ କ୍ଲିପବୋର୍ଡରେ କପି କରିବା ପୂର୍ବରୁ ଛେଦନ କରିବ|',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'ସ୍ମାର୍ଟ କପି ସକ୍ଷମ କରନ୍ତୁ',
@@ -260,11 +255,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'ଧାରକ ଫୋଲ୍ଡର ଖୋଲନ୍ତୁ',
   Tab_ContextFlyout_RenameButtonDisplayText: 'ନାମବଦଳ',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'ଦର୍ଶନ',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'କେବଳ ନୂତନ ଡକ୍ୟୁମେଣ୍ଟ୍ ପାଇଁ ପ୍ରଯୁଜ୍ୟ|',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'ଡିଫଲ୍ଟ ଏନକୋଡିଂ',
   'TextAndEditorPage_FontSettings_Title.Text': 'ଡିଫଲ୍ଟ ଫଣ୍ଟ ଏବଂ ଆକାର',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'କେବଳ ନୂତନ ଡକ୍ୟୁମେଣ୍ଟ୍ ପାଇଁ ପ୍ରଯୁଜ୍ୟ|',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'ଡିଫଲ୍ଟ ଲାଇନ ଶେଷ',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'ସାମ୍ପ୍ରତିକ ଲାଇନ୍ ହାଇଲାଇଟ୍ କରନ୍ତୁ',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'ସାମ୍ପ୍ରତିକ ଲାଇନ୍ ହାଇଲାଇଟ୍ କରନ୍ତୁ',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'ଡକ୍ୟୁମେଣ୍ଟ୍ ରେ ଲାଇନ୍ ନମ୍ବର ପ୍ରଦର୍ଶନ କରନ୍ତୁ|',

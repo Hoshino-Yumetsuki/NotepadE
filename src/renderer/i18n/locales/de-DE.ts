@@ -33,13 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'App schließen, wenn der letzte Tab geschlossen wird',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Startpräferenzen',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Notepads wird die aktuelle Sitzung für den nächsten Start beibehalten und periodische Sicherungen durchführen um versehentlichen Datenverlust zu verhindern. Notepads wird beim schließen NICHT zum speichern auffordern, wenn diese Option aktiviert ist. Sicherungen werden nur vom ersten oder vom Hauptfenster von Notepads erstellt.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent':
-    'Sitzungssicherung und Wiederherstellung aktivieren',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent':
-    'Sitzungssicherung und Wiederherstellung aktivieren',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Sitzungssicherungs-Einstellungen',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'Einmal aktiviert, wird Notepads intelligent führende und nachfolgende Leerzeichen, Tabs und leere Zeilen entfernen, bevor der ausgewählte Text in die Zwischenablage kopiert wird.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent': 'Smart Copy aktivieren',
@@ -270,11 +263,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Ordner öffnen',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Umbenennen',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Gilt nur für neue Dokumente.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Standard Codierung',
   'TextAndEditorPage_FontSettings_Title.Text': 'Standard Schriftart und Größe',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Gilt nur für neue Dokumente.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Standard Zeilenumbruch',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Aktuelle Zeile hervorheben',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Aktuelle Zeile hervorheben',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Zeilennummern im Dokument anzeigen.',

@@ -180,8 +180,6 @@ pub struct Settings {
     pub text_wrapping: String,
     pub display_line_highlighter: bool,
     pub display_line_numbers: bool,
-    pub default_line_ending: EolId,
-    pub default_encoding: EncodingId,
     /// -1 | 2 | 4 | 8 (-1 = real tab)
     pub tab_indents: i32,
     /// 'bing' | 'google' | 'duckDuckGo' | 'custom'
@@ -198,7 +196,6 @@ pub struct Settings {
     // --- Advanced ---
     pub show_status_bar: bool,
     pub smart_copy: bool,
-    pub session_snapshot: bool,
     pub always_open_new_window: bool,
     pub exit_when_last_tab_closed: bool,
     /// BCP-47 tag, or '' = follow the OS UI language.
@@ -220,8 +217,6 @@ impl Default for Settings {
             text_wrapping: "noWrap".into(),
             display_line_highlighter: true,
             display_line_numbers: true,
-            default_line_ending: EolId::Crlf,
-            default_encoding: "UTF-8".into(),
             tab_indents: -1,
             search_engine: "bing".into(),
             custom_search_url: String::new(),
@@ -231,7 +226,6 @@ impl Default for Settings {
             custom_accent_color: String::new(),
             show_status_bar: true,
             smart_copy: false,
-            session_snapshot: false,
             always_open_new_window: false,
             exit_when_last_tab_closed: false,
             app_language: String::new(),
@@ -404,8 +398,6 @@ mod tests {
                 "textWrapping": "noWrap",
                 "displayLineHighlighter": true,
                 "displayLineNumbers": true,
-                "defaultLineEnding": "crlf",
-                "defaultEncoding": "UTF-8",
                 "tabIndents": -1,
                 "searchEngine": "bing",
                 "customSearchUrl": "",
@@ -415,7 +407,6 @@ mod tests {
                 "customAccentColor": "",
                 "showStatusBar": true,
                 "smartCopy": false,
-                "sessionSnapshot": false,
                 "alwaysOpenNewWindow": false,
                 "exitWhenLastTabClosed": false,
                 "appLanguage": "",
@@ -432,7 +423,7 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"editorFontSize": 18}"#).unwrap();
         assert_eq!(s.editor_font_size, 18.0);
         assert_eq!(s.editor_font_family, "Consolas");
-        assert_eq!(s.default_line_ending, EolId::Crlf);
+        assert_eq!(s.display_line_numbers, true);
     }
 
     #[test]

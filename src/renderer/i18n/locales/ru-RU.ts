@@ -33,11 +33,6 @@ const table: LocaleTable = {
   'AdvancedPage_LaunchPreferenceSettings_ExitWhenLastTabClosedToggleSwitch.OnContent':
     'Закрыть приложение при закрытии последней вкладки.',
   'AdvancedPage_LaunchPreferenceSettings_Title.Text': 'Запуск',
-  'AdvancedPage_SessionSnapshotSettings_Description.Text':
-    'Если включено, Notepads будет сохранять текущую сессию для следующего запуска и периодически делать ее резервную копию для защиты несохраненных изменений от потери данных. Notepads НЕ будет напоминать вам сохранить изменения при закрытии программы если эта функция включена. Учтите, что резервное копирование сессии работает только в первом (основном) окне Notepads.',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OffContent': 'Включить снимки сессии',
-  'AdvancedPage_SessionSnapshotSettings_OnOffToggleSwitch.OnContent': 'Включить снимки сессии',
-  'AdvancedPage_SessionSnapshotSettings_Title.Text': 'Снимки сессии',
   'AdvancedPage_SmartCopySettings_Description.Text':
     'После включения, Notepads будет аккуратно обрезать начальные и конечные пробелы, табуляции и пустые строки перед копированием выделенного текста в буфер обмена.',
   'AdvancedPage_SmartCopySettings_EnableSmartCopyToggleSwitch.OffContent':
@@ -268,11 +263,7 @@ const table: LocaleTable = {
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Открыть папку, содержащую этот файл',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Переименовать',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Отображение',
-  'TextAndEditorPage_EncodingSettings_Description.Text': 'Применяется только к новым документам.',
-  'TextAndEditorPage_EncodingSettings_Title.Text': 'Сохранять в кодировке',
   'TextAndEditorPage_FontSettings_Title.Text': 'Шрифт',
-  'TextAndEditorPage_LineEndingSettings_Description.Text': 'Применяется только к новым документам.',
-  'TextAndEditorPage_LineEndingSettings_Title.Text': 'Разрыв строки',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Выделять текущую линию',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OnContent': 'Выделять текущую линию',
   'TextAndEditorPage_LineNumbersSettings_Description.Text': 'Показывать номера строк.',
