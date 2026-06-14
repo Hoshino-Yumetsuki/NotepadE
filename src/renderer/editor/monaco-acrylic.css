@@ -16,18 +16,27 @@
  */
 
 /* The editor ROOT paints the acrylic gutter "material" as a left-edge gradient:
-   a translucent wash for the gutter region [0, --np-gutter-width), transparent
-   beyond. The root is NOT GPU-promoted, so the wash composites WITH window
-   vibrancy (OS acrylic shows through, darkened). A background on `.margin` does
-   NOT work — Monaco promotes the gutter for scrolling, so any background there
-   renders as a solid, vibrancy-less gray panel. Width + wash are set from
-   MonacoEditor.tsx (transparent / 0 fallback → no panel, e.g. High-Contrast). */
+   a translucent wash for the gutter region [0, --np-gutter-inset +
+   --np-gutter-width), transparent beyond. The root is NOT GPU-promoted, so the
+   wash composites WITH window vibrancy (OS acrylic shows through, darkened). A
+   background on `.margin` does NOT work — Monaco promotes the gutter for
+   scrolling, so any background there renders as a solid, vibrancy-less gray panel.
+   Width + wash are set from MonacoEditor.tsx (transparent / 0 fallback → no panel,
+   e.g. High-Contrast).
+   padding-left shifts Monaco's content box 12px right (--np-gutter-inset). Monaco's
+   layout coordinates (--np-gutter-width: glyphMarginWidth + lineNumbersWidth) are
+   relative to Monaco's own content-box origin, so the gradient boundary must be
+   inset + width to hit the true gutter↔content edge in padding-box space.
+   renderLineHighlight:'all' overlays are absolutely positioned within .monaco-editor
+   and span the full padding-box width, so the gray band reaches the left window
+   edge even though Monaco's content is inset 12px. */
 .monaco-editor {
+  padding-left: var(--np-gutter-inset, 12px) !important;
   background: linear-gradient(
     to right,
     var(--np-gutter-wash, transparent) 0,
-    var(--np-gutter-wash, transparent) var(--np-gutter-width, 0px),
-    transparent var(--np-gutter-width, 0px)
+    var(--np-gutter-wash, transparent) calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px)),
+    transparent calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px))
   ) !important;
 }
 
@@ -75,4 +84,32 @@
 .monaco-editor .inputarea,
 .monaco-editor textarea {
   caret-color: transparent !important;
+}
+
+/* Monaco's scrollbar is a JS DOM overlay (.monaco-scrollable-element > .scrollbar
+   > .slider) that ::-webkit-scrollbar CSS cannot reach. Tint the slider to match
+   the app's chrome.css thin scrollbar: translucent #898989 (light) / #8A8A8A (dark)
+   at ~0.35 alpha, ~0.6 on hover, border-radius 6px, transparent track.
+   The create() options set verticalScrollbarSize/horizontalScrollbarSize:6 to slim
+   the bar to match the native thin scrollbar width. */
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
+  border-radius: 6px !important;
+  background: rgba(137, 137, 137, 0.35) !important;
+  transition: background 0.1s;
+}
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(137, 137, 137, 0.6) !important;
+}
+/* Dark theme: slightly lighter tint (#8A8A8A) at same alpha levels */
+.monaco-editor.vs-dark .monaco-scrollable-element > .scrollbar > .slider,
+.monaco-editor.hc-black .monaco-scrollable-element > .scrollbar > .slider {
+  background: rgba(138, 138, 138, 0.35) !important;
+}
+.monaco-editor.vs-dark .monaco-scrollable-element > .scrollbar > .slider:hover,
+.monaco-editor.hc-black .monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(138, 138, 138, 0.6) !important;
+}
+/* Transparent scrollbar track */
+.monaco-editor .monaco-scrollable-element > .scrollbar {
+  background: transparent !important;
 }

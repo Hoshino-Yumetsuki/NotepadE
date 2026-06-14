@@ -349,6 +349,11 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       // supplied as a CONSTANT gutter inset on the host wrapper (see the return
       // below), NOT extra digit slots, so there is no fill-before-widen lag.
       lineNumbersMinChars: 1,
+      // Internal left padding: Monaco paints this space as part of the editor
+      // (so renderLineHighlight:'all' fills it with the current-line gray wash),
+      // replacing the outer div's paddingLeft that was blocking the highlight band
+      // from reaching the window left edge.
+      padding: { top: 0, bottom: 0 },
       wordWrap: wordWrap ? 'on' : 'off',
       // 'all' highlights BOTH the content line and the gutter/margin, so the
       // current-line wash spans the full width including the line-number column
@@ -380,6 +385,18 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       // line so it matches the original thin caret, not Monaco's ~2px default.
       cursorStyle: 'line',
       cursorWidth: 1,
+      // Kill the black cursor-position tick and the ruler border in the scroll
+      // gutter; slim the scrollbar to match the app's thin chrome scrollbar.
+      overviewRulerLanes: 0,
+      overviewRulerBorder: false,
+      hideCursorInOverviewRuler: true,
+      scrollbar: {
+        verticalScrollbarSize: 6,
+        horizontalScrollbarSize: 6,
+        useShadows: false,
+        vertical: 'auto',
+        horizontal: 'auto'
+      },
       // Plain-text editor: no IDE affordances. Monaco's built-in find widget
       // (Ctrl+F) is left enabled for now — T4 ports the custom FindBar and at
       // that point Monaco's Ctrl+F binding is removed so the two don't conflict.
@@ -434,10 +451,16 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     // where text begins) as CSS custom properties, syncing width on layout change.
     const rootNode = editor.getDomNode();
     rootNode?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
+    // --np-gutter-inset is the CSS padding-left on .monaco-editor (12px). Monaco's
+    // layout coordinates are relative to its own content box (i.e. after padding),
+    // so the gradient stop must be offset by the same inset amount to land at the
+    // true gutter↔content boundary in the element's padding-box coordinate space.
+    rootNode?.style.setProperty('--np-gutter-inset', '12px');
     const applyGutterWidth = (info: monaco.editor.EditorLayoutInfo): void => {
       // Cover the glyph + line-number columns (NOT the decorations gap), so the
       // centered line numbers sit centered within the wash panel and the gap to
-      // the text stays fully transparent.
+      // the text stays fully transparent. The raw value is Monaco-internal (from
+      // the content-box origin); the CSS gradient adds --np-gutter-inset on top.
       rootNode?.style.setProperty(
         '--np-gutter-width',
         `${info.glyphMarginWidth + info.lineNumbersWidth}px`
@@ -508,21 +531,17 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     return attachLineNumberGlow(editor, { themeMode, accentColor });
   }, [showLineNumbers, themeMode, accentColor]);
 
-  // Constant left inset pushes the whole editor (gutter + text) right from the
-  // window edge, giving the line numbers breathing room WITHOUT reserving extra
-  // digit slots — so the column hugs the digit count (no "fill before widen")
-  // yet never sits cramped against the edge. The strip is transparent acrylic
-  // (the gutter wash is transparent), so the inset is visually seamless.
   // A small top gap keeps the input area from butting against the tab strip, so
-  // the active-line gray never reaches the top edge and sever the tab↔editor
-  // connection. border-box keeps the inner host at the right height despite the
-  // padding (percentage height resolves against the padded content box).
+  // the active-line gray never reaches the top edge and severs the tab↔editor
+  // connection. The left inset is now supplied internally via Monaco's
+  // padding.left option (see create options above) so renderLineHighlight:'all'
+  // can paint the current-line band all the way to the window left edge.
+  // border-box keeps the inner host at the right height despite the padding.
   return (
     <div
       style={{
         height: '100%',
         boxSizing: 'border-box',
-        paddingLeft: 'var(--np-gutter-inset, 12px)',
         paddingTop: 'var(--np-editor-top-gap, 6px)'
       }}
     >

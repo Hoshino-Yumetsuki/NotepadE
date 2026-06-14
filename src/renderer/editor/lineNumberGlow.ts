@@ -92,9 +92,24 @@ export function attachLineNumberGlow(
   overlay.style.transition = 'opacity 120ms ease-out';
   overlay.style.willChange = 'opacity';
 
-  // Boundary x = where content begins (right edge of the gutter), in px from the
-  // editor's left edge. Kept in sync on layout change (line-number toggle/resize).
-  let boundaryX = editor.getLayoutInfo().contentLeft;
+  // Boundary x = where editable content begins, in px from the overlay's
+  // positioning origin (the editor root's padding box). `.monaco-editor` carries a
+  // CSS padding-left inset that shifts Monaco's in-flow `.overflow-guard` (and thus
+  // the gutter + content) to the right, while the absolutely-positioned overlay is
+  // NOT moved by that padding. `contentLeft` is in Monaco's own coordinate space
+  // (origin = the shifted guard), so reading a CSS var for the inset is fragile —
+  // instead MEASURE the guard's actual on-screen offset from the root and add
+  // contentLeft. This lands exactly at the gutter↔content boundary and
+  // self-corrects whether or not the padding shifts the guard. Re-measured on
+  // layout change (line-number toggle / resize / zoom).
+  const contentBoundaryX = (): number => {
+    const guard = root.querySelector('.overflow-guard');
+    const offset = guard
+      ? guard.getBoundingClientRect().left - root.getBoundingClientRect().left
+      : 0;
+    return offset + editor.getLayoutInfo().contentLeft;
+  };
+  let boundaryX = contentBoundaryX();
   const positionLeft = (): void => {
     overlay.style.left = `${Math.max(0, boundaryX - GLOW_LINE_WIDTH / 2)}px`;
   };
@@ -138,8 +153,8 @@ export function attachLineNumberGlow(
   root.addEventListener('pointerenter', onEnter, { passive: true });
   root.addEventListener('pointermove', onMove, { passive: true });
   root.addEventListener('pointerleave', onLeave, { passive: true });
-  const layoutSub = editor.onDidLayoutChange((info) => {
-    boundaryX = info.contentLeft;
+  const layoutSub = editor.onDidLayoutChange(() => {
+    boundaryX = contentBoundaryX();
     positionLeft();
   });
 
