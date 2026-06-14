@@ -873,8 +873,15 @@ export function App(): JSX.Element {
         store.setModified(editorId, true);
         return;
       }
-      // Same length: compute hash in Rust to avoid full-string materialization
-      // in the common case. This is async but only fires when lengths tie (rare).
+      // Same length (e.g. overtype / replace-selection with equal length): a
+      // content change that ties the baseline length is almost always a real
+      // edit. Reflect dirty OPTIMISTICALLY and immediately so the tab dot +
+      // status bar respond at once, THEN reconcile against the baseline hash —
+      // on a multi-MB file getShadowText() materializes the whole string and the
+      // hash round-trips through IPC (seconds), which previously left the dirty
+      // state lagging behind the edit. The hash only ever CLEARS it back (when
+      // the user restored the exact saved text).
+      store.setModified(editorId, true);
       const text = handle.getShadowText();
       window.notepads.hash.compute(text).then((res) => {
         if (!res.ok) return;
