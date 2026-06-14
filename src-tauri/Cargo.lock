@@ -2545,6 +2545,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "thiserror 2.0.18",
+ "tokio",
  "url",
  "window-vibrancy 0.7.1",
  "windows",
