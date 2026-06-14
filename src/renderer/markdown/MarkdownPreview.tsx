@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { renderMarkdown } from './renderMarkdown';
 import { sanitizeMarkdownHtml } from './sanitizeHtml';
@@ -105,7 +105,20 @@ export function MarkdownPreview({
   fontSize = 14,
   editor = null
 }: MarkdownPreviewProps): JSX.Element {
-  const html = useMemo(() => sanitizeMarkdownHtml(renderMarkdown(text)), [text]);
+  const [html, setHtml] = useState(() => sanitizeMarkdownHtml(renderMarkdown(text)));
+
+  useEffect(() => {
+    let cancelled = false;
+    // Run render+sanitize asynchronously so the toggle paint is never blocked.
+    const id = setTimeout(() => {
+      const result = sanitizeMarkdownHtml(renderMarkdown(text));
+      if (!cancelled) setHtml(result);
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [text]);
 
   const paneRef = useRef<HTMLDivElement>(null);
 
