@@ -620,7 +620,7 @@ function EolColumn(props: {
         </div>
       </MenuTrigger>
       <MenuPopover>
-        <MenuList data-testid="status-eol-menu">
+        <MenuList data-testid="status-eol-menu" style={{ maxHeight: 'min(60vh, 480px)', overflowY: 'auto', overflowX: 'hidden' }}>
           {EOL_MENU_ROWS.map((row) => (
             <MenuItem
               key={row.eol}
@@ -679,7 +679,7 @@ function EncodingColumn(props: {
             // scroll it (Fluent MenuList does not auto-scroll). Viewport-relative so
             // it stays usable in a short window. The app's overlay scrollbar styling
             // (chrome.css) applies automatically.
-            style={{ maxHeight: '50vh', overflowY: 'auto' }}
+            style={{ maxHeight: '50vh', overflowY: 'auto', overflowX: 'hidden' }}
           >
             {model.more.map((row) => (
               <MenuItem
@@ -711,7 +711,7 @@ function EncodingColumn(props: {
         </div>
       </MenuTrigger>
       <MenuPopover>
-        <MenuList data-testid="status-encoding-menu">
+        <MenuList data-testid="status-encoding-menu" style={{ maxHeight: 'min(60vh, 480px)', overflowY: 'auto', overflowX: 'hidden' }}>
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
               <MenuItem data-testid="status-encoding-reopen">
