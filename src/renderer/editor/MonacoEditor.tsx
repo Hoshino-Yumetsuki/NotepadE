@@ -460,12 +460,22 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     // drive the wash color (per theme) and the gutter width (contentLeft, the x
     // where text begins) as CSS custom properties, syncing width on layout change.
     const rootNode = editor.getDomNode();
+    // The gutter inset (CSS padding-left on .monaco-editor) that lets the
+    // current-line highlight band reach the window's LEFT edge. Because
+    // .monaco-editor is content-box with overflow:visible and its .overflow-guard
+    // is position:relative (normal flow), this padding shifts Monaco's whole view
+    // 12px right. The vertical scrollbar is anchored to the RIGHT edge of that
+    // view, so unless we shrink the laid-out width by the same amount, the bar
+    // lands ~12px past the window's right edge and is never visible. The manual
+    // layout below subtracts GUTTER_INSET_PX so padding(12) + content(width-12)
+    // == host width exactly, keeping the vertical scrollbar on-screen.
+    const GUTTER_INSET_PX = 12;
     rootNode?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
     // --np-gutter-inset is the CSS padding-left on .monaco-editor (12px). Monaco's
     // layout coordinates are relative to its own content box (i.e. after padding),
     // so the gradient stop must be offset by the same inset amount to land at the
     // true gutter↔content boundary in the element's padding-box coordinate space.
-    rootNode?.style.setProperty('--np-gutter-inset', '12px');
+    rootNode?.style.setProperty('--np-gutter-inset', `${GUTTER_INSET_PX}px`);
     const applyGutterWidth = (info: monaco.editor.EditorLayoutInfo): void => {
       // Cover the glyph + line-number columns (NOT the decorations gap), so the
       // centered line numbers sit centered within the wash panel and the gap to
@@ -503,7 +513,10 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       if (width > 0 && height > 0 && (width !== lastW || height !== lastH)) {
         lastW = width;
         lastH = height;
-        editor.layout({ width, height });
+        // Lay out GUTTER_INSET_PX narrower than the host: .monaco-editor's
+        // padding-left adds that back, so the editor's total footprint equals the
+        // host width and the right-anchored vertical scrollbar stays on-screen.
+        editor.layout({ width: Math.max(0, width - GUTTER_INSET_PX), height });
       }
     });
     layoutObserver.observe(host);
