@@ -6,6 +6,7 @@ import './monacoEnvironment';
 import './monaco-acrylic.css';
 import type { EditorSettings } from './editorSettings';
 import { parseHexColor } from './colorUtils';
+import { DEFAULT_FONT_FAMILY, resolveFontFamily } from './fontFamily';
 
 /** Text flow direction. Ctrl+L/R flip the editor DOM `dir` live (see monacoCommands). */
 export type TextDirection = 'ltr' | 'rtl';
@@ -84,7 +85,6 @@ export interface MonacoEditorProps {
 }
 
 /** UWP RichEditBox defaults (Segoe UI / 14 / normal-400) — used when no setting. */
-const DEFAULT_FONT_FAMILY = '"Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif';
 const DEFAULT_FONT_SIZE = 14;
 const DEFAULT_ACCENT = '#0078D4';
 
@@ -95,16 +95,6 @@ const THEME_NAMES: Record<'light' | 'dark' | 'hc', string> = {
   hc: 'notepade-hc'
 };
 
-/**
- * Resolve the stored font-family to a full CSS value with fallbacks (mirrors the
- * CM6 component): empty → system stack; a named font gets a monospace fallback
- * chain so a CJK locale doesn't fall back to 宋体.
- */
-function resolveFontFamily(family: string): string {
-  if (!family) return DEFAULT_FONT_FAMILY;
-  if (family.includes('monospace') || family.includes('sans-serif')) return family;
-  return `${family}, "SF Mono", Menlo, Monaco, Consolas, "Cascadia Mono", "Courier New", monospace`;
-}
 
 /**
  * Selection background as an `#RRGGBBAA` Monaco color token built from the accent
