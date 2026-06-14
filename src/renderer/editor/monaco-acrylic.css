@@ -118,3 +118,15 @@
 .monaco-editor .monaco-scrollable-element > .scrollbar {
   background: transparent !important;
 }
+
+/* Defeat Monaco's scrollbar fade-out. Monaco toggles an `.invisible` class on the
+   `.scrollbar` (opacity:0 via a CSS transition) to hide the bar when idle; with
+   vertical:'visible' it should stay shown, but in WebView2 the slider can come up
+   stuck at opacity:0 (no scroll event fires after the manual layout to flip it
+   back). Force the bar — and slider — fully opaque so the thin tinted scrollbar is
+   always visible over the transparent acrylic surface. */
+.monaco-editor .monaco-scrollable-element > .scrollbar,
+.monaco-editor .monaco-scrollable-element > .scrollbar.invisible,
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
+  opacity: 1 !important;
+}
