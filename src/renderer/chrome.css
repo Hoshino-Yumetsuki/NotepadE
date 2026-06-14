@@ -83,17 +83,27 @@ body,
  * otherwise show the bare UA ring.
  *
  * The EDITOR is excluded entirely: UWP's RichEditBox shows no focus rectangle, and
- * :focus-visible matches a contenteditable even on a MOUSE click (the user is about
- * to type) — which is exactly the "mouse click now rings too" regression. Suppress
- * both :focus and :focus-visible on .cm-content so clicking or tabbing into the
- * editor draws nothing, matching UWP.
+ * :focus-visible matches a contenteditable/textarea even on a MOUSE click (the user
+ * is about to type) — which is exactly the "mouse click now rings too" regression.
+ * Suppress both :focus and :focus-visible on the CodeMirror surface (.cm-content)
+ * AND the Monaco surface (.monaco-editor + its .inputarea/textarea, which receives
+ * focus when you click into the editor) so clicking or tabbing into the editor draws
+ * nothing, matching UWP.
  */
 :focus-visible {
   outline: 2px solid var(--colorStrokeFocus2, Highlight);
   outline-offset: -2px;
 }
 .cm-content:focus,
-.cm-content:focus-visible {
+.cm-content:focus-visible,
+.monaco-editor:focus,
+.monaco-editor:focus-visible,
+.monaco-editor .inputarea:focus,
+.monaco-editor .inputarea:focus-visible,
+.monaco-editor textarea:focus,
+.monaco-editor textarea:focus-visible,
+.monaco-editor .native-edit-context:focus,
+.monaco-editor .native-edit-context:focus-visible {
   outline: none;
 }
 

@@ -1,0 +1,78 @@
+/**
+ * Monaco acrylic material overrides (RENDERER, Lane B).
+ *
+ * Monaco paints several layers with an OPAQUE theme background by default
+ * (`.monaco-editor`, `.monaco-editor-background`, the `.margin` gutter, the
+ * scrollable element). Any opaque layer blocks the OS acrylic material that Rust
+ * applies to the window (window_vibrancy::apply_acrylic), so the editor surface
+ * MUST be transparent for the material to show through — the same contract the
+ * CodeMirror surface honored (transparent `.cm-content` + acrylic strip).
+ *
+ * The theme's `editor.background:#00000000` already paints transparent in most
+ * places, but a few Monaco layers paint their background from CSS rather than the
+ * theme color, so we force them transparent here. The gutter "material strip" (a
+ * non-promoted absolutely-positioned div sampling the acrylic) is injected from
+ * MonacoEditor.tsx at runtime — see that file.
+ */
+
+/* The editor ROOT paints the acrylic gutter "material" as a left-edge gradient:
+   a translucent wash for the gutter region [0, --np-gutter-width), transparent
+   beyond. The root is NOT GPU-promoted, so the wash composites WITH window
+   vibrancy (OS acrylic shows through, darkened). A background on `.margin` does
+   NOT work — Monaco promotes the gutter for scrolling, so any background there
+   renders as a solid, vibrancy-less gray panel. Width + wash are set from
+   MonacoEditor.tsx (transparent / 0 fallback → no panel, e.g. High-Contrast). */
+.monaco-editor {
+  background: linear-gradient(
+    to right,
+    var(--np-gutter-wash, transparent) 0,
+    var(--np-gutter-wash, transparent) var(--np-gutter-width, 0px),
+    transparent var(--np-gutter-width, 0px)
+  ) !important;
+}
+
+/* Every other Monaco layer stays transparent so the root gradient (and the OS
+   acrylic) shows through — including the promoted `.margin`, which must NOT carry
+   a background of its own or it composites as a solid panel without vibrancy. */
+.monaco-editor-background,
+.monaco-editor .margin,
+.monaco-editor .monaco-editor-background {
+  background: transparent !important;
+}
+
+/* Right-align the line numbers, matching the beta.10 external column
+   (text-align:right). This is also Monaco's native default; pinned explicitly so
+   it survives a base-theme change. */
+.monaco-editor .margin-view-overlays .line-numbers {
+  text-align: right !important;
+}
+
+/* The scrollable viewport wrapper Monaco mounts around the content. */
+.monaco-editor .monaco-scrollable-element {
+  background: transparent !important;
+}
+
+/* The hidden IME/input textarea Monaco focuses — keep it transparent so a
+   stray background never flashes a solid rectangle over the acrylic while
+   composing (the IME compose buffer lives here). */
+.monaco-editor .inputarea {
+  background: transparent !important;
+}
+
+/* The overflow guard Monaco lays over the content for the (unused here) overlay
+   widgets — transparent so it never tints the surface. */
+.monaco-editor .overflow-guard {
+  background: transparent !important;
+}
+
+/* Double-cursor fix. With editContext:true (default in WebView2/Chromium),
+   Monaco's editing surface is a focusable `.native-edit-context` div, and the
+   browser draws its OWN native caret there IN ADDITION to Monaco's synthetic
+   `.cursor` overlay — two bars (a thicker native one beside Monaco's thin one).
+   Suppress the browser caret on every possible editing host so only Monaco's
+   own cursor shows (the legacy textarea path is covered too, for safety). */
+.monaco-editor .native-edit-context,
+.monaco-editor .inputarea,
+.monaco-editor textarea {
+  caret-color: transparent !important;
+}
