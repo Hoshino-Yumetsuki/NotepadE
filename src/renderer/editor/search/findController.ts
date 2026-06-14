@@ -1,28 +1,21 @@
 /**
- * CM6 integration layer for the pure find/replace engine (RENDERER, Lane B).
+ * Monaco integration layer for the pure find/replace engine (RENDERER, Lane B).
  *
- * The pure engine in ./searchEngine.ts knows nothing about CodeMirror: it
- * operates on the '\n' shadow-buffer string and returns {from,to} spans. This
- * controller is the thin glue that:
- *   - reads the current document + caret/selection out of an EditorView,
+ * Drop-in replacement for the CM6 findController. The pure engine in
+ * ./searchEngine.ts is unchanged — it still operates on the '\n' shadow-buffer
+ * string. This module is the thin glue that:
+ *   - reads the current document + cursor out of an IStandaloneCodeEditor,
  *   - calls the engine (findNext / findPrevious / replaceAll / replace-one),
- *   - dispatches the resulting selection + scrollIntoView as ONE transaction,
- *   - and maintains a non-intrusive match HIGHLIGHT decoration.
+ *   - applies the resulting selection + reveals it via the Monaco API,
+ *   - and maintains non-intrusive match-highlight decorations via
+ *     deltaDecorations (class 'notepade-search-match', styled to match the
+ *     former CM6 'cm-search-match' yellow wash).
  *
- * It mirrors the UWP TextEditorCore.FindAndReplace.cs control flow:
- *   - find-next starts at the selection END; find-previous at the selection
- *     START (TryFindNextAndSelect / TryFindPreviousAndSelect).
- *   - replace-one replaces the CURRENT selection only if it already equals a
- *     match at the caret, then advances to the next match (TryFindNextAndReplace
- *     does select→SetText→find-next). We reproduce that as: ensure a match is
- *     selected (find first if not), replace it, then find-next.
- *   - replace-all is ONE transaction = ONE undo step (UWP SetText once); the
- *     caret is moved to the document end exactly like UWP (StartPosition =
- *     int.MaxValue).
+ * Public API surface is identical to the CM6 version so useFindBar + T6 wiring
+ * need only update the editor-instance type, not the function signatures.
  */
 
-import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
-import { StateField, StateEffect, type Extension } from '@codemirror/state';
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import {
   type SearchOptions,
   type MatchSpan,
@@ -31,6 +24,9 @@ import {
   findAllRegexMatches,
   replaceAll as engineReplaceAll
 } from './searchEngine';
+
+// Re-export SearchOptions so callers that imported it from here still work.
+export type { SearchOptions };
 
 /** A find query bundled with its options (the controller's working state). */
 export interface FindQuery extends SearchOptions {
@@ -45,260 +41,325 @@ export interface FindOutcome {
   wrapped: boolean;
 }
 
-// --- Match highlight decoration ---------------------------------------------
+// ---------------------------------------------------------------------------
+//  Highlight decorations
+// ---------------------------------------------------------------------------
 
-/** Effect carrying the spans to highlight (cleared with an empty array). */
-const setHighlightsEffect = StateEffect.define<readonly MatchSpan[]>();
-
-const highlightMark = Decoration.mark({ class: 'cm-search-match' });
+/** CSS class name applied to all match decoration spans. */
+const MATCH_CLASS = 'notepade-search-match';
 
 /**
- * StateField holding the current match highlights. Spans are mapped through
- * document changes so highlights stay anchored until the next search refresh.
+ * Inject the match-highlight stylesheet once. Monaco's defineTheme `colors` map
+ * cannot style arbitrary decoration classes; a plain <style> tag is the correct
+ * approach (same technique the Monaco playground uses for custom decorations).
  */
-const highlightField = StateField.define<DecorationSet>({
-  create() {
-    return Decoration.none;
-  },
-  update(deco, tr) {
-    let next = deco.map(tr.changes);
-    for (const effect of tr.effects) {
-      if (effect.is(setHighlightsEffect)) {
-        const spans = effect.value;
-        next = Decoration.set(
-          spans.filter((s) => s.to > s.from).map((s) => highlightMark.range(s.from, s.to)),
-          true
-        );
-      }
+let _styleInjected = false;
+function ensureHighlightStyle(): void {
+  if (_styleInjected) return;
+  _styleInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `
+    .${MATCH_CLASS} {
+      background-color: rgba(255, 213, 0, 0.32);
+      border-radius: 2px;
     }
-    return next;
-  },
-  provide: (f) => EditorView.decorations.from(f)
-});
-
-/** Theme for the match highlight. Subtle translucent fill (non-accent). */
-const highlightTheme = EditorView.baseTheme({
-  '.cm-search-match': {
-    backgroundColor: 'rgba(255, 213, 0, 0.32)',
-    borderRadius: '2px'
-  }
-});
+  `;
+  document.head.appendChild(style);
+}
 
 /**
- * The extension bundle the editor must install to support find highlighting.
- * Selection/scroll uses CM6's built-in selection; only highlighting needs state.
+ * Per-editor decoration collection IDs. Monaco's deltaDecorations returns the
+ * new IDs after each call; we keep the latest set so we can clear/replace it.
  */
-export function searchExtension(): Extension {
-  return [highlightField, highlightTheme];
+const decorationMap = new WeakMap<
+  monaco.editor.IStandaloneCodeEditor,
+  string[]
+>();
+
+/** Convert a 0-based MatchSpan offset pair to a Monaco IRange (1-based lines). */
+function spanToRange(
+  model: monaco.editor.ITextModel,
+  span: MatchSpan
+): monaco.IRange {
+  const start = model.getPositionAt(span.from);
+  const end = model.getPositionAt(span.to);
+  return {
+    startLineNumber: start.lineNumber,
+    startColumn: start.column,
+    endLineNumber: end.lineNumber,
+    endColumn: end.column
+  };
 }
 
-// --- Read helpers ------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  Helpers
+// ---------------------------------------------------------------------------
 
-/** The current document as the '\n' shadow buffer (CM6 lineSeparator is '\n'). */
-function docText(view: EditorView): string {
-  return view.state.doc.toString();
+function getDocText(editor: monaco.editor.IStandaloneCodeEditor): string {
+  return editor.getModel()?.getValue(1 /* LF */) ?? '';
 }
 
-/** The main selection's [from, to) offsets. */
-function selectionRange(view: EditorView): { from: number; to: number } {
-  const r = view.state.selection.main;
-  return { from: r.from, to: r.to };
+function getSelectionOffsets(
+  editor: monaco.editor.IStandaloneCodeEditor
+): { from: number; to: number } {
+  const model = editor.getModel();
+  const sel = editor.getSelection();
+  if (!model || !sel) return { from: 0, to: 0 };
+  const from = model.getOffsetAt({ lineNumber: sel.startLineNumber, column: sel.startColumn });
+  const to = model.getOffsetAt({ lineNumber: sel.endLineNumber, column: sel.endColumn });
+  return { from, to };
 }
 
-// --- Highlight refresh -------------------------------------------------------
-
-/**
- * Recompute and apply ALL match highlights for the current query. For literal /
- * whole-word queries this walks findNext; for regex it reuses findAllRegexMatches.
- * Empty queries clear the highlights. Dispatched as a highlight-only effect so it
- * never creates an undo step.
- */
-export function refreshHighlights(view: EditorView, q: FindQuery): void {
-  const spans = collectAllMatches(docText(view), q);
-  view.dispatch({ effects: setHighlightsEffect.of(spans) });
+function selectAndReveal(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  span: MatchSpan
+): void {
+  const model = editor.getModel();
+  if (!model) return;
+  const range = spanToRange(model, span);
+  editor.setSelection(range);
+  editor.revealRangeInCenter(range, 1 /* Immediate */);
 }
 
-/** Clear all match highlights (e.g. when the find bar closes). */
-export function clearHighlights(view: EditorView): void {
-  view.dispatch({ effects: setHighlightsEffect.of([]) });
-}
+// ---------------------------------------------------------------------------
+//  Collect all matches (for highlight refresh)
+// ---------------------------------------------------------------------------
 
-/** Collect every match in the document for the given query. */
 function collectAllMatches(text: string, q: FindQuery): MatchSpan[] {
   if (q.query.length === 0) return [];
   if (q.useRegex) return findAllRegexMatches(text, q.query, q);
 
   const out: MatchSpan[] = [];
   let from = 0;
-  // Walk forward without wrapping; stop when no further match is found.
   for (;;) {
     const hit = findNext(text, q.query, q, from, false);
     if (!hit) break;
     out.push(hit);
-    // Advance past this match; guard zero-length (can't happen for literal).
     from = hit.to > hit.from ? hit.to : hit.from + 1;
   }
   return out;
 }
 
-// --- Find / select -----------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  Public API — highlight management
+// ---------------------------------------------------------------------------
 
 /**
- * Select a span and scroll it into view in ONE transaction. The selection IS the
- * find highlight in UWP; we additionally keep the persistent match highlights.
+ * Recompute and apply ALL match highlights for the current query.
+ * Empty queries clear the highlights.
  */
-function selectAndReveal(view: EditorView, span: MatchSpan): void {
-  view.dispatch({
-    selection: { anchor: span.from, head: span.to },
-    effects: EditorView.scrollIntoView(span.from, { y: 'center' }),
-    scrollIntoView: true
-  });
+export function refreshHighlights(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery
+): void {
+  ensureHighlightStyle();
+  const model = editor.getModel();
+  if (!model) return;
+  const spans = collectAllMatches(getDocText(editor), q);
+  const decorations: monaco.editor.IModelDeltaDecoration[] = spans.map((s) => ({
+    range: spanToRange(model, s),
+    options: { inlineClassName: MATCH_CLASS }
+  }));
+  const prev = decorationMap.get(editor) ?? [];
+  const next = editor.deltaDecorations(prev, decorations);
+  decorationMap.set(editor, next);
 }
 
+/** Clear all match highlights (e.g. when the find bar closes). */
+export function clearHighlights(editor: monaco.editor.IStandaloneCodeEditor): void {
+  const prev = decorationMap.get(editor) ?? [];
+  const next = editor.deltaDecorations(prev, []);
+  decorationMap.set(editor, next);
+}
+
+// ---------------------------------------------------------------------------
+//  Public API — find / select
+// ---------------------------------------------------------------------------
+
 /**
- * Find-next from the current selection END, wrapping around the document end
- * (UWP TryFindNextAndSelect with stopAtEof=false). Selects + reveals the match.
+ * Find-next from the current selection END, wrapping around the document.
+ * Mirrors UWP TryFindNextAndSelect (stopAtEof=false).
  */
-export function findNextInView(view: EditorView, q: FindQuery): FindOutcome {
+export function findNextInEditor(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery
+): FindOutcome {
   if (q.query.length === 0) return { match: null, wrapped: false };
-  const text = docText(view);
-  const { to } = selectionRange(view);
+  const text = getDocText(editor);
+  const { to } = getSelectionOffsets(editor);
 
   const direct = findNext(text, q.query, q, to, false);
   if (direct) {
-    selectAndReveal(view, direct);
+    selectAndReveal(editor, direct);
     return { match: direct, wrapped: false };
   }
-  const wrappedHit = findNext(text, q.query, q, 0, false);
-  if (wrappedHit) {
-    selectAndReveal(view, wrappedHit);
-    return { match: wrappedHit, wrapped: true };
+  const wrapped = findNext(text, q.query, q, 0, false);
+  if (wrapped) {
+    selectAndReveal(editor, wrapped);
+    return { match: wrapped, wrapped: true };
   }
   return { match: null, wrapped: false };
 }
 
 /**
- * Find-previous from the current selection START, wrapping to the document end
- * (UWP TryFindPreviousAndSelect with stopAtBof=false). Selects + reveals.
+ * Find-previous from the current selection START, wrapping to the document end.
+ * Mirrors UWP TryFindPreviousAndSelect (stopAtBof=false).
  */
-export function findPreviousInView(view: EditorView, q: FindQuery): FindOutcome {
+export function findPreviousInEditor(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery
+): FindOutcome {
   if (q.query.length === 0) return { match: null, wrapped: false };
-  const text = docText(view);
-  const { from } = selectionRange(view);
+  const text = getDocText(editor);
+  const { from } = getSelectionOffsets(editor);
 
   const direct = findPrevious(text, q.query, q, from, false);
   if (direct) {
-    selectAndReveal(view, direct);
+    selectAndReveal(editor, direct);
     return { match: direct, wrapped: false };
   }
-  // Wrap: search from the document end.
-  const wrappedHit = findPrevious(text, q.query, q, text.length, false);
-  if (wrappedHit) {
-    selectAndReveal(view, wrappedHit);
-    return { match: wrappedHit, wrapped: true };
+  const wrapped = findPrevious(text, q.query, q, text.length, false);
+  if (wrapped) {
+    selectAndReveal(editor, wrapped);
+    return { match: wrapped, wrapped: true };
   }
   return { match: null, wrapped: false };
 }
 
-// --- Replace -----------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  Public API — replace
+// ---------------------------------------------------------------------------
 
-/** Whether the current selection exactly equals a match of the query at its from. */
-function selectionIsMatch(view: EditorView, q: FindQuery): boolean {
-  const { from, to } = selectionRange(view);
+function selectionIsMatch(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery
+): boolean {
+  const { from, to } = getSelectionOffsets(editor);
   if (to <= from) return false;
-  const text = docText(view);
+  const text = getDocText(editor);
   const hit = findNext(text, q.query, q, from, false);
   return hit !== null && hit.from === from && hit.to === to;
 }
 
-/**
- * Replace the current match and advance to the next (UWP TryFindNextAndReplace:
- * select→SetText→find-next). If the selection is not currently a match, this
- * first selects the next match (UWP collapses the selection then finds), then
- * replaces THAT. Regex replacement strings get the escape-sequence fix applied
- * by the engine; literal replacement is verbatim. Returns true if a replacement
- * happened.
- *
- * NOTE: the replacement transaction + the follow-up find are dispatched
- * separately, matching UWP (the SetText and the subsequent select are distinct
- * operations); each replace-one is therefore one undo step.
- */
-export function replaceOne(view: EditorView, q: FindQuery, replacement: string): boolean {
-  if (q.query.length === 0) return false;
-
-  // Ensure a match is selected (UWP collapses selection to start, then finds).
-  if (!selectionIsMatch(view, q)) {
-    const found = findNextInView(view, q);
-    if (!found.match) return false;
-  }
-
-  const { from, to } = selectionRange(view);
-  const insert = q.useRegex ? expandRegexReplacement(view, q, from, to, replacement) : replacement;
-
-  view.dispatch({
-    changes: { from, to, insert },
-    selection: { anchor: from + insert.length }
-  });
-
-  // Advance to the next match (UWP find-next after replace).
-  findNextInView(view, q);
-  return true;
-}
-
-/**
- * Expand a regex replacement for the SELECTED match. We re-run the regex against
- * the matched slice so '$1' group substitution + the \r/\n/\t escape fix are both
- * honored — the engine's replaceAll does this document-wide; here we scope it to
- * the single selected match so replace-one stays a one-occurrence edit.
- */
 function expandRegexReplacement(
-  view: EditorView,
+  editor: monaco.editor.IStandaloneCodeEditor,
   q: FindQuery,
   from: number,
   to: number,
   replacement: string
 ): string {
-  const slice = view.state.doc.sliceString(from, to);
-  // replaceAll on the isolated slice yields exactly one substitution with the
-  // engine's escape-sequence + $-group handling applied.
+  const model = editor.getModel();
+  if (!model) return replacement;
+  const slice = model.getValue(1 /* LF */).slice(from, to);
   const result = engineReplaceAll(slice, q.query, q, replacement);
   return result.count > 0 ? result.text : slice;
 }
 
 /**
- * Replace EVERY occurrence in the document as ONE transaction = ONE undo step
- * (UWP TryFindAndReplaceAll does a single SetText). Moves the caret to the
- * document end afterward (UWP sets StartPosition = int.MaxValue). Returns the
- * number of replacements.
+ * Replace the current match and advance to the next.
+ * Mirrors UWP TryFindNextAndReplace. Returns true if a replacement happened.
  */
-export function replaceAllInView(view: EditorView, q: FindQuery, replacement: string): number {
+export function replaceOne(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery,
+  replacement: string
+): boolean {
+  if (q.query.length === 0) return false;
+
+  if (!selectionIsMatch(editor, q)) {
+    const found = findNextInEditor(editor, q);
+    if (!found.match) return false;
+  }
+
+  const model = editor.getModel();
+  if (!model) return false;
+  const { from, to } = getSelectionOffsets(editor);
+  const insert = q.useRegex
+    ? expandRegexReplacement(editor, q, from, to, replacement)
+    : replacement;
+
+  const startPos = model.getPositionAt(from);
+  const endPos = model.getPositionAt(to);
+  model.applyEdits([{
+    range: {
+      startLineNumber: startPos.lineNumber,
+      startColumn: startPos.column,
+      endLineNumber: endPos.lineNumber,
+      endColumn: endPos.column
+    },
+    text: insert
+  }]);
+
+  // Advance to the next match.
+  findNextInEditor(editor, q);
+  return true;
+}
+
+/**
+ * Replace EVERY occurrence as one push-edit = one undo step.
+ * Mirrors UWP TryFindAndReplaceAll. Returns the replacement count.
+ */
+export function replaceAllInEditor(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery,
+  replacement: string
+): number {
   if (q.query.length === 0) return 0;
-  const text = docText(view);
+  const model = editor.getModel();
+  if (!model) return 0;
+  const text = getDocText(editor);
   const result = engineReplaceAll(text, q.query, q, replacement);
   if (result.count === 0) return 0;
 
-  view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: result.text },
-    selection: { anchor: result.text.length },
-    scrollIntoView: true
-  });
+  // Apply as a single full-document edit so it is one undo step.
+  model.applyEdits([{ range: model.getFullModelRange(), text: result.text }]);
+
+  // Move caret to document end (UWP StartPosition = int.MaxValue).
+  const endPos = model.getPositionAt(result.text.length);
+  editor.setPosition(endPos);
+  editor.revealPosition(endPos);
   return result.count;
 }
 
-// --- Go to line --------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  Public API — go to line
+// ---------------------------------------------------------------------------
 
 /**
- * Move the caret to the start of 1-based `lineNumber`, clamped to the document's
- * line range, and reveal it (Ctrl+G). Returns the clamped line actually used.
+ * Move the caret to 1-based `lineNumber`, clamped to the document's line range,
+ * and reveal it (Ctrl+G). Returns the clamped line actually used.
  */
-export function goToLine(view: EditorView, lineNumber: number): number {
-  const lineCount = view.state.doc.lines;
+export function goToLine(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  lineNumber: number
+): number {
+  const model = editor.getModel();
+  if (!model) return lineNumber;
+  const lineCount = model.getLineCount();
   const clamped = Math.max(1, Math.min(lineNumber, lineCount));
-  const line = view.state.doc.line(clamped);
-  view.dispatch({
-    selection: { anchor: line.from },
-    effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
-    scrollIntoView: true
-  });
+  const pos = { lineNumber: clamped, column: 1 };
+  editor.setPosition(pos);
+  editor.revealLineInCenter(clamped, 1 /* Immediate */);
   return clamped;
+}
+
+// ---------------------------------------------------------------------------
+//  Legacy CM6 compat shim
+//  useFindBar / T6 may still reference the old EditorView-typed names during
+//  the migration. These thin aliases let that code compile while T6 finalises.
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use findNextInEditor */
+export const findNextInView = findNextInEditor;
+/** @deprecated Use findPreviousInEditor */
+export const findPreviousInView = findPreviousInEditor;
+/** @deprecated Use replaceAllInEditor */
+export const replaceAllInView = replaceAllInEditor;
+
+/**
+ * @deprecated No-op shim. Monaco has no CM6 Extension bundle.
+ * useFindBar no longer passes this to editors; kept so old imports compile.
+ */
+export function searchExtension(): [] {
+  return [];
 }
