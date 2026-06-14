@@ -680,7 +680,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
         </button>
       </MenuTrigger>
       <MenuPopover data-testid="main-menu-popover">
-        <MenuList style={{ maxHeight: 'min(60vh, 480px)', overflowY: 'auto', overflowX: 'hidden' }}>
+        <MenuList style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}>
           <MenuItem secondaryContent={`${modKey}+N`} onClick={commands.onNew}>
             {t('MainMenu_Button_New.Text')}
           </MenuItem>
@@ -712,7 +712,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
                 </MenuItem>
               </MenuTrigger>
               <MenuPopover data-testid="open-recent-popover">
-                <MenuList style={{ maxHeight: 'min(60vh, 480px)', overflowY: 'auto', overflowX: 'hidden' }}>
+                <MenuList style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}>
                   {recent.map((entry) => (
                     <MenuItem
                       key={entry.path}
