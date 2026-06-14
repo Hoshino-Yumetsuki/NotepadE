@@ -92,7 +92,7 @@ jobs:
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          artifacts: release/*
+          artifacts: release/**/*.deb,release/**/*.AppImage,release/**/*.exe,release/**/*.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
