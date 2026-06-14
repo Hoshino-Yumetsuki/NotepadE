@@ -39,11 +39,11 @@ describe('printDocuments', () => {
     });
     await printDocuments([{ title: 'note.txt', text: 'hello' }]);
     expect(print).toHaveBeenCalledTimes(1);
-    expect(hostHtmlDuringPrint).toContain('note.txt');
+    expect(hostHtmlDuringPrint).not.toContain('note.txt');
     expect(hostHtmlDuringPrint).toContain('hello');
   });
 
-  it('escapes document title + text in the print host (no HTML injection)', async () => {
+  it('escapes document text in the print host (no HTML injection); title is not rendered', async () => {
     const print = stubPrintBridge();
     let hostHtml = '';
     print.mockImplementation(() => {
@@ -53,7 +53,8 @@ describe('printDocuments', () => {
     await printDocuments([{ title: '<b>t</b>', text: '<script>x</script>' }]);
     expect(hostHtml).not.toContain('<script>');
     expect(hostHtml).toContain('&lt;script&gt;');
-    expect(hostHtml).toContain('&lt;b&gt;');
+    expect(hostHtml).not.toContain('&lt;b&gt;');
+    expect(hostHtml).not.toContain('<b>');
   });
 
   it('renders one section per document for print-all', async () => {

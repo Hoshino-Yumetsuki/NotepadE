@@ -42,8 +42,6 @@ const PRINT_CSS = `
   .np-print-doc { white-space: pre-wrap; word-break: break-word;
     font-family: Consolas, "Courier New", monospace; font-size: 12pt; }
   .np-print-doc + .np-print-doc { page-break-before: always; }
-  .np-print-title { font-weight: bold; font-size: 13pt; margin: 0 0 8px;
-    font-family: Segoe UI, sans-serif; }
 }
 `;
 
@@ -73,7 +71,6 @@ function populatePrintHost(host: HTMLElement, docs: PrintDocument[]): void {
     .map(
       (doc) =>
         `<section class="np-print-doc">` +
-        `<div class="np-print-title">${escapeHtml(doc.title)}</div>` +
         `<div>${escapeHtml(doc.text)}</div>` +
         `</section>`
     )
