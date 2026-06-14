@@ -77,6 +77,12 @@ export function attachCurrentLineEdge(
   // Back-most layer: behind Monaco's transparent content (line numbers/text render
   // on top), in front of the root's gutter-wash background.
   overlay.style.zIndex = '-1';
+  // GPU-promote the band so it composites the SAME way Monaco's native current-line
+  // band did (Monaco paints it inside transformed/promoted scroll layers). A
+  // non-promoted div instead blends WITH the window vibrancy/acrylic, yielding a
+  // visibly different shade than the native band — the color mismatch the user saw.
+  // translateZ(0) forces an own compositing layer so the theme color reads identical.
+  overlay.style.transform = 'translateZ(0)';
   overlay.style.background = color;
   overlay.style.display = 'none';
   root.appendChild(overlay);
@@ -93,10 +99,14 @@ export function attachCurrentLineEdge(
       return;
     }
     const line = pos.lineNumber;
-    // Viewport-relative top of the active model line, and its full height (covers
-    // every wrapped visual row, since the next line's top sits after them).
-    let top = editor.getTopForLineNumber(line) - editor.getScrollTop();
-    let height = editor.getTopForLineNumber(line + 1) - editor.getTopForLineNumber(line);
+    // Viewport-relative top + bottom of the active model line. getBottomForLineNumber
+    // (not getTopForLineNumber(line + 1)) is essential: for the LAST line there is no
+    // line+1, so Monaco clamps it to the last line's top → height 0 → the highlight
+    // vanished on the final line. getBottomForLineNumber returns the true bottom edge
+    // (covering every wrapped visual row) for any line, including the last.
+    const scrollTop = editor.getScrollTop();
+    let top = editor.getTopForLineNumber(line) - scrollTop;
+    let height = editor.getBottomForLineNumber(line) - editor.getTopForLineNumber(line);
     // Clamp to the visible viewport so the band never bleeds into the top gap or
     // past the bottom (Monaco's native band was clipped by .overflow-guard).
     const viewportH = root.clientHeight;
