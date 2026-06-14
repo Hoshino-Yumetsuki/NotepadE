@@ -20,6 +20,7 @@
 //! only wired on macOS, where argv does not carry the url.
 
 use std::collections::{HashMap, HashSet};
+use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
 use tauri::{Emitter, Listener, Manager};
@@ -164,6 +165,29 @@ fn spawn_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
     }
 }
 
+/// Spawn NotepadE as a NEW, independent OS process (the "New Window" path).
+/// The child boots its own `main` window; lib.rs skips single-instance because
+/// of the `NEW_PROCESS_ENV` marker, so it is never forwarded back here. `paths`
+/// are passed as argv and opened by the child's cold-start `parse_argv` path.
+/// Fully detached: no `Child` handle is retained — the OS owns its lifetime, so
+/// closing the spawning window can never cascade into the child.
+fn spawn_process(paths: &[String]) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let mut cmd = Command::new(exe);
+    cmd.env(crate::argv_parse::NEW_PROCESS_ENV, "1");
+    // Inherit a stable cwd so the child resolves any relative argv against it
+    // (we pass absolute paths today, but keep parity with the parse contract).
+    if let Ok(cwd) = std::env::current_dir() {
+        cmd.current_dir(cwd);
+    }
+    for p in paths {
+        cmd.arg(p); // absolute path tokens; parse_argv skips argv[0] + flags.
+    }
+    // Detach: do not hold a Child handle / wait — the OS owns its lifetime.
+    // (Windows: no CREATE_NEW_CONSOLE needed for a GUI subsystem exe.)
+    cmd.spawn().map(|_child| ()).map_err(|e| format!("spawn NotepadE: {e}"))
+}
+
 /// Pick the redirect target: the last-focused live window, else any live one.
 fn redirect_target(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
     let last = state().lock().ok().and_then(|s| s.last_focused.clone());
@@ -220,21 +244,37 @@ async fn route_activation(app: &tauri::AppHandle, event: ActivationEvent) -> Res
     };
     let force_new = always_new || is_new_instance_protocol(event.protocol_url.as_deref());
 
-    let target = if force_new {
-        spawn_window(app)
-    } else {
-        redirect_target(app).or_else(|| spawn_window(app))
-    };
+    if force_new {
+        // True independent process: spawn a fresh current_exe() child that
+        // boots its own main window and opens `paths` via its cold-start argv.
+        // On spawn failure, degrade to an in-process window so "New Window" is
+        // never a silent no-op.
+        match spawn_process(&event.paths) {
+            Ok(()) => return Ok(()), // child opens the paths itself
+            Err(e) => {
+                log::error!("broker: process spawn failed, falling back in-process: {e}");
+                let Some(win) = spawn_window(app) else {
+                    return Err("broker: spawn fallback failed".into());
+                };
+                deliver(&win, event);
+                return Ok(());
+            }
+        }
+    }
+
+    // Non-force path (file-association / protocol open with alwaysOpenNewWindow
+    // false): redirect into a live window, or — if none exist — spawn ONE
+    // in-process window so this process is not left headless. (Do NOT spawn a
+    // detached process here: a bare launch must keep its own main window.)
+    let target = redirect_target(app).or_else(|| spawn_window(app));
     let Some(target) = target else {
         let msg = "broker: no window available for activation (spawn failed)";
         log::error!("{msg}");
         return Err(msg.to_string());
     };
-    // A freshly spawned window already comes up shown+focused; a redirected
-    // existing window may be behind other apps or minimized — surface it.
-    if !force_new {
-        bring_to_front(&target);
-    }
+    // A redirected existing window may be behind other apps or minimized —
+    // surface it.
+    bring_to_front(&target);
     deliver(&target, event);
     Ok(())
 }

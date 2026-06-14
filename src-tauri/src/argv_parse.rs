@@ -12,6 +12,9 @@ use std::path::{Component, Path, PathBuf};
 pub const PROTOCOL_SCHEME: &str = "notepads";
 /// Protocol verb that always forces a new instance/window.
 pub const NEW_INSTANCE_VERB: &str = "newinstance";
+/// Env marker set on a child process spawned by the "New Window" path so lib.rs
+/// skips single-instance registration (true independent process). Value "1".
+pub const NEW_PROCESS_ENV: &str = "NOTEPADE_NEW_PROCESS";
 
 /// Parsed activation argv: candidate file paths + an optional protocol url.
 #[derive(Debug, Clone, PartialEq, Eq)]

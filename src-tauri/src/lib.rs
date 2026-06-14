@@ -48,7 +48,13 @@ pub fn run() {
     // Electron app skipped single-instance under NOTEPADS_E2E=1 so parallel
     // test apps don't redirect into each other — preserve that.
     let is_e2e = std::env::var("NOTEPADS_E2E").map(|v| v == "1").unwrap_or(false);
-    if !is_e2e {
+    // A marker-spawned child (the "New Window" path) must NOT be forwarded into
+    // an existing instance — that is the whole point of an independent process.
+    // Skip single-instance registration for it so it boots its own main window
+    // and lives as a fully independent process.
+    let is_new_process =
+        std::env::var(argv_parse::NEW_PROCESS_ENV).map(|v| v == "1").unwrap_or(false);
+    if !is_e2e && !is_new_process {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             // Broker routing (task #4): redirect-vs-spawn per alwaysOpenNewWindow /
             // notepads://newinstance; EvtAppActivation carries the SECOND
@@ -64,7 +70,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init());
 
     builder
-        .setup(|app| {
+        .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -120,11 +126,16 @@ pub fn run() {
             // registers it on a real install; register_all is idempotent so
             // the two don't conflict). macOS registers via Info.plist. Without
             // this, second-instance/protocol routing only works post-install.
+            // A marker-spawned child (independent "New Window" process) skips
+            // this — the primary/installer already registered the scheme, and a
+            // child re-registering is harmless but redundant (design R4).
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             {
-                use tauri_plugin_deep_link::DeepLinkExt;
-                if let Err(e) = app.deep_link().register_all() {
-                    log::warn!("deep_link register_all failed: {e}");
+                if !is_new_process {
+                    use tauri_plugin_deep_link::DeepLinkExt;
+                    if let Err(e) = app.deep_link().register_all() {
+                        log::warn!("deep_link register_all failed: {e}");
+                    }
                 }
             }
 
