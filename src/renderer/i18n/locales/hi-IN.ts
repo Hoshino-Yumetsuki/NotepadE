@@ -258,19 +258,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'दस्तावेज़ का पाथ कॉपी करें',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'धारक फोल्डर को खोलें',
   Tab_ContextFlyout_RenameButtonDisplayText: 'नाम बदलें',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows कोड पेज)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'स्वत: एन्कोडिंग का अनुमान लगाएं (अनुशंसित)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'यदि फ़ाइल की एन्कोडिंग को मान्यता नहीं दी जा सकती है तो फॉलबैक डिकोडिंग का उपयोग किया जाएगा।',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'फॉलबैक डिकोडिंग',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'देखाव',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'केवल नए दस्तावेज पर लागू होते हैं।',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'डिफ़ॉल्ट एन्कोडिंग',
   'TextAndEditorPage_FontSettings_Title.Text': 'डिफ़ॉल्ट फ़ॉन्ट और आकार',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'डिफ़ॉल्ट फ़ॉन्ट शैली',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'डिफ़ॉल्ट फ़ॉन्ट वजन',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'केवल नए दस्तावेज पर लागू होते हैं।',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'डिफ़ॉल्ट लाइन एंडींग',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'वर्तमान लाइन हाइलाइट करें',
@@ -284,10 +275,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'डिफ़ॉल्ट सर्च इंजन के लिए चुनागया सेटिंग जब इन्टरनेट पर खोज की जाती है।',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'डिफ़ॉल्ट सर्च इंजन',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'गलत वर्तनी वाले शब्दों को हाइलाइट करें',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'गलत वर्तनी वाले शब्दों को हाइलाइट करें',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'वर्तनी',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'डिफ़ॉल्ट (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

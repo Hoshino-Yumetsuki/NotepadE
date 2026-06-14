@@ -266,19 +266,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Dosya Yolunu Kopyala',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'İçeren Klasörü Aç',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Yeniden Adlandır',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows kod sayfası)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Otomatik Tahmin Kodlaması (Önerilen)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Eğer dosya kodlayıcısı tanınmazsa alternatif çözücü kullanılacak.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Alternatif Çözücü',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Görüntü',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Sadece yeni dosyaya uygula.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Varsayılan Çözücü',
   'TextAndEditorPage_FontSettings_Title.Text': 'Varsayılan Font ve Büyüklüğü',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Varsayılan Yazı Tipi Biçimi',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Varsayılan Yazı Tipi Ağırlığı',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Sadece yeni dosyaya uygula.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Varsayılan Satır Sonu Karakteri',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Bulunan satırı vurgula',
@@ -292,10 +283,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Bir web araması yapıldığında varsayılan arama motoru ayarları seçilir.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Varsayılan Arama Motoru',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Yanlış yazılmış kelimeleri vurgula',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Yanlış yazılmış kelimeleri vurgula',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'İmlâ',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Varsayılan (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

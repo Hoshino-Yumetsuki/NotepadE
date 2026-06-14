@@ -269,19 +269,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Gesamten Pfad kopieren',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Ordner öffnen',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Umbenennen',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows Zeichensatz)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Codierung automatisch erkennen (empfohlen)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Die Notfall-Dekodierung wird verwendet, wenn die Codierung einer Datei nicht erkannt wird.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Notfall-Dekodierung',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Gilt nur für neue Dokumente.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Standard Codierung',
   'TextAndEditorPage_FontSettings_Title.Text': 'Standard Schriftart und Größe',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Standard-Schriftstil',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Standard-Schriftgewicht',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Gilt nur für neue Dokumente.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Standard Zeilenumbruch',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Aktuelle Zeile hervorheben',
@@ -296,10 +287,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Einstellungen für die Standardsuchmaschine für die Websuche.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Standardsuchmaschine',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Rechtschreibfehler hervorheben',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Rechtschreibfehler hervorheben',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Rechtschreibung',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Standard (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

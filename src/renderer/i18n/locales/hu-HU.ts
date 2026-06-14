@@ -265,19 +265,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Teljes Útvonal Másolása',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Tartalmazó Mappa Megnyitása',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Átnevezés',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows kódlap)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Autómatikus kódolás kitalálás (Ajánlott)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Visszaeső dekódolás lesz használva ha a fájl kódolása nem felismerhető.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Visszaeső Dekódolás',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Megjelenítés',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Csak új dokumentumokra alkalmazva.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Alapértelmezett Kódolás',
   'TextAndEditorPage_FontSettings_Title.Text': 'Alapértelmezett Szövegtipus & Méret',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Alapértelmezett formázás',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Alapértelmezett kiemelés',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Csak új dokumentumokra alkalmazva.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Alapértelmezett Sor Végződés',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Aktuális sor kiemelése',
@@ -291,10 +282,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Beállítások az alapértelmezett keresőmotorhoz ami a weben való kereséskor lesz használva.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Alapértelmezett Keresőmotor',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Elgépelt szavak kiemelése',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Elgépelt szavak kiemelése',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Helyesírás',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Alapértelmezett (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

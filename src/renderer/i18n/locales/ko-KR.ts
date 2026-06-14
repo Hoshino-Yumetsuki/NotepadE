@@ -259,18 +259,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: '파일 경로 복사',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '저장된 폴더 열기',
   Tab_ContextFlyout_RenameButtonDisplayText: '이름 변경',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows 코드 페이지)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content': '자동으로 인코딩 결정 (추천)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    '파일 인코딩을 인식할 수 없는 경우 대체 설정이 적용됩니다.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': '대체 디코딩',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': '표시',
   'TextAndEditorPage_EncodingSettings_Description.Text': '새 문서에만 적용됩니다.',
   'TextAndEditorPage_EncodingSettings_Title.Text': '기본 인코딩',
   'TextAndEditorPage_FontSettings_Title.Text': '기본 글꼴 및 크기',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': '기본 글자 서식',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': '기본 글자 굵기',
   'TextAndEditorPage_LineEndingSettings_Description.Text': '새 문서에만 적용됩니다.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': '기본 줄바꿈',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '선택한 줄 강조 표시',
@@ -284,8 +276,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     '웹 검색 수행 시 선택된 기본 검색 엔진에 대한 설정입니다.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': '기본 검색 엔진',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent': '오타 강조',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent': '오타 강조',
   'TextAndEditorPage_SpellingSettings_Title.Text': '철자',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': '탭 문자 (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

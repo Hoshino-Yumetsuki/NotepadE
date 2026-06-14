@@ -272,20 +272,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Copiar o caminho completo',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Abrir a pasta do ficheiro',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Mudar o nome',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content':
-    'ANSI (Página de código do Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Detectar automaticamente a codificação (Recomendado)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Se não for possível reconhecer a codificação do ficheiro, será utilizada a descodificação de contingência.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Decodificação de contingência',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Apresentação',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Aplica-se apenas a novos documentos.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Codificação predefinida',
   'TextAndEditorPage_FontSettings_Title.Text': 'Tipo de letra e tamanho',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Estilo',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Peso',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Aplica-se apenas a novos documentos.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Quebra de linha predefinida',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Realçar a linha atual',
@@ -300,10 +290,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Escolher o motor de pesquisa que é utilizado quando é efetuada uma pesquisa na web.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Motor de pesquisa predefinido',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Realçar erros ortográficos',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Realçar erros ortográficos',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Ortografia',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Predefinação (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

@@ -267,18 +267,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'ファイルの場所をコピー',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '保存フォルダーを開く',
   Tab_ContextFlyout_RenameButtonDisplayText: '名前の変更',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows コードページ)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content': '自動検出 (推奨)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'フォールバック設定は、ファイルのエンコードを認識できない場合に使用されます。',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'フォールバック設定',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': '表示',
   'TextAndEditorPage_EncodingSettings_Description.Text': '新規文書にのみ適用されます。',
   'TextAndEditorPage_EncodingSettings_Title.Text': '既定のエンコード',
   'TextAndEditorPage_FontSettings_Title.Text': '既定のフォントとサイズ',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': '既定のフォント スタイル',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': '既定のフォント ウェイト',
   'TextAndEditorPage_LineEndingSettings_Description.Text': '新規文書にのみ適用されます。',
   'TextAndEditorPage_LineEndingSettings_Title.Text': '既定の行末',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '現在行をハイライト',
@@ -292,10 +284,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'ウェブ検索時に使用される既定の検索エンジンの設定です。',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': '既定の検索エンジン',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'スペルミスした単語をハイライト',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'スペルミスした単語をハイライト',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'スペルチェック',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'タブ文字 (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

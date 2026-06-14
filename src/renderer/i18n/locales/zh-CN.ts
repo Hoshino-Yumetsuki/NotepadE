@@ -254,18 +254,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: '复制文件路径',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '打开文件所在文件夹',
   Tab_ContextFlyout_RenameButtonDisplayText: '重命名',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows 当前默认代码页)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content': '自动猜测编码 (推荐)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    '如果文件开头不含有BOM(字节顺序标记)，Notepads将使用此编码作为默认读取编码。如果选择自动猜测识别编码，Notepads将会猜测文件编码并打开。',
-  'TextAndEditorPage_DecodingSettings_Title.Text': '默认读取编码',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': '显示设置',
   'TextAndEditorPage_EncodingSettings_Description.Text': '改变设置后只会影响新打开或者创建的文件。',
   'TextAndEditorPage_EncodingSettings_Title.Text': '默认写入编码',
   'TextAndEditorPage_FontSettings_Title.Text': '默认字体和大小',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': '默认字体样式',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': '默认字体粗细',
   'TextAndEditorPage_LineEndingSettings_Description.Text':
     '改变设置后只会影响新打开或者创建的文件。',
   'TextAndEditorPage_LineEndingSettings_Title.Text': '默认换行符',
@@ -279,10 +271,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_CustomSearchUrlRadioButton.Text': '自定义搜索',
   'TextAndEditorPage_SearchEngineSettings_Description.Text': '文本搜索默认所使用的搜索引擎。',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': '默认搜索引擎',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    '高亮拼写错误 (英文)',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    '高亮拼写错误 (英文)',
   'TextAndEditorPage_SpellingSettings_Title.Text': '拼写检查',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': '插入默认制表符 (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

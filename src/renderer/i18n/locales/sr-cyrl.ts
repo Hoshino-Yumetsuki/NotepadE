@@ -266,19 +266,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Копирај целу путању',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Отвори фасциклу',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Преименуј',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (кодна страница за Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Аутоматски погађај кодирање (препоручено)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Резервно декодирање ће бити искоришћено ако се кодирање датотеке не може препознати.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Резервно декодирање',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Приказ',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Важи само за нове документе.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Подразумевано кодирање',
   'TextAndEditorPage_FontSettings_Title.Text': 'Подразумевани фонт и величина',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Подразумевани стил фонта',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Подразумевана тежина фонта',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Важи само за нове документе.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Подразумевани завршетак редова',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Означи тренутни ред',
@@ -292,10 +283,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Подешавања подразумеваног претраживача за веб-претраге.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Подразумевани претраживач',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Маркирај погрешно откуцане речи',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Маркирај погрешно откуцане речи',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Правопис',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Стандардно (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

@@ -266,19 +266,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Kopiuj ścieżkę do pliku',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otwórz lokalizację pliku',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Zmień nazwę',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (system Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Automatyczne przewidywanie kodowania (Zalecane)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Dekodowanie rezerwowe zostanie zastosowane, jeśli kodowanie pliku nie zostanie rozpoznane.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Dekodowanie rezerwowe',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Wyświetlanie',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Wybierz sposób domyślnego kodowania.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Domyślne kodowanie',
   'TextAndEditorPage_FontSettings_Title.Text': 'Rozmiar i rodzaj czcionki',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Domyślny styl czcionki',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Domyślna grubość czcionki',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Wybierz domyślne kończenie linii.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Kończenie linii',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Pokaż prowadnice wierszy',
@@ -293,10 +284,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Wybierz domyślny silnik wyszukiwanki internetowej.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Domyślny silnik wyszukiwarki',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Wyróżniaj błędnie zapisane słowa',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Wyróżniaj błędnie zapisane słowa',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Pisownia',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Domyślne (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

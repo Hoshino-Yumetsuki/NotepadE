@@ -267,19 +267,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Volledig pad kopiëren',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Onderliggende map openen',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Hernoemen',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows code page)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Codering automatisch inschatten (aanbevolen)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Decodering die wordt gebruikt wanneer de codering van een bestand niet wordt herkend.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Terugval-decodering',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Weergave',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Van toepassing op nieuwe documenten.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Standaard-codering',
   'TextAndEditorPage_FontSettings_Title.Text': 'Standaard lettertype en -grootte',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Standaard lettertypestijl',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Standaard lettergrootte',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Van toepassing op nieuwe documenten.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Standaard regeleinde',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Huidige regel markeren',
@@ -295,10 +286,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Instellingen voor de gekozen standaardzoekmachine bij de uitvoering van een webzoekopdracht.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Standaard zoekmachine',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Spelfouten markeren',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Spelfouten markeren',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Spelling',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Standaard (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

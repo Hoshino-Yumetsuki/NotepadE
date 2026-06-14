@@ -266,19 +266,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'სრული მისამართის კოპირება',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'გახსენი შემცვლელი ფოლდერი',
   Tab_ContextFlyout_RenameButtonDisplayText: 'გადარქმევა',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows code page)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'ავტომატური ენკოდინგის ამოცნობა (რეკომენდირებულია)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'შემდგომი დეკოდირება გამოიყენება, როდესაც ფაილის კოდირება არ იცნობა.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'შემდგომი დეკოდირება',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'ჩვენება',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'გავრცელდება მხოლოდ ახალ დოკუმენტებზე.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'საწყისი ენკოდირება',
   'TextAndEditorPage_FontSettings_Title.Text': 'საწყისი ფონტი & ზომა',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'სტანდარტული შრიფტის სტილი',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'სტანდარტული შრიფტის წონა',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'გავრცელდება მხოლოდ ახალ დოკუმენტებზე.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'საწყისი ხაზის ენკოდინგი',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'აღნიშნე მიმდინარე ხაზი',
@@ -293,10 +284,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'მხარდაჭერი ძიების ძრავი-ის აირჩევა ვებ ძებნისას შესრულდება.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'სტანდარტული ძიების ძრავი',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'აღნიშნე არასწორი სიწტყვები',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'აღნიშნე არასწორი სიწტყვები',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'მართლწერა',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Default (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

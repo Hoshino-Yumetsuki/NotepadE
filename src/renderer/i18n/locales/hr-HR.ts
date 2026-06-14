@@ -263,19 +263,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Kopiraj cijelu stazu',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otvori mapu',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Preimenovati',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (kodna stranica za Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Automatski pogodi kodiranje (preporučeno)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Rezervno dekodiranje se koristi, ako se kodiranje datoteke ne može prepoznati.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Rezervno dekodiranje',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Vrijedi samo za nove dokumente.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Standardno kodiranje',
   'TextAndEditorPage_FontSettings_Title.Text': 'Standardni font i veličina',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Zadani stil fonta',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Zadana težina fonta',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Vrijedi samo za nove dokumente.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Standardni kraj retka',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Istakni trenutačni redak',
@@ -289,10 +280,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Postavke za standardnu tražilicu za web-pretragu.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Standardna tražilica',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Istakni pravopisne greške',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Istakni pravopisne greške',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Pravopis',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Standardno (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

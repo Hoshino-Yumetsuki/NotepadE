@@ -270,19 +270,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Копіювати повний шлях файлу',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Відкрити папку з файлом',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Перейменувати',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (кодова сторінка Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Автоматично визначати кодування (рекомендовано)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Запасне кодування буде використане, якщо неможливо визначити кодування файлу.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Запасне кодування',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Відображення',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Тільки для нових файлів.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Стандартне кодування',
   'TextAndEditorPage_FontSettings_Title.Text': 'Стандартний шрифт і розмір тексту',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Стандартний стиль тексту',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Стандартна жирність тексту',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Тільки для нових файлів.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Стандартний кінець рядків',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent':
@@ -297,10 +288,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Налаштування для пошуковика (шукати в Інтернеті).',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Стандартний пошуковик',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Не підсвічувати невідомі слова',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Підсвічувати невідомі слова',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Перевірка правильності слів',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Без змін (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text': 'Не впливає на раніше введений текст.',

@@ -261,19 +261,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Copy Full Path',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Open Containing Folder',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Rename',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows code page)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Auto guess Encoding (Recommended)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    "Fallback decoding will be used when a file's encoding cannot be recognized.",
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Fallback Decoding',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Only apply to new document.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Default Encoding',
   'TextAndEditorPage_FontSettings_Title.Text': 'Default Font & Size',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Default Font Style',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Default Font Weight',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Only apply to new document.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Default Line Ending',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Highlight current line',
@@ -287,10 +278,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Settings for default search engine choosen when a web search is done.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Default Search Engine',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Highlight misspelled words',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Highlight misspelled words',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Spelling',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Default (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

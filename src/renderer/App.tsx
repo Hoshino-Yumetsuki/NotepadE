@@ -1400,8 +1400,6 @@ export function App(): JSX.Element {
                     direction="ltr"
                     fontFamily={settings.editorFontFamily}
                     fontSize={settings.editorFontSize}
-                    fontStyle={settings.editorFontStyle}
-                    fontWeight={settings.editorFontWeight}
                     accentColor={appTheme.accentHex}
                     themeMode={appTheme.resolved}
                   />

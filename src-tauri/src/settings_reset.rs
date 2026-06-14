@@ -47,10 +47,10 @@ mod tests {
 
         // Every key from the Settings struct should be present
         let expected_keys = &[
-            "editorFontFamily", "editorFontSize", "editorFontStyle",
-            "editorFontWeight", "textWrapping", "displayLineHighlighter",
-            "displayLineNumbers", "highlightMisspelledWords", "defaultLineEnding",
-            "defaultEncoding", "defaultDecoding", "tabIndents",
+            "editorFontFamily", "editorFontSize",
+            "textWrapping", "displayLineHighlighter",
+            "displayLineNumbers", "defaultLineEnding",
+            "defaultEncoding", "tabIndents",
             "searchEngine", "customSearchUrl", "themeMode", "tintOpacity",
             "useWindowsAccentColor", "customAccentColor", "showStatusBar",
             "smartCopy", "sessionSnapshot", "alwaysOpenNewWindow",

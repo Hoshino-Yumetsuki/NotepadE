@@ -264,19 +264,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Kopírovat celou cestu',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otevřít složku obsahující soubor',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Přejmenovat',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows code page)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Auto guess Encoding (Doporučené)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Záložní dekódování bude použitu, pokud nebude možné rozeznat kódování souboru.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Záložní dekódování',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Display',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Aplikuje se pouze na nové dokumenty.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Výchozí kódování',
   'TextAndEditorPage_FontSettings_Title.Text': 'Výchozí Font a Velikost',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Výchozí styl fontu',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Výchozí tloušťka fontu',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Aplikuje se pouze na nové dokumenty.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Výchozí zakončení řádků',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Zvýraznit aktuální řádek',
@@ -290,10 +281,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Nastavení pro výchozí vyhledávač bude použito ve chvíli, kdy bude hledání dokončeno.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Výchozí vyhledávač',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Zvýraznit chybně napsaná slova',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Zvýraznit chybně napsaná slova',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Pravopis',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Výchozí (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

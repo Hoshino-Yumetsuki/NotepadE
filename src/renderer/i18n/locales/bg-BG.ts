@@ -270,19 +270,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Копиране на пълен път',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Отвори съдържащата папка',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Преименувам',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (кодова страница на Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Автоматично познаване кодиране (препоръчително)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Резервното декодиране ще се използва, ако кодирането на файла не може да бъде разпознато.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Резервно декодиране',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Дисплей',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Кандидатствайте само за нов документ.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Кодиране по подразбиране',
   'TextAndEditorPage_FontSettings_Title.Text': 'Шрифт и размер по подразбиране',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Стил на Шрифта по Подразбиране',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Дебелина на Шрифта по Подразбиране',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Кандидатствайте само за нов документ.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Краен ред по подразбиране',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Маркирайте текущата линия',
@@ -298,10 +289,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Настройките за търсачката по подразбиране се избират, когато се извърши търсене в мрежата.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Търсачка по подразбиране',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Маркирайте грешно написани думи',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Маркирайте грешно написани думи',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Правопис',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'По подразбиране (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

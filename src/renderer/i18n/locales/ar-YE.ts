@@ -258,19 +258,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'نسخ المسار كاملاً',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'فتح المجلد المحتوي على المستند',
   Tab_ContextFlyout_RenameButtonDisplayText: 'إعادة تسمية',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows كود صفحة)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'التخمين التلقائي للترميز (ينصح به)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'سيستخدم فك الترميز الإحتياطي عندما يتعذر تحديد نوع ترميز الملف.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'فك الترميز الإحتياطي',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'العرض',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'تطبيق فقط على المستندات الجديدة.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'الترميز الإفتراضي',
   'TextAndEditorPage_FontSettings_Title.Text': 'الخط والحجم الإفتراضي',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'نوع الخط الإفتراضي',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'وزن الخط الإفتراضي',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'تطبق فقط على المستند الجديد.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'نهاية السطر الإفتراضي',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'تعليم السطر الحالي',
@@ -284,10 +275,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'إعدادات محرك البحث يتم إختيارها عندما ينتهي البحث في الإنترنت.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'محرك البحث الإفتراضي',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'تعليم الأخطاء الإملائية',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'تعليم الأخطاء الإملائية',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'الإملاء',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'افتراضي (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

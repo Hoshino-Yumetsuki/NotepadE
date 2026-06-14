@@ -257,18 +257,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Sao chép đường dẫn',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Mở thư mục chứa',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Đổi tên',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (trang mã Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content': 'Mã hóa tự đoán (Đề xuất)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Áp dụng khi không thể nhận dạng loại mã hóa của tệp.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Giải mã dự phòng',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Hiển thị',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Chỉ áp dụng cho tài liệu mới.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Mã hóa mặc định',
   'TextAndEditorPage_FontSettings_Title.Text': 'Phông & kích cỡ',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Kiểu chữ',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Độ đậm chữ',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Chỉ áp dụng cho tài liệu mới.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Kết thúc dòng',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Làm nổi bật dòng hiện tại',
@@ -282,10 +274,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Chọn công cụ tìm kiếm mặc định khi tìm kiếm trên web.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Công cụ tìm kiếm',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Đánh dấu các từ sai chính tả',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Đánh dấu các từ sai chính tả',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Chính tả',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Mặc định (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

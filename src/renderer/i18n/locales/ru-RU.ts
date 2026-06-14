@@ -267,19 +267,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Скопировать путь',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Открыть папку, содержащую этот файл',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Переименовать',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (кодировка Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Автоматически определять кодировку (рекомендуется)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Кодировка, которая будет использоваться, если не удастся распознать кодировку файла.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Кодировка по умолчанию',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Отображение',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Применяется только к новым документам.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Сохранять в кодировке',
   'TextAndEditorPage_FontSettings_Title.Text': 'Шрифт',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Стиль шрифта',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Насыщенность шрифта',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Применяется только к новым документам.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Разрыв строки',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Выделять текущую линию',
@@ -293,10 +284,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Поисковая система, в которой будет производиться поиск.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Поисковая система по умолчанию',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Выделять слова с ошибками',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Выделять слова с ошибками',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Правописание',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'По умолчанию (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

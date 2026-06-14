@@ -266,19 +266,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Kopiraj celu putanju',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Otvori fasciklu',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Preimenuj',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (kodna stranica za Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Automatski pogađaj kodiranje (preporučeno)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Rezervno dekodiranje će biti iskorišćeno ako se kodiranje datoteke ne može prepoznati.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Rezervno dekodiranje',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Prikaz',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Važi samo za nove dokumente.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Podrazumevano kodiranje',
   'TextAndEditorPage_FontSettings_Title.Text': 'Podrazumevani font i veličina',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Podrazumevani stil fonta',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Podrazumevana težina fonta',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Važi samo za nove dokumente.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Podrazumevani završetak redova',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Označi trenutni red',
@@ -292,10 +283,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Podešavanja podrazumevanog pretraživača za veb-pretrage.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Podrazumevani pretraživač',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Markiraj pogrešno otkucane reči',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Markiraj pogrešno otkucane reči',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Pravopis',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Standardno (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

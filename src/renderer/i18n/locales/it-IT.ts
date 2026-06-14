@@ -270,19 +270,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Copia percorso completo',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Mostra nella cartella',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Rinomina',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (tabella codici di Windows)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Codifica autodeterminata (consigliata)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'La decodifica secondaria verrà utilizzata nel caso la codifica principale non fosse riconosciuta.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Decodifica secondaria',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Righe',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Si applica solo ai nuovi documenti.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Codifica predefinita',
   'TextAndEditorPage_FontSettings_Title.Text': 'Carattere e dimensione',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Stile carattere',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Spessore carattere',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Si applica solo ai nuovi documenti.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Fine riga predefinito',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Evidenzia riga corrente',
@@ -297,10 +288,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Motore di ricerca predefinito per quando si effettua una ricerca nel web.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Motore di ricerca predefinito',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Evidenzia parole con errori ortografici',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Evidenzia parole con errori ortografici',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Controllo ortografico',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Predefinito (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

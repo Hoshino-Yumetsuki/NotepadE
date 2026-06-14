@@ -176,19 +176,12 @@ pub struct Settings {
     // --- Text & Editor ---
     pub editor_font_family: String,
     pub editor_font_size: f64,
-    /// 'normal' | 'italic' | 'oblique'
-    pub editor_font_style: String,
-    /// OpenType weight (400 = Normal).
-    pub editor_font_weight: f64,
     /// 'noWrap' | 'wrap'
     pub text_wrapping: String,
     pub display_line_highlighter: bool,
     pub display_line_numbers: bool,
-    pub highlight_misspelled_words: bool,
     pub default_line_ending: EolId,
     pub default_encoding: EncodingId,
-    /// 'auto' | 'utf-8' | 'ansi'
-    pub default_decoding: String,
     /// -1 | 2 | 4 | 8 (-1 = real tab)
     pub tab_indents: i32,
     /// 'bing' | 'google' | 'duckDuckGo' | 'custom'
@@ -224,15 +217,11 @@ impl Default for Settings {
         Settings {
             editor_font_family: "Consolas".into(),
             editor_font_size: 14.0,
-            editor_font_style: "normal".into(),
-            editor_font_weight: 400.0,
             text_wrapping: "noWrap".into(),
             display_line_highlighter: true,
             display_line_numbers: true,
-            highlight_misspelled_words: false,
             default_line_ending: EolId::Crlf,
             default_encoding: "UTF-8".into(),
-            default_decoding: "auto".into(),
             tab_indents: -1,
             search_engine: "bing".into(),
             custom_search_url: String::new(),
@@ -412,15 +401,11 @@ mod tests {
             serde_json::json!({
                 "editorFontFamily": "Consolas",
                 "editorFontSize": 14.0,
-                "editorFontStyle": "normal",
-                "editorFontWeight": 400.0,
                 "textWrapping": "noWrap",
                 "displayLineHighlighter": true,
                 "displayLineNumbers": true,
-                "highlightMisspelledWords": false,
                 "defaultLineEnding": "crlf",
                 "defaultEncoding": "UTF-8",
-                "defaultDecoding": "auto",
                 "tabIndents": -1,
                 "searchEngine": "bing",
                 "customSearchUrl": "",

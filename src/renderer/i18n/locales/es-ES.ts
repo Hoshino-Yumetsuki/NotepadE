@@ -271,19 +271,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Copiar Ruta de Acceso',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Abrir Carpeta Contenedora',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Renombrar',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows code page)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Adivinar codificación (recomendado)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'La codificación de reserva será usada si la codificación del documento no es reconocida.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Codificación de Reserva',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Visualización',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Solo aplica para nuevos documentos.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Codificación Predeterminada',
   'TextAndEditorPage_FontSettings_Title.Text': 'Fuente y Tamaño Predeterminados',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Estilo de Fuente Predeterminado',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Peso de Fuente Predeterminado',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Solo aplicar a documentos nuevos.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Terminación de Línea',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Resaltar línea actual',
@@ -299,10 +290,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Ajustes de Motor de Búsqueda cuando se realiza una búsqueda en la web.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Motor de Búsqueda Predeterminado',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Resaltar errores ortográficos',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Resaltar errores ortográficos',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Ortografía',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Predeterminado (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

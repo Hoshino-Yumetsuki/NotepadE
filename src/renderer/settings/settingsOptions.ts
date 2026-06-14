@@ -10,10 +10,8 @@
  */
 
 import type {
-  FontStyleId,
   TabIndents,
   SearchEngineId,
-  DefaultDecoding,
   EncodingId
 } from '@shared/ipc-contract';
 import { UNICODE_ENCODINGS } from '../statusbar/statusModel';
@@ -52,21 +50,6 @@ export const APP_LANGUAGES: readonly { tag: string; label: string }[] = [
   { tag: 'zh-TW', label: '繁體中文' }
 ];
 
-/** Font-slant options (UWP FontStyle). */
-export const FONT_STYLES: readonly { id: FontStyleId; label: string }[] = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'italic', label: 'Italic' },
-  { id: 'oblique', label: 'Oblique' }
-];
-
-/** Common font-weight steps (OpenType weight; 400 = Normal). */
-export const FONT_WEIGHTS: readonly { weight: number; label: string }[] = [
-  { weight: 300, label: 'Light' },
-  { weight: 400, label: 'Normal' },
-  { weight: 600, label: 'Semibold' },
-  { weight: 700, label: 'Bold' }
-];
-
 /** Tab-as-spaces width options (UWP EditorDefaultTabIndents); -1 = real tab. */
 export const TAB_INDENTS: readonly { value: TabIndents; label: string }[] = [
   { value: -1, label: 'Tab' },
@@ -81,13 +64,6 @@ export const SEARCH_ENGINES: readonly { id: SearchEngineId; label: string }[] = 
   { id: 'google', label: 'Google' },
   { id: 'duckDuckGo', label: 'DuckDuckGo' },
   { id: 'custom', label: 'Custom' }
-];
-
-/** Default-decoding options (UWP EditorDefaultDecoding). */
-export const DECODING_OPTIONS: readonly { id: DefaultDecoding; label: string }[] = [
-  { id: 'auto', label: 'Auto-guess' },
-  { id: 'utf-8', label: 'UTF-8' },
-  { id: 'ansi', label: 'ANSI (system code page)' }
 ];
 
 /**

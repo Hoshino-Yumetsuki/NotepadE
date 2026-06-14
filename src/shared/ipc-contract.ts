@@ -296,19 +296,8 @@ export interface SessionApi {
 // default below is grounded 1:1 in the UWP source (AppSettingsService.cs /
 // ThemeSettingsService.cs); see DEFAULT_SETTINGS for the verbatim defaults.
 
-/** Editor font slant. Mirrors UWP Windows.UI.Text.FontStyle. */
-export type FontStyleId = 'normal' | 'italic' | 'oblique';
-
 /** Text-wrap mode. Mirrors the UWP TextWrapping values the app actually uses. */
 export type TextWrapMode = 'noWrap' | 'wrap';
-
-/**
- * Default decoding preference (UWP EditorDefaultDecoding):
- *   'auto'  → guess encoding at read time (UWP null sentinel / codePage -1),
- *   'utf-8' → force UTF-8 (no BOM),
- *   'ansi'  → force the system/current-culture ANSI code page.
- */
-export type DefaultDecoding = 'auto' | 'utf-8' | 'ansi';
 
 /** Web-search engine selection. Mirrors UWP SearchEngine enum. */
 export type SearchEngineId = 'bing' | 'google' | 'duckDuckGo' | 'custom';
@@ -336,18 +325,12 @@ export interface Settings {
   // --- Text & Editor ---
   editorFontFamily: string;
   editorFontSize: number;
-  editorFontStyle: FontStyleId;
-  /** OpenType weight (UWP FontWeight.Weight ushort); 400 = Normal. */
-  editorFontWeight: number;
   textWrapping: TextWrapMode;
   displayLineHighlighter: boolean;
   displayLineNumbers: boolean;
-  /** Spellcheck red-underline highlight (UWP IsHighlightMisspelledWordsEnabled). */
-  highlightMisspelledWords: boolean;
   defaultLineEnding: EolId;
   /** Default write encoding as an opaque EncodingId (UWP EditorDefaultEncoding). */
   defaultEncoding: EncodingId;
-  defaultDecoding: DefaultDecoding;
   tabIndents: TabIndents;
   searchEngine: SearchEngineId;
   customSearchUrl: string;
@@ -403,15 +386,11 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   editorFontFamily: '',
   editorFontSize: 14,
-  editorFontStyle: 'normal',
-  editorFontWeight: 400,
   textWrapping: 'noWrap',
   displayLineHighlighter: true,
   displayLineNumbers: true,
-  highlightMisspelledWords: false,
   defaultLineEnding: 'crlf',
   defaultEncoding: 'UTF-8',
-  defaultDecoding: 'auto',
   tabIndents: -1,
   searchEngine: 'bing',
   customSearchUrl: '',

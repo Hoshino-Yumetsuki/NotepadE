@@ -21,20 +21,15 @@ import {
 import type { Settings } from '@shared/ipc-contract';
 import type {
   EolId,
-  FontStyleId,
   TabIndents,
   SearchEngineId,
-  DefaultDecoding,
   EncodingId
 } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
   FONT_FAMILIES,
-  FONT_STYLES,
-  FONT_WEIGHTS,
   TAB_INDENTS,
   SEARCH_ENGINES,
-  DECODING_OPTIONS,
   ENCODING_OPTIONS,
   FONT_SIZE_MIN,
   FONT_SIZE_MAX
@@ -55,13 +50,6 @@ const TAB_INDENT_KEYS: Record<number, string> = {
   8: 'TextAndEditorPage_TabKeySettings_EightSpacesRadioButton.Content'
 };
 
-/** Ported .resw key for each fallback-decoding option. */
-const DECODING_KEYS: Record<string, string> = {
-  auto: 'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content',
-  'utf-8': 'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content',
-  ansi: 'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content'
-};
-
 export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
   const { t } = useT();
   const onFontSize = (_e: unknown, d: SpinButtonOnChangeData): void => {
@@ -71,15 +59,6 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
 
   const tabIndentLabel = (v: TabIndents): string =>
     TAB_INDENT_KEYS[v] ? t(TAB_INDENT_KEYS[v]) : String(v);
-  const decodingLabel = (v: DefaultDecoding): string =>
-    DECODING_KEYS[v] ? t(DECODING_KEYS[v]) : v;
-  // Font style / weight / search engine / EOL keep their static option labels:
-  // UWP rendered these from enum names with no per-option .resw string, so the
-  // existing English labels stay (parity with the ported tables).
-  const fontStyleLabel = (v: FontStyleId): string =>
-    FONT_STYLES.find((s) => s.id === v)?.label ?? 'Normal';
-  const fontWeightLabel = (v: number): string =>
-    FONT_WEIGHTS.find((w) => w.weight === v)?.label ?? String(v);
   const searchEngineLabel = (v: SearchEngineId): string =>
     v === 'custom'
       ? t('TextAndEditorPage_SearchEngineSettings_CustomSearchUrlRadioButton.Text')
@@ -114,17 +93,6 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           <Switch
             checked={settings.displayLineHighlighter}
             onChange={(_e, d) => update({ displayLineHighlighter: d.checked })}
-          />
-        </SettingRow>
-        <SettingRow
-          id="highlightMisspelledWords"
-          label={t(
-            'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent'
-          )}
-        >
-          <Switch
-            checked={settings.highlightMisspelledWords}
-            onChange={(_e, d) => update({ highlightMisspelledWords: d.checked })}
           />
         </SettingRow>
         <SettingRow
@@ -174,44 +142,6 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
             onChange={onFontSize}
           />
         </SettingRow>
-        <SettingRow
-          id="editorFontStyle"
-          layout="stack"
-          label={t('TextAndEditorPage_FontStyleSettings_Title.Text')}
-        >
-          <Dropdown
-            value={fontStyleLabel(settings.editorFontStyle)}
-            selectedOptions={[settings.editorFontStyle]}
-            onOptionSelect={(_e, d) => update({ editorFontStyle: d.optionValue as FontStyleId })}
-            style={{ width: '100%' }}
-          >
-            {FONT_STYLES.map((s) => (
-              <Option key={s.id} value={s.id}>
-                {s.label}
-              </Option>
-            ))}
-          </Dropdown>
-        </SettingRow>
-        <SettingRow
-          id="editorFontWeight"
-          layout="stack"
-          label={t('TextAndEditorPage_FontWeightSettings_Title.Text')}
-        >
-          <Dropdown
-            value={fontWeightLabel(settings.editorFontWeight)}
-            selectedOptions={[String(settings.editorFontWeight)]}
-            onOptionSelect={(_e, d) =>
-              d.optionValue && update({ editorFontWeight: Number(d.optionValue) })
-            }
-            style={{ width: '100%' }}
-          >
-            {FONT_WEIGHTS.map((w) => (
-              <Option key={w.weight} value={String(w.weight)}>
-                {w.label}
-              </Option>
-            ))}
-          </Dropdown>
-        </SettingRow>
       </SettingGroup>
 
       <SettingGroup title={t('TextAndEditorPage_EncodingSettings_Title.Text')}>
@@ -244,22 +174,6 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           >
             {ENCODING_OPTIONS.map((o) => (
               <Radio key={o.id} value={o.id} label={o.label} />
-            ))}
-          </RadioGroup>
-        </SettingRow>
-        <SettingRow
-          id="defaultDecoding"
-          layout="stack"
-          label={t('TextAndEditorPage_DecodingSettings_Title.Text')}
-          description={t('TextAndEditorPage_DecodingSettings_Description.Text')}
-        >
-          <RadioGroup
-            data-testid="setting-defaultDecoding-group"
-            value={settings.defaultDecoding}
-            onChange={(_e, d) => update({ defaultDecoding: d.value as DefaultDecoding })}
-          >
-            {DECODING_OPTIONS.map((o) => (
-              <Radio key={o.id} value={o.id} label={decodingLabel(o.id)} />
             ))}
           </RadioGroup>
         </SettingRow>

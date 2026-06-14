@@ -259,18 +259,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'ପୂର୍ଣ୍ଣ ପଥ କପି କରନ୍ତୁ',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'ଧାରକ ଫୋଲ୍ଡର ଖୋଲନ୍ତୁ',
   Tab_ContextFlyout_RenameButtonDisplayText: 'ନାମବଦଳ',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows କୋଡ୍ ପୃଷ୍ଠା)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content': 'ସ୍ୱତଃ ଏନକୋଡିଂ ର ଅନୁମାନ (ପରାମର୍ଶିତ)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'ଯଦି ଫାଇଲର ଏନକୋଡିଂ ଚିହ୍ନଟ ହୋଇପାରିବ ନାହିଁ ତେବେ ଫଲବ୍ୟାକ୍ ଡିକୋଡିଂ ବ୍ୟବହାର ହେବ| ',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'ଫଲବ୍ୟାକ୍ ଡିକୋଡିଂ',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'ଦର୍ଶନ',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'କେବଳ ନୂତନ ଡକ୍ୟୁମେଣ୍ଟ୍ ପାଇଁ ପ୍ରଯୁଜ୍ୟ|',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'ଡିଫଲ୍ଟ ଏନକୋଡିଂ',
   'TextAndEditorPage_FontSettings_Title.Text': 'ଡିଫଲ୍ଟ ଫଣ୍ଟ ଏବଂ ଆକାର',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'ଡିଫଲ୍ଟ ଫଣ୍ଟ ଶୈଳୀ',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'ଡିଫଲ୍ଟ ଫଣ୍ଟ ଓଜନ',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'କେବଳ ନୂତନ ଡକ୍ୟୁମେଣ୍ଟ୍ ପାଇଁ ପ୍ରଯୁଜ୍ୟ|',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'ଡିଫଲ୍ଟ ଲାଇନ ଶେଷ',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'ସାମ୍ପ୍ରତିକ ଲାଇନ୍ ହାଇଲାଇଟ୍ କରନ୍ତୁ',
@@ -284,10 +276,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'ଇଣ୍ଟରନେଟରେ ସନ୍ଧାନ କରିବା ସମୟରେ ଡିଫଲ୍ଟ ସର୍ଚ୍ଚ ଇଞ୍ଜିନ୍ ପାଇଁ ମନୋନୀତ ସେଟିଂ',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'ଡିଫଲ୍ଟ ସର୍ଚ୍ଚ ଇଞ୍ଜିନ୍',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'ଭୁଲ ବନାନ ଶବ୍ଦଗୁଡ଼ିକୁ ହାଇଲାଇଟ୍ କରନ୍ତୁ',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'ଭୁଲ ବନାନ ଶବ୍ଦଗୁଡ଼ିକୁ ହାଇଲାଇଟ୍ କରନ୍ତୁ',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'ବନାନ',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'ଡିଫଲ୍ଟ (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

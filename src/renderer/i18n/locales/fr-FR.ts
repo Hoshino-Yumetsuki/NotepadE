@@ -278,20 +278,11 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Copier le chemin complet',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Ouvrir le dossier',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Renommer',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows code page)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Encodage automatique (Recommandé)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    "Le décodage de secours sera utilisé si l'encodage du fichier ne peut pas être reconnu.",
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Décodage de secours',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Affichage',
   'TextAndEditorPage_EncodingSettings_Description.Text':
     "S'applique uniquement aux nouveaux documents.",
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Encodage par défaut',
   'TextAndEditorPage_FontSettings_Title.Text': 'Police & taille par défaut',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Style de police par défaut',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Épaisseur de police par défaut',
   'TextAndEditorPage_LineEndingSettings_Description.Text':
     "S'applique uniquement aux nouveaux documents.",
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Fin de ligne par défaut',
@@ -310,10 +301,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     "Le moteur de recherche par défaut est utilisé lorsqu'une recherche Web est effectuée.",
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Moteur de recherche par défaut',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Souligner les mots mal orthographiés',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Souligner les mots mal orthographiés',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Orthographe',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Par défaut (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

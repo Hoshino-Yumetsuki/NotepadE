@@ -267,19 +267,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: 'Kopioi koko polku',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: 'Avaa sisältävä kansio',
   Tab_ContextFlyout_RenameButtonDisplayText: 'Nimeä uudelleen',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows-koodisivu)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content':
-    'Arvaa koodaus automaattisesti (Suositeltu)',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    'Varakoodaus käytetään, jos tiedoston koodausta ei voida tunnistaa.',
-  'TextAndEditorPage_DecodingSettings_Title.Text': 'Varakoodaus',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': 'Näyttö',
   'TextAndEditorPage_EncodingSettings_Description.Text': 'Soveltuu vain uuteen asiakirjaan.',
   'TextAndEditorPage_EncodingSettings_Title.Text': 'Oletuskoodaus',
   'TextAndEditorPage_FontSettings_Title.Text': 'Oletus Fontti & Koko',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': 'Oletus Fonttityyli',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': 'Oletus Fonttipaino',
   'TextAndEditorPage_LineEndingSettings_Description.Text': 'Soveltuu vain uuteen asiakirjaan.',
   'TextAndEditorPage_LineEndingSettings_Title.Text': 'Oletus Rivinvaihto',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': 'Korosta nykyinen rivi',
@@ -293,10 +284,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     'Asetukset oletushakukoneelle, joka valitaan verkkohaussa.',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': 'Oletushakukone',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    'Korosta kirjoitusvirheet',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    'Korosta kirjoitusvirheet',
   'TextAndEditorPage_SpellingSettings_Title.Text': 'Oikeinkirjoitus',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': 'Oletus (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':

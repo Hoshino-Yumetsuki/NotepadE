@@ -255,18 +255,10 @@ const table: LocaleTable = {
   Tab_ContextFlyout_CopyFullPathButtonDisplayText: '複製完整路徑',
   Tab_ContextFlyout_OpenContainingFolderButtonDisplayText: '開啟檔案所在之資料夾',
   Tab_ContextFlyout_RenameButtonDisplayText: '重新命名',
-  'TextAndEditorPage_DecodingSettings_AnsiRadioButton.Content': 'ANSI (Windows 編碼頁)',
-  'TextAndEditorPage_DecodingSettings_AutoGuessRadioButton.Content': '自動猜測編碼（建議）',
-  'TextAndEditorPage_DecodingSettings_Description.Text':
-    '當無法識別檔案的編碼時，此編碼將會被作為預設編碼使用。',
-  'TextAndEditorPage_DecodingSettings_Title.Text': '預設讀取編碼',
-  'TextAndEditorPage_DecodingSettings_Utf8RadioButton.Content': 'UTF-8',
   'TextAndEditorPage_DisplaySettings_Title.Text': '顯示',
   'TextAndEditorPage_EncodingSettings_Description.Text': '僅會套用至新的文件。',
   'TextAndEditorPage_EncodingSettings_Title.Text': '預設寫入編碼',
   'TextAndEditorPage_FontSettings_Title.Text': '預設字型和大小',
-  'TextAndEditorPage_FontStyleSettings_Title.Text': '預設字型樣式',
-  'TextAndEditorPage_FontWeightSettings_Title.Text': '預設字型粗細',
   'TextAndEditorPage_LineEndingSettings_Description.Text': '僅會套用至新的文件。',
   'TextAndEditorPage_LineEndingSettings_Title.Text': '預設行尾',
   'TextAndEditorPage_LineHighlighterSettings_ToggleSwitch.OffContent': '強調顯示當前行',
@@ -280,10 +272,6 @@ const table: LocaleTable = {
   'TextAndEditorPage_SearchEngineSettings_Description.Text':
     '當執行網路搜尋時，將會採用此搜尋引擎進行搜尋。',
   'TextAndEditorPage_SearchEngineSettings_Title.Text': '預設搜尋引擎',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OffContent':
-    '強調顯示拼寫錯誤的字詞',
-  'TextAndEditorPage_SpellingSettings_HighlightMisspelledWordsToggleSwitch.OnContent':
-    '強調顯示拼寫錯誤的字詞',
   'TextAndEditorPage_SpellingSettings_Title.Text': '拼寫檢查',
   'TextAndEditorPage_TabKeySettings_DefaultRadioButton.Content': '預設 (\\t)',
   'TextAndEditorPage_TabKeySettings_Description.Text':
