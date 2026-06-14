@@ -17,7 +17,7 @@
  */
 
 import { useEffect } from 'react';
-import { viewModeCallbacksRef, type ViewModeCallbacks } from '../editor/commands/keymap';
+import { viewModeCallbacksRef, type ViewModeCallbacks } from '../editor/commands/viewModeBridge';
 
 export type { ViewModeCallbacks };
 

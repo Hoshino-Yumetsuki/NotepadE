@@ -1,69 +1,48 @@
 /**
- * ============================================================================
- *  Line-number Reveal glow — vertical boundary line between gutter and content
- * ============================================================================
+ * Line-number reveal glow (RENDERER, Monaco port).
  *
- * A vertical highlight line rendered AT the boundary between the line-number
- * column and the editor text area. The line is solid in the center and fades
- * horizontally on both sides (into the gutter and into the content), following
- * the cursor vertically as the pointer moves near the boundary.
+ * A thin vertical highlight rendered AT the boundary between the line-number
+ * column and the editor text area. It is solid in the center and fades vertically
+ * at both ends, following the pointer's Y as it moves near the boundary, and
+ * fades out horizontally as the pointer moves right into the content.
  *
- * Self-contained on purpose: this is the editor's own glow and deliberately does
- * NOT import `theme/reveal.ts` (a different worker's lane).
+ * Monaco port of the original CM6 plugin (deleted in the migration). Same visual
+ * contract; geometry now reads `editor.getLayoutInfo().contentLeft` for the
+ * boundary x and `editor.getDomNode()` as the positioning/clipping root.
  *
- * Perf discipline:
- *   - the gutter rect is sampled ONCE on pointerenter and reused for every move
+ * Perf discipline (mirrors the CM6 original):
+ *   - the editor rect is sampled ONCE on pointerenter and reused for every move
  *   - pointer updates are coalesced into a single requestAnimationFrame
- *   - only CSS `opacity`, `top`, `height`, `left`, `width` are written
+ *   - only CSS `opacity`, `top`, `height`, `left` are written
  *   - `transition: opacity` only — no transition on layout-triggering props
  *
  * THEME: light/dark/hc aware. HC and prefers-reduced-transparency/motion users
- * get NO glow (plugin stays fully inert).
+ * get NO glow (the attach is fully inert and returns a no-op disposer).
  *
  * PA-8: pure renderer data + DOM-only pointer tracking.
  */
 
-import { ViewPlugin, type PluginValue, type ViewUpdate, EditorView } from '@codemirror/view';
-import type { Extension } from '@codemirror/state';
-
-// ---------------------------------------------------------------------------
-//  Geometry + CSS contract
-// ---------------------------------------------------------------------------
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 /** Width of the thin vertical line at the boundary (px). */
 export const GLOW_LINE_WIDTH = 2;
 /** Vertical band height around the cursor (px above + below). */
 export const GLOW_BAND_HALF = 60;
-/**
- * Horizontal falloff: glow is full while the pointer is over the gutter edge and
- * ramps to zero this many px to the RIGHT of the boundary.
- */
+/** Horizontal falloff: full at the boundary, zero this many px to the RIGHT. */
 export const GLOW_FALLOFF_PX = 80;
 
-/** Options threaded from the host. */
 export interface LineNumberGlowOptions {
   themeMode: 'light' | 'dark' | 'hc';
   accentColor: string;
 }
 
-// ---------------------------------------------------------------------------
-//  Pure helpers
-// ---------------------------------------------------------------------------
-
-export function parseHexColor(hex: string): { r: number; g: number; b: number } | null {
-  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return null;
-  let h = m[1];
-  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-  const n = Number.parseInt(h, 16);
-  return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
-}
-
-export function glowColor(themeMode: 'light' | 'dark' | 'hc', _accentColor: string): string {
+/** Glow color per theme (HC → none). Accent intentionally unused (neutral glow). */
+export function glowColor(themeMode: 'light' | 'dark' | 'hc'): string {
   if (themeMode === 'hc') return 'transparent';
   return themeMode === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.14)';
 }
 
+/** Opacity ramp: 1 at/left-of the boundary, linearly to 0 by `falloff` px right. */
 export function glowOpacityForDistance(
   distanceRightOfEdge: number,
   falloff = GLOW_FALLOFF_PX
@@ -73,169 +52,103 @@ export function glowOpacityForDistance(
   return 1 - distanceRightOfEdge / falloff;
 }
 
+/** True when the OS asks for reduced transparency/motion — the glow stays off. */
 export function glowDisabledByMedia(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
   return (
-    (window.matchMedia('(prefers-reduced-transparency: reduce)').matches ?? false) ||
-    (window.matchMedia('(prefers-reduced-motion: reduce)').matches ?? false)
+    window.matchMedia('(prefers-reduced-transparency: reduce)').matches ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
+}
+
+/** Vertical gradient: solid in the center, fading to transparent at top + bottom. */
+export function glowBackground(color: string): string {
+  return `linear-gradient(to bottom, transparent 0%, ${color} 40%, ${color} 60%, transparent 100%)`;
 }
 
 /**
- * Vertical gradient for the line: solid color in the center, fading to
- * transparent at both top and bottom ends.
+ * Attach the reveal glow to a live Monaco editor. Returns a disposer that removes
+ * the overlay + all listeners. Inert (no-op disposer) for HC / reduced-motion.
  */
-export function glowBackground(color: string): string {
-  return (
-    `linear-gradient(to bottom,` +
-    ` transparent 0%,` +
-    ` ${color} 40%,` +
-    ` ${color} 60%,` +
-    ` transparent 100%)`
-  );
-}
+export function attachLineNumberGlow(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  options: LineNumberGlowOptions
+): () => void {
+  const color = glowColor(options.themeMode);
+  const root = editor.getDomNode();
+  if (color === 'transparent' || glowDisabledByMedia() || !root) return () => {};
 
-// ---------------------------------------------------------------------------
-//  The ViewPlugin
-// ---------------------------------------------------------------------------
+  const overlay = document.createElement('div');
+  overlay.className = 'monaco-lineNumberGlow';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.style.position = 'absolute';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.zIndex = '3';
+  overlay.style.width = `${GLOW_LINE_WIDTH}px`;
+  overlay.style.top = '0';
+  overlay.style.height = '0';
+  overlay.style.opacity = '0';
+  overlay.style.background = glowBackground(color);
+  overlay.style.transition = 'opacity 120ms ease-out';
+  overlay.style.willChange = 'opacity';
 
-export function lineNumberGlow(options: LineNumberGlowOptions): Extension {
-  const color = glowColor(options.themeMode, options.accentColor);
-  const motionless = glowDisabledByMedia();
-  const disabled = motionless || color === 'transparent';
+  // Boundary x = where content begins (right edge of the gutter), in px from the
+  // editor's left edge. Kept in sync on layout change (line-number toggle/resize).
+  let boundaryX = editor.getLayoutInfo().contentLeft;
+  const positionLeft = (): void => {
+    overlay.style.left = `${Math.max(0, boundaryX - GLOW_LINE_WIDTH / 2)}px`;
+  };
+  positionLeft();
+  root.appendChild(overlay);
 
-  return ViewPlugin.define((view) => new LineNumberGlowPlugin(view, color, disabled));
-}
+  let rafId: number | null = null;
+  let next: { y: number; opacity: number } | null = null;
+  // Editor rect sampled on pointerenter and reused for the move burst (perf).
+  let rect: { top: number; left: number } | null = null;
 
-class LineNumberGlowPlugin implements PluginValue {
-  private overlay: HTMLDivElement | null = null;
-  private rect: { top: number; right: number } | null = null;
-  private rafId: number | null = null;
-  private next: { y: number; opacity: number } | null = null;
-  private colWidth = 0;
+  const flush = (): void => {
+    rafId = null;
+    if (!next) return;
+    const maxH = editor.getLayoutInfo().height;
+    const bandH = maxH > 0 ? Math.min(GLOW_BAND_HALF * 2, maxH) : GLOW_BAND_HALF * 2;
+    const rawTop = next.y - bandH / 2;
+    const top = maxH > 0 ? Math.max(0, Math.min(rawTop, maxH - bandH)) : Math.max(0, rawTop);
+    overlay.style.top = `${top}px`;
+    overlay.style.height = `${bandH}px`;
+    overlay.style.opacity = `${next.opacity}`;
+  };
+  const write = (y: number, opacity: number): void => {
+    next = { y, opacity };
+    if (rafId == null) rafId = requestAnimationFrame(flush);
+  };
 
-  constructor(
-    private readonly view: EditorView,
-    private readonly color: string,
-    private readonly disabled: boolean
-  ) {
-    if (this.disabled) return;
-    this.onEnter = this.onEnter.bind(this);
-    this.onMove = this.onMove.bind(this);
-    this.onLeave = this.onLeave.bind(this);
-    this.flush = this.flush.bind(this);
-    this.mountOverlay();
-    const scroller = view.scrollDOM;
-    scroller.addEventListener('pointerenter', this.onEnter, { passive: true });
-    scroller.addEventListener('pointermove', this.onMove, { passive: true });
-    scroller.addEventListener('pointerleave', this.onLeave, { passive: true });
-  }
-
-  private gutters(): HTMLElement | null {
-    // CM6's native line-number gutter (lineNumbers(), themed in
-    // lineNumberColumn.ts). It lives inside .cm-scroller as .cm-gutters at the
-    // left edge — its right edge is the boundary this glow lights.
-    return this.view.dom.querySelector<HTMLElement>('.cm-gutters');
-  }
-
-  private mountOverlay(): void {
-    const gutters = this.gutters();
-    if (!gutters) return;
-    const colRect = gutters.getBoundingClientRect();
-    this.colWidth = colRect.width;
-
-    const el = document.createElement('div');
-    el.className = 'cm-lineNumberGlow';
-    el.setAttribute('aria-hidden', 'true');
-    el.style.position = 'absolute';
-    el.style.pointerEvents = 'none';
-    el.style.zIndex = '1';
-    // 2px line centered at the boundary: 1px on each side.
-    el.style.left = `${Math.max(0, this.colWidth - 1)}px`;
-    el.style.width = `${GLOW_LINE_WIDTH}px`;
-    el.style.top = '0';
-    el.style.height = '0';
-    el.style.opacity = '0';
-    el.style.background = glowBackground(this.color);
-    el.style.transition = 'opacity 120ms ease-out';
-    el.style.willChange = 'opacity';
-    // Clip the overlay to view.dom so the glow never bleeds into surrounding UI.
-    this.view.dom.style.overflow = 'hidden';
-    this.view.dom.appendChild(el);
-    this.overlay = el;
-  }
-
-  update(_update: ViewUpdate): void {
-    if (this.disabled) return;
-    // The column DOM may rebuild on theme/font changes; re-read column width.
-    const gutters = this.gutters();
-    if (gutters) {
-      const w = gutters.getBoundingClientRect().width;
-      if (w !== this.colWidth) {
-        this.colWidth = w;
-        if (this.overlay) {
-          this.overlay.style.left = `${Math.max(0, w - 1)}px`;
-        }
-      }
-    }
-    if (!this.overlay || !this.overlay.isConnected) {
-      this.overlay = null;
-      this.mountOverlay();
-    }
-  }
-
-  private onEnter(e: PointerEvent): void {
-    const gutters = this.gutters();
-    if (gutters) {
-      const r = gutters.getBoundingClientRect();
-      this.rect = { top: r.top, right: r.right };
-    }
-    this.onMove(e);
-  }
-
-  private onMove(e: PointerEvent): void {
-    const rect = this.rect;
+  const onEnter = (e: PointerEvent): void => {
+    const r = root.getBoundingClientRect();
+    rect = { top: r.top, left: r.left };
+    onMove(e);
+  };
+  const onMove = (e: PointerEvent): void => {
     if (!rect) return;
     const y = e.clientY - rect.top;
-    const opacity = glowOpacityForDistance(e.clientX - rect.right);
-    this.write(y, opacity);
-  }
+    const opacity = glowOpacityForDistance(e.clientX - (rect.left + boundaryX));
+    write(y, opacity);
+  };
+  const onLeave = (): void => write(0, 0);
 
-  private onLeave(): void {
-    this.write(0, 0);
-  }
+  root.addEventListener('pointerenter', onEnter, { passive: true });
+  root.addEventListener('pointermove', onMove, { passive: true });
+  root.addEventListener('pointerleave', onLeave, { passive: true });
+  const layoutSub = editor.onDidLayoutChange((info) => {
+    boundaryX = info.contentLeft;
+    positionLeft();
+  });
 
-  private write(y: number, opacity: number): void {
-    this.next = { y, opacity };
-    if (this.rafId == null) this.rafId = requestAnimationFrame(this.flush);
-  }
-
-  private flush(): void {
-    this.rafId = null;
-    const el = this.overlay;
-    const n = this.next;
-    if (!el || !n) return;
-    const maxH = this.view.scrollDOM.clientHeight;
-    // Clamp within the editor viewport: never let the glow bleed above or below.
-    const bandH = maxH > 0 ? Math.min(GLOW_BAND_HALF * 2, maxH) : GLOW_BAND_HALF * 2;
-    const rawTop = n.y - bandH / 2;
-    const top = maxH > 0 ? Math.max(0, Math.min(rawTop, maxH - bandH)) : Math.max(0, rawTop);
-    el.style.top = `${top}px`;
-    el.style.height = `${bandH}px`;
-    el.style.opacity = `${n.opacity}`;
-  }
-
-  destroy(): void {
-    if (this.rafId != null) cancelAnimationFrame(this.rafId);
-    this.rafId = null;
-    if (!this.disabled) {
-      const scroller = this.view.scrollDOM;
-      scroller.removeEventListener('pointerenter', this.onEnter);
-      scroller.removeEventListener('pointermove', this.onMove);
-      scroller.removeEventListener('pointerleave', this.onLeave);
-    }
-    this.overlay?.remove();
-    this.overlay = null;
-    this.view.dom.style.overflow = '';
-  }
+  return () => {
+    if (rafId != null) cancelAnimationFrame(rafId);
+    root.removeEventListener('pointerenter', onEnter);
+    root.removeEventListener('pointermove', onMove);
+    root.removeEventListener('pointerleave', onLeave);
+    layoutSub.dispose();
+    overlay.remove();
+  };
 }

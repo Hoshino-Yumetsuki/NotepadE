@@ -1,26 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { EditorSelection } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import type * as monacoApi from 'monaco-editor/esm/vs/editor/editor.api';
 import { TabsStore } from '../tabs/useTabsStore';
-import type { CodeMirrorHandle } from '../editor/CodeMirrorEditor';
-import { mountView } from '../editor/commands/testUtils';
-import { editorSettings } from '../editor/editorSettings';
-import { zoomField, zoomStyle, setZoom, DEFAULT_ZOOM } from '../editor/commands/zoom';
-import { useStatusBarModel } from './useStatusBarModel';
+import {
+  useStatusBarModel,
+  getEditorZoom,
+  initEditorZoom,
+  applyEditorZoom
+} from './useStatusBarModel';
+import { DEFAULT_ZOOM, MAX_ZOOM } from '../editor/commands/logic/zoom';
 
 /**
- * Zoom slider ↔ editor bidirectional sync (UWP FontZoomIndicator/E108 parity).
+ * Zoom slider ↔ Monaco editor bidirectional sync (UWP FontZoomIndicator/E108 parity).
  *
- * The slider/buttons must drive the SAME per-editor zoomField the keyboard +
- * Ctrl+wheel commands mutate (one zoom authority), and a field change made by
- * those commands must surface back into the status-bar percent via the 250ms
- * poll — the editor view is owned by CodeMirrorEditor, so the status bar reads
- * the field instead of mounting its own updateListener. Tab switches must show
- * the newly-active editor's (per-state) zoom.
+ * The slider/buttons must drive the same per-editor zoom registry that keyboard
+ * commands (T3) use, and a registry change must surface back via the 250ms poll.
+ * Tab switches must show the newly-active editor's zoom.
  *
- * Real CM6 views (jsdom) + the real hook; only window.notepads is stubbed
- * (PA-8: the hook touches IPC for the ANSI list / file revalidation only).
+ * Monaco editor instances are mocked (jsdom has no Monaco); only the registry
+ * and hook state are exercised.
  */
 
 beforeEach(() => {
@@ -44,164 +42,162 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Mount a zoom-capable CM6 view (the field + the style listener, like keymap.ts). */
-function zoomView(): EditorView {
-  return mountView('hello', EditorSelection.cursor(0), [
-    editorSettings.of({}),
-    zoomField,
-    zoomStyle
-  ]);
+/** Create a minimal mock Monaco editor with a zoom registry entry. */
+function makeEditor(baseFontSize = 14): monacoApi.editor.IStandaloneCodeEditor {
+  const updateOptions = vi.fn();
+  const editor = {
+    updateOptions,
+    getPosition: vi.fn(() => ({ lineNumber: 1, column: 1 })),
+    getSelection: vi.fn(() => null),
+    getModel: vi.fn(() => null),
+    onDidChangeCursorPosition: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidChangeCursorSelection: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() }))
+  } as unknown as monacoApi.editor.IStandaloneCodeEditor;
+  initEditorZoom(editor, baseFontSize);
+  return editor;
 }
 
-/** Wrap a live view in the minimal CodeMirrorHandle surface the hook reads. */
-function handleFor(view: EditorView): CodeMirrorHandle {
-  return { getView: () => view } as unknown as CodeMirrorHandle;
+/** Wrap an editor in the minimal MonacoHandle surface the hook reads. */
+function handleFor(editor: monacoApi.editor.IStandaloneCodeEditor) {
+  return {
+    getEditor: () => editor,
+    setDoc: vi.fn(),
+    getShadowText: vi.fn(() => ''),
+    focus: vi.fn(),
+    tryInsertLogEntry: vi.fn(() => false)
+  };
 }
 
-describe('useStatusBarModel zoom sync', () => {
-  it('onSetZoom dispatches setZoom into the ACTIVE editor view (slider → editor)', () => {
+describe('useStatusBarModel zoom sync (Monaco)', () => {
+  it('onSetZoom writes to the zoom registry and calls updateOptions (slider → editor)', () => {
     const store = new TabsStore();
     const id = store.newTab();
-    const view = zoomView();
-    try {
-      const { result } = renderHook(() =>
-        useStatusBarModel({
-          theme: 'light',
-          store,
-          getActiveHandle: () => handleFor(view),
-          activeEditorId: id
-        })
-      );
-      act(() => {
-        result.current.onSetZoom(150);
-      });
-      // The field is the single zoom authority — the slider write must land there.
-      expect(view.state.field(zoomField)).toBe(150);
-      // Optimistic local mirror updates in the same tick (no 250ms wait).
-      expect(result.current.zoomPercent).toBe(150);
-    } finally {
-      view.destroy();
-    }
+    const editor = makeEditor(14);
+    const handle = handleFor(editor);
+
+    const { result } = renderHook(() =>
+      useStatusBarModel({
+        theme: 'light',
+        store,
+        getActiveHandle: () => handle,
+        activeEditorId: id
+      })
+    );
+
+    act(() => {
+      result.current.onSetZoom(150);
+    });
+
+    // Registry is the single zoom authority.
+    expect(getEditorZoom(editor)).toBe(150);
+    // updateOptions called with the scaled font size (14 * 150/100 = 21).
+    expect(editor.updateOptions).toHaveBeenCalledWith({ fontSize: 21 });
+    // Optimistic local mirror updates in the same tick (no 250ms wait).
+    expect(result.current.zoomPercent).toBe(150);
   });
 
-  it('onResetZoom restores the editor field to 100% (UWP Ctrl+0 default)', () => {
+  it('onResetZoom restores the editor to 100% (UWP Ctrl+0 default)', () => {
     const store = new TabsStore();
     const id = store.newTab();
-    const view = zoomView();
-    try {
-      const { result } = renderHook(() =>
-        useStatusBarModel({
-          theme: 'light',
-          store,
-          getActiveHandle: () => handleFor(view),
-          activeEditorId: id
-        })
-      );
-      act(() => {
-        result.current.onSetZoom(250);
-      });
-      expect(view.state.field(zoomField)).toBe(250);
-      act(() => {
-        result.current.onResetZoom();
-      });
-      expect(view.state.field(zoomField)).toBe(DEFAULT_ZOOM);
-      expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
-    } finally {
-      view.destroy();
-    }
+    const editor = makeEditor(14);
+    const handle = handleFor(editor);
+
+    const { result } = renderHook(() =>
+      useStatusBarModel({
+        theme: 'light',
+        store,
+        getActiveHandle: () => handle,
+        activeEditorId: id
+      })
+    );
+
+    act(() => { result.current.onSetZoom(250); });
+    expect(getEditorZoom(editor)).toBe(250);
+
+    act(() => { result.current.onResetZoom(); });
+    expect(getEditorZoom(editor)).toBe(DEFAULT_ZOOM);
+    expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
   });
 
-  it('an out-of-range slider value settles on the field-clamped percent after the poll', () => {
+  it('out-of-range slider value is clamped to MAX_ZOOM', () => {
     const store = new TabsStore();
     const id = store.newTab();
-    const view = zoomView();
-    try {
-      const { result } = renderHook(() =>
-        useStatusBarModel({
-          theme: 'light',
-          store,
-          getActiveHandle: () => handleFor(view),
-          activeEditorId: id
-        })
-      );
-      act(() => {
-        result.current.onSetZoom(9999);
-      });
-      // The zoomField reducer clamps to MAX_ZOOM (500); the next poll tick
-      // re-reads the field and overwrites the optimistic local value.
-      expect(view.state.field(zoomField)).toBe(500);
-      act(() => {
-        vi.advanceTimersByTime(250);
-      });
-      expect(result.current.zoomPercent).toBe(500);
-    } finally {
-      view.destroy();
-    }
+    const editor = makeEditor(14);
+    const handle = handleFor(editor);
+
+    const { result } = renderHook(() =>
+      useStatusBarModel({
+        theme: 'light',
+        store,
+        getActiveHandle: () => handle,
+        activeEditorId: id
+      })
+    );
+
+    act(() => { result.current.onSetZoom(9999); });
+    expect(getEditorZoom(editor)).toBe(MAX_ZOOM);
+    expect(result.current.zoomPercent).toBe(MAX_ZOOM);
   });
 
-  it('a setZoom effect dispatched by editor commands reaches zoomPercent (editor → slider)', () => {
+  it('a registry change by T3 keyboard command surfaces via the 250ms poll (editor → slider)', () => {
     const store = new TabsStore();
     const id = store.newTab();
-    const view = zoomView();
-    try {
-      const { result } = renderHook(() =>
-        useStatusBarModel({
-          theme: 'light',
-          store,
-          getActiveHandle: () => handleFor(view),
-          activeEditorId: id
-        })
-      );
-      expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
-      // Simulate Ctrl+wheel / Ctrl+± zoom: a setZoom effect straight into the
-      // view, bypassing React entirely — exactly what ctrlWheelZoom does.
-      act(() => {
-        view.dispatch({ effects: setZoom.of(130) });
-        vi.advanceTimersByTime(250); // next poll tick mirrors the field
-      });
-      expect(result.current.zoomPercent).toBe(130);
-    } finally {
-      view.destroy();
-    }
+    const editor = makeEditor(14);
+    const handle = handleFor(editor);
+
+    const { result } = renderHook(() =>
+      useStatusBarModel({
+        theme: 'light',
+        store,
+        getActiveHandle: () => handle,
+        activeEditorId: id
+      })
+    );
+
+    expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
+
+    // Simulate T3 keyboard zoom writing directly to the registry.
+    act(() => {
+      applyEditorZoom(editor, 130);
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.zoomPercent).toBe(130);
   });
 
   it('reflects the newly-active editor zoom on tab switch (zoom is per-editor)', () => {
     const store = new TabsStore();
     const idA = store.newTab();
     const idB = store.newTab({ activate: false });
-    const viewA = zoomView();
-    const viewB = zoomView();
-    const handles = new Map<string, CodeMirrorHandle>([
-      [idA, handleFor(viewA)],
-      [idB, handleFor(viewB)]
+    const editorA = makeEditor(14);
+    const editorB = makeEditor(14);
+    const handles = new Map([
+      [idA, handleFor(editorA)],
+      [idB, handleFor(editorB)]
     ]);
-    try {
-      const { result, rerender } = renderHook(
-        ({ activeEditorId }: { activeEditorId: string }) =>
-          useStatusBarModel({
-            theme: 'light',
-            store,
-            getActiveHandle: () => handles.get(activeEditorId) ?? null,
-            activeEditorId
-          }),
-        { initialProps: { activeEditorId: idA } }
-      );
-      // Zoom tab A to 200 via the slider; tab B's field stays at the default.
-      act(() => {
-        result.current.onSetZoom(200);
-      });
-      expect(viewA.state.field(zoomField)).toBe(200);
-      expect(viewB.state.field(zoomField)).toBe(DEFAULT_ZOOM);
-      // Switch to B: the poll effect re-fires on activeEditorId and refreshes
-      // immediately, so the slider shows B's zoom without waiting 250ms.
-      rerender({ activeEditorId: idB });
-      expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
-      // And back to A: its per-editor 200% survives the round trip.
-      rerender({ activeEditorId: idA });
-      expect(result.current.zoomPercent).toBe(200);
-    } finally {
-      viewA.destroy();
-      viewB.destroy();
-    }
+
+    const { result, rerender } = renderHook(
+      ({ activeEditorId }: { activeEditorId: string }) =>
+        useStatusBarModel({
+          theme: 'light',
+          store,
+          getActiveHandle: () => handles.get(activeEditorId) ?? null,
+          activeEditorId
+        }),
+      { initialProps: { activeEditorId: idA } }
+    );
+
+    // Zoom tab A to 200 via the slider; tab B stays at default.
+    act(() => { result.current.onSetZoom(200); });
+    expect(getEditorZoom(editorA)).toBe(200);
+    expect(getEditorZoom(editorB)).toBe(DEFAULT_ZOOM);
+
+    // Switch to B: hook re-fires on activeEditorId and snapshots immediately.
+    rerender({ activeEditorId: idB });
+    expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
+
+    // Back to A: per-editor 200% survives the round trip.
+    rerender({ activeEditorId: idA });
+    expect(result.current.zoomPercent).toBe(200);
   });
 });

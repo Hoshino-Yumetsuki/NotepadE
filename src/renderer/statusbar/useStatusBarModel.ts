@@ -1,29 +1,41 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EncodingId, EolId, AnsiEncodingEntry } from '@shared/ipc-contract';
-import type { CodeMirrorHandle } from '../editor/CodeMirrorEditor';
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import type { MonacoHandle } from '../editor/MonacoEditor';
 import type { NotepadsTestHook, StatusBarTestHook } from '../editor/test-hook';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { StatusTheme } from './tokens';
 import { type LineColumn } from './statusModel';
 import type { FileModificationState, StatusBarProps } from './StatusBar';
 import { recordLastSaved, getLastSaved, deriveModificationState } from './fileStatusTracker';
-import { zoomField, setZoom, DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM } from '../editor/commands/zoom';
+import { DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM } from '../editor/commands/logic/zoom';
+import { getEditorZoom, applyEditorZoom, initEditorZoom } from '../editor/zoomRegistry';
 
 /**
- * useStatusBarModel — derives StatusBarProps from the active tab + its CM6 view
- * and binds every action to window.notepads (PA-8: no fs/path; all IO via IPC).
+ * useStatusBarModel — derives StatusBarProps from the active tab + its Monaco
+ * editor and binds every action to window.notepads (PA-8: no fs/path; all IO via IPC).
  *
- * The host (App) passes the active editor handle resolver, the tabs store, and
- * the resolved theme. Encoding/EOL labels are read from the active tab OPAQUE
- * (never re-derived). Line/column is computed from the active editor's '\n'
- * shadow doc + selection. The ANSI list is fetched once from MAIN for the
- * "More encodings" submenu; a fetch failure leaves it empty (Unicode rows still
- * show), matching the contract's stubbed-namespace behavior.
+ * Caret/selection updates subscribe via Monaco's onDidChangeCursorPosition and
+ * onDidChangeModelContent so they are event-driven rather than polled.
+ * Zoom percent is tracked in the shared editor/zoomRegistry (a WeakMap keyed on
+ * the editor instance), since Monaco has no CM6-style StateField for per-editor
+ * state. The keyboard/wheel zoom commands write to the SAME registry so the status
+ * bar slider always reflects keyboard-driven zoom and vice-versa.
  */
+
+// Re-exported so existing tests (useStatusBarModel.zoom.test.ts) and any host
+// callers keep importing the zoom API from this module's path after the registry
+// moved into editor/zoomRegistry.
+export { initEditorZoom, applyEditorZoom, getEditorZoom };
+
+// ---------------------------------------------------------------------------
+//  Hook
+// ---------------------------------------------------------------------------
+
 export function useStatusBarModel(args: {
   theme: StatusTheme;
   store: TabsStore;
-  getActiveHandle: () => CodeMirrorHandle | null;
+  getActiveHandle: () => MonacoHandle | null;
   activeEditorId: string | null;
   isShadowWindow?: boolean;
 }): StatusBarProps {
@@ -41,79 +53,69 @@ export function useStatusBarModel(args: {
     column: 1,
     selectedCount: 0
   });
-  const [zoomPercent, setZoomPercent] = useState(100);
-  // True while the zoom slider is being dragged. Pauses the 250ms poll's zoom
-  // read (refreshZoom) so it can't clobber the optimistic per-move percentage
-  // with a stale field read mid-drag.
+  const [zoomPercent, setZoomPercent] = useState(DEFAULT_ZOOM);
+  // True while the zoom slider is being dragged; pauses the poll read so the
+  // optimistic per-move percentage is never clobbered mid-drag.
   const zoomDraggingRef = useRef(false);
   const [ansiEncodings, setAnsiEncodings] = useState<readonly AnsiEncodingEntry[]>([]);
-  // Column-0 external-modification state machine (Gate-4 line 3).
   const [fileModificationState, setFileModificationState] = useState<FileModificationState>('none');
 
-  // Recompute Ln/Col from the active editor's main selection. Uses CM6's
-  // doc.lineAt (O(log n) line-tree lookup) on the selection START offset instead
-  // of serializing the whole document (view.state.doc.toString()) + scanning it
-  // char-by-char — the displayed Ln/Col is identical (the editor pins its line
-  // separator to the '\n' shadow buffer, so offset/line/column arithmetic matches
-  // computeLineColumn exactly), but the per-tick cost no longer scales with doc
-  // length. `from`/`to` are the already-sorted main range; START is `from`.
-  const refreshCaret = useCallback(() => {
-    const view = getActiveHandle()?.getView();
-    if (!view) return;
-    const { from, to } = view.state.selection.main;
-    const startLine = view.state.doc.lineAt(from);
-    const next: LineColumn = {
-      line: startLine.number,
-      column: from - startLine.from + 1,
-      selectedCount: to - from
-    };
-    // Bail when unchanged so the 250ms poll doesn't re-render every tick (and so
-    // an unstable getActiveHandle can never drive a setState→render→setState loop).
-    setLineColumn((prev) =>
-      prev.line === next.line &&
-      prev.column === next.column &&
-      prev.selectedCount === next.selectedCount
-        ? prev
-        : next
-    );
-  }, [getActiveHandle]);
+  // Snapshot caret position + selection length from the active Monaco editor.
+  const snapshotCaret = useCallback(
+    (editor: monaco.editor.IStandaloneCodeEditor) => {
+      const position = editor.getPosition();
+      if (!position) return;
+      const selection = editor.getSelection();
+      const selectedCount =
+        selection && !selection.isEmpty()
+          ? (editor.getModel()?.getValueLengthInRange(selection) ?? 0)
+          : 0;
+      setLineColumn((prev) => {
+        const l = position.lineNumber;
+        const c = position.column;
+        const s = selectedCount;
+        return prev.line === l && prev.column === c && prev.selectedCount === s
+          ? prev
+          : { line: l, column: c, selectedCount: s };
+      });
+    },
+    [] // intentionally stable — editor is passed in, not captured
+  );
 
-  // Mirror the ACTIVE editor's per-editor zoomField into local state so the
-  // status-bar percent/slider tracks Ctrl+wheel / Ctrl+± / Ctrl+0 zoom (which
-  // dispatch setZoom effects straight into the CM6 view, bypassing React). Same
-  // channel as refreshCaret: the editor view is owned by CodeMirrorEditor, so
-  // the status bar reads the field over the existing 250ms poll instead of
-  // mounting its own updateListener (which would remount that view). Because
-  // zoomField is PER-EDITOR state, this read also makes the slider reflect the
-  // active editor's zoom after a tab switch (the poll effect re-fires on
-  // activeEditorId below). setState with an identical number is a React no-op,
-  // so the poll never causes render churn while zoom is unchanged.
-  const refreshZoom = useCallback(() => {
-    // While the user is dragging the zoom slider, the optimistic applyZoom write
-    // already holds the live percentage; a poll read here can lag a frame behind
-    // the in-flight CM6 dispatch and would clobber the drag value back to a stale
-    // field read (the visible lag). Skip the poll until the drag ends.
-    if (zoomDraggingRef.current) return;
-    const view = getActiveHandle()?.getView();
-    if (!view) return;
-    setZoomPercent(view.state.field(zoomField, false) ?? DEFAULT_ZOOM);
-  }, [getActiveHandle]);
-
-  // Drive Ln/Col from caret/selection movement. The 250ms poll is retained as the
-  // settle mechanism the e2e statusbar driver waits on (it seeds a doc + selection
-  // then waits ~250ms before asserting "Ln x, Col y"); the editor view is owned by
-  // CodeMirrorEditor, so the status bar cannot mount its own CM6 updateListener
-  // without remounting that view. The expensive part — full-doc serialization — is
-  // gone (see refreshCaret above), so the remaining poll is a cheap O(log n) read.
+  // Subscribe to cursor/selection/content events on the active editor.
+  // Re-fires whenever activeEditorId changes (new tab) so the new editor's
+  // events are wired and stale subscriptions from the previous editor are disposed.
   useEffect(() => {
-    refreshCaret();
-    refreshZoom();
+    const editor = getActiveHandle()?.getEditor();
+    if (!editor) return;
+
+    // Initial snapshot on mount / tab switch.
+    snapshotCaret(editor);
+    if (!zoomDraggingRef.current) setZoomPercent(getEditorZoom(editor));
+
+    const cursorSub = editor.onDidChangeCursorPosition(() => snapshotCaret(editor));
+    const selectionSub = editor.onDidChangeCursorSelection(() => snapshotCaret(editor));
+    // Content change can affect selection length metrics; re-snapshot on change.
+    const contentSub = editor.onDidChangeModelContent(() => snapshotCaret(editor));
+
+    return () => {
+      cursorSub.dispose();
+      selectionSub.dispose();
+      contentSub.dispose();
+    };
+  }, [activeEditorId, getActiveHandle, snapshotCaret]);
+
+  // Poll zoom every 250ms — zoom is still written externally by keyboard commands
+  // (T3) via applyEditorZoom, and there is no Monaco event for font-size changes.
+  // This poll is cheap (a WeakMap lookup) and matches the e2e settle cadence.
+  useEffect(() => {
     const id = window.setInterval(() => {
-      refreshCaret();
-      refreshZoom();
+      if (zoomDraggingRef.current) return;
+      const editor = getActiveHandle()?.getEditor();
+      if (editor) setZoomPercent(getEditorZoom(editor));
     }, 250);
     return () => window.clearInterval(id);
-  }, [refreshCaret, refreshZoom, activeEditorId]);
+  }, [getActiveHandle, activeEditorId]);
 
   // Pull the ANSI table once for the "More encodings" submenu.
   useEffect(() => {
@@ -127,15 +129,11 @@ export function useStatusBarModel(args: {
   }, []);
 
   // --- column-0 external-modification state machine (UWP parity) -----------
-  // Live refs so the test seam + interval always see the CURRENT active tab,
-  // not a stale render closure. Only the ACTIVE file-backed tab is checked.
   const activeIdRef = useRef<string | null>(activeEditorId);
   const activePathRef = useRef<string | null>(filePath);
   activeIdRef.current = activeEditorId;
   activePathRef.current = filePath;
 
-  // Force one synchronous check against disk: revalidate the active file-backed
-  // tab and map the outcome vs its last-saved baseline. Untitled/no-path → 'none'.
   const checkFileStatus = useCallback(async (): Promise<FileModificationState> => {
     const id = activeIdRef.current;
     const path = activePathRef.current;
@@ -146,15 +144,12 @@ export function useStatusBarModel(args: {
     const r = await window.notepads.file.revalidatePath(path);
     const outcome = r.ok ? r.data : { exists: false, dateModifiedMs: 0 };
     const next = deriveModificationState(path, outcome, getLastSaved(id));
-    // Guard against a tab switch racing the await: only commit if still active.
     if (activeIdRef.current === id && activePathRef.current === path) {
       setFileModificationState(next);
     }
     return next;
   }, []);
 
-  // Poll the active tab ~every 3s (UWP CheckAndUpdateFileStatusAsync cadence).
-  // Reset to 'none' immediately on tab switch; an untitled tab never polls.
   useEffect(() => {
     setFileModificationState('none');
     if (!activeEditorId || filePath === null) return;
@@ -163,9 +158,7 @@ export function useStatusBarModel(args: {
     return () => window.clearInterval(id);
   }, [activeEditorId, filePath, checkFileStatus]);
 
-  // Test seam: window.__notepadsTest.statusbar.checkFileStatus() forces a check
-  // synchronously (the e2e cannot wait on the 3s timer). PA-8 clean — it only
-  // composes window.notepads.file.revalidatePath + the renderer state machine.
+  // Test seam: window.__notepadsTest.statusbar.checkFileStatus()
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const seam: StatusBarTestHook = { checkFileStatus };
@@ -173,8 +166,6 @@ export function useStatusBarModel(args: {
     if (existing) {
       existing.statusbar = seam;
     } else {
-      // Editor/tabs hooks not installed yet; stash a partial so the seam is
-      // reachable. installTestHook preserves sibling seams via Object semantics.
       window.__notepadsTest = { statusbar: seam } as unknown as NotepadsTestHook;
     }
     return () => {
@@ -189,8 +180,6 @@ export function useStatusBarModel(args: {
     [filePath]
   );
 
-  // Reload from disk, then re-baseline the last-saved mtime from the fresh
-  // OpenedFile so the indicator returns to 'none' (UWP resets state on reload).
   const reloadAndRebaseline = useCallback(async (id: string, path: string) => {
     const r = await window.notepads.file.reloadFromDisk(path);
     if (r.ok) {
@@ -199,35 +188,25 @@ export function useStatusBarModel(args: {
     }
   }, []);
 
-  // Slider/buttons → editor: dispatch an absolute setZoom effect into the
-  // ACTIVE editor's CM6 view (the zoomField reducer clamps; zoomStyle then
-  // repaints the font-size variable — the exact same pipeline Ctrl+wheel uses,
-  // so slider zoom and keyboard zoom can never diverge). Local state is updated
-  // optimistically so the flyout percent tracks the drag immediately instead of
-  // waiting up to 250ms for the next poll tick; the poll re-reads the field and
-  // settles on the clamped authoritative value. The optimistic write applies
-  // the SAME [MIN_ZOOM, MAX_ZOOM] clamp as the field reducer: with no active
-  // view (no tabs) there is no reducer to clamp and no poll to correct, so an
-  // out-of-range value would otherwise stick in the displayed percent.
+  // Slider/buttons → editor: write the zoom registry + updateOptions, update
+  // local state optimistically so the flyout tracks the drag immediately.
   const applyZoom = useCallback(
     (percent: number) => {
-      setZoomPercent(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, percent)));
-      const view = getActiveHandle()?.getView();
-      if (view) view.dispatch({ effects: setZoom.of(percent) });
+      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, percent));
+      setZoomPercent(clamped);
+      const editor = getActiveHandle()?.getEditor();
+      if (editor) applyEditorZoom(editor, clamped);
     },
     [getActiveHandle]
   );
 
-  // Slider drag lifecycle: while dragging, the poll's zoom read is paused (see
-  // refreshZoom) so the per-move optimistic percentage is never clobbered. On
-  // release, settle once on the authoritative clamped field value.
   const onZoomDragStart = useCallback(() => {
     zoomDraggingRef.current = true;
   }, []);
   const onZoomDragEnd = useCallback(() => {
     zoomDraggingRef.current = false;
-    const view = getActiveHandle()?.getView();
-    if (view) setZoomPercent(view.state.field(zoomField, false) ?? DEFAULT_ZOOM);
+    const editor = getActiveHandle()?.getEditor();
+    if (editor) setZoomPercent(getEditorZoom(editor));
   }, [getActiveHandle]);
 
   return useMemo<StatusBarProps>(
@@ -279,7 +258,6 @@ export function useStatusBarModel(args: {
       onSaveWithEncoding: (id: EncodingId) => {
         if (!filePath || !activeEditorId) return;
         void window.notepads.file.save({ filePath, encodingId: id }).then((r) => {
-          // Re-baseline from the SaveResult mtime so a save clears the indicator.
           if (r.ok) {
             recordLastSaved(activeEditorId, r.data.filePath, r.data.dateModifiedMs);
             setFileModificationState('none');

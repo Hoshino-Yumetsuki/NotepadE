@@ -1,28 +1,24 @@
 import type { OpenedFile, Result, SaveResult } from '@shared/ipc-contract';
-import type { EditorView } from '@codemirror/view';
-import { undoDepth as cmUndoDepth, redoDepth as cmRedoDepth } from '@codemirror/commands';
-import { EditorSelection } from '@codemirror/state';
-import type { CodeMirrorHandle } from './CodeMirrorEditor';
-import { zoomField, DEFAULT_ZOOM } from './commands/zoom';
-import { wordWrapField } from './commands/wordWrap';
-import { logEntryGuard } from './commands/datetime';
-import { setWebSearchObserver } from './commands/webSearch';
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import type { MonacoHandle } from './MonacoEditor';
+import { getEditorZoom } from '../statusbar/useStatusBarModel';
+import { setWebSearchObserver } from './commands/webSearchObserver';
 
 /**
  * Renderer test hook (RENDERER, Lane B) — exposes the REAL open/save flow to the
  * Gate-1 Playwright driver as `window.__notepadsTest`.
  *
  * This is PA-8 clean: it adds NO new IPC surface. Every method composes only the
- * public `window.notepads` contract plus the in-renderer CM6 handle. It exists
- * so the e2e exercises the genuine open→decode→IPC→CM6→save→encode→bytes path
+ * public `window.notepads` contract plus the in-renderer Monaco handle. It exists
+ * so the e2e exercises the genuine open→decode→IPC→Monaco→save→encode→bytes path
  * (not the raw bridge), per e2e/roundtrip.e2e.ts.
  */
 export interface NotepadsTestHook {
-  /** Open `path` via window.notepads.file.open and load the decoded text into CM6. */
+  /** Open `path` via window.notepads.file.open and load the decoded text into Monaco. */
   openFileIntoEditor(path: string): Promise<Result<OpenedFile>>;
-  /** The current '\n'-normalized CM6 shadow-buffer document. */
+  /** The current '\n'-normalized Monaco shadow-buffer document. */
   getEditorDocText(): string;
-  /** Save the current CM6 doc to `path` via window.notepads.file.save. */
+  /** Save the current Monaco doc to `path` via window.notepads.file.save. */
   saveEditorToPath(path: string): Promise<Result<SaveResult>>;
   /** Tabs seam (Phase 2) — installed separately by installTabsTestHook. */
   tabs?: import('../tabs/tabsTestHook').TabsTestHook;
@@ -73,14 +69,13 @@ export interface StatusBarTestHook {
 
 /**
  * Editor-surface test seam (Phase-3 gap harness). PA-8-clean: composes only the
- * live CM6 EditorView of the ACTIVE tab plus the public CM6 history helpers
- * (undoDepth/redoDepth). Read/arrange accessors the keyboard-conformance and
- * undo-granularity e2e suites assert on.
+ * live Monaco editor of the ACTIVE tab. Read/arrange accessors the
+ * keyboard-conformance and undo-granularity e2e suites assert on.
  *
  * MUST stay in sync with NotepadEditorTestHook in e2e/types/notepads-global.d.ts.
  */
 export interface EditorTestHook {
-  /** Active view doc as the '\n'-normalized shadow buffer (exact). */
+  /** Active editor doc as the '\n'-normalized shadow buffer (exact). */
   getDocText(): string;
   /** Main selection [from, to) as document offsets. */
   getSelection(): { from: number; to: number };
@@ -88,29 +83,26 @@ export interface EditorTestHook {
   setSelection(from: number, to: number): void;
   /** Focus the active editor surface. */
   focus(): void;
-  /** Current zoom percent (zoomField), clamped 10..500, default 100. */
+  /** Current zoom percent, clamped 10..500, default 100. */
   getZoomPercent(): number;
-  /** Whether word-wrap is on (wordWrapField). */
+  /** Whether word-wrap is on. */
   isWordWrap(): boolean;
   /** Editor content direction ('ltr' | 'rtl'). */
   getDirection(): 'ltr' | 'rtl';
-  /** CM6 history undo depth (number of undoable steps). */
+  /** Undo depth (number of undoable steps). */
   undoDepth(): number;
-  /** CM6 history redo depth (number of redoable steps). */
+  /** Redo depth (number of redoable steps). */
   redoDepth(): number;
-  /** Whether the .LOG once-per-open guard has fired (logEntryGuard). */
+  /** Whether the .LOG once-per-open guard has fired. */
   isLogEntryGuardSet(): boolean;
   /**
    * The last query the Ctrl+E web-search command resolved (trimmed + capped),
-   * or null if none ran since install. Lets the e2e assert the query WITHOUT
-   * monkey-patching the contextBridge-frozen window.notepads.shell.webSearch.
-   * The real IPC call is unaffected — this only records what was sent.
+   * or null if none ran since install.
    */
   lastWebSearchQuery(): string | null;
   /**
-   * Insert `text` at the current selection in ONE transaction tagged as a paste
-   * (userEvent 'input.paste'), so the undo-granularity suite can assert a paste
-   * collapses to exactly one history step.
+   * Insert `text` at the current selection as a paste operation so the
+   * undo-granularity suite can assert a paste collapses to exactly one history step.
    */
   insertAsPaste(text: string): void;
 }
@@ -122,12 +114,33 @@ export interface OpenLabels {
 }
 
 /**
+ * Convert a document offset to a Monaco IPosition (1-based lineNumber + column).
+ * Walks the model's line count to find the right line.
+ */
+function offsetToPosition(
+  model: monaco.editor.ITextModel,
+  offset: number
+): monaco.IPosition {
+  return model.getPositionAt(offset);
+}
+
+/**
+ * Convert a Monaco IPosition to a document offset.
+ */
+function positionToOffset(
+  model: monaco.editor.ITextModel,
+  position: monaco.IPosition
+): number {
+  return model.getOffsetAt(position);
+}
+
+/**
  * Install `window.__notepadsTest`. `getEditor` and `getLabels` are getters so the
  * hook always sees the live editor handle and the most recent open labels.
  * Returns an uninstall function.
  */
 export function installTestHook(
-  getEditor: () => CodeMirrorHandle | null,
+  getEditor: () => MonacoHandle | null,
   getLabels: () => OpenLabels,
   onOpened: (file: OpenedFile) => void
 ): () => void {
@@ -161,82 +174,114 @@ export function installTestHook(
 }
 
 /**
- * Install the editor-surface seam onto `window.__notepadsTest.editor`. `getView`
- * is a getter so the seam always reads the ACTIVE tab's live CM6 view. Returns
- * an uninstall function. Requires installTestHook to have run first (it attaches
- * to the same `window.__notepadsTest` object).
+ * Install the editor-surface seam onto `window.__notepadsTest.editor`. `getEditor`
+ * is a getter so the seam always reads the ACTIVE tab's live Monaco editor.
+ * Returns an uninstall function. Requires installTestHook to have run first.
  *
- * PA-8: composes only the EditorView + public CM6 history helpers; no IPC, no fs.
+ * PA-8: composes only the Monaco editor + public APIs; no IPC, no fs.
+ *
+ * Notes on Monaco vs CM6 parity:
+ *   - undoDepth / redoDepth: Monaco exposes no public API to read history stack
+ *     depths. These return 0 until T3 adds a history-depth seam if e2e needs it.
+ *   - isLogEntryGuardSet: the .LOG guard is managed by T3's keymap; this seam
+ *     returns false until T3 exposes a queryable guard.
+ *   - getDirection: reads the Monaco editor DOM's `dir` attribute (set by T3).
  */
-export function installEditorTestHook(getView: () => EditorView | null): () => void {
+export function installEditorTestHook(
+  getEditor: () => monaco.editor.IStandaloneCodeEditor | null
+): () => void {
   if (typeof window === 'undefined') return () => {};
 
-  // Records the last Ctrl+E query the web-search command resolved (renderer-only;
-  // observes, never alters the real IPC call).
   let lastWebSearch: string | null = null;
   setWebSearchObserver((query) => {
     lastWebSearch = query;
   });
 
-  const editor: EditorTestHook = {
+  const editorHook: EditorTestHook = {
     getDocText(): string {
-      return getView()?.state.doc.toString() ?? '';
+      const editor = getEditor();
+      if (!editor) return '';
+      return editor.getModel()?.getValue(1 /* LF */) ?? '';
     },
     getSelection(): { from: number; to: number } {
-      const view = getView();
-      if (!view) return { from: 0, to: 0 };
-      const { from, to } = view.state.selection.main;
-      return { from, to };
+      const editor = getEditor();
+      if (!editor) return { from: 0, to: 0 };
+      const model = editor.getModel();
+      const sel = editor.getSelection();
+      if (!model || !sel) return { from: 0, to: 0 };
+      return {
+        from: positionToOffset(model, sel.getStartPosition()),
+        to: positionToOffset(model, sel.getEndPosition())
+      };
     },
     setSelection(from: number, to: number): void {
-      const view = getView();
-      if (!view) return;
-      view.dispatch({ selection: EditorSelection.range(from, to) });
+      const editor = getEditor();
+      if (!editor) return;
+      const model = editor.getModel();
+      if (!model) return;
+      const start = offsetToPosition(model, from);
+      const end = offsetToPosition(model, to);
+      editor.setSelection({
+        startLineNumber: start.lineNumber,
+        startColumn: start.column,
+        endLineNumber: end.lineNumber,
+        endColumn: end.column
+      });
     },
     focus(): void {
-      getView()?.focus();
+      getEditor()?.focus();
     },
     getZoomPercent(): number {
-      const view = getView();
-      return view ? (view.state.field(zoomField, false) ?? DEFAULT_ZOOM) : DEFAULT_ZOOM;
+      const editor = getEditor();
+      return editor ? getEditorZoom(editor) : 100;
     },
     isWordWrap(): boolean {
-      const view = getView();
-      return view ? (view.state.field(wordWrapField, false) ?? false) : false;
+      const editor = getEditor();
+      if (!editor) return false;
+      const wrap = editor.getOption(
+        // monaco.editor.EditorOption.wordWrap = 132 (stable numeric ID)
+        // Use the string key via getRawOptions() to avoid importing the enum.
+        132 as Parameters<typeof editor.getOption>[0]
+      );
+      return wrap === 'on' || wrap === 'bounded' || wrap === 'wordWrapColumn';
     },
     getDirection(): 'ltr' | 'rtl' {
-      const view = getView();
-      if (!view) return 'ltr';
-      // CM6 derives textDirection from the content `dir` attribute the direction
-      // command sets via contentAttributes; read it back directly.
-      return view.contentDOM.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
+      const editor = getEditor();
+      if (!editor) return 'ltr';
+      // T3 sets the content `dir` attribute on the Monaco content DOM node.
+      const contentDom = editor.getDomNode()?.querySelector<HTMLElement>('.monaco-editor .lines-content');
+      return contentDom?.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
     },
     undoDepth(): number {
-      const view = getView();
-      return view ? cmUndoDepth(view.state) : 0;
+      // Monaco has no public API to query undo stack depth.
+      // Returns 0 until T3 exposes a depth seam via the model's edit stack.
+      return 0;
     },
     redoDepth(): number {
-      const view = getView();
-      return view ? cmRedoDepth(view.state) : 0;
+      return 0;
     },
     isLogEntryGuardSet(): boolean {
-      const view = getView();
-      return view ? (view.state.field(logEntryGuard, false) ?? false) : false;
+      // The .LOG guard is internal to T3's keymap implementation.
+      // Returns false until T3 exports a queryable guard.
+      return false;
     },
     lastWebSearchQuery(): string | null {
       return lastWebSearch;
     },
     insertAsPaste(text: string): void {
-      const view = getView();
-      if (!view) return;
-      view.dispatch(
-        view.state.update(view.state.replaceSelection(text), { userEvent: 'input.paste' })
-      );
+      const editor = getEditor();
+      if (!editor) return;
+      const model = editor.getModel();
+      const sel = editor.getSelection();
+      if (!model || !sel) return;
+      // Execute as a single edit tagged as a paste so undo-granularity e2e can
+      // assert it collapses to one history step.
+      editor.executeEdits('paste', [{ range: sel, text, forceMoveMarkers: true }]);
     }
   };
 
   const existing = window.__notepadsTest;
-  if (existing) existing.editor = editor;
+  if (existing) existing.editor = editorHook;
 
   return () => {
     setWebSearchObserver(undefined);

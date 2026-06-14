@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useViewModeKeyboard } from './useViewModeKeyboard';
-import { viewModeCallbacksRef } from '../editor/commands/keymap';
+import { viewModeCallbacksRef } from '../editor/commands/viewModeBridge';
 
 afterEach(() => {
   vi.restoreAllMocks();

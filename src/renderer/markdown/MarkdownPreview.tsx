@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import type { EditorView } from '@codemirror/view';
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { renderMarkdown } from './renderMarkdown';
 import { sanitizeMarkdownHtml } from './sanitizeHtml';
 
@@ -14,18 +14,14 @@ import { sanitizeMarkdownHtml } from './sanitizeHtml';
  * an image-source policy) BEFORE dangerouslySetInnerHTML. The sanitized string is
  * the only thing injected — that pass is the XSS gate, not html:false anymore.
  *
- * Scroll sync (UWP-parity split behavior): the pane is NOT an independently
- * scrolling view. It mirrors the EDITOR's vertical scroll position proportionally,
- * so paging through the source pages the rendered output in lock-step. The editor
- * stays the scroll master; we listen to its CM6 scrollDOM and map its scroll
- * fraction onto our own scroller. (UWP synced the diff viewer's two panes the same
- * way via ScrollViewerSynchronizer; here we sync editor -> preview.)
- *
- * Styling follows the codebase convention (inline styles + a scoped <style> block).
- * The scoped block targets only `.np-md-preview` descendants so it cannot leak.
+ * Scroll sync (UWP-parity split behavior): the pane mirrors the Monaco editor's
+ * vertical scroll position proportionally, so paging through the source pages the
+ * rendered output in lock-step. The editor stays the scroll master; we subscribe to
+ * editor.onDidScrollChange and map its scrollTop fraction onto our scroller.
+ * The preview can also drive the editor back (two-way sync) via editor.setScrollTop.
  *
  * MOUNT API (App.tsx integration):
- *   <MarkdownPreview text={shadowText} isDark={...} editorView={view} />
+ *   <MarkdownPreview text={shadowText} isDark={...} editor={monacoEditor} />
  */
 
 export interface MarkdownPreviewProps {
@@ -36,11 +32,11 @@ export interface MarkdownPreviewProps {
   /** Optional body font size in px (defaults to 14, the editor default). */
   fontSize?: number;
   /**
-   * The editor's CM6 view whose vertical scroll this pane mirrors. When provided,
+   * The live Monaco editor whose vertical scroll this pane mirrors. When provided,
    * the preview follows the editor's scroll fraction (the editor is the master).
    * Null/undefined falls back to an independently scrollable pane.
    */
-  editorView?: EditorView | null;
+  editor?: monaco.editor.IStandaloneCodeEditor | null;
 }
 
 /** Scoped element styling for the rendered markdown (headings, code, quotes, etc.). */
@@ -107,31 +103,32 @@ export function MarkdownPreview({
   text,
   isDark = false,
   fontSize = 14,
-  editorView = null
+  editor = null
 }: MarkdownPreviewProps): JSX.Element {
-  // Re-render only when the source text changes. Render (markdown-it) then
-  // sanitize (DOMPurify) — both are pure transforms keyed on the text.
   const html = useMemo(() => sanitizeMarkdownHtml(renderMarkdown(text)), [text]);
 
   const paneRef = useRef<HTMLDivElement>(null);
 
-  // Mirror the editor's vertical scroll fraction onto this pane. The editor is the
-  // scroll master; we are a follower. Re-applied whenever the editor view or the
-  // rendered html changes (new content can change our scrollHeight).
+  // Mirror the editor's vertical scroll fraction onto this pane (editor is master).
+  // Also lets the preview drive the editor back (two-way sync) via a passive scroll
+  // listener on the pane. Re-wires whenever the editor instance or rendered html
+  // changes (new content can change our scrollHeight).
   useEffect(() => {
-    const scroller = editorView?.scrollDOM;
     const pane = paneRef.current;
-    if (!scroller || !pane) return;
+    if (!editor || !pane) return;
 
     let driving: 'editor' | 'preview' | null = null;
 
     const syncEditorToPreview = (): void => {
       if (driving === 'preview') return;
       driving = 'editor';
-      const srcRange = scroller.scrollHeight - scroller.clientHeight;
-      const dstRange = pane.scrollHeight - pane.clientHeight;
+      const editorScrollTop = editor.getScrollTop();
+      const editorScrollHeight = editor.getScrollHeight();
+      const editorHeight = editor.getLayoutInfo().height;
+      const editorRange = editorScrollHeight - editorHeight;
+      const paneRange = pane.scrollHeight - pane.clientHeight;
       pane.scrollTop =
-        srcRange > 0 && dstRange > 0 ? (scroller.scrollTop / srcRange) * dstRange : 0;
+        editorRange > 0 && paneRange > 0 ? (editorScrollTop / editorRange) * paneRange : 0;
       requestAnimationFrame(() => {
         driving = null;
       });
@@ -140,23 +137,29 @@ export function MarkdownPreview({
     const syncPreviewToEditor = (): void => {
       if (driving === 'editor') return;
       driving = 'preview';
-      const srcRange = pane.scrollHeight - pane.clientHeight;
-      const dstRange = scroller.scrollHeight - scroller.clientHeight;
-      scroller.scrollTop =
-        srcRange > 0 && dstRange > 0 ? (pane.scrollTop / srcRange) * dstRange : 0;
+      const paneRange = pane.scrollHeight - pane.clientHeight;
+      const editorScrollHeight = editor.getScrollHeight();
+      const editorHeight = editor.getLayoutInfo().height;
+      const editorRange = editorScrollHeight - editorHeight;
+      editor.setScrollTop(
+        paneRange > 0 && editorRange > 0 ? (pane.scrollTop / paneRange) * editorRange : 0
+      );
       requestAnimationFrame(() => {
         driving = null;
       });
     };
 
+    // Initial sync to match the editor's current scroll position.
     syncEditorToPreview();
-    scroller.addEventListener('scroll', syncEditorToPreview, { passive: true });
+
+    const scrollSub = editor.onDidScrollChange(syncEditorToPreview);
     pane.addEventListener('scroll', syncPreviewToEditor, { passive: true });
+
     return () => {
-      scroller.removeEventListener('scroll', syncEditorToPreview);
+      scrollSub.dispose();
       pane.removeEventListener('scroll', syncPreviewToEditor);
     };
-  }, [editorView, html]);
+  }, [editor, html]);
 
   return (
     <>
