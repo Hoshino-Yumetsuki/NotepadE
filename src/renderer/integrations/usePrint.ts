@@ -18,6 +18,7 @@
 
 import { useCallback } from 'react';
 import { escapeHtml } from './escapeHtml';
+import { DEFAULT_FONT_FAMILY, resolveFontFamily } from '../editor/fontFamily';
 
 /** A single document to print: a display title + its '\n'-normalized text. */
 export interface PrintDocument {
@@ -33,14 +34,23 @@ const PRINT_STYLE_ID = 'np-print-style';
  * host is shown (the live app root is hidden). The app root is matched by
  * `#root` (the renderer mount, see index.html) — everything inside it is omitted
  * from the printout so the page shows just the document text.
+ *
+ * `@page { margin: 0 }` drops the browser's print header/footer (date, document
+ * title, the localhost dev URL, and page numbers) — Chromium renders those into
+ * the page-margin box, so removing the margin removes the chrome. Readable insets
+ * are restored as padding on the printed content instead. The body font is taken
+ * from the `--np-print-font` custom property (set per call to the editor's
+ * resolved family) so a CJK locale prints in the system font, not 宋体.
  */
 const PRINT_CSS = `
 #${PRINT_HOST_ID} { display: none; }
+@page { margin: 0; }
 @media print {
   body > *:not(#${PRINT_HOST_ID}) { display: none !important; }
   #${PRINT_HOST_ID} { display: block !important; }
   .np-print-doc { white-space: pre-wrap; word-break: break-word;
-    font-family: Consolas, "Courier New", monospace; font-size: 12pt; }
+    font-family: var(--np-print-font, ${DEFAULT_FONT_FAMILY}); font-size: 12pt;
+    padding: 12mm; }
   .np-print-doc + .np-print-doc { page-break-before: always; }
 }
 `;
@@ -81,13 +91,20 @@ function populatePrintHost(host: HTMLElement, docs: PrintDocument[]): void {
  * Lay out `docs` into the print host and ask MAIN to print, clearing the host
  * afterward. Exported (not just via the hook) so non-React callers/tests can use
  * it. Returns the bridge Result; a user cancel resolves ok (MAIN maps it).
+ *
+ * `fontFamily` is the raw editor font setting ('' = system default); it is
+ * resolved to the same CSS family the editor uses and applied to the printed
+ * text, so the printout matches the on-screen font instead of falling back to a
+ * monospace/宋体 default.
  */
 export async function printDocuments(
-  docs: PrintDocument[]
+  docs: PrintDocument[],
+  fontFamily = ''
 ): Promise<{ ok: boolean; error?: string }> {
   if (docs.length === 0) return { ok: true };
   ensurePrintStyle();
   const host = ensurePrintHost();
+  host.style.setProperty('--np-print-font', resolveFontFamily(fontFamily));
   populatePrintHost(host, docs);
   try {
     const result = await window.notepads?.shell.print();
@@ -100,26 +117,33 @@ export async function printDocuments(
 /** Bound print actions for the active tab (current) and all tabs. */
 export interface PrintActions {
   /** Print the single current document (Ctrl+P). */
-  printCurrent: (doc: PrintDocument) => Promise<void>;
+  printCurrent: (doc: PrintDocument, fontFamily?: string) => Promise<void>;
   /** Print every open document, one per page (Ctrl+Shift+P). */
-  printAll: (docs: PrintDocument[]) => Promise<void>;
+  printAll: (docs: PrintDocument[], fontFamily?: string) => Promise<void>;
 }
 
 /**
- * usePrint — returns stable print actions. The caller supplies the document(s) at
- * call time (it owns the tab text), keeping this hook free of editor coupling.
+ * usePrint — returns stable print actions. The caller supplies the document(s)
+ * and the editor font setting at call time (it owns the tab text + settings),
+ * keeping this hook free of editor/settings coupling.
  *
  * WIRING (App.tsx integration pass — lane-a):
  *   const print = usePrint();
- *   // Ctrl+P:        print.printCurrent({ title, text: activeShadowText })
- *   // Ctrl+Shift+P:  print.printAll(allTabs.map(t => ({ title, text })))
+ *   // Ctrl+P:        print.printCurrent({ title, text }, settings.editorFontFamily)
+ *   // Ctrl+Shift+P:  print.printAll(allTabs, settings.editorFontFamily)
  */
 export function usePrint(): PrintActions {
-  const printCurrent = useCallback(async (doc: PrintDocument): Promise<void> => {
-    await printDocuments([doc]);
-  }, []);
-  const printAll = useCallback(async (docs: PrintDocument[]): Promise<void> => {
-    await printDocuments(docs);
-  }, []);
+  const printCurrent = useCallback(
+    async (doc: PrintDocument, fontFamily = ''): Promise<void> => {
+      await printDocuments([doc], fontFamily);
+    },
+    []
+  );
+  const printAll = useCallback(
+    async (docs: PrintDocument[], fontFamily = ''): Promise<void> => {
+      await printDocuments(docs, fontFamily);
+    },
+    []
+  );
   return { printCurrent, printAll };
 }

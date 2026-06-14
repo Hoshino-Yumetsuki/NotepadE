@@ -7,6 +7,7 @@ import { isMac } from '@shared/platform';
 import { MonacoEditor, type MonacoHandle } from './editor/MonacoEditor';
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
+import { resolveFontFamily } from './editor/fontFamily';
 import { TabStrip } from './tabs/TabStrip';
 import { useTabsStore, tabsStore, setUntitledBaseName } from './tabs/useTabsStore';
 import { useTabKeyboard } from './tabs/useTabKeyboard';
@@ -1103,20 +1104,24 @@ export function App(): JSX.Element {
     const id = store.activeEditorId;
     const t = id ? store.get(id) : undefined;
     if (id && t) {
-      void print.printCurrent({
-        title: tabTitle(t),
-        text: editorHandles.current.get(id)?.getShadowText() ?? ''
-      });
+      void print.printCurrent(
+        {
+          title: tabTitle(t),
+          text: editorHandles.current.get(id)?.getShadowText() ?? ''
+        },
+        settings.editorFontFamily
+      );
     }
-  }, [print, store]);
+  }, [print, store, settings.editorFontFamily]);
   const doPrintAll = useCallback((): void => {
     void print.printAll(
       store.tabs.map((t) => ({
         title: tabTitle(t),
         text: editorHandles.current.get(t.editorId)?.getShadowText() ?? ''
-      }))
+      })),
+      settings.editorFontFamily
     );
-  }, [print, store]);
+  }, [print, store, settings.editorFontFamily]);
   useEffect(() => {
     const readText = (id: string): string => editorHandles.current.get(id)?.getShadowText() ?? '';
     const onKey = (e: KeyboardEvent): void => {
@@ -1454,6 +1459,11 @@ export function App(): JSX.Element {
                         // (lastSavedTextRef invariant) — no per-render normalize.
                         original={lastSavedTextRef.current.get(tab.editorId) ?? ''}
                         modified={shadow}
+                        // Match the editor's resolved font (empty setting → system
+                        // stack with a CJK-safe chain) so the diff doesn't fall back
+                        // to Consolas → 宋体 for non-Latin text.
+                        fontFamily={resolveFontFamily(settings.editorFontFamily)}
+                        fontSize={settings.editorFontSize}
                       />
                     </PaneMount>
                   </Suspense>
