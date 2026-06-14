@@ -343,16 +343,12 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       glyphMargin: false,
       folding: false,
       lineDecorationsWidth: 10,
-      // Hug the actual digit count (minChars:1) — no reserved empty slots that a
-      // growing number must "fill" before the column widens. The column grows
-      // exactly when a digit is added (10, 100, 1000). Left breathing room is
-      // supplied as a CONSTANT gutter inset on the host wrapper (see the return
-      // below), NOT extra digit slots, so there is no fill-before-widen lag.
-      lineNumbersMinChars: 1,
-      // Internal left padding: Monaco paints this space as part of the editor
-      // (so renderLineHighlight:'all' fills it with the current-line gray wash),
-      // replacing the outer div's paddingLeft that was blocking the highlight band
-      // from reaching the window left edge.
+      // Reserve 2 char-slots for the line number: the gutter sits flush at the
+      // editor's own left edge (no external padding), and a right-aligned digit in
+      // a 2-char box leaves a little painted breathing room so the number isn't
+      // jammed against the window edge — while renderLineHighlight:'all' still
+      // fills the current-line band from the window edge rightward.
+      lineNumbersMinChars: 2,
       padding: { top: 0, bottom: 0 },
       wordWrap: wordWrap ? 'on' : 'off',
       // 'all' highlights BOTH the content line and the gutter/margin, so the
@@ -450,27 +446,19 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     // drive the wash color (per theme) and the gutter width (contentLeft, the x
     // where text begins) as CSS custom properties, syncing width on layout change.
     const rootNode = editor.getDomNode();
-    // The gutter inset (CSS padding-left on .monaco-editor) that lets the
-    // current-line highlight band reach the window's LEFT edge. Because
-    // .monaco-editor is content-box with overflow:visible and its .overflow-guard
-    // is position:relative (normal flow), this padding shifts Monaco's whole view
-    // 12px right. The vertical scrollbar is anchored to the RIGHT edge of that
-    // view, so unless we shrink the laid-out width by the same amount, the bar
-    // lands ~12px past the window's right edge and is never visible. The manual
-    // layout below subtracts GUTTER_INSET_PX so padding(12) + content(width-12)
-    // == host width exactly, keeping the vertical scrollbar on-screen.
-    const GUTTER_INSET_PX = 12;
+    // Monaco lays the gutter (line-number column) out at the editor's own left
+    // edge — there is NO external padding-left on .monaco-editor — so both the
+    // gutter material wash and the renderLineHighlight:'all' current-line band
+    // start at the window's LEFT edge. (An earlier CSS padding-left inset shifted
+    // the view right, which both severed the highlight band from the window edge
+    // and pushed the right-anchored vertical scrollbar off-screen; laying Monaco
+    // out at the full host width — see the observer below — fixes both.)
     rootNode?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
-    // --np-gutter-inset is the CSS padding-left on .monaco-editor (12px). Monaco's
-    // layout coordinates are relative to its own content box (i.e. after padding),
-    // so the gradient stop must be offset by the same inset amount to land at the
-    // true gutter↔content boundary in the element's padding-box coordinate space.
-    rootNode?.style.setProperty('--np-gutter-inset', `${GUTTER_INSET_PX}px`);
     const applyGutterWidth = (info: monaco.editor.EditorLayoutInfo): void => {
       // Cover the glyph + line-number columns (NOT the decorations gap), so the
-      // centered line numbers sit centered within the wash panel and the gap to
-      // the text stays fully transparent. The raw value is Monaco-internal (from
-      // the content-box origin); the CSS gradient adds --np-gutter-inset on top.
+      // line numbers sit within the wash panel and the gap to the text stays
+      // fully transparent. The value is Monaco's gutter width measured from its
+      // own left edge — the CSS gradient uses it directly (no external inset).
       rootNode?.style.setProperty(
         '--np-gutter-width',
         `${info.glyphMarginWidth + info.lineNumbersWidth}px`
@@ -503,10 +491,11 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       if (width > 0 && height > 0 && (width !== lastW || height !== lastH)) {
         lastW = width;
         lastH = height;
-        // Lay out GUTTER_INSET_PX narrower than the host: .monaco-editor's
-        // padding-left adds that back, so the editor's total footprint equals the
-        // host width and the right-anchored vertical scrollbar stays on-screen.
-        editor.layout({ width: Math.max(0, width - GUTTER_INSET_PX), height });
+        // Lay out at the FULL host width: with no external CSS padding the
+        // editor's footprint equals the host, so the right-anchored vertical
+        // scrollbar stays on-screen AND the gutter / current-line band reach the
+        // window's left edge.
+        editor.layout({ width, height });
       }
     });
     layoutObserver.observe(host);
@@ -576,10 +565,10 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
 
   // A small top gap keeps the input area from butting against the tab strip, so
   // the active-line gray never reaches the top edge and severs the tab↔editor
-  // connection. The left inset is now supplied internally via Monaco's
-  // padding.left option (see create options above) so renderLineHighlight:'all'
-  // can paint the current-line band all the way to the window left edge.
-  // border-box keeps the inner host at the right height despite the padding.
+  // connection. There is no left inset here — Monaco's gutter sits at the window's
+  // left edge, so renderLineHighlight:'all' paints the current-line band all the
+  // way to that edge. border-box keeps the inner host at the right height despite
+  // the top padding.
   return (
     <div
       style={{

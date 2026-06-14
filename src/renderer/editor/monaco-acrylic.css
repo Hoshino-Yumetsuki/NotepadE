@@ -16,27 +16,22 @@
  */
 
 /* The editor ROOT paints the acrylic gutter "material" as a left-edge gradient:
-   a translucent wash for the gutter region [0, --np-gutter-inset +
-   --np-gutter-width), transparent beyond. The root is NOT GPU-promoted, so the
-   wash composites WITH window vibrancy (OS acrylic shows through, darkened). A
-   background on `.margin` does NOT work — Monaco promotes the gutter for
-   scrolling, so any background there renders as a solid, vibrancy-less gray panel.
-   Width + wash are set from MonacoEditor.tsx (transparent / 0 fallback → no panel,
-   e.g. High-Contrast).
-   padding-left shifts Monaco's content box 12px right (--np-gutter-inset). Monaco's
-   layout coordinates (--np-gutter-width: glyphMarginWidth + lineNumbersWidth) are
-   relative to Monaco's own content-box origin, so the gradient boundary must be
-   inset + width to hit the true gutter↔content edge in padding-box space.
-   renderLineHighlight:'all' overlays are absolutely positioned within .monaco-editor
-   and span the full padding-box width, so the gray band reaches the left window
-   edge even though Monaco's content is inset 12px. */
+   a translucent wash for the gutter region [0, --np-gutter-width), transparent
+   beyond. The root is NOT GPU-promoted, so the wash composites WITH window
+   vibrancy (OS acrylic shows through, darkened). A background on `.margin` does
+   NOT work — Monaco promotes the gutter for scrolling, so any background there
+   renders as a solid, vibrancy-less gray panel. Width + wash are set from
+   MonacoEditor.tsx (transparent / 0 fallback → no panel, e.g. High-Contrast).
+   There is NO padding-left here: Monaco lays the gutter out at the element's own
+   left edge, so the wash AND the renderLineHighlight:'all' current-line band both
+   start at the window's left edge. (--np-gutter-width = glyphMarginWidth +
+   lineNumbersWidth, Monaco's gutter width from that same origin.) */
 .monaco-editor {
-  padding-left: var(--np-gutter-inset, 12px) !important;
   background: linear-gradient(
     to right,
     var(--np-gutter-wash, transparent) 0,
-    var(--np-gutter-wash, transparent) calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px)),
-    transparent calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px))
+    var(--np-gutter-wash, transparent) var(--np-gutter-width, 0px),
+    transparent var(--np-gutter-width, 0px)
   ) !important;
 }
 
