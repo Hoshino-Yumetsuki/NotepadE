@@ -333,7 +333,17 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     const editor = monaco.editor.create(hostRef.current, {
       model,
       theme: THEME_NAMES[themeMode],
-      automaticLayout: true,
+      // Layout is driven MANUALLY by the visibility-aware ResizeObserver below
+      // (not Monaco's built-in automaticLayout). With one editor mounted PER TAB
+      // and inactive tabs hidden via `display:none` (App renders all tabs, only
+      // the active one is shown), automaticLayout:true makes EVERY hidden editor
+      // keep a live ResizeObserver and forces a synchronous full re-measure +
+      // repaint the instant a tab toggles display:none→block. For a multi-MB file
+      // that show-relayout — multiplied across several open large tabs and the GC
+      // pressure of N live models — stalls the main thread long enough that
+      // WebView2 kills the renderer on tab switch. Our observer skips layout while
+      // the host is hidden (0×0) and lays out exactly once when it becomes visible.
+      automaticLayout: false,
       // Plain-text editor: strip the IDE chrome.
       minimap: { enabled: false },
       lineNumbers: showLineNumbers ? 'on' : 'off',
@@ -394,7 +404,7 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
         verticalScrollbarSize: 6,
         horizontalScrollbarSize: 6,
         useShadows: false,
-        vertical: 'auto',
+        vertical: 'visible',
         horizontal: 'auto'
       },
       // Plain-text editor: no IDE affordances. Monaco's built-in find widget
@@ -469,6 +479,35 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     applyGutterWidth(editor.getLayoutInfo());
     const layoutSub = editor.onDidLayoutChange(applyGutterWidth);
 
+    // --- Visibility-aware manual layout (replaces automaticLayout) ---
+    // One editor is mounted per tab; inactive tabs are hidden with `display:none`,
+    // so the host collapses to 0×0 while hidden and returns to real dimensions when
+    // its tab is activated. Observe the host and call editor.layout() ONLY when it
+    // has non-zero size — this lays out exactly once on show (the tab-switch path)
+    // and skips entirely while hidden, avoiding the synchronous full relayout of a
+    // large model that froze/crashed the renderer on switch. Passing explicit
+    // dimensions avoids a second forced reflow inside editor.layout().
+    //
+    // The (width,height) dedup matters for wordWrap:'on'/'bounded': Monaco recomputes
+    // line-wrapping for the ENTIRE document on a width change (O(file size)), so a
+    // redundant same-size relayout on a multi-MB wrapped file is itself a main-thread
+    // stall. Skipping unchanged sizes guarantees the expensive wrap pass runs at most
+    // once per genuine resize/activation, never on a spurious observer callback.
+    const host = hostRef.current;
+    let lastW = 0;
+    let lastH = 0;
+    const layoutObserver = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      const width = box?.width ?? host.clientWidth;
+      const height = box?.height ?? host.clientHeight;
+      if (width > 0 && height > 0 && (width !== lastW || height !== lastH)) {
+        lastW = width;
+        lastH = height;
+        editor.layout({ width, height });
+      }
+    });
+    layoutObserver.observe(host);
+
     // Pre-park: capture the live doc on unmount so a remount restores it.
     return () => {
       docRef.current = model.getValue(monaco.editor.EndOfLinePreference.LF);
@@ -477,6 +516,7 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       ctxMenuSub?.dispose();
       contentSub.dispose();
       layoutSub.dispose();
+      layoutObserver.disconnect();
       editor.dispose();
       model.dispose();
       editorRef.current = null;
