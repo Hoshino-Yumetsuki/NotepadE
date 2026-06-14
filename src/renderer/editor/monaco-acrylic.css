@@ -88,26 +88,31 @@
 
 /* Monaco's scrollbar is a JS DOM overlay (.monaco-scrollable-element > .scrollbar
    > .slider) that ::-webkit-scrollbar CSS cannot reach. Tint the slider to match
-   the app's chrome.css thin scrollbar: translucent #898989 (light) / #8A8A8A (dark)
-   at ~0.35 alpha, ~0.6 on hover, border-radius 6px, transparent track.
+   the app's chrome.css thin scrollbar.
+   NOTE: unlike the old CM6 scrollbar (which sat over the editor's own opaque
+   background), this slider floats over a TRANSPARENT surface — we force the
+   scrollable element transparent so the OS acrylic shows through (see below). A
+   faint thumb over the bright blurred desktop reads as "gone", so the resting
+   alpha is raised (~0.55, ~0.85 hover) for clear contrast over acrylic.
    The create() options set verticalScrollbarSize/horizontalScrollbarSize:6 to slim
-   the bar to match the native thin scrollbar width. */
+   the bar to match the native thin scrollbar width, and vertical:'visible' keeps
+   it always present. */
 .monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
   border-radius: 6px !important;
-  background: rgba(137, 137, 137, 0.35) !important;
+  background: rgba(137, 137, 137, 0.55) !important;
   transition: background 0.1s;
 }
 .monaco-editor .monaco-scrollable-element > .scrollbar > .slider:hover {
-  background: rgba(137, 137, 137, 0.6) !important;
+  background: rgba(137, 137, 137, 0.85) !important;
 }
-/* Dark theme: slightly lighter tint (#8A8A8A) at same alpha levels */
+/* Dark theme: slightly lighter tint (#8A8A8A) at the same alpha levels */
 .monaco-editor.vs-dark .monaco-scrollable-element > .scrollbar > .slider,
 .monaco-editor.hc-black .monaco-scrollable-element > .scrollbar > .slider {
-  background: rgba(138, 138, 138, 0.35) !important;
+  background: rgba(138, 138, 138, 0.55) !important;
 }
 .monaco-editor.vs-dark .monaco-scrollable-element > .scrollbar > .slider:hover,
 .monaco-editor.hc-black .monaco-scrollable-element > .scrollbar > .slider:hover {
-  background: rgba(138, 138, 138, 0.6) !important;
+  background: rgba(138, 138, 138, 0.85) !important;
 }
 /* Transparent scrollbar track */
 .monaco-editor .monaco-scrollable-element > .scrollbar {
