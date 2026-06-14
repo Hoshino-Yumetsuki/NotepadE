@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { NavigationRegular } from '@fluentui/react-icons';
 import {
   Menu,
@@ -920,13 +920,23 @@ function TabOverlayCard(props: {
 /**
  * Exit (close) ghost for a tab that was just removed from the store. TabStrip keeps
  * a closed tab on screen for one short animation by rendering this in the tab's old
- * slot; the `np-tab-exit` keyframe collapses it with `opacity + max-width →0` (NO
- * transform — the active-tab elevation overlay is measured by getBoundingClientRect
- * and a translate would mis-place it, see chrome.css np-tab-enter/np-tab-exit). The
- * width collapse lets the surviving neighbours slide in to fill the gap. It is inert
- * (pointer-events:none, never active, not sortable, no data-testid="tab") so it is
- * excluded from the measured/interactive set, then dropped on animationend (TabStrip
- * has a timer fallback for the reduced-motion / no-animation case).
+ * slot; the `np-tab-exit` keyframe SHRINKS it (max-width var→0) while fading, so the
+ * surviving tabs slide smoothly into the freed space rather than jumping. The slot's
+ * full width is published to the keyframe via the `--np-tab-exit-width` custom
+ * property so the collapse starts from the real measured width.
+ *
+ * Two coordination points make this seamless (see chrome.css np-tab-exit):
+ *   - TabStrip inserts this ghost in a useLayoutEffect (BEFORE paint), so the first
+ *     painted frame already holds the full-width ghost — no snap-forward-then-back
+ *     flicker before the slide begins.
+ *   - While ANY ghost is exiting, TabStrip runs a requestAnimationFrame loop that
+ *     re-measures the active-tab rect every frame, so the unclipped elevation overlay
+ *     (+ the App wash notch) glides in lockstep with the sliding active tab instead
+ *     of stranding at its old x.
+ *
+ * It is inert (pointer-events:none, never active, not sortable, no data-testid="tab")
+ * so it is excluded from the measured/interactive set, then dropped on animationend
+ * (TabStrip has a timer fallback for the reduced-motion / no-animation case).
  */
 function ExitingTab(props: {
   tab: TabState;
@@ -944,8 +954,9 @@ function ExitingTab(props: {
       onAnimationEnd={() => onDone(tab.editorId)}
       style={
         {
-          // Starting width feeds the keyframe's from-state so the collapse begins at
-          // the tab's real rendered width instead of the 210px CSS fallback.
+          // Publish the real slot width to the keyframe (it animates max-width from
+          // this var down to 0). minWidth:0 lets the box collapse fully; the flex
+          // basis stays `width` but max-width clamps the rendered size each frame.
           ['--np-tab-exit-width' as string]: `${width}px`,
           width,
           maxWidth: width,
@@ -1316,7 +1327,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   // motion we skip ghosting (instant removal, the historical behaviour). A reorder
   // keeps every id present, so it never produces a ghost.
   const prevTabsRef = useRef<readonly TabState[]>(tabs);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prev = prevTabsRef.current;
     prevTabsRef.current = tabs;
     if (reducedMotion) return;
@@ -1360,55 +1371,79 @@ export function TabStrip(props: TabStripProps): JSX.Element {
   }, [tabs, exiting, dropExiting]);
 
   // Measure the active tab's box in STRIP-LOCAL coordinates so the unclipped
-  // elevation overlay can hug it. Re-runs whenever anything that moves the active
-  // tab changes (selection, per-tab width, scroll offset, tab count, strip width).
-  // The active tab DOM node carries data-active="true"; we read both rects and
-  // subtract origins, then clamp to the visible strip so a tab scrolled partly
-  // out of view doesn't push the shadow past the chrome edges. rAF-coalesced and
-  // frozen mid-drag (same rationale as the resize observer above).
+  // elevation overlay can hug it. Extracted as a stable callback (refs + setState
+  // only, no reactive deps) so BOTH the keyed one-shot effect below and the
+  // exit-tracking rAF loop can call it. The active tab DOM node carries
+  // data-active="true"; we read both rects and subtract origins, then clamp to the
+  // visible LIST so a tab scrolled partly out of view doesn't push the shadow past
+  // the chrome edges.
+  const measureActiveRect = useCallback((): void => {
+    const strip = stripRef.current;
+    if (!strip) {
+      setActiveRect((p) => (p === null ? p : null));
+      return;
+    }
+    const node = strip.querySelector<HTMLElement>('[data-testid="tab"][data-active="true"]');
+    if (!node) {
+      setActiveRect((p) => (p === null ? p : null));
+      return;
+    }
+    const sb = strip.getBoundingClientRect();
+    const tb = node.getBoundingClientRect();
+    // The visible window for tabs is the LIST's box, NOT the whole strip: the
+    // strip also holds the hamburger + scroll-left button (left of the list) and
+    // the add button + caption (right of it). getBoundingClientRect ignores the
+    // list's overflow clip, so a tab scrolled out the list's left edge still
+    // reports its true (off-list) geometry. Clamping to the strip [0, sb.width]
+    // then pinned the overlay's left to strip-x=0 — painting the selected-tab
+    // elevation OVER the hamburger/scroll chrome as a stray translucent block
+    // (the bug: "选中效果...其他组件会突出来一个透明的块"). clampOverlayToList
+    // clamps to the list's own edges instead, so the overlay tracks only the
+    // in-list visible portion and vanishes (null) once the tab is fully scrolled
+    // out of the list viewport.
+    const lb = listRef.current ? listRef.current.getBoundingClientRect() : sb;
+    const next = clampOverlayToList(sb, lb, tb);
+    setActiveRect((prev) =>
+      prev && next && prev.left === next.left && prev.width === next.width
+        ? prev
+        : (next ?? (prev === null ? prev : null))
+    );
+  }, []);
+
+  // One-shot remeasure whenever something that moves the active tab changes
+  // (selection, per-tab width, scroll offset, tab count, strip width, theme).
+  // rAF-coalesced and frozen mid-drag (same rationale as the resize observer above).
   useEffect(() => {
     if (draggingRef.current) return;
-    let raf = 0;
-    const measure = (): void => {
-      const strip = stripRef.current;
-      if (!strip) {
-        setActiveRect((p) => (p === null ? p : null));
-        return;
-      }
-      const node = strip.querySelector<HTMLElement>('[data-testid="tab"][data-active="true"]');
-      if (!node) {
-        setActiveRect((p) => (p === null ? p : null));
-        return;
-      }
-      const sb = strip.getBoundingClientRect();
-      const tb = node.getBoundingClientRect();
-      // The visible window for tabs is the LIST's box, NOT the whole strip: the
-      // strip also holds the hamburger + scroll-left button (left of the list) and
-      // the add button + caption (right of it). getBoundingClientRect ignores the
-      // list's overflow clip, so a tab scrolled out the list's left edge still
-      // reports its true (off-list) geometry. Clamping to the strip [0, sb.width]
-      // then pinned the overlay's left to strip-x=0 — painting the selected-tab
-      // elevation OVER the hamburger/scroll chrome as a stray translucent block
-      // (the bug: "选中效果...其他组件会突出来一个透明的块"). clampOverlayToList
-      // clamps to the list's own edges instead, so the overlay tracks only the
-      // in-list visible portion and vanishes (null) once the tab is fully scrolled
-      // out of the list viewport.
-      const lb = listRef.current ? listRef.current.getBoundingClientRect() : sb;
-      const next = clampOverlayToList(sb, lb, tb);
-      setActiveRect((prev) =>
-        prev && next && prev.left === next.left && prev.width === next.width
-          ? prev
-          : (next ?? (prev === null ? prev : null))
-      );
-    };
-    raf = requestAnimationFrame(measure);
+    const raf = requestAnimationFrame(measureActiveRect);
     return () => cancelAnimationFrame(raf);
     // `ids` (the joined editorId order) is included so a REORDER — which moves the
     // active tab without changing activeEditorId/length — remeasures its new x.
     // `dragging` is included so dropping (dragging:true→false) re-runs the effect
-    // and remeasures the active tab at its new resting position.
+    // and remeasures the active tab at its new resting position. `exiting` is
+    // included so the FINAL resting position (after the last ghost drops) is
+    // measured even though the rAF loop below has already stopped by then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeEditorId, tabWidth, scrollLeft, tabs.length, stripWidth, resolvedTheme, ids, dragging]);
+  }, [activeEditorId, tabWidth, scrollLeft, tabs.length, stripWidth, resolvedTheme, ids, dragging, exiting, measureActiveRect]);
+
+  // Continuous remeasure WHILE a tab is animating closed. The exit ghost collapses
+  // its width (max-width →0) over ~167ms, so the surviving tabs — including the
+  // active one when an earlier tab is closed — slide every frame. A one-shot
+  // measure would strand the elevation overlay + wash notch at the active tab's
+  // pre-slide x (the "突出装饰层不会跟随" bug). This rAF loop re-measures each frame
+  // for as long as any ghost is exiting, so the decoration glides in lockstep; it
+  // stops as soon as `exiting` empties (and the keyed effect above pins the final
+  // rest). Frozen mid-drag (a close can't overlap a drag in practice, but guard
+  // anyway for symmetry with the other measure paths).
+  useEffect(() => {
+    if (exiting.length === 0) return;
+    if (draggingRef.current) return;
+    let raf = requestAnimationFrame(function tick() {
+      measureActiveRect();
+      raf = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [exiting.length, measureActiveRect]);
 
   // Report the active tab's geometry to the host (App) so the single continuous
   // wash layer behind the strip + editor can notch up under exactly this rect.

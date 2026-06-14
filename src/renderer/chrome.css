@@ -140,32 +140,44 @@ body,
 }
 
 /*
- * Tab EXIT (close) animation. Mirror of np-tab-enter and bound by the SAME hard
- * constraint: NO transform. The selected-tab elevation overlay is measured via
- * getBoundingClientRect right after a tab mounts (see the np-tab-enter note above
- * and TabStrip's measure effect), and a translate offset would mis-place it. So a
- * closing tab collapses with `opacity 1→0 + max-width →0` ONLY: the width collapse
- * lets the surviving neighbours slide in smoothly to fill the gap, while opacity
- * fades the closing tab out. The closing tab is a non-interactive ghost (TabStrip
- * keeps it mounted past store-removal just long enough to play this, then drops it)
- * and is never the measured active tab, so the overlay is unaffected. Reduced-motion
- * users skip the ghost entirely (instant removal). Duration matches the brush fade
- * (167ms) so close motion reads native against the rest of the strip.
+ * Tab EXIT (close) animation — the closing tab SHRINKS away (max-width →0) while
+ * fading, so the surviving tabs slide smoothly into the freed space (UWP SetsView
+ * close: the gap closes by animation, never a jump). Width is driven from
+ * --np-tab-exit-width (the tab's measured slot width at removal); padding collapses
+ * to 0 so no sliver lingers; overflow:hidden clips the content as the box narrows.
+ *
+ * Two prior failures this design avoids:
+ *   1. The ghost used to be inserted in a POST-paint effect, so the survivors painted
+ *      one frame snapped-forward (ghost absent) then snapped back (ghost inserted) —
+ *      a 1-frame back-and-forth flicker ("闪烁"). FIX: TabStrip inserts the ghost in a
+ *      useLayoutEffect (before paint), so the first painted frame already holds the
+ *      full-width ghost and the slide starts cleanly from rest.
+ *   2. The selected-tab elevation overlay (measured once via getBoundingClientRect)
+ *      stranded at the active tab's old x while the tab slid away ("突出装饰层不会跟随").
+ *      FIX: TabStrip runs a requestAnimationFrame loop for as long as a ghost is
+ *      exiting, re-measuring the active rect every frame so the overlay + wash notch
+ *      glide in lockstep with the sliding tab.
+ *
+ * Reduced-motion users skip the ghost entirely (instant removal). Duration/easing
+ * match the entrance so close reads native against it.
  */
 @keyframes np-tab-exit {
   from {
-    opacity: 1;
     max-width: var(--np-tab-exit-width, 210px);
+    opacity: 1;
   }
   to {
-    opacity: 0;
     max-width: 0;
+    opacity: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 .np-tab-exit {
-  animation: np-tab-exit 167ms ease-out forwards;
+  animation: np-tab-exit 167ms cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
   overflow: hidden;
   pointer-events: none;
+  white-space: nowrap;
 }
 @media (prefers-reduced-motion: reduce) {
   .np-tab-exit {
