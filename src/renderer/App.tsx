@@ -1,11 +1,10 @@
 import { FluentProvider, Spinner } from '@fluentui/react-components';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { keymap, EditorView } from '@codemirror/view';
-import { Transaction } from '@codemirror/state';
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import type { OpenedFile } from '@shared/ipc-contract';
 import { isMac } from '@shared/platform';
-import { CodeMirrorEditor, type CodeMirrorHandle } from './editor/CodeMirrorEditor';
+import { MonacoEditor, type MonacoHandle } from './editor/MonacoEditor';
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
 import { TabStrip } from './tabs/TabStrip';
@@ -31,7 +30,7 @@ import {
   type TransferTextSource
 } from './tabs/transferWiring';
 import type { TabState } from './tabs/types';
-import { wordWrapToggleRef } from './editor/commands/wordWrap';
+import { wordWrapToggleRef } from './editor/commands/wordWrapBridge';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
 import { useEditorContextMenu } from './editor/EditorContextMenu';
@@ -247,8 +246,8 @@ export function App(): JSX.Element {
   // Live translator — drives the localized untitled new-file base name (below).
   const { t } = useT();
 
-  // One CM6 handle per editorId. The active editor's handle backs the test hook.
-  const editorHandles = useRef<Map<string, CodeMirrorHandle | null>>(new Map());
+  // One Monaco handle per editorId. The active editor's handle backs the test hook.
+  const editorHandles = useRef<Map<string, MonacoHandle | null>>(new Map());
   // Opaque labels for the ACTIVE editor (carried back to MAIN on save).
   const labelsRef = useRef<OpenLabels>({ encodingId: null, eolId: null });
 
@@ -275,18 +274,15 @@ export function App(): JSX.Element {
   const [, bumpDocVersion] = useState(0);
   const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Find/replace host (Lane B). Reads the ACTIVE editor's live EditorView so
-  // Ctrl+F/H/G + F3/Shift+F3 drive the same CM6 instance the host owns, and the
-  // returned editorExtensions install the match-highlight field per editor.
-  // Stable accessors for the ACTIVE editor's view/handle. These MUST be
+  // Stable accessors for the ACTIVE editor's Monaco instance/handle. These MUST be
   // referentially stable: useStatusBarModel feeds getActiveHandle into a
   // useCallback→useEffect that runs a 250ms caret poll; an inline arrow here
   // would change identity every render, re-run that effect every render, and
   // setLineColumn(new object) → re-render → infinite update loop.
-  const getActiveView = useCallback(
-    () =>
+  const getActiveEditor = useCallback(
+    (): monaco.editor.IStandaloneCodeEditor | null =>
       store.activeEditorId
-        ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
+        ? (editorHandles.current.get(store.activeEditorId)?.getEditor() ?? null)
         : null,
     [store]
   );
@@ -295,41 +291,31 @@ export function App(): JSX.Element {
     [store]
   );
 
-  const find = useFindBar({ getActiveView });
-  // Compose the find seam once: the find keymap (Ctrl+F/H/G, F3/Shift+F3, Esc)
-  // plus the match-highlight StateField, mounted via CodeMirrorEditor's
-  // `editorExtensions` prop (after the command keymap, before the CM6 base).
-  const findEditorExtensions = useMemo(
-    () => [keymap.of(find.keymap), find.editorExtensions],
-    [find.keymap, find.editorExtensions]
-  );
+  // Find/replace host (Lane B, Monaco). Reads the ACTIVE editor's live
+  // IStandaloneCodeEditor so Ctrl+F/H/G + F3/Shift+F3 drive the same instance the
+  // host owns. Find keybindings are registered INSIDE MonacoEditor (via the
+  // findCallbacks prop → registerFindKeybindings); highlights apply through
+  // deltaDecorations directly on the editor. No CM6 extension array.
+  const find = useFindBar({ getActiveEditor });
 
-  // Compose the editor extensions actually mounted: the find seam PLUS a doc-change
-  // pulse that re-renders App while a content pane is open, so MarkdownPreview /
-  // DiffViewer reflect live typing. The listener is a no-op when no pane is open.
-  // The pulse is TRAILING-DEBOUNCED ~150ms (B1): every doc change reschedules the
-  // single pending timer, so a run of keystrokes fires at most one bump ~150ms
-  // after typing settles. The final rendered output is identical to the per-
-  // keystroke version (it always re-reads the live shadow text) — only the cadence
-  // changes, which is what removes the per-keystroke markdown + diff recompute.
-  const paneEditorExtensions = useMemo(
-    () => [
-      ...findEditorExtensions,
-      EditorView.updateListener.of((u) => {
-        if (!u.docChanged) return;
-        const id = tabsStore.activeEditorId;
-        const vm = id ? tabsStore.get(id)?.viewMode : undefined;
-        // Preserve the existing gating: only pulse while a preview/diff pane is open.
-        if (!vm || !(vm.preview || vm.diff)) return;
-        if (pulseTimerRef.current !== null) clearTimeout(pulseTimerRef.current);
-        pulseTimerRef.current = setTimeout(() => {
-          pulseTimerRef.current = null;
-          bumpDocVersion((v) => v + 1);
-        }, 150);
-      })
-    ],
-    [findEditorExtensions]
-  );
+  // Schedule the trailing-debounced preview/diff re-render pulse for `editorId`.
+  // While a pane is open App must re-render so MarkdownPreview / DiffViewer reflect
+  // live typing (Monaco owns the doc; App doesn't otherwise re-render per keystroke).
+  // TRAILING-DEBOUNCED ~150ms (B1): each doc change reschedules the single pending
+  // timer, so a run of keystrokes fires at most one bump ~150ms after typing settles
+  // — identical final output, far fewer markdown/diff recomputes. Only pulses while
+  // THAT tab has a preview/diff pane open (gating preserved from the old CM6
+  // updateListener). Driven from each MonacoEditor's onDocChanged. pulseTimerRef /
+  // bumpDocVersion are declared above.
+  const schedulePanePulse = useCallback((editorId: string): void => {
+    const vm = tabsStore.get(editorId)?.viewMode;
+    if (!vm || !(vm.preview || vm.diff)) return;
+    if (pulseTimerRef.current !== null) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => {
+      pulseTimerRef.current = null;
+      bumpDocVersion((v) => v + 1);
+    }, 150);
+  }, []);
 
   // Clear any pending debounced pulse on unmount so it never fires into a torn-down
   // tree (setState-after-unmount). The timer ref persists across renders, so this
@@ -363,9 +349,10 @@ export function App(): JSX.Element {
     }
   });
 
-  // Editor right-click context menu (UWP TextEditorContextFlyout). Mounts a CM6
-  // contextmenu seam into every editor (via paneEditorExtensions) and renders a
-  // positioned Fluent menu. Gives Share + RTL their UI entry points.
+  // Editor right-click context menu (UWP TextEditorContextFlyout). Attaches a
+  // `contextmenu` listener to every Monaco editor (via the MonacoEditor
+  // `contextMenuAttach` prop) and renders a positioned Fluent menu. Gives Share +
+  // RTL their UI entry points.
   const editorContextMenu = useEditorContextMenu({
     // Preview offered for every file type (see useViewModeKeyboard above).
     isPreviewEligible: store.activeEditorId != null,
@@ -378,22 +365,17 @@ export function App(): JSX.Element {
     onShare: (selectionOnly: boolean) => {
       const id = store.activeEditorId;
       const tb = id ? store.get(id) : undefined;
-      const view = getActiveView();
-      if (!tb || !view) return;
-      const sel = view.state.selection.main;
+      const editor = getActiveEditor();
+      const model = editor?.getModel();
+      if (!tb || !editor || !model) return;
+      const sel = editor.getSelection();
       const text =
-        selectionOnly && !sel.empty
-          ? view.state.sliceDoc(sel.from, sel.to)
-          : view.state.doc.toString();
+        selectionOnly && sel && !sel.isEmpty()
+          ? model.getValueInRange(sel, 1 /* EndOfLinePreference.LF */)
+          : model.getValue(1 /* EndOfLinePreference.LF */);
       void share({ title: tabTitle(tb), text });
     }
   });
-
-  // Editor extensions including the contextmenu seam (find/preview-pulse + menu).
-  const editorExtensionsWithMenu = useMemo(
-    () => [paneEditorExtensions, editorContextMenu.extension],
-    [paneEditorExtensions, editorContextMenu.extension]
-  );
 
   // e.g. en 'Untitled.txt' / zh '新建文本文档.txt' / ja '無題.txt'). The store
   // appends a number ('{base} {N}'); we strip the trailing extension so the tab
@@ -487,13 +469,14 @@ export function App(): JSX.Element {
   }, [onFileOpened, store]);
 
   // Editor-surface seam (Phase 3 Gate-3 harness): exposes the ACTIVE tab's live
-  // CM6 view to the keyboard-conformance + undo-granularity e2e. PA-8-clean — it
-  // reads the EditorView + public CM6 history helpers, no IPC/fs. Installed after
-  // installTestHook so it attaches to the same window.__notepadsTest object.
+  // Editor-surface seam (Phase 3 Gate-3 harness): exposes the ACTIVE tab's live
+  // Monaco editor to the keyboard-conformance + undo-granularity e2e. PA-8-clean —
+  // it reads the IStandaloneCodeEditor + public Monaco APIs, no IPC/fs. Installed
+  // after installTestHook so it attaches to the same window.__notepadsTest object.
   useEffect(() => {
     const uninstall = installEditorTestHook(() =>
       store.activeEditorId
-        ? (editorHandles.current.get(store.activeEditorId)?.getView() ?? null)
+        ? (editorHandles.current.get(store.activeEditorId)?.getEditor() ?? null)
         : null
     );
     return uninstall;
@@ -511,7 +494,7 @@ export function App(): JSX.Element {
   // render.
   const transferSource = useRef<TransferTextSource>({
     getLastSavedText: (id) => lastSavedTextRef.current.get(id) ?? '',
-    getPendingText: (id) => editorHandles.current.get(id)?.getView()?.state.doc.toString() ?? '',
+    getPendingText: (id) => editorHandles.current.get(id)?.getShadowText() ?? '',
     seedAdoptedDoc: (id, text) => {
       // Seed once the adopted tab's editor handle exists. setTimeout(0), not rAF:
       // rAF never fires in a non-compositing window (Playwright primary / occluded
@@ -638,12 +621,25 @@ export function App(): JSX.Element {
               if (!store.get(id)) { unlisten(); return; }
               const handle = editorHandles.current.get(id);
               if (!handle) return;
-              const view = handle.getView();
-              if (!view) return;
-              view.dispatch({
-                changes: { from: view.state.doc.length, insert: chunk.text },
-                annotations: Transaction.addToHistory.of(false)
-              });
+              const editor = handle.getEditor();
+              const model = editor?.getModel();
+              if (!model) return;
+              // Append the chunk at end-of-doc with NO undo step: model.applyEdits
+              // does not push to the undo stack (unlike executeEdits /
+              // pushEditOperations), so a streamed load can never be partially
+              // un-done. Range = the empty range at the very end of the model.
+              const end = model.getFullModelRange().getEndPosition();
+              model.applyEdits([
+                {
+                  range: {
+                    startLineNumber: end.lineNumber,
+                    startColumn: end.column,
+                    endLineNumber: end.lineNumber,
+                    endColumn: end.column
+                  },
+                  text: chunk.text
+                }
+              ]);
               if (chunk.isLast) {
                 unlisten();
                 // Snapshot the fully-loaded text as the saved baseline for diff
@@ -681,6 +677,11 @@ export function App(): JSX.Element {
         }
       });
     },
+    // recomputeDirty (used in the streaming branch above) is a stable
+    // useCallback([store]) declared later in the body; including it would be a
+    // use-before-declaration and it never changes identity for a fixed store, so
+    // [store] is the correct, complete dependency set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [store]
   );
 
@@ -855,17 +856,20 @@ export function App(): JSX.Element {
     (editorId: string): void => {
       const handle = editorHandles.current.get(editorId);
       if (!handle) return;
+      const model = handle.getEditor()?.getModel();
+      if (!model) return;
+      // Length in the LF shadow buffer WITHOUT materializing the whole string
+      // (Monaco computes it from the buffer's internal metrics). Matches the
+      // baseline length, which Rust computed over the same '\n'-normalized text.
+      const shadowLength = model.getValueLength(1 /* EndOfLinePreference.LF */);
       const bl = baselineRef.current.get(editorId);
       // Untitled buffers have no baseline → any content makes them dirty.
       if (!bl) {
-        const view = handle.getView();
-        store.setModified(editorId, view ? view.state.doc.length > 0 : false);
+        store.setModified(editorId, shadowLength > 0);
         return;
       }
-      // Length fast-path (O(1) via CM6 rope): most edits change length.
-      const view = handle.getView();
-      if (!view) return;
-      if (view.state.doc.length !== bl.length) {
+      // Length fast-path: most edits change length.
+      if (shadowLength !== bl.length) {
         store.setModified(editorId, true);
         return;
       }
@@ -1239,8 +1243,8 @@ export function App(): JSX.Element {
     ]
   );
 
-  // Map the MAIN-owned persisted Settings bag onto the editor-behavior facets
-  // CodeMirrorEditor consumes (Worker C wires consumption). Only the four fields
+  // Map the MAIN-owned persisted Settings bag onto the editor-behavior settings
+  // MonacoEditor consumes (forwarded to the command wiring). Only the four fields
   // EditorSettings exposes are forwarded; the rest of Settings is theme/IO state.
   const editorBehaviorSettings = useMemo(
     () => ({
@@ -1408,14 +1412,19 @@ export function App(): JSX.Element {
                     <Spinner size="large" />
                   </div>
                 ) : (
-                  <CodeMirrorEditor
+                  <MonacoEditor
                     ref={(h) => {
                       if (h) editorHandles.current.set(tab.editorId, h);
                       else editorHandles.current.delete(tab.editorId);
                     }}
-                    editorExtensions={editorExtensionsWithMenu}
-                    onDocChanged={() => { if (!tab.isStreaming) recomputeDirty(tab.editorId); }}
-                    filePath={tab.filePath}
+                    onDocChanged={() => {
+                      if (!tab.isStreaming) recomputeDirty(tab.editorId);
+                      // Re-render the open preview/diff pane to reflect live typing
+                      // (replaces the old CM6 updateListener pulse).
+                      schedulePanePulse(tab.editorId);
+                    }}
+                    findCallbacks={find.keymapCallbacks}
+                    contextMenuAttach={editorContextMenu.attach}
                     settings={editorBehaviorSettings}
                     lineNumbers={settings.displayLineNumbers}
                     lineHighlighter={settings.displayLineHighlighter}
@@ -1454,7 +1463,7 @@ export function App(): JSX.Element {
                         text={shadow}
                         isDark={resolvedTheme === 'dark'}
                         fontSize={settings.editorFontSize}
-                        editorView={editorHandles.current.get(tab.editorId)?.getView() ?? null}
+                        editor={editorHandles.current.get(tab.editorId)?.getEditor() ?? null}
                       />
                     </PaneMount>
                   </Suspense>
