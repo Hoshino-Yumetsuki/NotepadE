@@ -159,8 +159,6 @@ export interface MainMenuCommands {
   onSaveAll?: () => void;
   onFind(): void;
   onReplace(): void;
-  onFullScreen(): void;
-  onCompactOverlay(): void;
   /** Print the active document (Ctrl+P) — wired to the print host. */
   onPrint?: () => void;
   /** Print every open document (Ctrl+Shift+P) — wired to the print host. */
@@ -768,13 +766,6 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           </MenuItem>
           <MenuItem secondaryContent={`${modKey}+Shift+F`} onClick={commands.onReplace}>
             {t('MainMenu_Button_Replace.Text')}
-          </MenuItem>
-          <MenuDivider />
-          <MenuItem secondaryContent="F11" onClick={commands.onFullScreen}>
-            {t('App_EnterFullScreenMode_Text')}
-          </MenuItem>
-          <MenuItem secondaryContent="F12" onClick={commands.onCompactOverlay}>
-            {t('App_EnterCompactOverlayMode_Text')}
           </MenuItem>
           <MenuDivider />
           <MenuItem secondaryContent={`${modKey}+P`} onClick={commands.onPrint}>

@@ -21,7 +21,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use crate::contract::{FullScreenResult, MaximizedResult};
+use crate::contract::MaximizedResult;
 use crate::result::NpResult;
 
 /// `notepads:window:maximizeChanged` (bool payload, window-scoped).
@@ -233,17 +233,6 @@ pub fn apply_window_icon(window: &tauri::WebviewWindow) {
 // ---------------------------------------------------------------------------
 //  Commands — each acts on the CALLING window (PA-8: no windowId from JS)
 // ---------------------------------------------------------------------------
-
-#[tauri::command]
-pub async fn window_set_full_screen(
-    window: tauri::WebviewWindow,
-    enabled: bool,
-) -> NpResult<FullScreenResult> {
-    if let Err(e) = window.set_fullscreen(enabled) {
-        return NpResult::Err(e.to_string());
-    }
-    NpResult::Ok(FullScreenResult { is_full_screen: window.is_fullscreen().unwrap_or(enabled) })
-}
 
 #[tauri::command]
 pub async fn window_minimize(window: tauri::WebviewWindow) -> NpResult<()> {

@@ -1085,46 +1085,6 @@ export function App(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Window-mode wiring (Workstream 6.A): F11 toggles native fullscreen; a
-  // dispatched 'notepads:toggle-compact' event toggles the compact-overlay
-  // substitute (frameless always-on-top, per 0.A sign-off #8). Both route
-  // through window.notepads.window (MAIN owns the BrowserWindow — PA-8). Local
-  // refs track the resolved state so each toggle flips it. The toggles are
-  // lifted to stable callbacks so the main-menu flyout (hamburger) drives the
-  // same code path as the F11/F12 accelerators.
-  const fullScreenRef = useRef(false);
-  const compactRef = useRef(false);
-  const toggleFullScreen = useCallback((): void => {
-    void window.notepads.window.setFullScreen(!fullScreenRef.current).then((res) => {
-      if (res.ok) fullScreenRef.current = res.data.isFullScreen;
-    });
-  }, []);
-  const toggleCompact = useCallback((): void => {
-    void window.notepads.window.setCompactOverlay(!compactRef.current).then((res) => {
-      if (res.ok) compactRef.current = res.data.isCompactOverlay;
-    });
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'F11') {
-        e.preventDefault();
-        toggleFullScreen();
-      } else if (e.key === 'F12' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
-        // F12 → toggle the compact-overlay window (frameless always-on-top, the
-        // 0.A sign-off #8 substitute). Bare F12 only, so a modified chord never
-        // triggers it; MAIN owns the actual window state machine (window.ts).
-        e.preventDefault();
-        toggleCompact();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('notepads:toggle-compact', toggleCompact);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('notepads:toggle-compact', toggleCompact);
-    };
-  }, [toggleFullScreen, toggleCompact]);
-
   // Print + Share (Workstream 6.B/C). Ctrl+P prints the current document and
   // Ctrl+Shift+P prints every open document (one per page); both route through the
   // print host + MAIN webContents.print(). A dispatched 'notepads:share' event
@@ -1200,8 +1160,6 @@ export function App(): JSX.Element {
       onNew: () => store.newTab(),
       onFind: () => find.keymapCallbacks.openFindBar(false),
       onReplace: () => find.keymapCallbacks.openFindBar(true),
-      onFullScreen: toggleFullScreen,
-      onCompactOverlay: toggleCompact,
       onPrint: doPrintCurrent,
       onPrintAll: doPrintAll,
       onSettings: () => setSettingsOpen(true),
@@ -1231,8 +1189,6 @@ export function App(): JSX.Element {
     [
       store,
       find.keymapCallbacks,
-      toggleFullScreen,
-      toggleCompact,
       doPrintCurrent,
       doPrintAll,
       doSave,

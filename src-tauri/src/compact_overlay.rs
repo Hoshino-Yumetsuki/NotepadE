@@ -10,11 +10,14 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
-use crate::contract::CompactOverlayResult;
-use crate::result::NpResult;
-
 /// UWP CompactOverlay default view size (logical/DIP, Electron `setSize` parity).
+/// The renderer-facing compact-overlay command was removed; the pure planner
+/// below is now exercised only by its own unit tests (kept because it
+/// documents + verifies the maximize/fullscreen restore ordering), so the
+/// no-longer-called items are marked test-only to avoid prod dead_code warnings.
+#[cfg_attr(not(test), allow(dead_code))]
 pub const COMPACT_WIDTH: f64 = 500.0;
+#[cfg_attr(not(test), allow(dead_code))]
 pub const COMPACT_HEIGHT: f64 = 360.0;
 
 /// A window rectangle in PHYSICAL pixels (snapshot/restore round-trips the
@@ -28,6 +31,7 @@ pub struct WindowRect {
 }
 
 /// The live window flags the enter-planner snapshots + normalizes from.
+#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WindowFlags {
     pub bounds: WindowRect,
@@ -50,6 +54,7 @@ pub struct CompactSnapshot {
 /// Declarative actions the shell applies to the window, in order. Keeping
 /// these as data (not direct window calls) is what makes the planner pure +
 /// testable; order matters (e.g. exit fullscreen BEFORE resizing).
+#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WindowAction {
     SetFullScreen(bool),
@@ -61,6 +66,7 @@ pub enum WindowAction {
     SetBounds(WindowRect),
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct CompactEnterPlan {
     pub snapshot: CompactSnapshot,
     pub actions: Vec<WindowAction>,
@@ -69,6 +75,7 @@ pub struct CompactEnterPlan {
 /// Plan entering compact overlay from the current window flags. Snapshot the
 /// maximized/fullscreen state too, then CLEAR them (fullscreen first, then
 /// unmaximize) before going always-on-top + shrinking.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn plan_compact_enter(current: &WindowFlags) -> CompactEnterPlan {
     let snapshot = CompactSnapshot {
         bounds: current.bounds,
@@ -92,6 +99,7 @@ pub fn plan_compact_enter(current: &WindowFlags) -> CompactEnterPlan {
 /// Plan leaving compact overlay back to a snapshot. Restore order is the
 /// inverse: drop always-on-top, restore the bounds, then re-apply
 /// maximize/fullscreen if the window had them.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn plan_compact_leave(snapshot: &CompactSnapshot) -> Vec<WindowAction> {
     let mut actions: Vec<WindowAction> = Vec::new();
     actions.push(WindowAction::SetAlwaysOnTop(snapshot.always_on_top));
@@ -107,6 +115,7 @@ pub fn plan_compact_leave(snapshot: &CompactSnapshot) -> Vec<WindowAction> {
 
 /// The window operations the stateful toggle driver needs, abstracted so the
 /// driver (and its idempotent guard) is unit-testable without a real window.
+#[cfg_attr(not(test), allow(dead_code))]
 pub trait CompactWindowPort {
     fn read_flags(&self) -> WindowFlags;
     fn apply(&mut self, actions: &[WindowAction]);
@@ -128,6 +137,7 @@ pub fn create_compact_state() -> CompactState {
 /// Idempotent by the `state.snapshot` guard: entering when already compact, or
 /// leaving when already normal, applies NOTHING and preserves the original
 /// snapshot. Returns the resolved compact flag.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn toggle_compact(
     port: &mut dyn CompactWindowPort,
     state: &mut CompactState,
@@ -175,64 +185,6 @@ pub fn forget_window(label: &str) {
     if let Ok(mut m) = compact_states().lock() {
         m.remove(label);
     }
-}
-
-struct TauriCompactPort<'a> {
-    window: &'a tauri::WebviewWindow,
-}
-
-impl CompactWindowPort for TauriCompactPort<'_> {
-    fn read_flags(&self) -> WindowFlags {
-        let pos = self.window.outer_position().unwrap_or(tauri::PhysicalPosition::new(0, 0));
-        let size = self.window.outer_size().unwrap_or(tauri::PhysicalSize::new(0, 0));
-        WindowFlags {
-            bounds: WindowRect { x: pos.x, y: pos.y, width: size.width, height: size.height },
-            always_on_top: self.window.is_always_on_top().unwrap_or(false),
-            maximized: self.window.is_maximized().unwrap_or(false),
-            full_screen: self.window.is_fullscreen().unwrap_or(false),
-        }
-    }
-
-    fn apply(&mut self, actions: &[WindowAction]) {
-        for a in actions {
-            // Best-effort like the Electron shell — individual failures are
-            // logged, the rest of the plan still applies.
-            let res: tauri::Result<()> = match *a {
-                WindowAction::SetFullScreen(v) => self.window.set_fullscreen(v),
-                WindowAction::Unmaximize => self.window.unmaximize(),
-                WindowAction::Maximize => self.window.maximize(),
-                WindowAction::SetAlwaysOnTop(v) => self.window.set_always_on_top(v),
-                WindowAction::SetSize { width, height } => {
-                    self.window.set_size(tauri::LogicalSize::new(width, height))
-                }
-                WindowAction::SetBounds(b) => self
-                    .window
-                    .set_size(tauri::PhysicalSize::new(b.width, b.height))
-                    .and_then(|_| {
-                        self.window.set_position(tauri::PhysicalPosition::new(b.x, b.y))
-                    }),
-            };
-            if let Err(e) = res {
-                log::warn!("compact-overlay action failed: {e}");
-            }
-        }
-    }
-}
-
-#[tauri::command]
-pub async fn window_set_compact_overlay(
-    window: tauri::WebviewWindow,
-    enabled: bool,
-) -> NpResult<CompactOverlayResult> {
-    let label = window.label().to_string();
-    let mut states = match compact_states().lock() {
-        Ok(g) => g,
-        Err(e) => return NpResult::Err(e.to_string()),
-    };
-    let state = states.entry(label).or_default();
-    let mut port = TauriCompactPort { window: &window };
-    let is_compact_overlay = toggle_compact(&mut port, state, enabled);
-    NpResult::Ok(CompactOverlayResult { is_compact_overlay })
 }
 
 // ---------------------------------------------------------------------------

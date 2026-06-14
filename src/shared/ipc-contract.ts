@@ -466,8 +466,6 @@ export interface SettingsApi {
 export interface WindowApi {
   /** Ask the broker to open paths (redirect-vs-spawn per AlwaysOpenNewWindow). */
   brokerRequest(args: { paths: string[]; forceNewWindow?: boolean }): Promise<Result<void>>;
-  setFullScreen(enabled: boolean): Promise<Result<{ isFullScreen: boolean }>>;
-  setCompactOverlay(enabled: boolean): Promise<Result<{ isCompactOverlay: boolean }>>;
   /**
    * Custom caption controls (replace the OS titleBarOverlay so the buttons are
    * transparent and the window acrylic shows through them — 1:1 with the UWP

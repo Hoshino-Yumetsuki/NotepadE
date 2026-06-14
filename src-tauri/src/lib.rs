@@ -149,8 +149,6 @@ pub fn run() {
             settings_reset::settings_reset_all,
             // window (task #4)
             broker::window_broker_request,
-            window_mgmt::window_set_full_screen,
-            compact_overlay::window_set_compact_overlay,
             window_mgmt::window_minimize,
             window_mgmt::window_toggle_maximize,
             window_mgmt::window_close,

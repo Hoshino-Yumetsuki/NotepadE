@@ -124,9 +124,7 @@ const C = {
   SettingsResetAll: 'notepads:settings:resetAll',
   // window
   WindowBrokerRequest: 'notepads:window:brokerRequest',
-  WindowSetFullScreen: 'notepads:window:setFullScreen',
-  WindowSetCompactOverlay: 'notepads:window:setCompactOverlay',
-  WindowMinimize: 'notepads:window:minimize',
+WindowMinimize: 'notepads:window:minimize',
   WindowToggleMaximize: 'notepads:window:toggleMaximize',
   WindowClose: 'notepads:window:close',
   WindowIsMaximized: 'notepads:window:isMaximized',
@@ -248,10 +246,6 @@ const api: NotepadsApi = {
   window: {
     brokerRequest: (args) =>
       call<void>(channelToCommand(C.WindowBrokerRequest), { args }),
-    setFullScreen: (enabled) =>
-      call<{ isFullScreen: boolean }>(channelToCommand(C.WindowSetFullScreen), { enabled }),
-    setCompactOverlay: (enabled) =>
-      call<{ isCompactOverlay: boolean }>(channelToCommand(C.WindowSetCompactOverlay), { enabled }),
     minimize: () => call<void>(channelToCommand(C.WindowMinimize)),
     toggleMaximize: () => call<{ isMaximized: boolean }>(channelToCommand(C.WindowToggleMaximize)),
     close: () => call<void>(channelToCommand(C.WindowClose)),
