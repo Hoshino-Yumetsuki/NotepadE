@@ -132,9 +132,17 @@ pub fn setup_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow, apply
         // CSS layer only.
         #[cfg(target_os = "windows")]
         {
-            if let Err(e) = window_vibrancy::apply_acrylic(window, None) {
-                log::warn!("apply_acrylic failed (pre-Win10 1809?): {e}");
-            }
+            // window-vibrancy's apply_acrylic touches the native HWND and must
+            // run on the main (UI) thread. Broker spawns call setup_window off
+            // the Tauri async runtime, so a direct call here runs off-main and
+            // can fail silently / leave the window without its backing surface
+            // (invisible transparent frame). Marshal onto the main thread.
+            let win = window.clone();
+            let _ = window.run_on_main_thread(move || {
+                if let Err(e) = window_vibrancy::apply_acrylic(&win, None) {
+                    log::warn!("apply_acrylic failed (pre-Win10 1809?): {e}");
+                }
+            });
         }
         #[cfg(target_os = "macos")]
         {

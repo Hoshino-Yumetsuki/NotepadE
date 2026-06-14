@@ -122,8 +122,12 @@ fn spawn_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         Ok(mut s) => s.next_label(),
         Err(_) => return None,
     };
-    let mut builder = tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::default())
-        .title("NotepadE")
+    // WebviewUrl::default() is an empty PathBuf, which resolves to "" and loads
+    // a blank/failed page. The conf-declared "main" window uses the config's
+    // default url ("index.html"); spawn the SAME entry so the renderer boots.
+    let mut builder =
+        tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::App("index.html".into()))
+            .title("NotepadE")
         .inner_size(1100.0, 720.0)
         .min_inner_size(480.0, 320.0)
         .visible(false)
@@ -153,6 +157,8 @@ fn spawn_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         }
         Err(e) => {
             log::error!("broker: failed to spawn window {label}: {e}");
+            // A reused label would otherwise stay burned; the seq already
+            // advanced so the next spawn gets a fresh label — fine.
             None
         }
     }
@@ -205,7 +211,7 @@ fn emit_activation(win: &tauri::WebviewWindow, event: &ActivationEvent) {
 /// the protocol asked for a new instance; otherwise redirect into the
 /// last-focused window (spawning one if none exist). The activation event is
 /// then delivered to (or queued for) the chosen window's renderer.
-async fn route_activation(app: &tauri::AppHandle, event: ActivationEvent) {
+async fn route_activation(app: &tauri::AppHandle, event: ActivationEvent) -> Result<(), String> {
     // settings.alwaysOpenNewWindow via worker-persist's settings module; an
     // unreadable settings store falls back to false (Electron parity).
     let always_new = match crate::settings::settings_get(app.clone()).await {
@@ -220,8 +226,9 @@ async fn route_activation(app: &tauri::AppHandle, event: ActivationEvent) {
         redirect_target(app).or_else(|| spawn_window(app))
     };
     let Some(target) = target else {
-        log::error!("broker: no window available for activation");
-        return;
+        let msg = "broker: no window available for activation (spawn failed)";
+        log::error!("{msg}");
+        return Err(msg.to_string());
     };
     // A freshly spawned window already comes up shown+focused; a redirected
     // existing window may be behind other apps or minimized — surface it.
@@ -229,6 +236,7 @@ async fn route_activation(app: &tauri::AppHandle, event: ActivationEvent) {
         bring_to_front(&target);
     }
     deliver(&target, event);
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +250,9 @@ pub fn on_second_instance(app: &tauri::AppHandle, argv: Vec<String>, cwd: String
     let event = ActivationEvent { paths: parsed.paths, cwd, protocol_url: parsed.protocol_url };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        route_activation(&app, event).await;
+        if let Err(e) = route_activation(&app, event).await {
+            log::error!("broker: second-instance activation failed: {e}");
+        }
     });
 }
 
@@ -304,14 +314,18 @@ pub fn init_broker(app: &tauri::AppHandle) {
                 };
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
-                    route_activation(&app, ev).await;
+                    if let Err(e) = route_activation(&app, ev).await {
+                        log::error!("broker: protocol-url activation failed: {e}");
+                    }
                 });
             }
             if !paths.is_empty() {
                 let ev = ActivationEvent { paths, cwd, protocol_url: None };
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
-                    route_activation(&app, ev).await;
+                    if let Err(e) = route_activation(&app, ev).await {
+                        log::error!("broker: file-open activation failed: {e}");
+                    }
                 });
             }
         }
@@ -337,7 +351,9 @@ pub fn init_broker(app: &tauri::AppHandle) {
             ActivationEvent { paths: parsed.paths, cwd, protocol_url: parsed.protocol_url };
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
-            route_activation(&app, event).await;
+            if let Err(e) = route_activation(&app, event).await {
+                log::error!("broker: cold-start activation failed: {e}");
+            }
         });
     }
 }
@@ -358,8 +374,7 @@ pub async fn window_broker_request(
     } else {
         None
     };
-    route_activation(&app, ActivationEvent { paths: args.paths, cwd, protocol_url }).await;
-    NpResult::Ok(())
+    route_activation(&app, ActivationEvent { paths: args.paths, cwd, protocol_url }).await.into()
 }
 
 // ---------------------------------------------------------------------------

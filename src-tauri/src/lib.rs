@@ -115,6 +115,19 @@ pub fn run() {
             // and this process's own cold-start argv activation.
             broker::init_broker(&app.handle().clone());
 
+            // Windows/Linux: ensure the notepads:// scheme is registered with
+            // the OS even on dev / non-installed runs (the NSIS installer also
+            // registers it on a real install; register_all is idempotent so
+            // the two don't conflict). macOS registers via Info.plist. Without
+            // this, second-instance/protocol routing only works post-install.
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                if let Err(e) = app.deep_link().register_all() {
+                    log::warn!("deep_link register_all failed: {e}");
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
