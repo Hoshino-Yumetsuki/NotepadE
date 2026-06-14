@@ -42,11 +42,22 @@ export interface DiffModel {
 const EMPTY_MODEL: DiffModel = { left: [], right: [] };
 
 /**
+ * Build an all-unchanged model for when both sides are identical: every line
+ * appears as an `unchanged` row so the viewer shows the full document content
+ * with no highlighted differences (rather than two empty panes).
+ */
+function buildIdenticalModel(text: string): DiffModel {
+  const lines = text.length === 0 ? [''] : text.split('\n');
+  const rows: DiffRow[] = lines.map((line) => ({ kind: 'unchanged', text: line }));
+  return { left: rows, right: rows };
+}
+
+/**
  * Build the row-aligned two-column diff model from two shadow-buffer texts.
  * Computation runs in Rust via IPC (non-blocking for the renderer thread).
  */
 export async function buildDiffModel(original: string, modified: string): Promise<DiffModel> {
-  if (original === modified) return EMPTY_MODEL;
+  if (original === modified) return buildIdenticalModel(original);
   const res = await window.notepads.diff.compute(original, modified);
   if (!res.ok) return EMPTY_MODEL;
   return res.data as DiffModel;

@@ -17,10 +17,15 @@ beforeEach(() => {
 });
 
 describe('buildDiffModel', () => {
-  it('identical text → empty model without calling Rust', async () => {
+  it('identical text → full unchanged model without calling Rust', async () => {
     const m = await buildDiffModel('a\nb\nc', 'a\nb\nc');
-    expect(m.left).toEqual([]);
-    expect(m.right).toEqual([]);
+    const expectedRows = [
+      { kind: 'unchanged', text: 'a' },
+      { kind: 'unchanged', text: 'b' },
+      { kind: 'unchanged', text: 'c' }
+    ];
+    expect(m.left).toEqual(expectedRows);
+    expect(m.right).toEqual(expectedRows);
     expect(mockCompute).not.toHaveBeenCalled();
   });
 
