@@ -1,23 +1,26 @@
 /**
- * Current-line edge filler (RENDERER, Monaco port).
+ * Current-line highlight (RENDERER, Monaco port) — fully manual.
  *
- * `.monaco-editor` carries a CSS `padding-left` inset (the gutter breathing room).
- * That padding is OUTSIDE Monaco's painted region — Monaco's `.overflow-guard`
- * (which clips all content/overlays, `overflow:hidden`) starts at the content-box
- * left, i.e. AFTER the padding. So Monaco's `renderLineHighlight:'all'` current-
- * line band begins at the gutter's left edge and can never reach into the padding:
- * the gray band stops short of the window's left edge, leaving a visible gap.
+ * Monaco's native `renderLineHighlight` band is painted INSIDE `.overflow-guard`
+ * (`overflow:hidden`), which starts at the content-box left — i.e. AFTER the CSS
+ * `padding-left` inset on `.monaco-editor`. So the native band can never reach
+ * into the padding strip: the gray stops short of the window's left edge, leaving
+ * a visible gap. A small filler strip in `[0, inset)` bridges the gap but leaves a
+ * seam where it meets Monaco's band (two layers compositing over acrylic at
+ * slightly different boundaries) — the "缺了一块" the user reported.
  *
- * A CSS pseudo-element on Monaco's own `.current-line-margin` can't fill the gap
- * either — it would be clipped by `.overflow-guard`. The robust fix is a sibling
- * overlay appended to the editor ROOT (which is `overflow:visible` and spans the
- * full padding box): a thin strip in the `[0, inset)` region that tracks the
- * active line's Y, painted in the SAME color as the theme's line-highlight token.
- * Together with Monaco's own band, the highlight then reads as continuous from the
- * window's left edge across the gutter and into the text.
+ * The robust fix is to draw the WHOLE current-line band ourselves as ONE piece,
+ * and disable Monaco's native band (see MonacoEditor: renderLineHighlight 'none').
+ * This overlay is a single full-width strip appended to the editor ROOT (which is
+ * `overflow:visible` and spans the full padding box), painted behind Monaco's
+ * transparent content layers (`z-index:-1` + `isolation:isolate` on the root) so
+ * line numbers and text render on top. It tracks the active line's Y and spans
+ * `[0, clientWidth)` — continuous from the window's left edge, across the gutter,
+ * through the text, to the right edge. No seam, no missing chunk.
  *
- * THEME: light/dark aware, matching `editor.lineHighlightBackground` exactly. HC
- * paints no line highlight → the attach is inert (no-op disposer).
+ * THEME: light/dark aware, matching the old `editor.lineHighlightBackground`
+ * token exactly. HC paints no line highlight → the attach is inert (no-op
+ * disposer).
  *
  * Perf: only `top`/`height`/`width`/`display` are written, coalesced into one rAF.
  *
@@ -31,11 +34,11 @@ export interface CurrentLineEdgeOptions {
 }
 
 /**
- * Current-line strip color per theme. These match the Monaco theme tokens set in
- * MonacoEditor.defineThemes EXACTLY (`editor.lineHighlightBackground`): light
- * `#7f7f7f14`, dark `#ffffff0d`. Both composite over the same transparent acrylic
- * surface as Monaco's own band, so the resulting shade is identical. HC paints no
- * line highlight → 'transparent' (the attach becomes a no-op).
+ * Current-line band color per theme. These match the Monaco theme tokens that
+ * `renderLineHighlight` used to paint (`editor.lineHighlightBackground`): light
+ * `#7f7f7f14`, dark `#ffffff0d`. The band composites over the same transparent
+ * acrylic surface as the text, so the resulting shade is identical to the old
+ * native band. HC paints no line highlight → 'transparent' (attach is a no-op).
  */
 export function currentLineEdgeColor(themeMode: 'light' | 'dark' | 'hc'): string {
   if (themeMode === 'hc') return 'transparent';
@@ -43,9 +46,9 @@ export function currentLineEdgeColor(themeMode: 'light' | 'dark' | 'hc'): string
 }
 
 /**
- * Attach the current-line edge filler to a live Monaco editor. Returns a disposer
- * that removes the overlay + all listeners. Inert (no-op disposer) for HC or when
- * the editor has no DOM node yet.
+ * Attach the manual current-line highlight to a live Monaco editor. Returns a
+ * disposer that removes the overlay + all listeners. Inert (no-op disposer) for
+ * HC or when the editor has no DOM node yet.
  */
 export function attachCurrentLineEdge(
   editor: monaco.editor.IStandaloneCodeEditor,
@@ -54,6 +57,13 @@ export function attachCurrentLineEdge(
   const color = currentLineEdgeColor(options.themeMode);
   const root = editor.getDomNode();
   if (color === 'transparent' || !root) return () => {};
+
+  // The root must be its own stacking context so the `z-index:-1` band paints
+  // BEHIND Monaco's (transparent) content layers but still IN FRONT of the root's
+  // background — not behind the window. Monaco sets the root position:relative;
+  // isolation:isolate pins the context without affecting layout.
+  const prevIsolation = root.style.isolation;
+  root.style.isolation = 'isolate';
 
   const overlay = document.createElement('div');
   overlay.className = 'monaco-currentLineEdge';
@@ -64,44 +74,39 @@ export function attachCurrentLineEdge(
   overlay.style.width = '0';
   overlay.style.height = '0';
   overlay.style.pointerEvents = 'none';
-  // Back-most overlay: it only ever occupies the left padding gutter region (which
-  // Monaco's content/overlays never cover), so z-order is cosmetic, but keeping it
-  // low guarantees it never paints over the line numbers or text.
-  overlay.style.zIndex = '0';
+  // Back-most layer: behind Monaco's transparent content (line numbers/text render
+  // on top), in front of the root's gutter-wash background.
+  overlay.style.zIndex = '-1';
   overlay.style.background = color;
   overlay.style.display = 'none';
   root.appendChild(overlay);
-
-  // Inset width = the CSS `padding-left` on `.monaco-editor`, measured as the
-  // overflow-guard's on-screen offset from the root (same technique the line-
-  // number glow uses). Monaco's current-line band starts at the guard's left edge,
-  // so this strip fills exactly `[0, inset)` to bridge it to the window edge.
-  const insetWidth = (): number => {
-    const guard = root.querySelector('.overflow-guard');
-    return guard
-      ? guard.getBoundingClientRect().left - root.getBoundingClientRect().left
-      : 0;
-  };
 
   let rafId: number | null = null;
   const render = (): void => {
     rafId = null;
     const pos = editor.getPosition();
     const sel = editor.getSelection();
-    // Monaco hides the current-line highlight while a non-empty selection is
-    // active; mirror that so the strip never lingers without a matching band.
+    // Monaco hid the current-line highlight while a non-empty selection was
+    // active; mirror that so the band never lingers under a selection.
     if (!pos || (sel && !sel.isEmpty())) {
       overlay.style.display = 'none';
       return;
     }
     const line = pos.lineNumber;
     // Viewport-relative top of the active model line, and its full height (covers
-    // every wrapped visual row, since the next line's top sits after them). Both
-    // are in the root's padding-box coordinate space (Monaco's content top = 0).
-    const top = editor.getTopForLineNumber(line) - editor.getScrollTop();
-    const height = editor.getTopForLineNumber(line + 1) - editor.getTopForLineNumber(line);
-    const width = insetWidth();
-    if (width <= 0 || height <= 0) {
+    // every wrapped visual row, since the next line's top sits after them).
+    let top = editor.getTopForLineNumber(line) - editor.getScrollTop();
+    let height = editor.getTopForLineNumber(line + 1) - editor.getTopForLineNumber(line);
+    // Clamp to the visible viewport so the band never bleeds into the top gap or
+    // past the bottom (Monaco's native band was clipped by .overflow-guard).
+    const viewportH = root.clientHeight;
+    if (top < 0) {
+      height += top;
+      top = 0;
+    }
+    if (height > viewportH - top) height = viewportH - top;
+    const width = root.clientWidth; // full padding-box width: window edge → edge
+    if (width <= 0 || height <= 0 || top >= viewportH) {
       overlay.style.display = 'none';
       return;
     }
@@ -125,5 +130,6 @@ export function attachCurrentLineEdge(
     scrollSub.dispose();
     layoutSub.dispose();
     overlay.remove();
+    root.style.isolation = prevIsolation;
   };
 }

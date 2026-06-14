@@ -357,10 +357,13 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       // paints the current-line band into that left gap manually.
       padding: { top: 0, bottom: 0 },
       wordWrap: wordWrap ? 'on' : 'off',
-      // 'all' highlights BOTH the content line and the gutter/margin, so the
-      // current-line wash spans the full width including the line-number column
-      // (matches the original editor — the line number sits inside the band).
-      renderLineHighlight: lineHighlighter ? 'all' : 'none',
+      // The current-line band is drawn MANUALLY (attachCurrentLineEdge), not by
+      // Monaco. Monaco's native band is clipped to `.overflow-guard`, which starts
+      // after the CSS padding-left inset — so it can't reach the window's left
+      // edge, and pairing it with a filler strip leaves a visible seam. We paint
+      // one continuous full-width band ourselves instead; keep native 'none' so
+      // the two never double-composite.
+      renderLineHighlight: 'none',
       // Plain-text Notepad has no IDE affordances. These default ON in Monaco and
       // paint over our acrylic surface: bracket matching draws a GREEN box on the
       // current line near brackets; selection/occurrence highlight draws BLUE
@@ -540,10 +543,9 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     if (!editor) return;
     defineThemes(themeMode, accentColor);
     monaco.editor.setTheme(THEME_NAMES[themeMode]);
-    editor.updateOptions({ renderLineHighlight: lineHighlighter ? 'all' : 'none' });
     // Update the native gutter material wash on theme change (HC → transparent).
     editor.getDomNode()?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
-  }, [themeMode, accentColor, lineHighlighter]);
+  }, [themeMode, accentColor]);
 
   // Typography (family/size/weight/style). fontSize routes through the zoom
   // registry (setEditorZoomBase) so changing the base font keeps the active zoom
@@ -576,13 +578,14 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     return attachLineNumberGlow(editor, { themeMode, accentColor });
   }, [showLineNumbers, themeMode, accentColor]);
 
-  // Current-line edge filler. `.monaco-editor` has a CSS padding-left inset that
-  // sits OUTSIDE Monaco's clipped paint region, so renderLineHighlight:'all' stops
-  // at the gutter and the gray band can't reach the window's left edge. This
-  // overlay (appended to the editor root, which spans the full padding box) paints
-  // the same line-highlight color into that left gap, tracking the active line —
-  // bridging Monaco's band to the window edge. Only when the highlighter is on;
-  // re-attached on theme change (color is theme-derived). Inert for HC.
+  // Current-line highlight, drawn MANUALLY. Monaco's native band is clipped to
+  // `.overflow-guard` (which starts after the CSS padding-left inset), so it can't
+  // reach the window's left edge; pairing it with a filler strip leaves a seam.
+  // Instead native renderLineHighlight is 'none' and this overlay paints one
+  // continuous full-width band behind Monaco's transparent content — from the
+  // window's left edge across the gutter through the text. Only when the
+  // highlighter is on; re-attached on theme change (color is theme-derived).
+  // Inert for HC.
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || !lineHighlighter) return;
