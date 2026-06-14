@@ -139,7 +139,7 @@ function tabTitle(tab: TabState): string {
  */
 export interface MainMenuCommands {
   onNew(): void;
-  /** TODO: multi-window (Ctrl+Shift+N) — no renderer command yet → disabled. */
+  /** New window (Ctrl+Shift+N). Wired to the broker spawn; absent → disabled. */
   onNewWindow?: () => void;
   /** TODO: file-open dialog (Ctrl+O) — no renderer picker yet → disabled. */
   onOpen?: () => void;
@@ -684,8 +684,11 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           <MenuItem secondaryContent={`${modKey}+N`} onClick={commands.onNew}>
             {t('MainMenu_Button_New.Text')}
           </MenuItem>
-          {/* TODO: multi-window support (Ctrl+Shift+N) — disabled until wired. */}
-          <MenuItem secondaryContent={`${modKey}+Shift+N`} disabled={!commands.onNewWindow}>
+          <MenuItem
+            secondaryContent={`${modKey}+Shift+N`}
+            disabled={!commands.onNewWindow}
+            onClick={commands.onNewWindow}
+          >
             {t('MainMenu_Button_New_Window.Text')}
           </MenuItem>
           {/* TODO: file-open dialog (Ctrl+O) — no renderer picker yet. */}
