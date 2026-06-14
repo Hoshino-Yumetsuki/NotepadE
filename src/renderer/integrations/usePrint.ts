@@ -46,6 +46,10 @@ const PRINT_CSS = `
 #${PRINT_HOST_ID} { display: none; }
 @page { margin: 0; }
 @media print {
+  /* The app shell locks html/body to height:100% + overflow:hidden (chrome.css)
+     so the editor — not the document — owns scrolling. In print that clips the
+     output to a single page; restore natural flow so long documents paginate. */
+  html, body { height: auto !important; overflow: visible !important; }
   body > *:not(#${PRINT_HOST_ID}) { display: none !important; }
   #${PRINT_HOST_ID} { display: block !important; }
   .np-print-doc { white-space: pre-wrap; word-break: break-word;
