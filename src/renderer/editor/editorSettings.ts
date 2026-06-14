@@ -1,17 +1,15 @@
 /**
- * Editor settings facets (RENDERER, Lane B).
+ * Editor-behavior settings (RENDERER, Lane B) — pure module, zero @codemirror.
  *
- * These mirror the UWP AppSettingsService values that the editor commands read
- * at runtime (TextEditorCore + TextEditor.xaml.cs). They are exposed as CM6
- * `Facet`s so commands can read the *current* value off `EditorState` without
- * any React/host coupling, and the host can reconfigure them live through a
- * compartment.
+ * These mirror the UWP AppSettingsService values the editor commands read at
+ * runtime (TextEditorCore + TextEditor.xaml.cs). Post-Monaco-migration (T6) this
+ * is a plain typed bag + pure helpers: MonacoEditor receives the values as props
+ * and feeds them to the command wiring via a ref (see monacoCommands.ts), so there
+ * is no CM6 Facet/compartment anymore.
  *
  * Authority note: NONE of these settings touch encoding/EOL — those stay opaque
  * MAIN-owned labels (docs/plan/04 §3.A). These are pure editor-behavior knobs.
  */
-
-import { Facet, combineConfig } from '@codemirror/state';
 
 /**
  * Tab-as-spaces width. Mirrors UWP `TabIndents` / AddIndentation(indent):
@@ -45,27 +43,6 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   fontSize: 14
 };
 
-/**
- * The settings facet. Commands read `state.facet(editorSettings)`; the host
- * provides the value (through a compartment so it can be reconfigured live).
- * Combines multiple inputs by letting the last provided input win per field.
- */
-export const editorSettings = Facet.define<Partial<EditorSettings>, EditorSettings>({
-  combine(values) {
-    return combineConfig(
-      values,
-      DEFAULT_EDITOR_SETTINGS,
-      // Last writer wins for each field (host provides a single value normally).
-      {
-        tabAsSpaces: (_a, b) => b,
-        smartCopy: (_a, b) => b,
-        searchEngine: (_a, b) => b,
-        fontSize: (_a, b) => b
-      }
-    );
-  }
-});
-
 /** Normalize an arbitrary number to the legal {-1,2,4,8} set (else real tab). */
 export function normalizeTabAsSpaces(value: number): TabAsSpaces {
   return value === 2 || value === 4 || value === 8 ? value : -1;
@@ -78,3 +55,4 @@ export function normalizeTabAsSpaces(value: number): TabAsSpaces {
 export function indentString(tabAsSpaces: TabAsSpaces): string {
   return tabAsSpaces === -1 ? '\t' : ' '.repeat(tabAsSpaces);
 }
+
