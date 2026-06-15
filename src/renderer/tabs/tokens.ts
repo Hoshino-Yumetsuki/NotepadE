@@ -171,10 +171,13 @@ export const LIGHT_TOKENS: TabThemeTokens = {
   topBorder: 'rgba(0, 0, 0, 0.10)',
   textDefault: 'rgba(0, 0, 0, 0.60)',
   textSelected: 'rgba(0, 0, 0, 0.90)',
-  // Left+right drop shadow (no bottom) — UWP SideEdgeShadow blur 8, opacity 0.55.
-  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.55), 3px 0 8px -2px rgba(0,0,0,0.55)',
-  elevationShadowAlpha: 0.55,
-  // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.55).
+  // Left+right drop shadow (no bottom). Softened from 0.55 → 0.25 so the
+  // selected-tab elevation reads as a faint lift rather than the heavy halo the
+  // user flagged (issue #8 "难绷阴影"); the shared TabSurfaceWash still carries the
+  // tab↔editor merge.
+  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.15), 3px 0 8px -2px rgba(0,0,0,0.15)',
+  elevationShadowAlpha: 0.25,
+  // Faint boundary line (UWP BottomEdgeShadow of a 1px line).
   elevationBandAlpha: 0.08,
   accent: '#0078D4'
 };
@@ -188,10 +191,13 @@ export const DARK_TOKENS: TabThemeTokens = {
   topBorder: 'rgba(255, 255, 255, 0.10)',
   textDefault: 'rgba(255, 255, 255, 0.60)',
   textSelected: 'rgba(255, 255, 255, 0.90)',
-  // Left+right drop shadow (no bottom) — UWP SideEdgeShadow blur 8, opacity 0.7.
-  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.7), 3px 0 8px -2px rgba(0,0,0,0.7)',
-  elevationShadowAlpha: 0.7,
-  // Faint boundary line (UWP BottomEdgeShadow of a 1px line @ opacity 0.7).
+  // Left+right drop shadow (no bottom). Softened from 0.7 → 0.30: dark mode's
+  // shadow was the most pronounced (issue #7 / #8), so it gets the largest cut
+  // while still keeping a faint elevation; the shared TabSurfaceWash carries the
+  // tab↔editor merge.
+  elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.30), 3px 0 8px -2px rgba(0,0,0,0.30)',
+  elevationShadowAlpha: 0.3,
+  // Faint boundary line (UWP BottomEdgeShadow of a 1px line).
   elevationBandAlpha: 0.12,
   accent: '#0078D4'
 };
