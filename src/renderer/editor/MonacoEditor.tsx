@@ -405,7 +405,8 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       // Plain-text editor: no IDE affordances. Monaco's built-in find widget
       // (Ctrl+F) is left enabled for now — T4 ports the custom FindBar and at
       // that point Monaco's Ctrl+F binding is removed so the two don't conflict.
-      contextmenu: false
+      contextmenu: false,
+      roundedSelection: false
     });
     editorRef.current = editor;
     // Seed the shared zoom registry at 100% on the host-provided base font size,

@@ -22,7 +22,8 @@
  * token exactly. HC paints no line highlight → the attach is inert (no-op
  * disposer).
  *
- * Perf: only `top`/`height`/`width`/`display` are written, coalesced into one rAF.
+ * Perf: only `top`/`height`/`width`/`opacity` are written synchronously on each
+ * cursor/scroll/layout event — no rAF deferral, so the band never lags Monaco.
  *
  * PA-8: pure renderer data + DOM-only positioning.
  */
@@ -81,61 +82,64 @@ export function attachCurrentLineEdge(
   // band did (Monaco paints it inside transformed/promoted scroll layers). A
   // non-promoted div instead blends WITH the window vibrancy/acrylic, yielding a
   // visibly different shade than the native band — the color mismatch the user saw.
-  // translateZ(0) forces an own compositing layer so the theme color reads identical.
-  overlay.style.transform = 'translateZ(0)';
+  // translateZ(0) is applied dynamically by show() and removed by hide() so the
+  // invisible overlay never holds a GPU layer that could interfere with Monaco's
+  // selection compositing on the transparent surface.
+  overlay.style.transform = 'none';
   overlay.style.background = color;
-  overlay.style.display = 'none';
+  overlay.style.opacity = '0';
   root.appendChild(overlay);
 
-  let rafId: number | null = null;
+  let visible = false;
+  const hide = (): void => {
+    if (!visible) return;
+    visible = false;
+    overlay.style.opacity = '0';
+    overlay.style.visibility = 'hidden';
+    overlay.style.transform = 'none';
+  };
+  const show = (): void => {
+    if (!visible) {
+      visible = true;
+      overlay.style.transform = 'translateZ(0)';
+    }
+  };
   const render = (): void => {
-    rafId = null;
     const pos = editor.getPosition();
     const sel = editor.getSelection();
-    // Monaco hid the current-line highlight while a non-empty selection was
-    // active; mirror that so the band never lingers under a selection.
     if (!pos || (sel && !sel.isEmpty())) {
-      overlay.style.display = 'none';
+      hide();
       return;
     }
     const line = pos.lineNumber;
-    // Viewport-relative top + bottom of the active model line. getBottomForLineNumber
-    // (not getTopForLineNumber(line + 1)) is essential: for the LAST line there is no
-    // line+1, so Monaco clamps it to the last line's top → height 0 → the highlight
-    // vanished on the final line. getBottomForLineNumber returns the true bottom edge
-    // (covering every wrapped visual row) for any line, including the last.
     const scrollTop = editor.getScrollTop();
     let top = editor.getTopForLineNumber(line) - scrollTop;
     let height = editor.getBottomForLineNumber(line) - editor.getTopForLineNumber(line);
-    // Clamp to the visible viewport so the band never bleeds into the top gap or
-    // past the bottom (Monaco's native band was clipped by .overflow-guard).
     const viewportH = root.clientHeight;
     if (top < 0) {
       height += top;
       top = 0;
     }
     if (height > viewportH - top) height = viewportH - top;
-    const width = root.clientWidth; // full padding-box width: window edge → edge
+    const width = root.clientWidth;
     if (width <= 0 || height <= 0 || top >= viewportH) {
-      overlay.style.display = 'none';
+      hide();
       return;
     }
+    show();
     overlay.style.top = `${top}px`;
     overlay.style.height = `${height}px`;
     overlay.style.width = `${width}px`;
-    overlay.style.display = 'block';
+    overlay.style.visibility = 'visible';
+    overlay.style.opacity = '1';
   };
-  const schedule = (): void => {
-    if (rafId == null) rafId = requestAnimationFrame(render);
-  };
-  schedule();
+  render();
 
-  const selSub = editor.onDidChangeCursorSelection(schedule);
-  const scrollSub = editor.onDidScrollChange(schedule);
-  const layoutSub = editor.onDidLayoutChange(schedule);
+  const selSub = editor.onDidChangeCursorSelection(render);
+  const scrollSub = editor.onDidScrollChange(render);
+  const layoutSub = editor.onDidLayoutChange(render);
 
   return () => {
-    if (rafId != null) cancelAnimationFrame(rafId);
     selSub.dispose();
     scrollSub.dispose();
     layoutSub.dispose();
