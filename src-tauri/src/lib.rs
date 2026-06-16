@@ -22,6 +22,7 @@ mod dragout;
 mod encoding;
 mod eol;
 mod file_io;
+mod folder;
 mod file_stream;
 mod hash;
 mod mru;
@@ -142,6 +143,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // folder (issue #10)
+            folder::folder_open_dialog,
+            folder::folder_list,
             // file (task #2)
             file_io::file_open,
             file_io::file_open_dialog,
@@ -155,6 +159,7 @@ pub fn run() {
             // recent (task #2)
             mru::recent_list,
             mru::recent_clear,
+            mru::recent_add_folder,
             // encoding + eol (task #2)
             encoding::encoding_list_ansi,
             encoding::encoding_decode_with,

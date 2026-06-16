@@ -104,6 +104,13 @@ pub struct RecentEntry {
     pub display_name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mtime_ms: Option<f64>,
+    /// `"file"` or `"folder"`. Defaults to `"file"` for backward compat.
+    #[serde(default = "default_entry_type")]
+    pub entry_type: String,
+}
+
+fn default_entry_type() -> String {
+    "file".into()
 }
 
 // ---------------------------------------------------------------------------
@@ -357,6 +364,20 @@ pub struct UpdateInfo {
     /// Empty string on macOS/Linux — the renderer opens `htmlUrl` instead.
     pub asset_url: String,
     pub asset_name: String,
+}
+
+// ---------------------------------------------------------------------------
+//  folder
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderEntry {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub size: Option<u64>,
+    pub date_modified_ms: f64,
 }
 
 // ---------------------------------------------------------------------------

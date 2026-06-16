@@ -163,6 +163,8 @@ export interface RecentEntry {
   displayName: string;
   /** Last-modified time in epoch ms, when stat succeeded on read. */
   mtimeMs?: number;
+  /** `"file"` or `"folder"`. Defaults to `"file"` for backward compat. */
+  entryType: 'file' | 'folder';
 }
 
 export interface RecentApi {
@@ -170,6 +172,8 @@ export interface RecentApi {
   list(): Promise<Result<RecentEntry[]>>;
   /** Clear the entire in-app recent list (UWP MRUService.ClearAll). */
   clear(): Promise<Result<void>>;
+  /** Add a folder to the recent list. */
+  addFolder(path: string): Promise<Result<void>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -641,12 +645,35 @@ export interface UpdatesApi {
 }
 
 // ---------------------------------------------------------------------------
+//  folder — open dialog + directory listing  (Issue #10)
+// ---------------------------------------------------------------------------
+
+export interface FolderEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+  size: number | null;
+  dateModifiedMs: number;
+}
+
+export interface FolderApi {
+  /** Prompt for a folder via MAIN's native folder-picker dialog. Returns the
+   *  chosen ABSOLUTE path, or `null` when the user cancels (cancel is a normal
+   *  success, NOT an error — same convention as file.openDialog). */
+  openDialog(): Promise<Result<string | null>>;
+  /** List the immediate children of `path`. Dirs first, then files, both
+   *  alphabetically. Hidden entries (names starting with '.') are excluded. */
+  list(path: string): Promise<Result<FolderEntry[]>>;
+}
+
+// ---------------------------------------------------------------------------
 //  The frozen window.notepads object
 // ---------------------------------------------------------------------------
 
 export interface NotepadsApi {
   file: FileApi;
   recent: RecentApi;
+  folder: FolderApi;
   paths: PathsApi;
   encoding: EncodingApi;
   hash: HashApi;
