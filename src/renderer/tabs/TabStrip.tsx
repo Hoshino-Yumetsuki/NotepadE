@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { NavigationRegular } from '@fluentui/react-icons';
+import { NavigationRegular, FolderRegular, DocumentRegular } from '@fluentui/react-icons';
 import {
   Menu,
   MenuTrigger,
@@ -143,6 +143,8 @@ export interface MainMenuCommands {
   onNewWindow?: () => void;
   /** TODO: file-open dialog (Ctrl+O) — no renderer picker yet → disabled. */
   onOpen?: () => void;
+  /** Open Folder dialog — shows a folder picker and opens the sidebar. */
+  onOpenFolder?: () => void;
   /**
    * Open Recent (UWP MenuOpenRecentlyUsedFileButton submenu). When provided, the
    * MainMenu renders an "Open Recent" submenu populated from `recent.list()`
@@ -151,6 +153,8 @@ export interface MainMenuCommands {
    * just opens one chosen absolute path (the App's shared open primitive).
    */
   onOpenRecent?: (path: string) => void;
+  /** Open a recent folder — sets the sidebar root path. */
+  onOpenRecentFolder?: (path: string) => void;
   /** TODO: save active tab (Ctrl+S) — no renderer save handler yet → disabled. */
   onSave?: () => void;
   /** TODO: save-as (Ctrl+Shift+S) — no renderer save-as handler yet → disabled. */
@@ -164,6 +168,10 @@ export interface MainMenuCommands {
   /** Print every open document (Ctrl+Shift+P) — wired to the print host. */
   onPrintAll?: () => void;
   onSettings(): void;
+  /** Toggle preview mode for the active tab (Alt+P). */
+  onTogglePreview?: () => void;
+  /** Toggle diff mode for the active tab (Alt+D). */
+  onToggleDiff?: () => void;
 }
 
 interface SortableTabProps {
@@ -634,6 +642,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
   // so it reflects files opened/saved since the last open. PA-8: window.notepads.*
   const [recent, setRecent] = useState<RecentEntry[]>([]);
   const onOpenRecent = commands.onOpenRecent;
+  const onOpenRecentFolder = commands.onOpenRecentFolder;
   const refreshRecent = useCallback((): void => {
     // .catch so an IPC channel error doesn't surface as an unhandled rejection;
     // fall back to an empty list (the submenu trigger then shows disabled).
@@ -699,6 +708,12 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           >
             {t('MainMenu_Button_Open.Text')}
           </MenuItem>
+          <MenuItem
+            disabled={!commands.onOpenFolder}
+            onClick={commands.onOpenFolder}
+          >
+            {t('MainMenu_Button_OpenFolder.Text')}
+          </MenuItem>
           {/* Open Recent (UWP MenuOpenRecentlyUsedFileButton) — nested submenu of
               the in-app MRU. Rendered only when onOpenRecent is wired; placed
               directly after Open to mirror the UWP insert-after-Open ordering.
@@ -718,7 +733,16 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
                       key={entry.path}
                       data-testid="open-recent-item"
                       title={entry.path}
-                      onClick={() => onOpenRecent(entry.path)}
+                      icon={entry.entryType === 'folder'
+                        ? <FolderRegular style={{ fontSize: 16 }} />
+                        : <DocumentRegular style={{ fontSize: 16 }} />}
+                      onClick={() => {
+                        if (entry.entryType === 'folder' && onOpenRecentFolder) {
+                          onOpenRecentFolder(entry.path);
+                        } else if (onOpenRecent) {
+                          onOpenRecent(entry.path);
+                        }
+                      }}
                     >
                       {entry.displayName}
                     </MenuItem>
@@ -769,6 +793,21 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           </MenuItem>
           <MenuItem secondaryContent={`${modKey}+Shift+F`} onClick={commands.onReplace}>
             {t('MainMenu_Button_Replace.Text')}
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem
+            secondaryContent="Alt+P"
+            disabled={!commands.onTogglePreview}
+            onClick={commands.onTogglePreview}
+          >
+            {t('MainMenu_Button_TogglePreview.Text')}
+          </MenuItem>
+          <MenuItem
+            secondaryContent="Alt+D"
+            disabled={!commands.onToggleDiff}
+            onClick={commands.onToggleDiff}
+          >
+            {t('MainMenu_Button_ToggleDiff.Text')}
           </MenuItem>
           <MenuDivider />
           <MenuItem secondaryContent={`${modKey}+P`} onClick={commands.onPrint}>
