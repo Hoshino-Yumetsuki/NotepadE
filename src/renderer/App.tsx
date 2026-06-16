@@ -61,6 +61,9 @@ const DiffViewer = lazy(() => import('./diff/DiffViewer').then((m) => ({ default
 const SettingsSurface = lazy(() =>
   import('./settings/SettingsSurface').then((m) => ({ default: m.SettingsSurface }))
 );
+const FolderSidebar = lazy(() =>
+  import('./folder/FolderSidebar').then((m) => ({ default: m.FolderSidebar }))
+);
 
 /**
  * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
@@ -698,6 +701,20 @@ export function App(): JSX.Element {
     });
   }, [openPathIntoTab]);
 
+  // Open Folder dialog (Issue #10): shows a native folder picker via MAIN,
+  // sets the sidebar root path. Cancelled picker resolves ok with null/undefined.
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const doOpenFolder = useCallback((): void => {
+    void window.notepads.folder.openDialog().then((res) => {
+      if (res.ok && res.data) {
+        setOpenFolder(res.data);
+        setSidebarVisible(true);
+        void window.notepads.recent.addFolder(res.data);
+      }
+    });
+  }, []);
+
   // New Window (Ctrl+Shift+N + menu, UWP MenuCreateNewWindowButton): ask the
   // broker to spawn a fresh empty window. MAIN owns window lifecycle (PA-8).
   const doNewWindow = useCallback((): void => {
@@ -1195,10 +1212,26 @@ export function App(): JSX.Element {
       // doOpen/doNewWindow the accelerators use. Providing these auto-enables the
       // matching disabled={!commands.onOpen/onNewWindow} MenuItems in TabStrip.
       onOpen: doOpen,
+      onOpenFolder: doOpenFolder,
       onNewWindow: doNewWindow,
       // Open Recent submenu (TabStrip fetches the list on flyout open via
       // recent.list and opens each entry via this shared primitive).
-      onOpenRecent: openPathIntoTab
+      onOpenRecent: openPathIntoTab,
+      onOpenRecentFolder: (path: string) => {
+        setOpenFolder(path);
+        setSidebarVisible(true);
+      },
+      onTogglePreview: () => {
+        const id = store.activeEditorId;
+        const tb = id ? store.get(id) : undefined;
+        if (!id || !tb) return;
+        store.setViewMode(id, { preview: !tb.viewMode.preview, diff: false });
+      },
+      onToggleDiff: () => {
+        const id = store.activeEditorId;
+        const tb = id ? store.get(id) : undefined;
+        if (id && tb) store.setViewMode(id, { diff: !tb.viewMode.diff, preview: false });
+      }
     }),
     [
       store,
@@ -1208,6 +1241,7 @@ export function App(): JSX.Element {
       doSave,
       doSaveAll,
       doOpen,
+      doOpenFolder,
       doNewWindow,
       openPathIntoTab
     ]
@@ -1272,6 +1306,18 @@ export function App(): JSX.Element {
       {wallpaperOn && wallpaperStyle ? (
         <div data-testid="app-wallpaper" aria-hidden style={wallpaperStyle} />
       ) : null}
+      <div style={{ flex: '1 1 auto', display: 'flex', minHeight: 0 }}>
+        {openFolder && sidebarVisible ? (
+          <Suspense fallback={null}>
+            <FolderSidebar
+              folderPath={openFolder}
+              theme={resolvedTheme}
+              onOpenFile={openPathIntoTab}
+              onClose={() => setSidebarVisible(false)}
+            />
+          </Suspense>
+        ) : null}
+      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
       <TabStrip
         tabs={tabs}
         activeEditorId={activeEditorId}
@@ -1478,7 +1524,9 @@ export function App(): JSX.Element {
             overlays content instead of docking at the window bottom. */}
         {find.findBar}
       </div>
-      {settings.showStatusBar ? <StatusBar {...statusModel} /> : null}
+      {settings.showStatusBar ? <StatusBar {...statusModel} folderPath={openFolder} onToggleFolder={() => setSidebarVisible((v) => !v)} /> : null}
+      </div>
+      </div>
       {/* Settings surface is lazy-loaded; only MOUNT it once the user has opened
           it, so its chunk (4 panes) never loads on a cold start. SettingsSurface
           internally renders null while closed, so gating on settingsOpen is
