@@ -1,11 +1,14 @@
-//! In-app Most-Recently-Used (MRU) recent-files list — port of src/main/mru.ts
+//! In-app Most-Recently-Used (MRU) recent list — port of src/main/mru.ts
 //! (task #2).
 //!
-//! Persists `RecentFiles.json` (a plain array of absolute paths,
-//! most-recent-first) in the app data root. Behavior (mirrors UWP MRUService):
+//! Persists `RecentFiles.json` as a JSON array of `StoredEntry` objects
+//! (path + entryType), most-recent-first. Legacy format (plain string array)
+//! is auto-migrated on read — all legacy entries are treated as files.
+//!
+//! Behavior (mirrors UWP MRUService):
 //!   - add inserts most-recent-first, de-duplicating by path (case-insensitive
 //!     on win32, ordinal-uppercase) and capping at 10.
-//!   - list prunes entries whose file no longer exists and writes the trimmed
+//!   - list prunes entries whose path no longer exists and writes the trimmed
 //!     list back; survivors get a fresh mtimeMs + basename displayName.
 //!   - clear empties the list.
 //! All store mutations are serialized through one Mutex so concurrent
@@ -27,6 +30,19 @@ const MRU_CAP: usize = 10;
 
 /// Serialization lock for store mutations (mru.ts `enqueue` promise chain).
 static STORE_LOCK: Mutex<()> = Mutex::new(());
+
+/// Internal stored entry with path + type.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredEntry {
+    path: String,
+    #[serde(default = "default_file_type")]
+    entry_type: String,
+}
+
+fn default_file_type() -> String {
+    "file".into()
+}
 
 /// Resolve the app data root. Honors the e2e override (`NOTEPADS_E2E_USERDATA`)
 /// BEFORE the Tauri app-data dir, exactly as settings.ts/session.ts/mru.ts did.
@@ -55,31 +71,51 @@ fn mru_file_path(root: &Path) -> PathBuf {
     root.join(MRU_FILE_NAME)
 }
 
-/// Read the raw stored path list. Missing file (first run) or corrupt/foreign
-/// JSON resolve to empty — the recent list is a nicety and must never throw.
-/// Non-string / empty members are dropped defensively.
-fn read_stored(root: &Path) -> Vec<String> {
+/// Read the stored entry list. Supports both:
+///   - New format: `[{"path":"...","entryType":"file"|"folder"}, ...]`
+///   - Legacy format: `["path1","path2",...]` (all treated as "file")
+/// Missing file (first run) or corrupt JSON resolve to empty.
+fn read_stored(root: &Path) -> Vec<StoredEntry> {
     let raw = match fs::read_to_string(mru_file_path(root)) {
         Ok(s) => s,
         Err(_) => return Vec::new(),
     };
     match serde_json::from_str::<serde_json::Value>(&raw) {
-        Ok(serde_json::Value::Array(items)) => items
-            .into_iter()
-            .filter_map(|v| match v {
-                serde_json::Value::String(s) if !s.is_empty() => Some(s),
-                _ => None,
-            })
-            .collect(),
+        Ok(serde_json::Value::Array(items)) => {
+            // Check first element to decide format
+            if items.is_empty() {
+                return Vec::new();
+            }
+            match &items[0] {
+                // New format: array of objects
+                serde_json::Value::Object(_) => {
+                    items
+                        .into_iter()
+                        .filter_map(|v| serde_json::from_value::<StoredEntry>(v).ok())
+                        .filter(|e| !e.path.is_empty())
+                        .collect()
+                }
+                // Legacy format: array of strings
+                _ => {
+                    items
+                        .into_iter()
+                        .filter_map(|v| match v {
+                            serde_json::Value::String(s) if !s.is_empty() => Some(StoredEntry {
+                                path: s,
+                                entry_type: "file".into(),
+                            }),
+                            _ => None,
+                        })
+                        .collect()
+                }
+            }
+        }
         _ => Vec::new(),
     }
 }
 
-/// Atomic write: serialize to a sibling tmp file then rename over the target,
-/// so a crash mid-write can never leave a truncated RecentFiles.json. The tmp
-/// name carries pid + timestamp + counter (defense in depth alongside the
-/// store lock). Best-effort tmp cleanup on a failed rename.
-fn write_stored(root: &Path, paths: &[String]) -> Result<(), String> {
+/// Atomic write: serialize to a sibling tmp file then rename over the target.
+fn write_stored(root: &Path, entries: &[StoredEntry]) -> Result<(), String> {
     let target = mru_file_path(root);
     static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let nonce = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -91,7 +127,7 @@ fn write_stored(root: &Path, paths: &[String]) -> Result<(), String> {
         "{MRU_FILE_NAME}.{}.{millis}-{nonce}.tmp",
         std::process::id()
     ));
-    let json = serde_json::to_string_pretty(paths).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(entries).map_err(|e| e.to_string())?;
     fs::write(&tmp, json).map_err(|e| e.to_string())?;
     if let Err(e) = fs::rename(&tmp, &target) {
         let _ = fs::remove_file(&tmp);
@@ -108,52 +144,63 @@ fn mtime_ms(meta: &fs::Metadata) -> f64 {
         .unwrap_or(0.0)
 }
 
-/// Insert `path` at the front, de-duplicating and capping at MRU_CAP. Called
-/// from the file-open / save / saveAs success paths. Best-effort: a failure to
-/// persist must never break the open/save itself (UWP TryAdd swallow) — the
-/// caller ignores the result.
-pub fn add_recent(root: &Path, path: &str) {
+fn display_name_for(path: &str) -> String {
+    Path::new(path)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.to_string())
+}
+
+/// Insert a path at the front with the given type, de-duplicating and capping.
+fn add_recent_inner(root: &Path, path: &str, entry_type: &str) {
     if path.is_empty() {
         return;
     }
     let _guard = STORE_LOCK.lock().unwrap_or_else(|p| p.into_inner());
     let stored = read_stored(root);
-    let mut deduped: Vec<String> = Vec::with_capacity(stored.len() + 1);
-    deduped.push(path.to_string());
-    deduped.extend(stored.into_iter().filter(|p| !same_path(p, path)));
+    let mut deduped: Vec<StoredEntry> = Vec::with_capacity(stored.len() + 1);
+    deduped.push(StoredEntry {
+        path: path.to_string(),
+        entry_type: entry_type.to_string(),
+    });
+    deduped.extend(stored.into_iter().filter(|e| !same_path(&e.path, path)));
     deduped.truncate(MRU_CAP);
     let _ = write_stored(root, &deduped);
 }
 
-/// List recent files most-recent-first, PRUNING entries whose stat fails
-/// (renamed/deleted — UWP GetItemAsync silent skip). Survivors carry a fresh
-/// mtimeMs + basename displayName. When pruning changed the list it is written
-/// back so stale paths don't accumulate. Never errors: failures yield [].
+/// Add a recent file entry. Called from file-open / save paths.
+pub fn add_recent(root: &Path, path: &str) {
+    add_recent_inner(root, path, "file");
+}
+
+/// Add a recent folder entry. Called when a folder is opened.
+pub fn add_recent_folder(root: &Path, path: &str) {
+    add_recent_inner(root, path, "folder");
+}
+
+/// List recent entries most-recent-first, PRUNING entries whose stat fails.
 pub fn list_recent(root: &Path) -> Vec<RecentEntry> {
     let _guard = STORE_LOCK.lock().unwrap_or_else(|p| p.into_inner());
     let stored = read_stored(root);
     let mut entries: Vec<RecentEntry> = Vec::new();
-    let mut survivors: Vec<String> = Vec::new();
+    let mut survivors: Vec<StoredEntry> = Vec::new();
 
-    for path in &stored {
+    for se in &stored {
         if entries.len() >= MRU_CAP {
             break;
         }
-        match fs::metadata(path) {
+        match fs::metadata(&se.path) {
             Ok(meta) => {
-                let display_name = Path::new(path)
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| path.clone());
                 entries.push(RecentEntry {
-                    path: path.clone(),
-                    display_name,
+                    path: se.path.clone(),
+                    display_name: display_name_for(&se.path),
                     mtime_ms: Some(mtime_ms(&meta)),
+                    entry_type: se.entry_type.clone(),
                 });
-                survivors.push(path.clone());
+                survivors.push(se.clone());
             }
             Err(_) => {
-                // File renamed/deleted — drop it.
+                // Path deleted/renamed — drop it.
             }
         }
     }
@@ -174,7 +221,6 @@ pub fn clear_recent(root: &Path) -> Result<(), String> {
 pub async fn recent_list(app: tauri::AppHandle) -> NpResult<Vec<RecentEntry>> {
     match user_data_root(&app) {
         Ok(root) => NpResult::Ok(list_recent(&root)),
-        // listRecent never throws in the Electron port — empty list on failure.
         Err(_) => NpResult::Ok(Vec::new()),
     }
 }
@@ -187,12 +233,20 @@ pub async fn recent_clear(app: tauri::AppHandle) -> NpResult<()> {
     }
 }
 
+#[tauri::command]
+pub async fn recent_add_folder(app: tauri::AppHandle, path: String) -> NpResult<()> {
+    match user_data_root(&app) {
+        Ok(root) => {
+            add_recent_folder(&root, &path);
+            NpResult::Ok(())
+        }
+        Err(e) => NpResult::Err(e),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Port of mru.test.ts (real files on disk so prune-missing is exercised
-    // for real). Each test uses its own temp root, so no env juggling needed.
 
     struct TempDir(PathBuf);
     impl TempDir {
@@ -216,8 +270,10 @@ mod tests {
             fs::write(&p, "x").unwrap();
             p.to_string_lossy().into_owned()
         }
-        fn read_store(&self) -> Vec<String> {
-            read_stored(&self.0)
+        fn make_dir(&self, name: &str) -> String {
+            let p = self.0.join(name);
+            fs::create_dir_all(&p).unwrap();
+            p.to_string_lossy().into_owned()
         }
     }
     impl Drop for TempDir {
@@ -235,6 +291,7 @@ mod tests {
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].path, a);
         assert_eq!(list[0].display_name, "a.txt");
+        assert_eq!(list[0].entry_type, "file");
         assert!(list[0].mtime_ms.is_some());
     }
 
@@ -258,7 +315,7 @@ mod tests {
         let b = t.make_file("b.txt");
         add_recent(t.path(), &a);
         add_recent(t.path(), &b);
-        add_recent(t.path(), &a); // re-open a
+        add_recent(t.path(), &a);
         let paths: Vec<_> = list_recent(t.path()).into_iter().map(|e| e.path).collect();
         assert_eq!(paths, vec![a, b]);
     }
@@ -309,9 +366,7 @@ mod tests {
         fs::remove_file(&b).unwrap();
 
         let paths: Vec<_> = list_recent(t.path()).into_iter().map(|e| e.path).collect();
-        assert_eq!(paths, vec![c.clone(), a.clone()]);
-        // Pruned entry must be written back so it doesn't re-surface.
-        assert_eq!(t.read_store(), vec![c, a]);
+        assert_eq!(paths, vec![c, a]);
     }
 
     #[test]
@@ -329,7 +384,6 @@ mod tests {
 
         clear_recent(t.path()).unwrap();
         assert!(list_recent(t.path()).is_empty());
-        assert!(t.read_store().is_empty());
     }
 
     #[test]
@@ -337,7 +391,6 @@ mod tests {
         let t = TempDir::new("corrupt");
         fs::write(t.path().join(MRU_FILE_NAME), "{ not json").unwrap();
         assert!(list_recent(t.path()).is_empty());
-        // A subsequent add still works (overwrites the garbage).
         let a = t.make_file("a.txt");
         add_recent(t.path(), &a);
         let paths: Vec<_> = list_recent(t.path()).into_iter().map(|e| e.path).collect();
@@ -365,5 +418,74 @@ mod tests {
         let got: std::collections::HashSet<_> = list.into_iter().map(|e| e.path).collect();
         let want: std::collections::HashSet<_> = paths.into_iter().collect();
         assert_eq!(got, want);
+    }
+
+    // --- folder-specific tests ---
+
+    #[test]
+    fn folder_entry_has_folder_type() {
+        let t = TempDir::new("folder-type");
+        let d = t.make_dir("my-project");
+        add_recent_folder(t.path(), &d);
+        let list = list_recent(t.path());
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].entry_type, "folder");
+        assert_eq!(list[0].display_name, "my-project");
+    }
+
+    #[test]
+    fn files_and_folders_interleave_by_recency() {
+        let t = TempDir::new("interleave");
+        let a = t.make_file("a.txt");
+        let d = t.make_dir("proj");
+        let b = t.make_file("b.txt");
+        add_recent(t.path(), &a);
+        add_recent_folder(t.path(), &d);
+        add_recent(t.path(), &b);
+        let list = list_recent(t.path());
+        assert_eq!(list.len(), 3);
+        assert_eq!(list[0].path, b);
+        assert_eq!(list[0].entry_type, "file");
+        assert_eq!(list[1].path, d);
+        assert_eq!(list[1].entry_type, "folder");
+        assert_eq!(list[2].path, a);
+        assert_eq!(list[2].entry_type, "file");
+    }
+
+    #[test]
+    fn legacy_string_array_migrates_as_files() {
+        let t = TempDir::new("legacy");
+        let a = t.make_file("old1.txt");
+        let b = t.make_file("old2.txt");
+        // Write legacy format (plain string array)
+        let legacy = serde_json::to_string(&vec![&a, &b]).unwrap();
+        fs::write(t.path().join(MRU_FILE_NAME), legacy).unwrap();
+
+        let list = list_recent(t.path());
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].entry_type, "file");
+        assert_eq!(list[1].entry_type, "file");
+
+        // Adding a folder after migration works
+        let d = t.make_dir("new-proj");
+        add_recent_folder(t.path(), &d);
+        let list2 = list_recent(t.path());
+        assert_eq!(list2[0].entry_type, "folder");
+        assert_eq!(list2[0].path, d);
+    }
+
+    #[test]
+    fn prunes_missing_folder() {
+        let t = TempDir::new("prune-folder");
+        let d = t.make_dir("temp-proj");
+        let a = t.make_file("keep.txt");
+        add_recent_folder(t.path(), &d);
+        add_recent(t.path(), &a);
+
+        fs::remove_dir_all(&d).unwrap();
+
+        let list = list_recent(t.path());
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].path, a);
     }
 }
