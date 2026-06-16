@@ -85,6 +85,14 @@ export interface StatusBarProps {
   ansiEncodings: readonly AnsiEncodingEntry[];
   /** Column 7: true on a non-primary (shadow) window. */
   isShadowWindow: boolean;
+  /** View mode selector: which rendering mode is active for the current tab. */
+  viewMode: { preview: boolean; diff: boolean };
+  /** Set the view mode for the current tab. */
+  onSetViewMode(mode: { preview: boolean; diff: boolean }): void;
+  /** Currently open folder path, or null when no folder is open. */
+  folderPath: string | null;
+  /** Toggle the folder sidebar open (or reopen if closed). */
+  onToggleFolder(): void;
 
   // --- actions (all renderer-safe; the host wires them to window.notepads) ---
   /** Column 0/1: reload the file from disk. */
@@ -463,6 +471,63 @@ function ModificationColumn(props: {
 }
 
 // ---------------------------------------------------------------------------
+//  Column 3 (new) — ViewModeColumn (Source / Preview / Diff)
+// ---------------------------------------------------------------------------
+
+function ViewModeColumn(props: {
+  tokens: StatusThemeTokens;
+  viewMode: { preview: boolean; diff: boolean };
+  onSetViewMode: (mode: { preview: boolean; diff: boolean }) => void;
+}): JSX.Element {
+  const { tokens, viewMode, onSetViewMode } = props;
+  const { t } = useT();
+  const label = viewMode.preview
+    ? t('StatusBar_ViewMode_Preview')
+    : viewMode.diff
+      ? t('StatusBar_ViewMode_Diff')
+      : t('StatusBar_ViewMode_Source');
+
+  return (
+    <Menu positioning="above-end">
+      <MenuTrigger disableButtonEnhancement>
+        <div>
+          <Cell
+            tokens={tokens}
+            testid="status-viewmode"
+            ariaLabel={t('StatusBar_ViewMode')}
+            title={label}
+          >
+            <span data-testid="status-viewmode-text">{label}</span>
+          </Cell>
+        </div>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList data-testid="status-viewmode-menu">
+          <MenuItem
+            data-testid="status-viewmode-source"
+            onClick={() => onSetViewMode({ preview: false, diff: false })}
+          >
+            {t('StatusBar_ViewMode_Source')}
+          </MenuItem>
+          <MenuItem
+            data-testid="status-viewmode-preview"
+            onClick={() => onSetViewMode({ preview: true, diff: false })}
+          >
+            {t('StatusBar_ViewMode_Preview')}
+          </MenuItem>
+          <MenuItem
+            data-testid="status-viewmode-diff"
+            onClick={() => onSetViewMode({ preview: false, diff: true })}
+          >
+            {t('StatusBar_ViewMode_Diff')}
+          </MenuItem>
+        </MenuList>
+      </MenuPopover>
+    </Menu>
+  );
+}
+
+// ---------------------------------------------------------------------------
 //  Column 3 — LineColumnIndicator (click = go-to-line)
 // ---------------------------------------------------------------------------
 
@@ -735,6 +800,42 @@ function EncodingColumn(props: {
 }
 
 // ---------------------------------------------------------------------------
+//  Folder indicator — shows the open folder basename; click to toggle sidebar
+// ---------------------------------------------------------------------------
+
+function folderBasename(path: string): string {
+  const parts = path.replace(/[\\/]+$/, '').split(/[\\/]/);
+  return parts[parts.length - 1] || path;
+}
+
+function FolderColumn(props: {
+  tokens: StatusThemeTokens;
+  folderPath: string | null;
+  onToggleFolder: () => void;
+}): JSX.Element {
+  const { tokens, folderPath, onToggleFolder } = props;
+  const { t } = useT();
+  if (!folderPath) return <div data-testid="status-folder" />;
+  return (
+    <Cell
+      tokens={tokens}
+      testid="status-folder"
+      ariaLabel={t('StatusBar_Folder')}
+      title={folderPath}
+      onClick={onToggleFolder}
+    >
+      <Glyph icon={StatusGlyph.openFolder} />
+      <span
+        data-testid="status-folder-text"
+        style={{ marginLeft: 4, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}
+      >
+        {folderBasename(folderPath)}
+      </span>
+    </Cell>
+  );
+}
+
+// ---------------------------------------------------------------------------
 //  Column 7 — ShadowWindowIndicator (E737)
 // ---------------------------------------------------------------------------
 
@@ -773,8 +874,8 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
         role="status"
         style={{
           display: 'grid',
-          // Auto / * / Auto x6 — verbatim UWP ColumnDefinitions (xaml:14-23).
-          gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto',
+          // Auto / * / Auto x8 — UWP columns + ViewMode + Folder columns.
+          gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto auto auto',
           alignItems: 'stretch',
           height: StatusDimensions.height,
           minHeight: StatusDimensions.height,
@@ -784,6 +885,11 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
           overflow: 'hidden'
         }}
       >
+        <FolderColumn
+          tokens={tokens}
+          folderPath={props.folderPath}
+          onToggleFolder={props.onToggleFolder}
+        />
         <ModificationStateColumn
           tokens={tokens}
           state={props.fileModificationState}
@@ -803,6 +909,11 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
           isModified={props.isModified}
           onPreviewChanges={props.onPreviewChanges}
           onRevertAllChanges={props.onRevertAllChanges}
+        />
+        <ViewModeColumn
+          tokens={tokens}
+          viewMode={props.viewMode}
+          onSetViewMode={props.onSetViewMode}
         />
         <LineColumnColumn
           tokens={tokens}

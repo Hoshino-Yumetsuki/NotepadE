@@ -47,6 +47,7 @@ export function useStatusBarModel(args: {
   const encodingId: EncodingId = tab?.encodingId ?? 'UTF-8';
   const eolId: EolId = tab?.eolId ?? 'crlf';
   const placeholder = tab?.untitledName || 'Untitled';
+  const viewMode = tab?.viewMode ?? { preview: false, diff: false };
 
   const [lineColumn, setLineColumn] = useState<LineColumn>({
     line: 1,
@@ -222,6 +223,12 @@ export function useStatusBarModel(args: {
       encodingId,
       ansiEncodings,
       isShadowWindow,
+      viewMode,
+      onSetViewMode: (mode) => {
+        if (activeEditorId) store.setViewMode(activeEditorId, mode);
+      },
+      folderPath: null,
+      onToggleFolder: () => {},
       onReloadFromDisk: () => {
         if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId, filePath);
       },
@@ -277,6 +284,7 @@ export function useStatusBarModel(args: {
       encodingId,
       ansiEncodings,
       isShadowWindow,
+      viewMode,
       activeEditorId,
       store,
       onReopenWithEncoding,

@@ -43,6 +43,10 @@ function makeProps(overrides: Partial<StatusBarProps> = {}): StatusBarProps {
     onChangeEol: vi.fn(),
     onReopenWithEncoding: vi.fn(),
     onSaveWithEncoding: vi.fn(),
+    viewMode: { preview: false, diff: false },
+    onSetViewMode: vi.fn(),
+    folderPath: null,
+    onToggleFolder: vi.fn(),
     ...overrides
   };
 }
@@ -58,12 +62,12 @@ function renderBar(overrides: Partial<StatusBarProps> = {}): StatusBarProps {
 }
 
 describe('StatusBar', () => {
-  it('renders the 8-column grid with the verbatim UWP column template', () => {
+  it('renders the 10-column grid (8 UWP + view-mode + folder)', () => {
     renderBar();
     const bar = screen.getByTestId('status-bar');
     expect(bar).toBeInTheDocument();
     expect(bar).toHaveStyle({
-      gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto'
+      gridTemplateColumns: 'auto 1fr auto auto auto auto auto auto auto auto'
     });
   });
 
