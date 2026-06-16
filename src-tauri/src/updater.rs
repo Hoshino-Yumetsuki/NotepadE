@@ -31,7 +31,7 @@ struct GhAsset {
 }
 
 fn current_version() -> Result<semver::Version, String> {
-    semver::Version::parse(env!("CARGO_PKG_VERSION"))
+    semver::Version::parse(env!("APP_VERSION"))
         .map_err(|e| format!("Failed to parse current version: {e}"))
 }
 
