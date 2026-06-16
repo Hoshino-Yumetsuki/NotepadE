@@ -35,7 +35,8 @@ import type {
   WallpaperState,
   AdoptPayload,
   UpdateInfo,
-  Unsubscribe
+  Unsubscribe,
+  FolderEntry
 } from '@shared/ipc-contract';
 
 // ---------------------------------------------------------------------------
@@ -207,7 +208,12 @@ const api: NotepadsApi = {
   },
   recent: {
     list: () => call<RecentEntry[]>(channelToCommand(C.RecentList)),
-    clear: () => call<void>(channelToCommand(C.RecentClear))
+    clear: () => call<void>(channelToCommand(C.RecentClear)),
+    addFolder: (path: string) => call<void>('recent_add_folder', { path })
+  },
+  folder: {
+    openDialog: () => call<string | null>('folder_open_dialog'),
+    list: (path) => call<FolderEntry[]>('folder_list', { path }),
   },
   paths: {
     /**

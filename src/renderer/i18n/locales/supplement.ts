@@ -69,6 +69,18 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   StatusBar_LineColumnGoTo: { 'en-US': 'Line and column, go to line' },
   // Shadow-window (secondary instance) hint title — awaiting-translation.
   StatusBar_ShadowWindowHint: { 'en-US': 'This is a shadow window' },
+  // View-mode selector in the status bar — awaiting-translation.
+  StatusBar_ViewMode: { 'en-US': 'View mode', 'zh-CN': '视图模式' },
+  StatusBar_ViewMode_Source: { 'en-US': 'Source', 'zh-CN': '源码' },
+  StatusBar_ViewMode_Preview: { 'en-US': 'Preview', 'zh-CN': '预览' },
+  StatusBar_ViewMode_Diff: { 'en-US': 'Diff', 'zh-CN': '差异' },
+  // Toggle Preview / Toggle Diff main-menu items — awaiting-translation.
+  'MainMenu_Button_TogglePreview.Text': { 'en-US': 'Toggle Preview', 'zh-CN': '切换预览' },
+  'MainMenu_Button_ToggleDiff.Text': { 'en-US': 'Toggle Diff', 'zh-CN': '切换差异视图' },
+  // Folder sidebar (Issue #10) — awaiting-translation.
+  'MainMenu_Button_OpenFolder.Text': { 'en-US': 'Open Folder...', 'zh-CN': '打开文件夹...' },
+  FolderSidebar_Title: { 'en-US': 'Explorer', 'zh-CN': '资源管理器' },
+  StatusBar_Folder: { 'en-US': 'Folder', 'zh-CN': '文件夹' },
 
   // Custom caption-button tooltips (web port) — no UWP .resw origin: the UWP app
   // used OS-drawn title-bar buttons (ApplyThemeForTitleBarButtons) whose tooltips
