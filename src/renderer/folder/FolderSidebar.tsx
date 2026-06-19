@@ -8,6 +8,7 @@ import {
   ChevronDownRegular,
   DismissRegular
 } from '@fluentui/react-icons';
+import { TabDimensions } from '../tabs/tokens';
 
 // ---------------------------------------------------------------------------
 //  Types
@@ -305,7 +306,10 @@ export function FolderSidebar({
         position: 'relative'
       }}
     >
-      {/* Header bar */}
+      {/* Header bar — height + bottom border align with the TabStrip's
+          strip→editor seam on the right (32px tab body + 1px top border = 33px
+          total). border-box keeps the 1px bottom border INSIDE the height so the
+          divider line falls on exactly the same y-pixel as the editor's top edge. */}
       <div
         style={{
           display: 'flex',
@@ -313,7 +317,8 @@ export function FolderSidebar({
           justifyContent: 'space-between',
           paddingLeft: 12,
           paddingRight: 4,
-          height: 30,
+          height: TabDimensions.height + TabDimensions.topBorderThickness,
+          boxSizing: 'border-box',
           flexShrink: 0,
           background: headerHovered && !isHC ? colors.hover : 'transparent',
           borderBottom: `1px solid ${colors.border}`
