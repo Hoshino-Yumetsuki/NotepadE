@@ -15,6 +15,10 @@
     "playwright-report",
     "test/fixtures"
   ],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
   "overrides": [
     {
       "files": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
