@@ -84,9 +84,7 @@ function populatePrintHost(host: HTMLElement, docs: PrintDocument[]): void {
   host.innerHTML = docs
     .map(
       (doc) =>
-        `<section class="np-print-doc">` +
-        `<div>${escapeHtml(doc.text)}</div>` +
-        `</section>`
+        `<section class="np-print-doc">` + `<div>${escapeHtml(doc.text)}</div>` + `</section>`
     )
     .join('');
 }
@@ -137,17 +135,11 @@ export interface PrintActions {
  *   // Ctrl+Shift+P:  print.printAll(allTabs, settings.editorFontFamily)
  */
 export function usePrint(): PrintActions {
-  const printCurrent = useCallback(
-    async (doc: PrintDocument, fontFamily = ''): Promise<void> => {
-      await printDocuments([doc], fontFamily);
-    },
-    []
-  );
-  const printAll = useCallback(
-    async (docs: PrintDocument[], fontFamily = ''): Promise<void> => {
-      await printDocuments(docs, fontFamily);
-    },
-    []
-  );
+  const printCurrent = useCallback(async (doc: PrintDocument, fontFamily = ''): Promise<void> => {
+    await printDocuments([doc], fontFamily);
+  }, []);
+  const printAll = useCallback(async (docs: PrintDocument[], fontFamily = ''): Promise<void> => {
+    await printDocuments(docs, fontFamily);
+  }, []);
   return { printCurrent, printAll };
 }

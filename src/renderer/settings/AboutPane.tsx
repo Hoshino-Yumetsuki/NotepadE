@@ -110,9 +110,7 @@ export function AboutPane({ settings, update }: PaneProps): JSX.Element {
           )}
           {checkState.status === 'available' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <Text size={200}>
-                {t('Updates_Available', checkState.info.version)}
-              </Text>
+              <Text size={200}>{t('Updates_Available', checkState.info.version)}</Text>
               <div>
                 <Button
                   appearance="primary"

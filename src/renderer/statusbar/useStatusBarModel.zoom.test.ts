@@ -112,10 +112,14 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
       })
     );
 
-    act(() => { result.current.onSetZoom(250); });
+    act(() => {
+      result.current.onSetZoom(250);
+    });
     expect(getEditorZoom(editor)).toBe(250);
 
-    act(() => { result.current.onResetZoom(); });
+    act(() => {
+      result.current.onResetZoom();
+    });
     expect(getEditorZoom(editor)).toBe(DEFAULT_ZOOM);
     expect(result.current.zoomPercent).toBe(DEFAULT_ZOOM);
   });
@@ -135,7 +139,9 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
       })
     );
 
-    act(() => { result.current.onSetZoom(9999); });
+    act(() => {
+      result.current.onSetZoom(9999);
+    });
     expect(getEditorZoom(editor)).toBe(MAX_ZOOM);
     expect(result.current.zoomPercent).toBe(MAX_ZOOM);
   });
@@ -188,7 +194,9 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
     );
 
     // Zoom tab A to 200 via the slider; tab B stays at default.
-    act(() => { result.current.onSetZoom(200); });
+    act(() => {
+      result.current.onSetZoom(200);
+    });
     expect(getEditorZoom(editorA)).toBe(200);
     expect(getEditorZoom(editorB)).toBe(DEFAULT_ZOOM);
 

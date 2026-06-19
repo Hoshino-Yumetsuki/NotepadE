@@ -9,10 +9,7 @@
  * PA-8: pure data — no fs/path/child_process, no IPC.
  */
 
-import type {
-  TabIndents,
-  SearchEngineId
-} from '@shared/ipc-contract';
+import type { TabIndents, SearchEngineId } from '@shared/ipc-contract';
 
 /** The 29 UWP-shipped locales (Strings/* folders), BCP-47 + English label. */
 export const APP_LANGUAGES: readonly { tag: string; label: string }[] = [

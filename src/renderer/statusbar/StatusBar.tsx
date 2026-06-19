@@ -204,8 +204,7 @@ function Cell(props: CellProps): JSX.Element {
     // the brush in one frame. 'background' paints reveal-low; 'opacity' dims to
     // 0.7 (the PathIndicator behavior — UWP never tints the path cell).
     opacity: !isStatic && hoverEffect === 'opacity' && hovered ? 0.7 : 1,
-    background:
-      !isStatic && hoverEffect === 'background' && hovered ? tokens.hover : 'transparent'
+    background: !isStatic && hoverEffect === 'background' && hovered ? tokens.hover : 'transparent'
   };
 
   return (
@@ -685,7 +684,10 @@ function EolColumn(props: {
         </div>
       </MenuTrigger>
       <MenuPopover>
-        <MenuList data-testid="status-eol-menu" style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}>
+        <MenuList
+          data-testid="status-eol-menu"
+          style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
+        >
           {EOL_MENU_ROWS.map((row) => (
             <MenuItem
               key={row.eol}
@@ -776,7 +778,10 @@ function EncodingColumn(props: {
         </div>
       </MenuTrigger>
       <MenuPopover>
-        <MenuList data-testid="status-encoding-menu" style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}>
+        <MenuList
+          data-testid="status-encoding-menu"
+          style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
+        >
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
               <MenuItem data-testid="status-encoding-reopen">

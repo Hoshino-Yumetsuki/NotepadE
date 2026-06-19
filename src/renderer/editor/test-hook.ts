@@ -117,20 +117,14 @@ export interface OpenLabels {
  * Convert a document offset to a Monaco IPosition (1-based lineNumber + column).
  * Walks the model's line count to find the right line.
  */
-function offsetToPosition(
-  model: monaco.editor.ITextModel,
-  offset: number
-): monaco.IPosition {
+function offsetToPosition(model: monaco.editor.ITextModel, offset: number): monaco.IPosition {
   return model.getPositionAt(offset);
 }
 
 /**
  * Convert a Monaco IPosition to a document offset.
  */
-function positionToOffset(
-  model: monaco.editor.ITextModel,
-  position: monaco.IPosition
-): number {
+function positionToOffset(model: monaco.editor.ITextModel, position: monaco.IPosition): number {
   return model.getOffsetAt(position);
 }
 
@@ -249,7 +243,9 @@ export function installEditorTestHook(
       const editor = getEditor();
       if (!editor) return 'ltr';
       // T3 sets the content `dir` attribute on the Monaco content DOM node.
-      const contentDom = editor.getDomNode()?.querySelector<HTMLElement>('.monaco-editor .lines-content');
+      const contentDom = editor
+        .getDomNode()
+        ?.querySelector<HTMLElement>('.monaco-editor .lines-content');
       return contentDom?.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
     },
     undoDepth(): number {

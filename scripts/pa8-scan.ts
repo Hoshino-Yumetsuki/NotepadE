@@ -50,7 +50,9 @@ if (missing) {
   process.exit(expectFail ? 0 : 1);
 }
 
-console.log('PA-8 SECURITY GATE: PASS — no violations found (Tauri adapter: rules not yet defined).');
+console.log(
+  'PA-8 SECURITY GATE: PASS — no violations found (Tauri adapter: rules not yet defined).'
+);
 console.log(`Scanned 0 file(s) under: ${roots.join(', ')}.`);
 console.log('(Tauri port — Electron security rules are no longer applicable.)');
 

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { isLetterOrDigit, movingWordSpan, swapSpans, moveWordLeftLogic, moveWordRightLogic } from './moveWords';
+import {
+  isLetterOrDigit,
+  movingWordSpan,
+  swapSpans,
+  moveWordLeftLogic,
+  moveWordRightLogic
+} from './moveWords';
 
 describe('isLetterOrDigit', () => {
   it('returns true for ASCII letters', () => {

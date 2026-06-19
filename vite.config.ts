@@ -12,7 +12,6 @@ import react from '@vitejs/plugin-react';
  */
 const dirname = import.meta.dirname;
 
-
 export default defineConfig(({ command }) => ({
   root: resolve(dirname, 'src/renderer'),
   // Relative base so the production build's asset URLs work under file://.
@@ -20,9 +19,7 @@ export default defineConfig(({ command }) => ({
   // Inline the real package version at build time so the About pane shows it.
   // No IPC needed — pure build constant.
   define: {
-    __APP_VERSION__: JSON.stringify(
-      process.env.npm_package_version ?? '0.0.0'
-    )
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0')
   },
   // Tauri uses TAURI_* env vars for platform detection, family, etc.
   envPrefix: ['VITE_', 'TAURI_'],

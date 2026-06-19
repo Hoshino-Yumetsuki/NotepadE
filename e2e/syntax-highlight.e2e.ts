@@ -40,7 +40,8 @@ test('opening a .json file paints syntax-token spans; a .txt stays plain', async
       (p) => window.__notepadsTest!.openFileIntoEditor(p),
       jsonPath.replace(/\\/g, '/')
     );
-    await expect.poll(() => page.evaluate(() => window.__notepadsTest!.getEditorDocText()))
+    await expect
+      .poll(() => page.evaluate(() => window.__notepadsTest!.getEditorDocText()))
       .toContain('notepads');
     await expect.poll(tokenSpanCount, { timeout: 15_000 }).toBeGreaterThan(2);
 
@@ -49,7 +50,8 @@ test('opening a .json file paints syntax-token spans; a .txt stays plain', async
       (p) => window.__notepadsTest!.openFileIntoEditor(p),
       txtPath.replace(/\\/g, '/')
     );
-    await expect.poll(() => page.evaluate(() => window.__notepadsTest!.getEditorDocText()))
+    await expect
+      .poll(() => page.evaluate(() => window.__notepadsTest!.getEditorDocText()))
       .toContain('plain text body');
     await expect.poll(tokenSpanCount).toBe(0);
   } finally {

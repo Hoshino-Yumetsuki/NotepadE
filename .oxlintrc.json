@@ -4,7 +4,8 @@
   "categories": { "correctness": "error" },
   "rules": {
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "typescript/no-explicit-any": "warn"
+    "typescript/no-explicit-any": "warn",
+    "typescript/unbound-method": "off"
   },
   "ignorePatterns": [
     "node_modules",
@@ -13,7 +14,8 @@
     ".vite",
     "coverage",
     "playwright-report",
-    "test/fixtures"
+    "test/fixtures",
+    "e2e"
   ],
   "options": {
     "typeAware": true,

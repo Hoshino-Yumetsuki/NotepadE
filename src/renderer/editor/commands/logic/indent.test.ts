@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { leadingSpaces, outdentWidthForLine, indentString, splitLines, outdentRange } from './indent';
+import {
+  leadingSpaces,
+  outdentWidthForLine,
+  indentString,
+  splitLines,
+  outdentRange
+} from './indent';
 
 describe('leadingSpaces', () => {
   it('counts leading spaces', () => {

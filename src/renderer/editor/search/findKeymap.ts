@@ -52,68 +52,98 @@ export function registerFindKeybindings(
   // Monaco KeyCode / KeyMod are accessed from the namespace the editor ships.
   // We import the type namespace only above, so access through the global that
   // monaco-editor sets up at runtime (always present when an editor is live).
-  const m = (globalThis as unknown as { monaco: typeof import('monaco-editor/esm/vs/editor/editor.api') }).monaco;
+  const m = (
+    globalThis as unknown as { monaco: typeof import('monaco-editor/esm/vs/editor/editor.api') }
+  ).monaco;
   const { KeyMod, KeyCode } = m;
 
   const disposables: monaco.IDisposable[] = [];
 
-  const add = (d: monaco.IDisposable): void => { disposables.push(d); };
+  const add = (d: monaco.IDisposable): void => {
+    disposables.push(d);
+  };
 
   // Ctrl+F — open find (find mode). Override Monaco's built-in find widget.
-  add(editor.addAction({
-    id: 'notepade.findBar.open',
-    label: 'Open Find Bar',
-    keybindings: [KeyMod.CtrlCmd | KeyCode.KeyF],
-    run() { cb.openFindBar(false); }
-  }));
+  add(
+    editor.addAction({
+      id: 'notepade.findBar.open',
+      label: 'Open Find Bar',
+      keybindings: [KeyMod.CtrlCmd | KeyCode.KeyF],
+      run() {
+        cb.openFindBar(false);
+      }
+    })
+  );
 
   // Ctrl+H — open find (replace mode).
-  add(editor.addAction({
-    id: 'notepade.findBar.openReplace',
-    label: 'Open Replace Bar',
-    keybindings: [KeyMod.CtrlCmd | KeyCode.KeyH],
-    run() { cb.openFindBar(true); }
-  }));
+  add(
+    editor.addAction({
+      id: 'notepade.findBar.openReplace',
+      label: 'Open Replace Bar',
+      keybindings: [KeyMod.CtrlCmd | KeyCode.KeyH],
+      run() {
+        cb.openFindBar(true);
+      }
+    })
+  );
 
   // Ctrl+Shift+F — alternate replace accel.
-  add(editor.addAction({
-    id: 'notepade.findBar.openReplaceAlt',
-    label: 'Open Replace Bar (Alt)',
-    keybindings: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyF],
-    run() { cb.openFindBar(true); }
-  }));
+  add(
+    editor.addAction({
+      id: 'notepade.findBar.openReplaceAlt',
+      label: 'Open Replace Bar (Alt)',
+      keybindings: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyF],
+      run() {
+        cb.openFindBar(true);
+      }
+    })
+  );
 
   // Ctrl+G — go to line.
-  add(editor.addAction({
-    id: 'notepade.goToLine',
-    label: 'Go To Line',
-    keybindings: [KeyMod.CtrlCmd | KeyCode.KeyG],
-    run() { cb.openGoToLine(); }
-  }));
+  add(
+    editor.addAction({
+      id: 'notepade.goToLine',
+      label: 'Go To Line',
+      keybindings: [KeyMod.CtrlCmd | KeyCode.KeyG],
+      run() {
+        cb.openGoToLine();
+      }
+    })
+  );
 
   // F3 — find next (or open bar if no active query).
-  add(editor.addAction({
-    id: 'notepade.findBar.findNext',
-    label: 'Find Next',
-    keybindings: [KeyCode.F3],
-    run() {
-      const q = cb.getActiveQuery();
-      if (!q || q.query.length === 0) { cb.openFindBar(false); return; }
-      findNextInEditor(editor, q);
-    }
-  }));
+  add(
+    editor.addAction({
+      id: 'notepade.findBar.findNext',
+      label: 'Find Next',
+      keybindings: [KeyCode.F3],
+      run() {
+        const q = cb.getActiveQuery();
+        if (!q || q.query.length === 0) {
+          cb.openFindBar(false);
+          return;
+        }
+        findNextInEditor(editor, q);
+      }
+    })
+  );
 
   // Shift+F3 — find previous (or open bar).
-  add(editor.addAction({
-    id: 'notepade.findBar.findPrevious',
-    label: 'Find Previous',
-    keybindings: [KeyMod.Shift | KeyCode.F3],
-    run() {
-      const q = cb.getActiveQuery();
-      if (!q || q.query.length === 0) { cb.openFindBar(false); return; }
-      findPreviousInEditor(editor, q);
-    }
-  }));
+  add(
+    editor.addAction({
+      id: 'notepade.findBar.findPrevious',
+      label: 'Find Previous',
+      keybindings: [KeyMod.Shift | KeyCode.F3],
+      run() {
+        const q = cb.getActiveQuery();
+        if (!q || q.query.length === 0) {
+          cb.openFindBar(false);
+          return;
+        }
+        findPreviousInEditor(editor, q);
+      }
+    })
+  );
 
   // Escape — dismiss when open. addCommand returns string|null (not IDisposable)
   // so we don't push it to disposables; it's unregistered when the editor disposes.

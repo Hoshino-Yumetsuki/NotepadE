@@ -19,10 +19,7 @@ import {
   type SpinButtonOnChangeData
 } from '@fluentui/react-components';
 import type { Settings } from '@shared/ipc-contract';
-import type {
-  TabIndents,
-  SearchEngineId
-} from '@shared/ipc-contract';
+import type { TabIndents, SearchEngineId } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
   FONT_FAMILIES,
@@ -119,7 +116,9 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
             data-testid="setting-editorFontFamily-dropdown"
             value={settings.editorFontFamily || t('TextAndEditorPage_FontFamily_SystemDefault')}
             selectedOptions={[settings.editorFontFamily]}
-            onOptionSelect={(_e, d) => d.optionValue != null && update({ editorFontFamily: d.optionValue })}
+            onOptionSelect={(_e, d) =>
+              d.optionValue != null && update({ editorFontFamily: d.optionValue })
+            }
             style={{ width: '100%' }}
           >
             {FONT_FAMILIES.map((f) => (

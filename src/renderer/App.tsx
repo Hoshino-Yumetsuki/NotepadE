@@ -531,7 +531,10 @@ export function App(): JSX.Element {
       // (lastSavedTextRef invariant: entries are always '\n'-shadow form).
       const localId = applyAdopt(store, transferSource.current, payload);
       lastSavedTextRef.current.set(localId, payload.file.decodedText);
-      baselineRef.current.set(localId, { hash: payload.file.baselineHash, length: payload.file.baselineLength });
+      baselineRef.current.set(localId, {
+        hash: payload.file.baselineHash,
+        length: payload.file.baselineLength
+      });
     });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
       applyRelease(store, editorId)
@@ -612,7 +615,10 @@ export function App(): JSX.Element {
               else setTimeout(seedOpened, 0);
             };
             lastSavedTextRef.current.set(id, normalized);
-            baselineRef.current.set(id, { hash: res.data.baselineHash, length: res.data.baselineLength });
+            baselineRef.current.set(id, {
+              hash: res.data.baselineHash,
+              length: res.data.baselineLength
+            });
             store.setLabels(id, res.data.encodingId, res.data.eolId);
             store.setFilePath(id, res.data.filePath);
             if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
@@ -624,7 +630,10 @@ export function App(): JSX.Element {
           void (async () => {
             // Subscribe to chunk events BEFORE requesting streamed open
             const unlisten = await window.notepads.file.onChunk((chunk) => {
-              if (!store.get(id)) { unlisten(); return; }
+              if (!store.get(id)) {
+                unlisten();
+                return;
+              }
               const handle = editorHandles.current.get(id);
               if (!handle) return;
               const editor = handle.getEditor();
@@ -658,7 +667,10 @@ export function App(): JSX.Element {
             });
 
             const res = await window.notepads.file.openStreamed(path);
-            if (!store.get(id)) { unlisten(); return; }
+            if (!store.get(id)) {
+              unlisten();
+              return;
+            }
             if (!res.ok) {
               unlisten();
               if (seedTab) {
@@ -671,7 +683,10 @@ export function App(): JSX.Element {
               return;
             }
             const header = res.data;
-            baselineRef.current.set(id, { hash: header.baselineHash, length: header.baselineLength });
+            baselineRef.current.set(id, {
+              hash: header.baselineHash,
+              length: header.baselineLength
+            });
             lastSavedTextRef.current.set(id, ''); // placeholder; re-read from disk for diff
             store.setLabels(id, header.encodingId, header.eolId);
             store.setFilePath(id, header.filePath);
@@ -768,16 +783,18 @@ export function App(): JSX.Element {
     let unlisten: (() => void) | null = null;
     // Guard: only activate inside a Tauri webview. jsdom/vitest never enters here.
     if (!('__TAURI_INTERNALS__' in window)) return;
-    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-      getCurrentWindow().onDragDropEvent((event) => {
-        if (event.payload.type === 'drop') {
-          for (const path of event.payload.paths) {
-            openPathIntoTab(path);
+    void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      void getCurrentWindow()
+        .onDragDropEvent((event) => {
+          if (event.payload.type === 'drop') {
+            for (const path of event.payload.paths) {
+              openPathIntoTab(path);
+            }
           }
-        }
-      }).then((fn) => {
-        unlisten = fn;
-      });
+        })
+        .then((fn) => {
+          unlisten = fn;
+        });
     });
     return () => {
       unlisten?.();
@@ -903,7 +920,7 @@ export function App(): JSX.Element {
       // the user restored the exact saved text).
       store.setModified(editorId, true);
       const text = handle.getShadowText();
-      window.notepads.hash.compute(text).then((res) => {
+      void window.notepads.hash.compute(text).then((res) => {
         if (!res.ok) return;
         store.setModified(editorId, res.data !== bl.hash);
       });
@@ -959,7 +976,10 @@ export function App(): JSX.Element {
       // Re-baseline to the JUST-saved shadow text so the doc is clean again, and
       // adopt the authoritative path + labels MAIN echoes back.
       lastSavedTextRef.current.set(editorId, shadowText);
-      baselineRef.current.set(editorId, { hash: res.data.baselineHash, length: res.data.baselineLength });
+      baselineRef.current.set(editorId, {
+        hash: res.data.baselineHash,
+        length: res.data.baselineLength
+      });
       store.setFilePath(editorId, res.data.filePath);
       store.setLabels(editorId, res.data.encodingId, res.data.eolId);
       recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
@@ -1257,7 +1277,13 @@ export function App(): JSX.Element {
       customSearchUrl: settings.customSearchUrl,
       fontSize: settings.editorFontSize
     }),
-    [settings.tabIndents, settings.smartCopy, settings.searchEngine, settings.customSearchUrl, settings.editorFontSize]
+    [
+      settings.tabIndents,
+      settings.smartCopy,
+      settings.searchEngine,
+      settings.customSearchUrl,
+      settings.editorFontSize
+    ]
   );
   // word-wrap derives from the persisted TextWrapMode ('wrap' | 'noWrap').
   const editorWordWrap = settings.textWrapping === 'wrap';
@@ -1317,38 +1343,46 @@ export function App(): JSX.Element {
             />
           </Suspense>
         ) : null}
-      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
-      <TabStrip
-        tabs={tabs}
-        activeEditorId={activeEditorId}
-        store={store}
-        isDark={resolvedTheme === 'dark'}
-        theme={resolvedTheme}
-        onNewTab={onNewTab}
-        onCloseTab={closeTab}
-        onBeginTransfer={onBeginTransfer}
-        onVoidDrop={onVoidDrop}
-        menu={menuCommands}
-        captionSlot={<CaptionButtons theme={resolvedTheme} />}
-        onActiveTabGeometry={setActiveTabRect}
-      />
-      <div
-        id="app-shell"
-        style={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          position: 'relative',
-          // The editor region itself is transparent — its surface is painted by the
-          // single continuous wash layer below (the inverted-T <TabSurfaceWash/>),
-          // NOT by a background here. Previously this carried the same headerSelected
-          // wash the selected tab did; two separate translucent layers meeting at the
-          // strip→editor line rounded to a 1px seam on fractional DPI (the "接缝" the
-          // user flagged). One shared layer makes that boundary internal to a single
-          // paint, so there is physically no seam at any scaling factor.
-          background: 'transparent'
-        }}
-      >
-        {/* Single continuous wash sheet (UWP SetsView selected-tab brush == content
+        <div
+          style={{
+            flex: '1 1 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
+            minHeight: 0
+          }}
+        >
+          <TabStrip
+            tabs={tabs}
+            activeEditorId={activeEditorId}
+            store={store}
+            isDark={resolvedTheme === 'dark'}
+            theme={resolvedTheme}
+            onNewTab={onNewTab}
+            onCloseTab={closeTab}
+            onBeginTransfer={onBeginTransfer}
+            onVoidDrop={onVoidDrop}
+            menu={menuCommands}
+            captionSlot={<CaptionButtons theme={resolvedTheme} />}
+            onActiveTabGeometry={setActiveTabRect}
+          />
+          <div
+            id="app-shell"
+            style={{
+              flex: '1 1 auto',
+              minHeight: 0,
+              position: 'relative',
+              // The editor region itself is transparent — its surface is painted by the
+              // single continuous wash layer below (the inverted-T <TabSurfaceWash/>),
+              // NOT by a background here. Previously this carried the same headerSelected
+              // wash the selected tab did; two separate translucent layers meeting at the
+              // strip→editor line rounded to a 1px seam on fractional DPI (the "接缝" the
+              // user flagged). One shared layer makes that boundary internal to a single
+              // paint, so there is physically no seam at any scaling factor.
+              background: 'transparent'
+            }}
+          >
+            {/* Single continuous wash sheet (UWP SetsView selected-tab brush == content
             brush). One absolutely-positioned layer that fills the editor band AND
             extends UP under the active tab as a notch (clipped into an inverted-T),
             so the selected tab and the editor are literally one painted surface —
@@ -1356,176 +1390,182 @@ export function App(): JSX.Element {
             transparent and shows it through) and below the transparent strip above
             (which shows the notch through under the active tab). Retracts to a plain
             band when no tab is measurable (empty / scrolled out / mid-drag). */}
-        <TabSurfaceWash rect={activeTabRect} theme={resolvedTheme} />
-        {/* Status-bar elevation caster (status bar lifts onto the editor from
+            <TabSurfaceWash rect={activeTabRect} theme={resolvedTheme} />
+            {/* Status-bar elevation caster (status bar lifts onto the editor from
             below). The tab-strip 'down' caster was removed: it drew a full-width
             shadow line across the WHOLE strip→editor boundary, which separated the
             selected tab from the content instead of merging them. The selected
             tab's own left/right box-shadow now provides its elevation (TabStrip),
             and the shared wash above seals the seam. */}
-        {settings.showStatusBar ? (
-          <div
-            data-testid="status-bar-shadow"
-            aria-hidden
-            style={edgeShadowStyle(resolvedTheme, 'up')}
-          />
-        ) : null}
-        {tabs.map((tab) => {
-          const isActive = tab.editorId === activeEditorId;
-          const paneOn = isActive && (tab.viewMode.preview || tab.viewMode.diff);
-          // Live shadow text for the pane, re-read each render. bumpDocVersion
-          // pulses a re-render while a pane is open so typing reflects live.
-          const shadow = paneOn
-            ? (editorHandles.current.get(tab.editorId)?.getShadowText() ?? '')
-            : '';
-          return (
-            <div
-              key={tab.editorId}
-              data-testid="editor-host"
-              data-editor-id={tab.editorId}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: isActive ? 'block' : 'none',
-                // Above the TabSurfaceWash (zIndex 0) so the editor content paints
-                // over the shared wash (the CM6 surface is transparent, so the wash
-                // still reads through as the editor background).
-                zIndex: 1
-              }}
-            >
+            {settings.showStatusBar ? (
               <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  // Preview is a SIDE-BY-SIDE split (editor left 50%, preview right
-                  // 50%). Diff, by contrast, REPLACES the editor (UWP
-                  // OpenSideBySideDiffViewer zeroes the editor row + disables it):
-                  // the DiffViewer is itself two scroll-synced columns, so leaving
-                  // the editor visible beside it produced THREE columns. Hide the
-                  // editor for diff so the viewer's own two panes are the only split.
-                  right: tab.viewMode.preview ? '50%' : 0,
-                  display: tab.viewMode.diff ? 'none' : 'block'
-                }}
-              >
-                {tab.isLoading ? (
-                  // Open in flight (MAIN still reading/decoding): show a
-                  // centered spinner INSTEAD of mounting the editor — the tab
-                  // appears instantly with its basename while a large file
-                  // loads, and no edits can land in a half-loaded buffer. The
-                  // editor mounts when openPathIntoTab clears the flag, and
-                  // the pending setDoc retry seeds it on the next tick.
+                data-testid="status-bar-shadow"
+                aria-hidden
+                style={edgeShadowStyle(resolvedTheme, 'up')}
+              />
+            ) : null}
+            {tabs.map((tab) => {
+              const isActive = tab.editorId === activeEditorId;
+              const paneOn = isActive && (tab.viewMode.preview || tab.viewMode.diff);
+              // Live shadow text for the pane, re-read each render. bumpDocVersion
+              // pulses a re-render while a pane is open so typing reflects live.
+              const shadow = paneOn
+                ? (editorHandles.current.get(tab.editorId)?.getShadowText() ?? '')
+                : '';
+              return (
+                <div
+                  key={tab.editorId}
+                  data-testid="editor-host"
+                  data-editor-id={tab.editorId}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: isActive ? 'block' : 'none',
+                    // Above the TabSurfaceWash (zIndex 0) so the editor content paints
+                    // over the shared wash (the CM6 surface is transparent, so the wash
+                    // still reads through as the editor background).
+                    zIndex: 1
+                  }}
+                >
                   <div
-                    data-testid="editor-loading"
                     style={{
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      // Preview is a SIDE-BY-SIDE split (editor left 50%, preview right
+                      // 50%). Diff, by contrast, REPLACES the editor (UWP
+                      // OpenSideBySideDiffViewer zeroes the editor row + disables it):
+                      // the DiffViewer is itself two scroll-synced columns, so leaving
+                      // the editor visible beside it produced THREE columns. Hide the
+                      // editor for diff so the viewer's own two panes are the only split.
+                      right: tab.viewMode.preview ? '50%' : 0,
+                      display: tab.viewMode.diff ? 'none' : 'block'
                     }}
                   >
-                    <Spinner size="large" />
+                    {tab.isLoading ? (
+                      // Open in flight (MAIN still reading/decoding): show a
+                      // centered spinner INSTEAD of mounting the editor — the tab
+                      // appears instantly with its basename while a large file
+                      // loads, and no edits can land in a half-loaded buffer. The
+                      // editor mounts when openPathIntoTab clears the flag, and
+                      // the pending setDoc retry seeds it on the next tick.
+                      <div
+                        data-testid="editor-loading"
+                        style={{
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Spinner size="large" />
+                      </div>
+                    ) : (
+                      <MonacoEditor
+                        ref={(h) => {
+                          if (h) editorHandles.current.set(tab.editorId, h);
+                          else editorHandles.current.delete(tab.editorId);
+                        }}
+                        onDocChanged={() => {
+                          if (!tab.isStreaming) recomputeDirty(tab.editorId);
+                          // Re-render the open preview/diff pane to reflect live typing
+                          // (replaces the old CM6 updateListener pulse).
+                          schedulePanePulse(tab.editorId);
+                        }}
+                        findCallbacks={find.keymapCallbacks}
+                        contextMenuAttach={editorContextMenu.attach}
+                        settings={editorBehaviorSettings}
+                        lineNumbers={settings.displayLineNumbers}
+                        lineHighlighter={settings.displayLineHighlighter}
+                        wordWrap={editorWordWrap}
+                        direction="ltr"
+                        fontFamily={settings.editorFontFamily}
+                        fontSize={settings.editorFontSize}
+                        accentColor={appTheme.accentHex}
+                        themeMode={appTheme.resolved}
+                      />
+                    )}
                   </div>
-                ) : (
-                  <MonacoEditor
-                    ref={(h) => {
-                      if (h) editorHandles.current.set(tab.editorId, h);
-                      else editorHandles.current.delete(tab.editorId);
-                    }}
-                    onDocChanged={() => {
-                      if (!tab.isStreaming) recomputeDirty(tab.editorId);
-                      // Re-render the open preview/diff pane to reflect live typing
-                      // (replaces the old CM6 updateListener pulse).
-                      schedulePanePulse(tab.editorId);
-                    }}
-                    findCallbacks={find.keymapCallbacks}
-                    contextMenuAttach={editorContextMenu.attach}
-                    settings={editorBehaviorSettings}
-                    lineNumbers={settings.displayLineNumbers}
-                    lineHighlighter={settings.displayLineHighlighter}
-                    wordWrap={editorWordWrap}
-                    direction="ltr"
-                    fontFamily={settings.editorFontFamily}
-                    fontSize={settings.editorFontSize}
-                    accentColor={appTheme.accentHex}
-                    themeMode={appTheme.resolved}
-                  />
-                )}
-              </div>
-              {paneOn && tab.viewMode.preview && (
-                <div
-                  data-testid="preview-pane"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    // Clear the status-bar elevation caster (an absolute 6px
-                    // gradient at #app-shell's bottom, zIndex 2) so it never paints
-                    // over the preview's last text row. The editor's own scroller
-                    // tolerates scrolling under it, but the static preview needs the
-                    // inset or its bottom strip is unreadable.
-                    bottom: settings.showStatusBar ? EDGE_SHADOW_BLUR : 0,
-                    right: 0,
-                    left: '50%',
-                    overflow: 'hidden',
-                    borderLeft: '1px solid rgba(128,128,128,0.4)'
-                  }}
-                >
-                  <Suspense fallback={null}>
-                    <PaneMount reduced={reducedMotion}>
-                      <MarkdownPreview
-                        text={shadow}
-                        isDark={resolvedTheme === 'dark'}
-                        fontSize={settings.editorFontSize}
-                        editor={editorHandles.current.get(tab.editorId)?.getEditor() ?? null}
-                      />
-                    </PaneMount>
-                  </Suspense>
+                  {paneOn && tab.viewMode.preview && (
+                    <div
+                      data-testid="preview-pane"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        // Clear the status-bar elevation caster (an absolute 6px
+                        // gradient at #app-shell's bottom, zIndex 2) so it never paints
+                        // over the preview's last text row. The editor's own scroller
+                        // tolerates scrolling under it, but the static preview needs the
+                        // inset or its bottom strip is unreadable.
+                        bottom: settings.showStatusBar ? EDGE_SHADOW_BLUR : 0,
+                        right: 0,
+                        left: '50%',
+                        overflow: 'hidden',
+                        borderLeft: '1px solid rgba(128,128,128,0.4)'
+                      }}
+                    >
+                      <Suspense fallback={null}>
+                        <PaneMount reduced={reducedMotion}>
+                          <MarkdownPreview
+                            text={shadow}
+                            isDark={resolvedTheme === 'dark'}
+                            fontSize={settings.editorFontSize}
+                            editor={editorHandles.current.get(tab.editorId)?.getEditor() ?? null}
+                          />
+                        </PaneMount>
+                      </Suspense>
+                    </div>
+                  )}
+                  {paneOn && tab.viewMode.diff && (
+                    <div
+                      data-testid="diff-pane"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: settings.showStatusBar ? EDGE_SHADOW_BLUR : 0,
+                        right: 0,
+                        // Diff REPLACES the editor (see the editor wrapper above): it
+                        // spans the full width so the DiffViewer's two internal columns
+                        // are the entire side-by-side view — not a third column beside a
+                        // still-visible editor.
+                        left: 0
+                      }}
+                    >
+                      <Suspense fallback={null}>
+                        <PaneMount reduced={reducedMotion}>
+                          <DiffViewer
+                            // Baseline entries are stored already '\n'-normalized
+                            // (lastSavedTextRef invariant) — no per-render normalize.
+                            original={lastSavedTextRef.current.get(tab.editorId) ?? ''}
+                            modified={shadow}
+                            // Match the editor's resolved font (empty setting → system
+                            // stack with a CJK-safe chain) so the diff doesn't fall back
+                            // to Consolas → 宋体 for non-Latin text.
+                            fontFamily={resolveFontFamily(settings.editorFontFamily)}
+                            fontSize={settings.editorFontSize}
+                          />
+                        </PaneMount>
+                      </Suspense>
+                    </div>
+                  )}
                 </div>
-              )}
-              {paneOn && tab.viewMode.diff && (
-                <div
-                  data-testid="diff-pane"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    bottom: settings.showStatusBar ? EDGE_SHADOW_BLUR : 0,
-                    right: 0,
-                    // Diff REPLACES the editor (see the editor wrapper above): it
-                    // spans the full width so the DiffViewer's two internal columns
-                    // are the entire side-by-side view — not a third column beside a
-                    // still-visible editor.
-                    left: 0
-                  }}
-                >
-                  <Suspense fallback={null}>
-                    <PaneMount reduced={reducedMotion}>
-                      <DiffViewer
-                        // Baseline entries are stored already '\n'-normalized
-                        // (lastSavedTextRef invariant) — no per-render normalize.
-                        original={lastSavedTextRef.current.get(tab.editorId) ?? ''}
-                        modified={shadow}
-                        // Match the editor's resolved font (empty setting → system
-                        // stack with a CJK-safe chain) so the diff doesn't fall back
-                        // to Consolas → 宋体 for non-Latin text.
-                        fontFamily={resolveFontFamily(settings.editorFontFamily)}
-                        fontSize={settings.editorFontSize}
-                      />
-                    </PaneMount>
-                  </Suspense>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {/* Find/replace bar — floats top-right OVER the editor region (UWP
+              );
+            })}
+            {/* Find/replace bar — floats top-right OVER the editor region (UWP
             placeholder placement). Mounted INSIDE #app-shell (position:relative)
             so its absolute top-right offsets anchor to the editor region, and it
             overlays content instead of docking at the window bottom. */}
-        {find.findBar}
-      </div>
-      {settings.showStatusBar ? <StatusBar {...statusModel} folderPath={openFolder} onToggleFolder={() => setSidebarVisible((v) => !v)} /> : null}
-      </div>
+            {find.findBar}
+          </div>
+          {settings.showStatusBar ? (
+            <StatusBar
+              {...statusModel}
+              folderPath={openFolder}
+              onToggleFolder={() => setSidebarVisible((v) => !v)}
+            />
+          ) : null}
+        </div>
       </div>
       {/* Settings surface is lazy-loaded; only MOUNT it once the user has opened
           it, so its chunk (4 panes) never loads on a cold start. SettingsSurface
@@ -1564,7 +1604,12 @@ export function App(): JSX.Element {
         info={updateInfo}
         onInstall={() => {
           setUpdatePromptOpen(false);
-          if (updateInfo) void window.notepads.updates.install(updateInfo.assetUrl, updateInfo.assetName, updateInfo.htmlUrl);
+          if (updateInfo)
+            void window.notepads.updates.install(
+              updateInfo.assetUrl,
+              updateInfo.assetName,
+              updateInfo.htmlUrl
+            );
         }}
         onDismiss={() => setUpdatePromptOpen(false)}
       />

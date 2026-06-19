@@ -48,12 +48,32 @@ describe('DiffViewer', () => {
 
   it('marks a modified line with kind=modified on both columns', async () => {
     mockDiffResult({
-      left: [{ kind: 'modified', text: 'hello world', pieces: [{ text: 'hello ', kind: 'unchanged' }, { text: 'world', kind: 'deleted' }] }],
-      right: [{ kind: 'modified', text: 'hello there', pieces: [{ text: 'hello ', kind: 'unchanged' }, { text: 'there', kind: 'inserted' }] }]
+      left: [
+        {
+          kind: 'modified',
+          text: 'hello world',
+          pieces: [
+            { text: 'hello ', kind: 'unchanged' },
+            { text: 'world', kind: 'deleted' }
+          ]
+        }
+      ],
+      right: [
+        {
+          kind: 'modified',
+          text: 'hello there',
+          pieces: [
+            { text: 'hello ', kind: 'unchanged' },
+            { text: 'there', kind: 'inserted' }
+          ]
+        }
+      ]
     });
     render(<DiffViewer original="hello world" modified="hello there" />);
     await waitFor(() => {
-      expect(screen.getByTestId('diff-column-left').querySelector('[data-row-kind="modified"]')).not.toBeNull();
+      expect(
+        screen.getByTestId('diff-column-left').querySelector('[data-row-kind="modified"]')
+      ).not.toBeNull();
     });
     const left = screen.getByTestId('diff-column-left');
     const right = screen.getByTestId('diff-column-right');
@@ -78,7 +98,9 @@ describe('DiffViewer', () => {
     });
     render(<DiffViewer original={'a\nc'} modified={'a\nb\nc'} />);
     await waitFor(() => {
-      expect(screen.getByTestId('diff-column-right').querySelector('[data-row-kind="inserted"]')).not.toBeNull();
+      expect(
+        screen.getByTestId('diff-column-right').querySelector('[data-row-kind="inserted"]')
+      ).not.toBeNull();
     });
     const left = screen.getByTestId('diff-column-left');
     expect(left.querySelector('[data-row-kind="imaginary"]')).not.toBeNull();
@@ -99,7 +121,9 @@ describe('DiffViewer', () => {
     });
     render(<DiffViewer original={'a\nb\nc'} modified={'a\nc'} />);
     await waitFor(() => {
-      expect(screen.getByTestId('diff-column-left').querySelector('[data-row-kind="deleted"]')).not.toBeNull();
+      expect(
+        screen.getByTestId('diff-column-left').querySelector('[data-row-kind="deleted"]')
+      ).not.toBeNull();
     });
     const right = screen.getByTestId('diff-column-right');
     expect(right.querySelector('[data-row-kind="imaginary"]')).not.toBeNull();

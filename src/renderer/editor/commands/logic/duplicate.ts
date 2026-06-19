@@ -21,11 +21,7 @@ export interface DuplicateResult {
  * @param selTo     Selection end (= selFrom for collapsed caret).
  * @returns         Descriptor the caller applies as an edit.
  */
-export function duplicateLogic(
-  docText: string,
-  selFrom: number,
-  selTo: number
-): DuplicateResult {
+export function duplicateLogic(docText: string, selFrom: number, selTo: number): DuplicateResult {
   if (selFrom === selTo) {
     // Collapsed caret: duplicate the current line below.
     const lineStart = docText.lastIndexOf('\n', selFrom - 1) + 1;

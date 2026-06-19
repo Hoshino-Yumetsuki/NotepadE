@@ -47,7 +47,8 @@ export function useStatusBarModel(args: {
   const encodingId: EncodingId = tab?.encodingId ?? 'UTF-8';
   const eolId: EolId = tab?.eolId ?? 'crlf';
   const placeholder = tab?.untitledName || 'Untitled';
-  const viewMode = tab?.viewMode ?? { preview: false, diff: false };
+  const viewModePreview = tab?.viewMode?.preview ?? false;
+  const viewModeDiff = tab?.viewMode?.diff ?? false;
 
   const [lineColumn, setLineColumn] = useState<LineColumn>({
     line: 1,
@@ -223,7 +224,7 @@ export function useStatusBarModel(args: {
       encodingId,
       ansiEncodings,
       isShadowWindow,
-      viewMode,
+      viewMode: { preview: viewModePreview, diff: viewModeDiff },
       onSetViewMode: (mode) => {
         if (activeEditorId) store.setViewMode(activeEditorId, mode);
       },
@@ -284,7 +285,8 @@ export function useStatusBarModel(args: {
       encodingId,
       ansiEncodings,
       isShadowWindow,
-      viewMode,
+      viewModePreview,
+      viewModeDiff,
       activeEditorId,
       store,
       onReopenWithEncoding,

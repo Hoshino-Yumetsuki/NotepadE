@@ -64,7 +64,10 @@ export interface MonacoCommandContext {
 // ---------------------------------------------------------------------------
 
 /** The single primary selection as shadow-buffer offsets (LF), anchor/head aware. */
-function selOffsets(editor: Editor, model: Model): {
+function selOffsets(
+  editor: Editor,
+  model: Model
+): {
   from: number;
   to: number;
   anchor: number;
@@ -124,9 +127,11 @@ function runDuplicate(editor: Editor): void {
   const { from, to } = selOffsets(editor, model);
   const res = duplicateLogic(docOf(model), from, to);
   const at = rangeFromOffsets(model, res.insertAt, res.insertAt);
-  editor.executeEdits('duplicate', [{ range: at, text: res.insert, forceMoveMarkers: true }], [
-    selectionFromOffsets(model, res.newSel.anchor, res.newSel.head)
-  ]);
+  editor.executeEdits(
+    'duplicate',
+    [{ range: at, text: res.insert, forceMoveMarkers: true }],
+    [selectionFromOffsets(model, res.newSel.anchor, res.newSel.head)]
+  );
 }
 
 function runJoinLines(editor: Editor): void {
@@ -136,9 +141,11 @@ function runJoinLines(editor: Editor): void {
   const res = joinLogic(docOf(model), from, to, anchor, head);
   if (!res.changed) return;
   const range = rangeFromOffsets(model, res.from, res.to);
-  editor.executeEdits('joinLines', [{ range, text: res.joined, forceMoveMarkers: true }], [
-    selectionFromOffsets(model, res.newSel.anchor, res.newSel.head)
-  ]);
+  editor.executeEdits(
+    'joinLines',
+    [{ range, text: res.joined, forceMoveMarkers: true }],
+    [selectionFromOffsets(model, res.newSel.anchor, res.newSel.head)]
+  );
 }
 
 function runMoveLines(editor: Editor, dir: 'up' | 'down'): void {
@@ -148,9 +155,11 @@ function runMoveLines(editor: Editor, dir: 'up' | 'down'): void {
   const res = moveLinesLogic(docOf(model), from, to, anchor, head, dir);
   if (!res.changed) return;
   const range = rangeFromOffsets(model, res.from, res.to);
-  editor.executeEdits('moveLines', [{ range, text: res.insert, forceMoveMarkers: true }], [
-    selectionFromOffsets(model, res.newAnchor, res.newHead)
-  ]);
+  editor.executeEdits(
+    'moveLines',
+    [{ range, text: res.insert, forceMoveMarkers: true }],
+    [selectionFromOffsets(model, res.newAnchor, res.newHead)]
+  );
   editor.revealRangeInCenterIfOutsideViewport(
     selectionFromOffsets(model, res.newAnchor, res.newHead)
   );
@@ -160,14 +169,17 @@ function runMoveWord(editor: Editor, dir: 'left' | 'right'): void {
   const model = editor.getModel();
   if (!model) return;
   const { from, to } = selOffsets(editor, model);
-  const res = dir === 'left'
-    ? moveWordLeftLogic(docOf(model), from, to)
-    : moveWordRightLogic(docOf(model), from, to);
+  const res =
+    dir === 'left'
+      ? moveWordLeftLogic(docOf(model), from, to)
+      : moveWordRightLogic(docOf(model), from, to);
   if (!res.changed) return;
   const range = rangeFromOffsets(model, res.from, res.to);
-  editor.executeEdits('moveWord', [{ range, text: res.text, forceMoveMarkers: true }], [
-    selectionFromOffsets(model, res.newAnchor, res.newHead)
-  ]);
+  editor.executeEdits(
+    'moveWord',
+    [{ range, text: res.text, forceMoveMarkers: true }],
+    [selectionFromOffsets(model, res.newAnchor, res.newHead)]
+  );
 }
 
 function runIndent(editor: Editor, ctx: MonacoCommandContext): void {
@@ -183,9 +195,11 @@ function runIndent(editor: Editor, ctx: MonacoCommandContext): void {
     const tabStr = indentString(tabAsSpaces);
     const range = rangeFromOffsets(model, from, from);
     const caret = from + tabStr.length;
-    editor.executeEdits('indent', [{ range, text: tabStr, forceMoveMarkers: true }], [
-      selectionFromOffsets(model, caret, caret)
-    ]);
+    editor.executeEdits(
+      'indent',
+      [{ range, text: tabStr, forceMoveMarkers: true }],
+      [selectionFromOffsets(model, caret, caret)]
+    );
     return;
   }
 
@@ -195,9 +209,7 @@ function runIndent(editor: Editor, ctx: MonacoCommandContext): void {
     text: c.insert,
     forceMoveMarkers: true
   }));
-  editor.executeEdits('indent', edits, [
-    selectionFromOffsets(model, res.newAnchor, res.newHead)
-  ]);
+  editor.executeEdits('indent', edits, [selectionFromOffsets(model, res.newAnchor, res.newHead)]);
 }
 
 function runOutdent(editor: Editor, ctx: MonacoCommandContext): void {
@@ -212,9 +224,7 @@ function runOutdent(editor: Editor, ctx: MonacoCommandContext): void {
     text: c.insert,
     forceMoveMarkers: true
   }));
-  editor.executeEdits('outdent', edits, [
-    selectionFromOffsets(model, res.newAnchor, res.newHead)
-  ]);
+  editor.executeEdits('outdent', edits, [selectionFromOffsets(model, res.newAnchor, res.newHead)]);
 }
 
 function runDateTime(editor: Editor, ctx: MonacoCommandContext): void {
@@ -224,9 +234,11 @@ function runDateTime(editor: Editor, ctx: MonacoCommandContext): void {
   const { from, to } = selOffsets(editor, model);
   const range = rangeFromOffsets(model, from, to);
   const caret = from + text.length;
-  editor.executeEdits('datetime', [{ range, text, forceMoveMarkers: true }], [
-    selectionFromOffsets(model, caret, caret)
-  ]);
+  editor.executeEdits(
+    'datetime',
+    [{ range, text, forceMoveMarkers: true }],
+    [selectionFromOffsets(model, caret, caret)]
+  );
   editor.revealRangeInCenterIfOutsideViewport(rangeFromOffsets(model, caret, caret));
 }
 
@@ -247,9 +259,11 @@ export function tryInsertLogEntry(editor: Editor, ctx: MonacoCommandContext): bo
   const end = doc.length;
   const range = rangeFromOffsets(model, end, end);
   const caret = end + stamp.length;
-  editor.executeEdits('logEntry', [{ range, text: stamp, forceMoveMarkers: true }], [
-    selectionFromOffsets(model, caret, caret)
-  ]);
+  editor.executeEdits(
+    'logEntry',
+    [{ range, text: stamp, forceMoveMarkers: true }],
+    [selectionFromOffsets(model, caret, caret)]
+  );
   editor.revealRangeInCenterIfOutsideViewport(rangeFromOffsets(model, caret, caret));
   ctx.logGuard.added = true;
   return true;

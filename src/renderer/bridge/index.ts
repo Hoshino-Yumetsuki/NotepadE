@@ -79,7 +79,7 @@ function subscribe<T>(eventName: string, cb: (payload: T) => void): Unsubscribe 
   let unlisten: UnlistenFn | null = null;
   let done = false;
 
-  listen<T>(eventName, (evt) => {
+  void listen<T>(eventName, (evt) => {
     cb(evt.payload);
   }).then((fn) => {
     if (done) {
@@ -125,7 +125,7 @@ const C = {
   SettingsResetAll: 'notepads:settings:resetAll',
   // window
   WindowBrokerRequest: 'notepads:window:brokerRequest',
-WindowMinimize: 'notepads:window:minimize',
+  WindowMinimize: 'notepads:window:minimize',
   WindowToggleMaximize: 'notepads:window:toggleMaximize',
   WindowClose: 'notepads:window:close',
   WindowIsMaximized: 'notepads:window:isMaximized',
@@ -196,13 +196,19 @@ const api: NotepadsApi = {
     saveAs: (args: SaveAsArgs) => call<SaveResult>(channelToCommand(C.FileSaveAs), { args }),
     reloadFromDisk: (path) => call<OpenedFile>(channelToCommand(C.FileReloadFromDisk), { path }),
     revalidatePath: (path) =>
-      call<{ exists: boolean; dateModifiedMs: number }>(channelToCommand(C.FileRevalidatePath), { path }),
+      call<{ exists: boolean; dateModifiedMs: number }>(channelToCommand(C.FileRevalidatePath), {
+        path
+      }),
     getSize: (path) => call<number>('file_get_size', { path }),
-    openStreamed: (path) => call<import('@shared/ipc-contract').StreamedFileHeader>('file_open_streamed', { path }),
+    openStreamed: (path) =>
+      call<import('@shared/ipc-contract').StreamedFileHeader>('file_open_streamed', { path }),
     onChunk: async (cb) => {
-      const unlisten = await listen<import('@shared/ipc-contract').FileChunk>('notepads:evt:file:chunk', (evt) => {
-        cb(evt.payload);
-      });
+      const unlisten = await listen<import('@shared/ipc-contract').FileChunk>(
+        'notepads:evt:file:chunk',
+        (evt) => {
+          cb(evt.payload);
+        }
+      );
       return unlisten;
     }
   },
@@ -213,7 +219,7 @@ const api: NotepadsApi = {
   },
   folder: {
     openDialog: () => call<string | null>('folder_open_dialog'),
-    list: (path) => call<FolderEntry[]>('folder_list', { path }),
+    list: (path) => call<FolderEntry[]>('folder_list', { path })
   },
   paths: {
     /**
@@ -234,24 +240,30 @@ const api: NotepadsApi = {
     compute: (text) => call<number>('compute_text_hash', { text })
   },
   diff: {
-    compute: (original, modified) => call<import('@shared/ipc-contract').DiffModelDto>('compute_diff', { original, modified })
+    compute: (original, modified) =>
+      call<import('@shared/ipc-contract').DiffModelDto>('compute_diff', { original, modified })
   },
   session: {
     snapshot: (data: SessionSnapshot) =>
-      call<{ written: boolean }>(channelToCommand(C.SessionSnapshot), { data } as unknown as Record<string, unknown>),
+      call<{ written: boolean }>(channelToCommand(C.SessionSnapshot), { data } as unknown as Record<
+        string,
+        unknown
+      >),
     loadLast: () => call<SessionSnapshot | null>(channelToCommand(C.SessionLoadLast)),
     clearRecovered: () => call<void>(channelToCommand(C.SessionClearRecovered))
   },
   settings: {
     get: () => call<Settings>(channelToCommand(C.SettingsGet)),
     set: (patch: Partial<Settings>) =>
-      call<Settings>(channelToCommand(C.SettingsSet), { patch } as unknown as Record<string, unknown>),
+      call<Settings>(channelToCommand(C.SettingsSet), { patch } as unknown as Record<
+        string,
+        unknown
+      >),
     resetAll: () => call<Settings>(channelToCommand(C.SettingsResetAll)),
     onChanged: (cb) => subscribe<Settings>(C.EvtSettingsChanged, cb)
   },
   window: {
-    brokerRequest: (args) =>
-      call<void>(channelToCommand(C.WindowBrokerRequest), { args }),
+    brokerRequest: (args) => call<void>(channelToCommand(C.WindowBrokerRequest), { args }),
     minimize: () => call<void>(channelToCommand(C.WindowMinimize)),
     toggleMaximize: () => call<{ isMaximized: boolean }>(channelToCommand(C.WindowToggleMaximize)),
     close: () => call<void>(channelToCommand(C.WindowClose)),
@@ -263,13 +275,15 @@ const api: NotepadsApi = {
   },
   dragOut: {
     begin: (envelope: DragEnvelope) =>
-      call<{ token: string }>(channelToCommand(C.DragOutBegin), { envelope } as unknown as Record<string, unknown>),
+      call<{ token: string }>(channelToCommand(C.DragOutBegin), { envelope } as unknown as Record<
+        string,
+        unknown
+      >),
     complete: (token, dropIndex) =>
       call<void>(channelToCommand(C.DragOutComplete), { token, dropIndex })
   },
   editor: {
-    onAdopt: (cb: (payload: AdoptPayload) => void) =>
-      subscribe<AdoptPayload>(C.EvtEditorAdopt, cb),
+    onAdopt: (cb: (payload: AdoptPayload) => void) => subscribe<AdoptPayload>(C.EvtEditorAdopt, cb),
     onRelease: (cb) => subscribe<{ editorId: string }>(C.EvtEditorRelease, cb)
   },
   theme: {
@@ -351,7 +365,7 @@ export function installBridge(): Promise<void> {
  * controls (buttons, inputs, tabs, menus) are excluded so clicks still work.
  */
 function setupTauriDragRegion(): void {
-  import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+  void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
     document.addEventListener('pointerdown', (e) => {
       // Walk up from the event target looking for a drag-region ancestor.
       let el: HTMLElement | null = e.target as HTMLElement;
@@ -362,7 +376,7 @@ function setupTauriDragRegion(): void {
           // start a drag.
           if (isInteractive(e.target as HTMLElement)) return;
           e.preventDefault();
-          getCurrentWindow().startDragging();
+          void getCurrentWindow().startDragging();
           return;
         }
         el = el.parentElement;
@@ -375,13 +389,24 @@ function setupTauriDragRegion(): void {
  *  clicks should never start a window drag. */
 function isInteractive(target: HTMLElement): boolean {
   const INTERACTIVE_TAGS = new Set([
-    'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A', 'OPTION',
-    'DETAILS', 'SUMMARY', 'VIDEO', 'AUDIO', 'LABEL'
+    'BUTTON',
+    'INPUT',
+    'SELECT',
+    'TEXTAREA',
+    'A',
+    'OPTION',
+    'DETAILS',
+    'SUMMARY',
+    'VIDEO',
+    'AUDIO',
+    'LABEL'
   ]);
   if (INTERACTIVE_TAGS.has(target.tagName)) return true;
   // Also check ancestors: a click on an SVG icon inside a <button> still
   // needs to reach the button, not start a drag.
-  return target.closest(
-    'button, input, select, textarea, a, [role="tab"], [role="menuitem"], [role="button"], [role="menu"], [role="menubar"]'
-  ) !== null;
+  return (
+    target.closest(
+      'button, input, select, textarea, a, [role="tab"], [role="menuitem"], [role="button"], [role="menu"], [role="menubar"]'
+    ) !== null
+  );
 }

@@ -112,9 +112,7 @@ export interface EditorContextMenuHost {
 //  Monaco clipboard / edit helpers
 // ---------------------------------------------------------------------------
 
-async function pastePlainText(
-  editor: monacoApi.editor.IStandaloneCodeEditor
-): Promise<void> {
+async function pastePlainText(editor: monacoApi.editor.IStandaloneCodeEditor): Promise<void> {
   try {
     const text = await navigator.clipboard.readText();
     if (!text.length) return;
@@ -128,9 +126,7 @@ async function pastePlainText(
   }
 }
 
-async function copySelection(
-  editor: monacoApi.editor.IStandaloneCodeEditor
-): Promise<void> {
+async function copySelection(editor: monacoApi.editor.IStandaloneCodeEditor): Promise<void> {
   const model = editor.getModel();
   const sel = editor.getSelection();
   if (!model || !sel || sel.isEmpty()) return;
@@ -141,9 +137,7 @@ async function copySelection(
   }
 }
 
-async function cutSelection(
-  editor: monacoApi.editor.IStandaloneCodeEditor
-): Promise<void> {
+async function cutSelection(editor: monacoApi.editor.IStandaloneCodeEditor): Promise<void> {
   const model = editor.getModel();
   const sel = editor.getSelection();
   if (!model || !sel || sel.isEmpty()) return;
@@ -166,10 +160,7 @@ function triggerRedo(editor: monacoApi.editor.IStandaloneCodeEditor): void {
   editor.trigger('contextmenu', 'redo', null);
 }
 
-function setDirection(
-  editor: monacoApi.editor.IStandaloneCodeEditor,
-  dir: 'ltr' | 'rtl'
-): void {
+function setDirection(editor: monacoApi.editor.IStandaloneCodeEditor, dir: 'ltr' | 'rtl'): void {
   const dom = editor.getDomNode();
   if (!dom) return;
   // Monaco derives text direction from the content DOM's `dir` attribute.
@@ -177,7 +168,7 @@ function setDirection(
   if (content) content.setAttribute('dir', dir);
   // updateOptions does not expose direction; patch the DOM directly (same
   // approach the CM6 directionCompartment used via contentAttributes).
-  editor.updateOptions({});  // trigger a layout pass so Monaco re-reads geometry
+  editor.updateOptions({}); // trigger a layout pass so Monaco re-reads geometry
 }
 
 function toggleDirection(editor: monacoApi.editor.IStandaloneCodeEditor): void {
@@ -206,9 +197,11 @@ function toggleWordWrap(editor: monacoApi.editor.IStandaloneCodeEditor): void {
 
 function isWordWrapOn(editor: monacoApi.editor.IStandaloneCodeEditor): boolean {
   const opts = editor.getOptions();
-  return opts.get(
-    (globalThis as unknown as { monaco: typeof monacoApi }).monaco.editor.EditorOption.wordWrap
-  ) === 'on';
+  return (
+    opts.get(
+      (globalThis as unknown as { monaco: typeof monacoApi }).monaco.editor.EditorOption.wordWrap
+    ) === 'on'
+  );
 }
 
 function webSearch(
@@ -222,28 +215,30 @@ function webSearch(
   const raw = model.getValueInRange(sel);
   const query = buildWebSearchQuery(raw);
   if (!query) return;
-  void window.notepads?.shell.webSearch({ query, searchEngine: searchEngine as 'bing' | 'google' | 'duckDuckGo' | 'custom', customSearchUrl });
+  void window.notepads?.shell.webSearch({
+    query,
+    searchEngine: searchEngine as 'bing' | 'google' | 'duckDuckGo' | 'custom',
+    customSearchUrl
+  });
 }
 
 // ---------------------------------------------------------------------------
 //  Hook
 // ---------------------------------------------------------------------------
 
-export function useEditorContextMenu(
-  props: EditorContextMenuHostProps
-): EditorContextMenuHost {
+export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorContextMenuHost {
   const { isPreviewEligible, onTogglePreview, onShare, searchEngine, customSearchUrl } = props;
   const { t } = useT();
   const [ctx, setCtx] = useState<MenuContext | null>(null);
 
   const close = (): void => setCtx(null);
 
-  const run = (
-    fn: (editor: monacoApi.editor.IStandaloneCodeEditor) => void
-  ): (() => void) => () => {
-    if (ctx) fn(ctx.editor);
-    close();
-  };
+  const run =
+    (fn: (editor: monacoApi.editor.IStandaloneCodeEditor) => void): (() => void) =>
+    () => {
+      if (ctx) fn(ctx.editor);
+      close();
+    };
 
   const attach = useCallback(
     (editor: monacoApi.editor.IStandaloneCodeEditor): monacoApi.IDisposable => {
@@ -266,7 +261,11 @@ export function useEditorContextMenu(
       };
 
       domNode.addEventListener('contextmenu', handler);
-      return { dispose() { domNode.removeEventListener('contextmenu', handler); } };
+      return {
+        dispose() {
+          domNode.removeEventListener('contextmenu', handler);
+        }
+      };
     },
     []
   );
@@ -276,7 +275,9 @@ export function useEditorContextMenu(
     return (
       <Menu
         open
-        onOpenChange={(_e, data) => { if (!data.open) close(); }}
+        onOpenChange={(_e, data) => {
+          if (!data.open) close();
+        }}
         positioning={{
           target: { getBoundingClientRect: () => new DOMRect(ctx.x, ctx.y, 0, 0) }
         }}
@@ -369,7 +370,10 @@ export function useEditorContextMenu(
                 data-testid="ctx-preview"
                 icon={<Glyph icon={CtxGlyph.preview} />}
                 secondaryContent="Alt+P"
-                onClick={() => { onTogglePreview(); close(); }}
+                onClick={() => {
+                  onTogglePreview();
+                  close();
+                }}
               >
                 {t('TextEditor_ContextFlyout_PreviewToggleDisplay_Text')}
               </MenuItem>
@@ -377,7 +381,10 @@ export function useEditorContextMenu(
             <MenuItem
               data-testid="ctx-share"
               icon={<Glyph icon={CtxGlyph.share} />}
-              onClick={() => { onShare(ctx.hasSelection); close(); }}
+              onClick={() => {
+                onShare(ctx.hasSelection);
+                close();
+              }}
             >
               {ctx.hasSelection
                 ? t('TextEditor_ContextFlyout_ShareSelectedButtonDisplayText')

@@ -85,7 +85,6 @@ describe('TextEditorPane', () => {
     fireEvent.click(within(row).getByRole('radio', { name: '4 Spaces' }));
     expect(update).toHaveBeenCalledWith({ tabIndents: 4 });
   });
-
 });
 
 describe('PersonalizationPane', () => {

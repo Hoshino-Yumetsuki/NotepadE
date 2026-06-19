@@ -689,7 +689,9 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
         </button>
       </MenuTrigger>
       <MenuPopover data-testid="main-menu-popover">
-        <MenuList style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}>
+        <MenuList
+          style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
+        >
           <MenuItem secondaryContent={`${modKey}+N`} onClick={commands.onNew}>
             {t('MainMenu_Button_New.Text')}
           </MenuItem>
@@ -708,10 +710,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           >
             {t('MainMenu_Button_Open.Text')}
           </MenuItem>
-          <MenuItem
-            disabled={!commands.onOpenFolder}
-            onClick={commands.onOpenFolder}
-          >
+          <MenuItem disabled={!commands.onOpenFolder} onClick={commands.onOpenFolder}>
             {t('MainMenu_Button_OpenFolder.Text')}
           </MenuItem>
           {/* Open Recent (UWP MenuOpenRecentlyUsedFileButton) — nested submenu of
@@ -727,15 +726,25 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
                 </MenuItem>
               </MenuTrigger>
               <MenuPopover data-testid="open-recent-popover">
-                <MenuList style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}>
+                <MenuList
+                  style={{
+                    maxHeight: 'calc(100vh - 16px)',
+                    overflowY: 'auto',
+                    overflowX: 'hidden'
+                  }}
+                >
                   {recent.map((entry) => (
                     <MenuItem
                       key={entry.path}
                       data-testid="open-recent-item"
                       title={entry.path}
-                      icon={entry.entryType === 'folder'
-                        ? <FolderRegular style={{ fontSize: 16 }} />
-                        : <DocumentRegular style={{ fontSize: 16 }} />}
+                      icon={
+                        entry.entryType === 'folder' ? (
+                          <FolderRegular style={{ fontSize: 16 }} />
+                        ) : (
+                          <DocumentRegular style={{ fontSize: 16 }} />
+                        )
+                      }
                       onClick={() => {
                         if (entry.entryType === 'folder' && onOpenRecentFolder) {
                           onOpenRecentFolder(entry.path);
@@ -1457,7 +1466,18 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     // included so the FINAL resting position (after the last ghost drops) is
     // measured even though the rAF loop below has already stopped by then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeEditorId, tabWidth, scrollLeft, tabs.length, stripWidth, resolvedTheme, ids, dragging, exiting, measureActiveRect]);
+  }, [
+    activeEditorId,
+    tabWidth,
+    scrollLeft,
+    tabs.length,
+    stripWidth,
+    resolvedTheme,
+    ids,
+    dragging,
+    exiting,
+    measureActiveRect
+  ]);
 
   // Continuous remeasure WHILE a tab is animating closed. The exit ghost collapses
   // its width (max-width →0) over ~167ms, so the surviving tabs — including the

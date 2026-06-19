@@ -96,7 +96,6 @@ const THEME_NAMES: Record<'light' | 'dark' | 'hc', string> = {
   hc: 'notepade-hc'
 };
 
-
 /**
  * Selection background as an `#RRGGBBAA` Monaco color token built from the accent
  * (mirrors the CM6 selectionColors alpha split: heavier on dark, lighter on
@@ -545,7 +544,9 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     defineThemes(themeMode, accentColor);
     monaco.editor.setTheme(THEME_NAMES[themeMode]);
     // Update the native gutter material wash on theme change (HC → transparent).
-    editor.getDomNode()?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
+    editor
+      .getDomNode()
+      ?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
   }, [themeMode, accentColor]);
 
   // Typography (family/size/weight/style). fontSize routes through the zoom

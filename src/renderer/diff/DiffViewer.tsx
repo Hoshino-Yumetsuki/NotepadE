@@ -204,10 +204,12 @@ export function DiffViewer({
   const [model, setModel] = useState<DiffModel>({ left: [], right: [] });
   useEffect(() => {
     let cancelled = false;
-    buildDiffModel(original, modified).then((m) => {
+    void buildDiffModel(original, modified).then((m) => {
       if (!cancelled) setModel(m);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [original, modified]);
 
   const leftRef = useRef<HTMLDivElement>(null);

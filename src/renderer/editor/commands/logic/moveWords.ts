@@ -80,12 +80,15 @@ export interface MoveWordResult {
 }
 
 /** Compute move-word-left for a plain text document. */
-export function moveWordLeftLogic(
-  doc: string,
-  selFrom: number,
-  selTo: number
-): MoveWordResult {
-  const noop: MoveWordResult = { text: '', from: 0, to: 0, newAnchor: selFrom, newHead: selTo, changed: false };
+export function moveWordLeftLogic(doc: string, selFrom: number, selTo: number): MoveWordResult {
+  const noop: MoveWordResult = {
+    text: '',
+    from: 0,
+    to: 0,
+    newAnchor: selFrom,
+    newHead: selTo,
+    changed: false
+  };
   if (selFrom === 0) return noop;
 
   const moving = movingWordSpan(doc, selFrom, selTo);
@@ -96,16 +99,31 @@ export function moveWordLeftLogic(
   let replacedEnd = startIndex;
   while (replacedEnd > 0) {
     replacedEnd--;
-    if (isLetterOrDigit(doc[replacedEnd])) { replacedEnd++; break; }
+    if (isLetterOrDigit(doc[replacedEnd])) {
+      replacedEnd++;
+      break;
+    }
   }
   let replacedStart = replacedEnd;
   while (replacedStart > 0) {
     replacedStart--;
-    if (!isLetterOrDigit(doc[replacedStart])) { replacedStart++; break; }
+    if (!isLetterOrDigit(doc[replacedStart])) {
+      replacedStart++;
+      break;
+    }
   }
 
   const moveAmount = replacedStart - startIndex;
-  const swap = swapSpans(doc, replacedStart, replacedEnd, startIndex, endIndex, selFrom, selTo, moveAmount);
+  const swap = swapSpans(
+    doc,
+    replacedStart,
+    replacedEnd,
+    startIndex,
+    endIndex,
+    selFrom,
+    selTo,
+    moveAmount
+  );
   return {
     text: swap.text,
     from: swap.from,
@@ -117,12 +135,15 @@ export function moveWordLeftLogic(
 }
 
 /** Compute move-word-right for a plain text document. */
-export function moveWordRightLogic(
-  doc: string,
-  selFrom: number,
-  selTo: number
-): MoveWordResult {
-  const noop: MoveWordResult = { text: '', from: 0, to: 0, newAnchor: selFrom, newHead: selTo, changed: false };
+export function moveWordRightLogic(doc: string, selFrom: number, selTo: number): MoveWordResult {
+  const noop: MoveWordResult = {
+    text: '',
+    from: 0,
+    to: 0,
+    newAnchor: selFrom,
+    newHead: selTo,
+    changed: false
+  };
   if (selTo >= doc.length) return noop;
 
   const moving = movingWordSpan(doc, selFrom, selTo);
@@ -140,7 +161,16 @@ export function moveWordRightLogic(
   }
 
   const moveAmount = replacedEnd - endIndex;
-  const swap = swapSpans(doc, startIndex, endIndex, replacedStart, replacedEnd, selFrom, selTo, moveAmount);
+  const swap = swapSpans(
+    doc,
+    startIndex,
+    endIndex,
+    replacedStart,
+    replacedEnd,
+    selFrom,
+    selTo,
+    moveAmount
+  );
   return {
     text: swap.text,
     from: swap.from,

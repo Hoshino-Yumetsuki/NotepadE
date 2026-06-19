@@ -21,9 +21,5 @@
     "outDir": "./out/types-node",
     "noEmit": true
   },
-  "include": [
-    "src/shared/**/*.ts",
-    "scripts/**/*.ts",
-    "vite.config.ts"
-  ]
+  "include": ["src/shared/**/*.ts", "scripts/**/*.ts", "vite.config.ts"]
 }

@@ -137,9 +137,7 @@ test('line numbers stay glued to their lines through inserts in a BigScaler-size
     // (BigScaler). The numbers must stay glued after every keypress.
     for (let k = 1; k <= 5; k++) {
       await page.keyboard.press('Enter');
-      await expect
-        .poll(() => maxCellLineDelta(page, INSERT_LINE, k))
-        .toBeLessThanOrEqual(1.5);
+      await expect.poll(() => maxCellLineDelta(page, INSERT_LINE, k)).toBeLessThanOrEqual(1.5);
     }
 
     // Type some text too (horizontal edit on a rescaled doc) and re-verify.

@@ -35,7 +35,8 @@
   background: linear-gradient(
     to right,
     var(--np-gutter-wash, transparent) 0,
-    var(--np-gutter-wash, transparent) calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px)),
+    var(--np-gutter-wash, transparent)
+      calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px)),
     transparent calc(var(--np-gutter-inset, 12px) + var(--np-gutter-width, 0px))
   ) !important;
 }

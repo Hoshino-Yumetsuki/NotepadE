@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  DEFAULT_EDITOR_SETTINGS,
-  normalizeTabAsSpaces,
-  indentString
-} from './editorSettings';
+import { DEFAULT_EDITOR_SETTINGS, normalizeTabAsSpaces, indentString } from './editorSettings';
 
 describe('DEFAULT_EDITOR_SETTINGS', () => {
   it('has real tab as default', () => {

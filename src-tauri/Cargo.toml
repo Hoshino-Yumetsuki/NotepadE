@@ -33,7 +33,14 @@ chardetng = "1.0.0"
 base64 = "0.22.1"
 thiserror = "2.0.18"
 tauri-plugin-single-instance = { version = "2.4.2", features = ["deep-link"] }
-reqwest = { version = "0.13.3", default-features = false, features = ["rustls", "stream", "http2", "charset", "system-proxy", "json"] }
+reqwest = { version = "0.13.3", default-features = false, features = [
+  "rustls",
+  "stream",
+  "http2",
+  "charset",
+  "system-proxy",
+  "json"
+] }
 oem_cp = "2.1.2"
 charset = "0.1.5"
 url = "2.5.8"
@@ -43,9 +50,20 @@ similar = "3.1"
 tokio = { version = "1", features = ["time", "rt"] }
 
 [target."cfg(windows)".dependencies]
-windows = { version = "0.62.2", features = ["Win32_Globalization", "Win32_Foundation", "UI_ViewManagement", "Win32_UI_Accessibility"] }
+windows = { version = "0.62.2", features = [
+  "Win32_Globalization",
+  "Win32_Foundation",
+  "UI_ViewManagement",
+  "Win32_UI_Accessibility"
+] }
 winreg = "0.56.0"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSButton", "NSControl", "NSView", "NSResponder"] }
+objc2-app-kit = { version = "0.3", features = [
+  "NSWindow",
+  "NSButton",
+  "NSControl",
+  "NSView",
+  "NSResponder"
+] }

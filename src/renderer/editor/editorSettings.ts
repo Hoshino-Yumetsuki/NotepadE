@@ -58,4 +58,3 @@ export function normalizeTabAsSpaces(value: number): TabAsSpaces {
 export function indentString(tabAsSpaces: TabAsSpaces): string {
   return tabAsSpaces === -1 ? '\t' : ' '.repeat(tabAsSpaces);
 }
-

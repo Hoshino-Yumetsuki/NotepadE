@@ -573,7 +573,11 @@ export interface AppApi {
 export interface ShellApi {
   openContainingFolder(path: string): Promise<Result<void>>;
   copyPath(path: string): Promise<Result<void>>;
-  webSearch(args: { query: string; searchEngine: SearchEngineId; customSearchUrl: string }): Promise<Result<void>>;
+  webSearch(args: {
+    query: string;
+    searchEngine: SearchEngineId;
+    customSearchUrl: string;
+  }): Promise<Result<void>>;
   print(): Promise<Result<void>>;
   share(args: { title: string; text: string }): Promise<Result<void>>;
 }

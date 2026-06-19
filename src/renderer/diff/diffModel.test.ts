@@ -11,7 +11,9 @@ const mockCompute = vi.fn();
 
 beforeEach(() => {
   mockCompute.mockReset();
-  (globalThis as unknown as { window: { notepads: { diff: { compute: typeof mockCompute } } } }).window = {
+  (
+    globalThis as unknown as { window: { notepads: { diff: { compute: typeof mockCompute } } } }
+  ).window = {
     notepads: { diff: { compute: mockCompute } }
   };
 });

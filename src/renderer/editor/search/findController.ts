@@ -71,16 +71,10 @@ function ensureHighlightStyle(): void {
  * Per-editor decoration collection IDs. Monaco's deltaDecorations returns the
  * new IDs after each call; we keep the latest set so we can clear/replace it.
  */
-const decorationMap = new WeakMap<
-  monaco.editor.IStandaloneCodeEditor,
-  string[]
->();
+const decorationMap = new WeakMap<monaco.editor.IStandaloneCodeEditor, string[]>();
 
 /** Convert a 0-based MatchSpan offset pair to a Monaco IRange (1-based lines). */
-function spanToRange(
-  model: monaco.editor.ITextModel,
-  span: MatchSpan
-): monaco.IRange {
+function spanToRange(model: monaco.editor.ITextModel, span: MatchSpan): monaco.IRange {
   const start = model.getPositionAt(span.from);
   const end = model.getPositionAt(span.to);
   return {
@@ -99,9 +93,10 @@ function getDocText(editor: monaco.editor.IStandaloneCodeEditor): string {
   return editor.getModel()?.getValue(1 /* LF */) ?? '';
 }
 
-function getSelectionOffsets(
-  editor: monaco.editor.IStandaloneCodeEditor
-): { from: number; to: number } {
+function getSelectionOffsets(editor: monaco.editor.IStandaloneCodeEditor): {
+  from: number;
+  to: number;
+} {
   const model = editor.getModel();
   const sel = editor.getSelection();
   if (!model || !sel) return { from: 0, to: 0 };
@@ -110,10 +105,7 @@ function getSelectionOffsets(
   return { from, to };
 }
 
-function selectAndReveal(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  span: MatchSpan
-): void {
+function selectAndReveal(editor: monaco.editor.IStandaloneCodeEditor, span: MatchSpan): void {
   const model = editor.getModel();
   if (!model) return;
   const range = spanToRange(model, span);
@@ -148,10 +140,7 @@ function collectAllMatches(text: string, q: FindQuery): MatchSpan[] {
  * Recompute and apply ALL match highlights for the current query.
  * Empty queries clear the highlights.
  */
-export function refreshHighlights(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  q: FindQuery
-): void {
+export function refreshHighlights(editor: monaco.editor.IStandaloneCodeEditor, q: FindQuery): void {
   ensureHighlightStyle();
   const model = editor.getModel();
   if (!model) return;
@@ -230,10 +219,7 @@ export function findPreviousInEditor(
 //  Public API — replace
 // ---------------------------------------------------------------------------
 
-function selectionIsMatch(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  q: FindQuery
-): boolean {
+function selectionIsMatch(editor: monaco.editor.IStandaloneCodeEditor, q: FindQuery): boolean {
   const { from, to } = getSelectionOffsets(editor);
   if (to <= from) return false;
   const text = getDocText(editor);
@@ -280,15 +266,17 @@ export function replaceOne(
 
   const startPos = model.getPositionAt(from);
   const endPos = model.getPositionAt(to);
-  model.applyEdits([{
-    range: {
-      startLineNumber: startPos.lineNumber,
-      startColumn: startPos.column,
-      endLineNumber: endPos.lineNumber,
-      endColumn: endPos.column
-    },
-    text: insert
-  }]);
+  model.applyEdits([
+    {
+      range: {
+        startLineNumber: startPos.lineNumber,
+        startColumn: startPos.column,
+        endLineNumber: endPos.lineNumber,
+        endColumn: endPos.column
+      },
+      text: insert
+    }
+  ]);
 
   // Advance to the next match.
   findNextInEditor(editor, q);
@@ -329,10 +317,7 @@ export function replaceAllInEditor(
  * Move the caret to 1-based `lineNumber`, clamped to the document's line range,
  * and reveal it (Ctrl+G). Returns the clamped line actually used.
  */
-export function goToLine(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  lineNumber: number
-): number {
+export function goToLine(editor: monaco.editor.IStandaloneCodeEditor, lineNumber: number): number {
   const model = editor.getModel();
   if (!model) return lineNumber;
   const lineCount = model.getLineCount();

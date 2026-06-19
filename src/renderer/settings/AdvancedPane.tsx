@@ -190,10 +190,7 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
           description={t('AdvancedPage_ResetSettings_Description')}
         >
           <div>
-            <Button
-              data-testid="setting-resetAll-button"
-              onClick={() => setResetConfirmOpen(true)}
-            >
+            <Button data-testid="setting-resetAll-button" onClick={() => setResetConfirmOpen(true)}>
               {t('AdvancedPage_ResetSettings_Button')}
             </Button>
           </div>

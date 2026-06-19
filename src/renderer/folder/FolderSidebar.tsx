@@ -169,7 +169,10 @@ const TreeItem = memo(function TreeItem({
         </span>
       </div>
       {/* Render children if expanded */}
-      {node.isDir && node.expanded && node.children && node.children.length > 0 &&
+      {node.isDir &&
+        node.expanded &&
+        node.children &&
+        node.children.length > 0 &&
         node.children.map((child) => (
           <TreeItem
             key={child.path}
@@ -182,24 +185,27 @@ const TreeItem = memo(function TreeItem({
           />
         ))}
       {/* Empty dir indicator */}
-      {node.isDir && node.expanded && node.loaded && (!node.children || node.children.length === 0) && (
-        <div
-          style={{
-            paddingLeft: indent + 28,
-            paddingRight: 8,
-            height: 20,
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: 11,
-            fontFamily: 'Segoe UI, system-ui, sans-serif',
-            color: colors.icon,
-            fontStyle: 'italic',
-            userSelect: 'none'
-          }}
-        >
-          (empty)
-        </div>
-      )}
+      {node.isDir &&
+        node.expanded &&
+        node.loaded &&
+        (!node.children || node.children.length === 0) && (
+          <div
+            style={{
+              paddingLeft: indent + 28,
+              paddingRight: 8,
+              height: 20,
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: 11,
+              fontFamily: 'Segoe UI, system-ui, sans-serif',
+              color: colors.icon,
+              fontStyle: 'italic',
+              userSelect: 'none'
+            }}
+          >
+            (empty)
+          </div>
+        )}
     </>
   );
 });
@@ -265,29 +271,32 @@ export function FolderSidebar({
   }, [folderPath, loadDir]);
 
   // Toggle a directory: expand -> load children; collapse -> keep children cached
-  const handleToggle = useCallback((targetPath: string): void => {
-    const toggleInTree = (nodes: TreeNode[]): TreeNode[] =>
-      nodes.map((n) => {
-        if (n.path === targetPath && n.isDir) {
-          const nowExpanded = !n.expanded;
-          if (nowExpanded && !n.loaded) {
-            // Kick off async load; update state when done
-            void loadDir(targetPath).then((children) => {
-              setRootNodes((prev) => patchNode(prev, targetPath, { children, loaded: true }));
-            });
-            return { ...n, expanded: true };
+  const handleToggle = useCallback(
+    (targetPath: string): void => {
+      const toggleInTree = (nodes: TreeNode[]): TreeNode[] =>
+        nodes.map((n) => {
+          if (n.path === targetPath && n.isDir) {
+            const nowExpanded = !n.expanded;
+            if (nowExpanded && !n.loaded) {
+              // Kick off async load; update state when done
+              void loadDir(targetPath).then((children) => {
+                setRootNodes((prev) => patchNode(prev, targetPath, { children, loaded: true }));
+              });
+              return { ...n, expanded: true };
+            }
+            return { ...n, expanded: nowExpanded };
           }
-          return { ...n, expanded: nowExpanded };
-        }
-        if (n.children) {
-          const next = toggleInTree(n.children);
-          if (next !== n.children) return { ...n, children: next };
-        }
-        return n;
-      });
+          if (n.children) {
+            const next = toggleInTree(n.children);
+            if (next !== n.children) return { ...n, children: next };
+          }
+          return n;
+        });
 
-    setRootNodes((prev) => toggleInTree(prev));
-  }, [loadDir]);
+      setRootNodes((prev) => toggleInTree(prev));
+    },
+    [loadDir]
+  );
 
   const isHC = theme === 'hc';
 
@@ -460,11 +469,7 @@ export function FolderSidebar({
 // ---------------------------------------------------------------------------
 
 /** Immutably patch a node at `targetPath` anywhere in the tree. */
-function patchNode(
-  nodes: TreeNode[],
-  targetPath: string,
-  patch: Partial<TreeNode>
-): TreeNode[] {
+function patchNode(nodes: TreeNode[], targetPath: string, patch: Partial<TreeNode>): TreeNode[] {
   return nodes.map((n) => {
     if (n.path === targetPath) return { ...n, ...patch };
     if (n.children) {
