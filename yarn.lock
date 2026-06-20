@@ -2174,249 +2174,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mdit/helper@npm:0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/helper@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/a589e34e9cf929a085d11144cc2ed8d36c121f504841afbdf905eab73fc7937e5e6ecc8767234150e37d5c4d3ccd92f86ab0b67deec27dd93f5c33924779c51a
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-abbr@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-abbr@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/95e934bc713b0bf74ba31707a42c000f26cb8b399cda68b9d9c848d09acf530c920ea8e9403e3edf698ed33a16a9eb50bc6e1671ec729b133c197049b9eda77d
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-alert@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-alert@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/a3ddd395a60841fa11c95276046e4290864d0a8d082d29938268cc1718272364fac421b94b1b5e9d6556882c7fc845eb19bf85615424a9b2ab934bd98afccf91
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-align@npm:^0.24.2":
-  version: 0.24.2
-  resolution: "@mdit/plugin-align@npm:0.24.2"
-  dependencies:
-    "@mdit/plugin-container": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/105cc18a7ff071eb53be173b185ca061f3e1ffe172bba7973bf66ad158c2cf53571adfad809a42a6b29356df31a7871e1fb0a12985be1832c9fcfafb42d99af2
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-attrs@npm:^0.25.2":
-  version: 0.25.2
-  resolution: "@mdit/plugin-attrs@npm:0.25.2"
-  dependencies:
-    "@mdit/helper": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/42a6bdf50cdf30a0934c205c979d792ce18b2e7360e88562933104a6fc7523b81b09a9290df817921e5da0dac224439bdc4c9d85f7f0dc9079cea1b37de28f91
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-container@npm:0.23.2, @mdit/plugin-container@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-container@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/116a86df42d3b7879a4bf23bcaa0c28340fcbb32c6298aba8fe942337b5c8f6a901139d72f32a611567bd3ce79c52674d3d57160a0985350701742f2a5b31def
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-dl@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-dl@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/15aa7d51b2a3c2deeceb1fecd068b13d277d46bbc2651658c48b493d8fb5162b4a96a3434c51a6639eecfde13a4632c539bdd25c814654a7b1517533540ff9c2
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-emoji@npm:^0.2.2":
-  version: 0.2.2
-  resolution: "@mdit/plugin-emoji@npm:0.2.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/9edb3be32ea97992fd04cfa85fbca17dadfe4dad681e88d11f9296626103b9fa32ce7042867f9cefec18154feee4c7da006c82e2022da01c7d270a18917f5945
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-figure@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-figure@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/bf4cede1fa539c5697db77aeeb65922bab30ae9aa13d56308328cfc6d30a017d01f57e5a6ecb49f83a5d856982f917a2ee994c6aa24746c5b4826840bc777bbc
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-footnote@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-footnote@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  checksum: 10c0/b23c00412ebbe489ecf1575e11fa4e2b837044e76b83cad7eb94d4baf1205ac9e5c4daf9a274e1b19c398fbdf1d135bc39209274ed1605a2934de616d373ca43
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-inline-rule@npm:0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-inline-rule@npm:0.23.2"
-  dependencies:
-    "@mdit/helper": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/b6421b66c824697efabd74ef0bc5d895d34fe5bea5f85b5b1cdecee6e175aa5eac91dc81abf8af581ea3c885d19d6d9442528bfe4a2857201a7a38042a0826d5
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-ins@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-ins@npm:0.23.2"
-  dependencies:
-    "@mdit/plugin-inline-rule": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/2505923a311fa89564e6e3f15d237d02b614a4cf1b5a6f49781dca15f44184c4010d58a70000f4f0cf8435a3679fe94cb82da853725e4de5bb482f16f82bb070
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-mark@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-mark@npm:0.23.2"
-  dependencies:
-    "@mdit/plugin-inline-rule": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/797034b51bb074d47cc834f64807cfbf1321693d4f0d1eca1e2ab72e9ecf8ac5ab856c7508ce2382069d3ff10334a8d0eb4bf832a698d656fe737e2ef877ff1f
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-spoiler@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-spoiler@npm:0.23.2"
-  dependencies:
-    "@mdit/plugin-inline-rule": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/3e8cbba0d746189e8b6ba6bcf0766049cfe4878d330cd20dd5e732a0572784a649ddc560e44af77b881b169b9d675cb9509219cb462383224d91d67b7d07c8f0
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-sub@npm:^0.24.2":
-  version: 0.24.2
-  resolution: "@mdit/plugin-sub@npm:0.24.2"
-  dependencies:
-    "@mdit/plugin-inline-rule": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/f12c9619313d17478655b97ed1f92379c2643b8b977530f94b79bae5fd474342a8d6578b212aec91a5ff30b2e310f0573b671b0f831cb9f04e8326c8964063e9
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-sup@npm:^0.24.2":
-  version: 0.24.2
-  resolution: "@mdit/plugin-sup@npm:0.24.2"
-  dependencies:
-    "@mdit/plugin-inline-rule": "npm:0.23.2"
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/ec051027746fb812cf4f56b1d717595517bfb71dc79255965c078816325c579f1b4280b2199e8684aa99aac0d437486c19cad378efe790d6c62eeafba17fbde7
-  languageName: node
-  linkType: hard
-
-"@mdit/plugin-tasklist@npm:^0.23.2":
-  version: 0.23.2
-  resolution: "@mdit/plugin-tasklist@npm:0.23.2"
-  dependencies:
-    "@types/markdown-it": "npm:^14.1.2"
-  peerDependencies:
-    markdown-it: ^14.1.0
-  peerDependenciesMeta:
-    markdown-it:
-      optional: true
-  checksum: 10c0/93960a16636f8b01e30aafe2b9ec7fe68a99c679eb601322700ed9590bc15330dd49f5158618168ab7116c01dbae5f2dfe2244805523ddeee10f4f3773e68b01
-  languageName: node
-  linkType: hard
-
 "@napi-rs/wasm-runtime@npm:^1.1.4":
   version: 1.1.4
   resolution: "@napi-rs/wasm-runtime@npm:1.1.4"
@@ -3183,30 +2940,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/linkify-it@npm:^5":
-  version: 5.0.0
-  resolution: "@types/linkify-it@npm:5.0.0"
-  checksum: 10c0/7bbbf45b9dde17bf3f184fee585aef0e7342f6954f0377a24e4ff42ab5a85d5b806aaa5c8d16e2faf2a6b87b2d94467a196b7d2b85c9c7de2f0eaac5487aaab8
-  languageName: node
-  linkType: hard
-
-"@types/markdown-it@npm:^14.1.2":
-  version: 14.1.2
-  resolution: "@types/markdown-it@npm:14.1.2"
-  dependencies:
-    "@types/linkify-it": "npm:^5"
-    "@types/mdurl": "npm:^2"
-  checksum: 10c0/34f709f0476bd4e7b2ba7c3341072a6d532f1f4cb6f70aef371e403af8a08a7c372ba6907ac426bc618d356dab660c5b872791ff6c1ead80c483e0d639c6f127
-  languageName: node
-  linkType: hard
-
-"@types/mdurl@npm:^2":
-  version: 2.0.0
-  resolution: "@types/mdurl@npm:2.0.0"
-  checksum: 10c0/cde7bb571630ed1ceb3b92a28f7b59890bb38b8f34cd35326e2df43eebfc74985e6aa6fd4184e307393bad8a9e0783a519a3f9d13c8e03788c0f98e5ec869c5e
-  languageName: node
-  linkType: hard
-
 "@types/node@npm:16.9.1":
   version: 16.9.1
   resolution: "@types/node@npm:16.9.1"
@@ -3373,13 +3106,6 @@ __metadata:
   version: 1.1.0
   resolution: "any-base@npm:1.1.0"
   checksum: 10c0/1255cccb2c2ead4aa182eca000fd8aa0c1991d91781ff54e26323c132117ed23eb10eef057c0dcf1d919ab30d78e5b11bd8d88940352fc84586ecb961cc76466
-  languageName: node
-  linkType: hard
-
-"argparse@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "argparse@npm:2.0.1"
-  checksum: 10c0/c5640c2d89045371c7cedd6a70212a04e360fd34d6edeae32f6952c63949e3525ea77dbec0289d8213a99bbaeab5abfa860b5c12cf88a2e6cf8106e90dd27a7e
   languageName: node
   linkType: hard
 
@@ -3574,18 +3300,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.4.11":
-  version: 3.4.11
-  resolution: "dompurify@npm:3.4.11"
-  dependencies:
-    "@types/trusted-types": "npm:^2.0.7"
-  dependenciesMeta:
-    "@types/trusted-types":
-      optional: true
-  checksum: 10c0/31439481c7e8fc3805d40c376936fd66936620fb1b1a31a2ec097f6165412c37f2d868e082c9ceba62bb37661c1ea132a5db4d5213434317e30df68d4aca9cc9
-  languageName: node
-  linkType: hard
-
 "embla-carousel-autoplay@npm:^8.5.1":
   version: 8.6.0
   resolution: "embla-carousel-autoplay@npm:8.6.0"
@@ -3608,13 +3322,6 @@ __metadata:
   version: 8.6.0
   resolution: "embla-carousel@npm:8.6.0"
   checksum: 10c0/f4c598e7be28b70340d31ffd2bebb2472db370b0c81d9b089bf9555cf618695f35dc4a0694565c994c9ab972731123063f945aa09ff485df0df761d79c6a08ef
-  languageName: node
-  linkType: hard
-
-"entities@npm:^4.4.0":
-  version: 4.5.0
-  resolution: "entities@npm:4.5.0"
-  checksum: 10c0/5b039739f7621f5d1ad996715e53d964035f75ad3b9a4d38c6b3804bb226e282ffeae2443624d8fdd9c47d8e926ae9ac009c54671243f0c3294c26af7cc85250
   languageName: node
   linkType: hard
 
@@ -3745,13 +3452,6 @@ __metadata:
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: 10c0/386d011a553e02bc594ac2ca0bd6d9e4c22d7fa8cfbfc448a6d148c59ea881b092db9dbe3547ae4b88e55f1b01f7c4a2ecc53b310c042793e63aa44cf6c257f2
-  languageName: node
-  linkType: hard
-
-"highlight.js@npm:^11.11.1":
-  version: 11.11.1
-  resolution: "highlight.js@npm:11.11.1"
-  checksum: 10c0/40f53ac19dac079891fcefd5bd8a21cf2e8931fd47da5bd1dca73b7e4375c1defed0636fc39120c639b9c44119b7d110f7f0c15aa899557a5a1c8910f3c0144c
   languageName: node
   linkType: hard
 
@@ -4018,15 +3718,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"linkify-it@npm:^5.0.1":
-  version: 5.0.1
-  resolution: "linkify-it@npm:5.0.1"
-  dependencies:
-    uc.micro: "npm:^2.0.0"
-  checksum: 10c0/d06d04f1ed03be131740fc900a5e74ea1f49886b052213599e306d469d5ffe2303db76dd8f771de9f28e2b0b38852de22ec46ae597d245f8b66439b0ceb19b10
-  languageName: node
-  linkType: hard
-
 "lru-cache@npm:^11.3.5":
   version: 11.5.1
   resolution: "lru-cache@npm:11.5.1"
@@ -4052,22 +3743,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"markdown-it@npm:^14.2.0":
-  version: 14.2.0
-  resolution: "markdown-it@npm:14.2.0"
-  dependencies:
-    argparse: "npm:^2.0.1"
-    entities: "npm:^4.4.0"
-    linkify-it: "npm:^5.0.1"
-    mdurl: "npm:^2.0.0"
-    punycode.js: "npm:^2.3.1"
-    uc.micro: "npm:^2.1.0"
-  bin:
-    markdown-it: bin/markdown-it.mjs
-  checksum: 10c0/1d3a50061d2fe4efbcf317aac853dbee6892ed6f5a217570eead723f2ef2dd1c9baaeef5a687cd283480c45c2d20724a73e84a9ed72843cf7b3b719067af40ef
-  languageName: node
-  linkType: hard
-
 "marked@npm:14.0.0":
   version: 14.0.0
   resolution: "marked@npm:14.0.0"
@@ -4081,13 +3756,6 @@ __metadata:
   version: 2.27.1
   resolution: "mdn-data@npm:2.27.1"
   checksum: 10c0/eb8abf5d22e4d1e090346f5e81b67d23cef14c83940e445da5c44541ad874dc8fb9f6ca236e8258c3a489d9fb5884188a4d7d58773adb9089ac2c0b966796393
-  languageName: node
-  linkType: hard
-
-"mdurl@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "mdurl@npm:2.0.0"
-  checksum: 10c0/633db522272f75ce4788440669137c77540d74a83e9015666a9557a152c02e245b192edc20bc90ae953bbab727503994a53b236b4d9c99bdaee594d0e7dd2ce0
   languageName: node
   linkType: hard
 
@@ -4189,21 +3857,6 @@ __metadata:
     "@dnd-kit/sortable": "npm:^10.0.0"
     "@dnd-kit/utilities": "npm:^3.2.2"
     "@fluentui/react-components": "npm:^9.74.1"
-    "@mdit/plugin-abbr": "npm:^0.23.2"
-    "@mdit/plugin-alert": "npm:^0.23.2"
-    "@mdit/plugin-align": "npm:^0.24.2"
-    "@mdit/plugin-attrs": "npm:^0.25.2"
-    "@mdit/plugin-container": "npm:^0.23.2"
-    "@mdit/plugin-dl": "npm:^0.23.2"
-    "@mdit/plugin-emoji": "npm:^0.2.2"
-    "@mdit/plugin-figure": "npm:^0.23.2"
-    "@mdit/plugin-footnote": "npm:^0.23.2"
-    "@mdit/plugin-ins": "npm:^0.23.2"
-    "@mdit/plugin-mark": "npm:^0.23.2"
-    "@mdit/plugin-spoiler": "npm:^0.23.2"
-    "@mdit/plugin-sub": "npm:^0.24.2"
-    "@mdit/plugin-sup": "npm:^0.24.2"
-    "@mdit/plugin-tasklist": "npm:^0.23.2"
     "@playwright/test": "npm:^1.61.0"
     "@tauri-apps/api": "npm:^2.11.1"
     "@tauri-apps/cli": "npm:^2.11.2"
@@ -4216,18 +3869,14 @@ __metadata:
     "@testing-library/react": "npm:^16.3.2"
     "@testing-library/user-event": "npm:^14.6.1"
     "@types/diff": "npm:^8.0.0"
-    "@types/markdown-it": "npm:^14.1.2"
     "@types/node": "npm:^25.9.3"
     "@types/react": "npm:^19.2.17"
     "@types/react-dom": "npm:^19.2.3"
     "@vitejs/plugin-react": "npm:^6.0.2"
     cross-env: "npm:^10.1.0"
     diff: "npm:^9.0.0"
-    dompurify: "npm:^3.4.11"
-    highlight.js: "npm:^11.11.1"
     jimp: "npm:^1.6.1"
     jsdom: "npm:^29.1.1"
-    markdown-it: "npm:^14.2.0"
     monaco-editor: "npm:^0.55.1"
     oxfmt: "npm:^0.55.0"
     oxlint: "npm:^1.70.0"
@@ -4591,13 +4240,6 @@ __metadata:
   version: 6.1.0
   resolution: "proc-log@npm:6.1.0"
   checksum: 10c0/4f178d4062733ead9d71a9b1ab24ebcecdfe2250916a5b1555f04fe2eda972a0ec76fbaa8df1ad9c02707add6749219d118a4fc46dc56bdfe4dde4b47d80bb82
-  languageName: node
-  linkType: hard
-
-"punycode.js@npm:^2.3.1":
-  version: 2.3.1
-  resolution: "punycode.js@npm:2.3.1"
-  checksum: 10c0/1d12c1c0e06127fa5db56bd7fdf698daf9a78104456a6b67326877afc21feaa821257b171539caedd2f0524027fa38e67b13dd094159c8d70b6d26d2bea4dfdb
   languageName: node
   linkType: hard
 
@@ -4971,13 +4613,6 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10c0/2f25c74e65663c248fa1ade2b8459d9ce5372ff9dad07067310f132966ebec1d93f6c42f0baf77a6b6a7a91460463f708e6887013aaade22111037457c6b25df
-  languageName: node
-  linkType: hard
-
-"uc.micro@npm:^2.0.0, uc.micro@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "uc.micro@npm:2.1.0"
-  checksum: 10c0/8862eddb412dda76f15db8ad1c640ccc2f47cdf8252a4a30be908d535602c8d33f9855dfcccb8b8837855c1ce1eaa563f7fa7ebe3c98fd0794351aab9b9c55fa
   languageName: node
   linkType: hard
 

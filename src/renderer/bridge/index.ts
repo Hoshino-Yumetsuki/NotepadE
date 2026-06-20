@@ -243,6 +243,12 @@ const api: NotepadsApi = {
     compute: (original, modified) =>
       call<import('@shared/ipc-contract').DiffModelDto>('compute_diff', { original, modified })
   },
+  markdown: {
+    // snake_case command name — channelToCommand returns it verbatim. Tauri's
+    // serde maps the camelCase `hardBreaks` arg to the Rust `hard_breaks` param.
+    render: (text: string, hardBreaks: boolean) =>
+      call<string>('markdown_render', { text, hardBreaks })
+  },
   session: {
     snapshot: (data: SessionSnapshot) =>
       call<{ written: boolean }>(channelToCommand(C.SessionSnapshot), { data } as unknown as Record<

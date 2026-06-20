@@ -89,6 +89,16 @@ export function TextEditorPane({ settings, update }: PaneProps): JSX.Element {
           />
         </SettingRow>
         <SettingRow
+          id="strictLineBreaks"
+          label="Strict CommonMark line breaks"
+          description="Require a blank line between paragraphs. When off, a single newline starts a new line."
+        >
+          <Switch
+            checked={settings.strictLineBreaks}
+            onChange={(_e, d) => update({ strictLineBreaks: d.checked })}
+          />
+        </SettingRow>
+        <SettingRow
           id="tabIndents"
           layout="stack"
           label={t('TextAndEditorPage_TabKeySettings_Title.Text')}

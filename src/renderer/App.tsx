@@ -47,12 +47,12 @@ import { usePrefersReducedMotion } from './theme/usePrefersReducedMotion';
 /**
  * Heavy secondary panes loaded LAZILY (cold-start win, visually transparent):
  * none are visible at first paint — they mount only on a user action (Alt+P /
- * Alt+D / Ctrl+,). Splitting them out pulls markdown-it + its @mdit plugins +
- * highlight.js + dompurify (MarkdownPreview), the diff package (DiffViewer), and
- * the four settings panes (SettingsSurface) out of the first-paint chunk. Each is
- * a NAMED export, so React.lazy gets a synthesized default. Their mount sites are
- * wrapped in <Suspense fallback={null}> — a one-frame async on a user-triggered
- * mount is imperceptible, so there is zero visible change.
+ * Alt+D / Ctrl+,). Splitting them out pulls the MarkdownPreview chunk, the diff
+ * package (DiffViewer), and the four settings panes (SettingsSurface) out of
+ * the first-paint chunk. Each is a NAMED export, so React.lazy gets a
+ * synthesized default. Their mount sites are wrapped in <Suspense
+ * fallback={null}> — a one-frame async on a user-triggered mount is
+ * imperceptible, so there is zero visible change.
  */
 const MarkdownPreview = lazy(() =>
   import('./markdown/MarkdownPreview').then((m) => ({ default: m.MarkdownPreview }))
@@ -1511,6 +1511,7 @@ export function App(): JSX.Element {
                             text={shadow}
                             isDark={resolvedTheme === 'dark'}
                             fontSize={settings.editorFontSize}
+                            strictLineBreaks={settings.strictLineBreaks}
                             editor={editorHandles.current.get(tab.editorId)?.getEditor() ?? null}
                           />
                         </PaneMount>

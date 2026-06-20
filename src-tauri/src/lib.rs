@@ -25,6 +25,7 @@ mod file_io;
 mod folder;
 mod file_stream;
 mod hash;
+mod markdown;
 mod mru;
 mod result;
 mod search_url;
@@ -168,6 +169,8 @@ pub fn run() {
             hash::compute_text_hash,
             // diff
             diff::compute_diff,
+            // markdown
+            markdown::markdown_render,
             // session (task #3)
             session::session_snapshot,
             session::session_load_last,

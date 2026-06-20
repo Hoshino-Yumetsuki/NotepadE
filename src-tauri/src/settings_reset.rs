@@ -49,7 +49,7 @@ mod tests {
         let expected_keys = &[
             "editorFontFamily", "editorFontSize",
             "textWrapping", "displayLineHighlighter",
-            "displayLineNumbers", "tabIndents",
+            "displayLineNumbers", "tabIndents", "strictLineBreaks",
             "searchEngine", "customSearchUrl", "themeMode", "tintOpacity",
             "useWindowsAccentColor", "customAccentColor", "showStatusBar",
             "smartCopy", "alwaysOpenNewWindow",

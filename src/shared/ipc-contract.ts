@@ -248,6 +248,21 @@ export interface DiffApi {
 }
 
 // ---------------------------------------------------------------------------
+//  markdown — Rust-side markdown render + HTML sanitization
+// ---------------------------------------------------------------------------
+//
+// The renderer formerly drove markdown-it + @mdit plugins + highlight.js +
+// DOMPurify in-process. That pipeline moved to Rust (comrak + ammonia) so the
+// renderer ships a single Tauri command call instead of ~1MB of JS. The output
+// of `markdown.render` is ALREADY sanitized — safe to dangerouslySetInnerHTML.
+// `hardBreaks=false` is strict CommonMark (single \n is a space); `true` makes
+// single \n a `<br>` (old markdown-it `breaks:true` behavior). See DESIGN.md.
+
+export interface MarkdownApi {
+  render(text: string, hardBreaks: boolean): Promise<Result<string>>;
+}
+
+// ---------------------------------------------------------------------------
 //  session — snapshot / loadLast / clearRecovered  (Phase 4)
 // ---------------------------------------------------------------------------
 
@@ -333,6 +348,14 @@ export interface Settings {
   displayLineHighlighter: boolean;
   displayLineNumbers: boolean;
   tabIndents: TabIndents;
+  /**
+   * When true, the markdown preview uses strict CommonMark line-break rules: a
+   * single `\n` is a soft break (rendered as whitespace inside the paragraph), and
+   * only a blank line separates paragraphs. When false, every `\n` becomes a `<br>`
+   * (the old markdown-it `breaks:true` behavior). Passed to the Rust renderer as
+   * `hardBreaks = !strictLineBreaks`.
+   */
+  strictLineBreaks: boolean;
   searchEngine: SearchEngineId;
   customSearchUrl: string;
   // --- Personalization ---
@@ -390,6 +413,7 @@ export const DEFAULT_SETTINGS: Settings = {
   displayLineHighlighter: true,
   displayLineNumbers: true,
   tabIndents: -1,
+  strictLineBreaks: true,
   searchEngine: 'bing',
   customSearchUrl: '',
   themeMode: 'system',
@@ -682,6 +706,7 @@ export interface NotepadsApi {
   encoding: EncodingApi;
   hash: HashApi;
   diff: DiffApi;
+  markdown: MarkdownApi;
   session: SessionApi;
   settings: SettingsApi;
   window: WindowApi;

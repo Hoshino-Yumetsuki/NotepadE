@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import { renderMarkdown } from './renderMarkdown';
-import { sanitizeMarkdownHtml } from './sanitizeHtml';
 
 /**
  * MarkdownPreview — RENDERER, Lane B (Phase 6). Self-contained markdown preview
  * pane. Ports the UWP MarkdownExtensionView: renders the editor's live '\n' text as
- * GFM-equivalent HTML (see renderMarkdown.ts) in a pane that sits SIDE-BY-SIDE with
- * the editor (Alt+P toggles it on for .md files).
+ * GFM-equivalent HTML in a pane that sits SIDE-BY-SIDE with the editor (Alt+P
+ * toggles it on for .md files).
  *
- * Safety: `renderMarkdown` now runs markdown-it with html:true, so its output is
- * UNTRUSTED. This component routes it through `sanitizeMarkdownHtml` (DOMPurify +
- * an image-source policy) BEFORE dangerouslySetInnerHTML. The sanitized string is
- * the only thing injected — that pass is the XSS gate, not html:false anymore.
+ * Render pipeline lives in RUST: this component is a thin wrapper around
+ * `window.notepads.markdown.render(text, hardBreaks)` (comrak + ammonia). The
+ * returned HTML is ALREADY sanitized — safe to dangerouslySetInnerHTML.
+ *
+ * Line-break behavior is driven by `settings.strictLineBreaks` (true ⇒ strict
+ * CommonMark, false ⇒ `breaks:true` behavior). The App passes that toggle in as
+ * `hardBreaks = !strictLineBreaks`.
  *
  * Scroll sync (UWP-parity split behavior): the pane mirrors the Monaco editor's
  * vertical scroll position proportionally, so paging through the source pages the
@@ -21,7 +22,8 @@ import { sanitizeMarkdownHtml } from './sanitizeHtml';
  * The preview can also drive the editor back (two-way sync) via editor.setScrollTop.
  *
  * MOUNT API (App.tsx integration):
- *   <MarkdownPreview text={shadowText} isDark={...} editor={monacoEditor} />
+ *   <MarkdownPreview text={shadowText} isDark={...} editor={monacoEditor}
+ *                    strictLineBreaks={settings.strictLineBreaks} />
  */
 
 export interface MarkdownPreviewProps {
@@ -31,6 +33,12 @@ export interface MarkdownPreviewProps {
   isDark?: boolean;
   /** Optional body font size in px (defaults to 14, the editor default). */
   fontSize?: number;
+  /**
+   * When true (the default), use strict CommonMark line breaks (single \n is
+   * whitespace inside a paragraph; only a blank line separates paragraphs).
+   * When false, every \n becomes a <br>. Translates to `hardBreaks = !strict`.
+   */
+  strictLineBreaks?: boolean;
   /**
    * The live Monaco editor whose vertical scroll this pane mirrors. When provided,
    * the preview follows the editor's scroll fraction (the editor is the master).
@@ -56,20 +64,13 @@ const PREVIEW_STYLES = `
 .np-md-preview table { border-collapse: collapse; }
 .np-md-preview th, .np-md-preview td { border: 1px solid rgba(128,128,128,0.4); padding: 4px 8px; }
 .np-md-preview img { max-width: 100%; }
-.np-md-preview figure { margin: 1em 0; }
-.np-md-preview figcaption { font-size: 0.9em; opacity: 0.75; text-align: center; margin-top: 4px; }
-/* Task lists: drop the list bullet, align the checkbox with its label. */
-.np-md-preview .task-list-container { list-style: none; padding-left: 0.4em; }
-.np-md-preview .task-list-item { display: flex; align-items: flex-start; gap: 6px; }
-.np-md-preview .task-list-item-checkbox { margin-top: 0.35em; }
+/* Task lists (comrak class names): drop the bullet, align the checkbox with its label. */
+.np-md-preview ul.contains-task-list { list-style: none; padding-left: 0.4em; }
+.np-md-preview li.task-list-item { display: flex; align-items: flex-start; gap: 6px; }
+.np-md-preview li.task-list-item > input[type=checkbox] { margin-top: 0.35em; }
 /* Footnotes. */
 .np-md-preview .footnotes { font-size: 0.9em; opacity: 0.8; }
 .np-md-preview .footnotes-sep { border: none; border-top: 1px solid rgba(128,128,128,0.35); }
-/* Marks / inserts keep readable contrast in both themes. */
-.np-md-preview mark { background: rgba(255, 221, 87, 0.55); color: inherit; padding: 0 0.15em; }
-/* Spoiler: hidden until hovered/focused. */
-.np-md-preview .spoiler { background: currentColor; border-radius: 3px; transition: background 0.1s; }
-.np-md-preview .spoiler:hover, .np-md-preview .spoiler:focus { background: transparent; }
 /* GitHub-style alert blocks (NOTE / TIP / WARNING / …). */
 .np-md-preview .markdown-alert { border-left: 4px solid rgba(128,128,128,0.6);
   padding: 6px 12px; margin: 1em 0; border-radius: 0 4px 4px 0; background: rgba(128,128,128,0.08); }
@@ -83,42 +84,33 @@ const PREVIEW_STYLES = `
 .np-md-dark a { color: #4FA3FF; }
 .np-md-light { color: #1A1A1A; }
 .np-md-light a { color: #0067C0; }
-/* highlight.js token colors — light theme (GitHub-style). */
-.np-md-light .hljs-keyword, .np-md-light .hljs-selector-tag, .np-md-light .hljs-built_in { color: #d73a49; }
-.np-md-light .hljs-string, .np-md-light .hljs-attr { color: #032f62; }
-.np-md-light .hljs-comment, .np-md-light .hljs-meta { color: #6a737d; font-style: italic; }
-.np-md-light .hljs-number, .np-md-light .hljs-literal { color: #005cc5; }
-.np-md-light .hljs-title, .np-md-light .hljs-function { color: #6f42c1; }
-.np-md-light .hljs-type, .np-md-light .hljs-class, .np-md-light .hljs-variable { color: #e36209; }
-/* highlight.js token colors — dark theme (VS Code-ish). */
-.np-md-dark .hljs-keyword, .np-md-dark .hljs-selector-tag, .np-md-dark .hljs-built_in { color: #f97583; }
-.np-md-dark .hljs-string, .np-md-dark .hljs-attr { color: #9ecbff; }
-.np-md-dark .hljs-comment, .np-md-dark .hljs-meta { color: #6a737d; font-style: italic; }
-.np-md-dark .hljs-number, .np-md-dark .hljs-literal { color: #79b8ff; }
-.np-md-dark .hljs-title, .np-md-dark .hljs-function { color: #b392f0; }
-.np-md-dark .hljs-type, .np-md-dark .hljs-class, .np-md-dark .hljs-variable { color: #ffab70; }
 `;
 
 export function MarkdownPreview({
   text,
   isDark = false,
   fontSize = 14,
+  strictLineBreaks = true,
   editor = null
 }: MarkdownPreviewProps): JSX.Element {
-  const [html, setHtml] = useState(() => sanitizeMarkdownHtml(renderMarkdown(text)));
+  const [html, setHtml] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
-    // Run render+sanitize asynchronously so the toggle paint is never blocked.
+    // Run render+sanitize asynchronously (Rust round-trip) so the toggle paint
+    // is never blocked. setTimeout(0) preserves the coalescing pattern.
     const id = setTimeout(() => {
-      const result = sanitizeMarkdownHtml(renderMarkdown(text));
-      if (!cancelled) setHtml(result);
+      void window.notepads.markdown.render(text, !strictLineBreaks).then((r) => {
+        if (cancelled) return;
+        if (r.ok) setHtml(r.data);
+        // r.ok === false → keep previous html (rare; surface via console once).
+      });
     }, 0);
     return () => {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [text]);
+  }, [text, strictLineBreaks]);
 
   const paneRef = useRef<HTMLDivElement>(null);
 
@@ -182,7 +174,7 @@ export function MarkdownPreview({
         data-testid="markdown-preview"
         className={isDark ? 'np-md-preview np-md-dark' : 'np-md-preview np-md-light'}
         style={{ fontSize }}
-        // Safe: html is the output of sanitizeMarkdownHtml (DOMPurify + image policy).
+        // Safe: html is the output of the Rust ammonia sanitizer.
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </>

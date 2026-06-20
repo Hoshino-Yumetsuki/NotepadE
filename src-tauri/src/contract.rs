@@ -172,7 +172,7 @@ pub struct SnapshotResult {
 }
 
 // ---------------------------------------------------------------------------
-//  settings — 24 fields, DEFAULT_SETTINGS verbatim (ipc-contract.ts)
+//  settings — 25 fields, DEFAULT_SETTINGS verbatim (ipc-contract.ts)
 // ---------------------------------------------------------------------------
 
 /// The full persisted settings bag. Serde defaults mirror DEFAULT_SETTINGS so a
@@ -189,6 +189,11 @@ pub struct Settings {
     pub display_line_numbers: bool,
     /// -1 | 2 | 4 | 8 (-1 = real tab)
     pub tab_indents: i32,
+    /// When true (default), use strict CommonMark line breaks in the markdown
+    /// preview (single \n is a soft break; only a blank line starts a new
+    /// paragraph). When false, every \n becomes a <br>. Passed to the Rust
+    /// renderer as `hardBreaks = !strictLineBreaks`.
+    pub strict_line_breaks: bool,
     /// 'bing' | 'google' | 'duckDuckGo' | 'custom'
     pub search_engine: String,
     pub custom_search_url: String,
@@ -225,6 +230,7 @@ impl Default for Settings {
             display_line_highlighter: true,
             display_line_numbers: true,
             tab_indents: -1,
+            strict_line_breaks: true,
             search_engine: "bing".into(),
             custom_search_url: String::new(),
             theme_mode: "system".into(),
@@ -420,6 +426,7 @@ mod tests {
                 "displayLineHighlighter": true,
                 "displayLineNumbers": true,
                 "tabIndents": -1,
+                "strictLineBreaks": true,
                 "searchEngine": "bing",
                 "customSearchUrl": "",
                 "themeMode": "system",
