@@ -2894,6 +2894,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tauri-apps/api@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@tauri-apps/api@npm:2.11.1"
+  checksum: 10c0/78a08a64ee7eab9d34bd4ba1bdc3a2440c7e9cc5737b3f1d77bd80fa38b0cb5e9601efe04da40c947c5da2ca38dc702bec21b4ae96b18ee5f3e82980d1f0b325
+  languageName: node
+  linkType: hard
+
 "@tauri-apps/cli-darwin-arm64@npm:2.11.2":
   version: 2.11.2
   resolution: "@tauri-apps/cli-darwin-arm64@npm:2.11.2"
@@ -3567,15 +3574,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.4.10":
-  version: 3.4.10
-  resolution: "dompurify@npm:3.4.10"
+"dompurify@npm:^3.4.11":
+  version: 3.4.11
+  resolution: "dompurify@npm:3.4.11"
   dependencies:
     "@types/trusted-types": "npm:^2.0.7"
   dependenciesMeta:
     "@types/trusted-types":
       optional: true
-  checksum: 10c0/6ffbc564c09ae11f9e1ab97040d556f8fafb0a5221248fca02539378d442f4fbe737ebb72dd34309c46896f1093714622895cc6815a7a57599c4511e30e234ae
+  checksum: 10c0/31439481c7e8fc3805d40c376936fd66936620fb1b1a31a2ec097f6165412c37f2d868e082c9ceba62bb37661c1ea132a5db4d5213434317e30df68d4aca9cc9
   languageName: node
   linkType: hard
 
@@ -4198,7 +4205,7 @@ __metadata:
     "@mdit/plugin-sup": "npm:^0.24.2"
     "@mdit/plugin-tasklist": "npm:^0.23.2"
     "@playwright/test": "npm:^1.61.0"
-    "@tauri-apps/api": "npm:^2.11.0"
+    "@tauri-apps/api": "npm:^2.11.1"
     "@tauri-apps/cli": "npm:^2.11.2"
     "@tauri-apps/plugin-clipboard-manager": "npm:^2.3.2"
     "@tauri-apps/plugin-deep-link": "npm:^2.4.9"
@@ -4216,7 +4223,7 @@ __metadata:
     "@vitejs/plugin-react": "npm:^6.0.2"
     cross-env: "npm:^10.1.0"
     diff: "npm:^9.0.0"
-    dompurify: "npm:^3.4.10"
+    dompurify: "npm:^3.4.11"
     highlight.js: "npm:^11.11.1"
     jimp: "npm:^1.6.1"
     jsdom: "npm:^29.1.1"
