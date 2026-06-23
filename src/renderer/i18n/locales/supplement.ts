@@ -80,6 +80,15 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   // Folder sidebar (Issue #10) — awaiting-translation.
   'MainMenu_Button_OpenFolder.Text': { 'en-US': 'Open Folder...', 'zh-CN': '打开文件夹...' },
   FolderSidebar_Title: { 'en-US': 'Explorer', 'zh-CN': '资源管理器' },
+  FolderSidebar_Close: { 'en-US': 'Close folder', 'zh-CN': '关闭文件夹' },
+  FolderSidebar_Loading: { 'en-US': 'Loading...', 'zh-CN': '正在加载...' },
+  FolderSidebar_Empty: { 'en-US': '(empty)', 'zh-CN': '（空）' },
+  FolderSidebar_EmptyFolder: { 'en-US': '(empty folder)', 'zh-CN': '（空文件夹）' },
+  FolderSidebar_NewFile: { 'en-US': 'New File', 'zh-CN': '新建文件' },
+  FolderSidebar_NewFolder: { 'en-US': 'New Folder', 'zh-CN': '新建文件夹' },
+  FolderSidebar_Rename: { 'en-US': 'Rename', 'zh-CN': '重命名' },
+  FolderSidebar_Delete: { 'en-US': 'Delete', 'zh-CN': '删除' },
+  FolderSidebar_DeleteConfirm: { 'en-US': 'Delete {0}?', 'zh-CN': '要删除 {0} 吗？' },
   StatusBar_Folder: { 'en-US': 'Folder', 'zh-CN': '文件夹' },
 
   // Custom caption-button tooltips (web port) — no UWP .resw origin: the UWP app

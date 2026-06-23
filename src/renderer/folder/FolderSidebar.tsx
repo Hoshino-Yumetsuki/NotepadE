@@ -23,13 +23,22 @@ interface TreeNode {
   loaded?: boolean;
 }
 
-type FolderMenuAction = 'newFile' | 'newFolder' | 'rename' | 'delete' | 'refresh';
+type FolderMenuAction = 'newFile' | 'newFolder' | 'rename' | 'delete';
 
 interface FolderContextMenuState {
   x: number;
   y: number;
   target: TreeNode | null;
   parentPath: string;
+  depth: number;
+}
+
+interface NameActionState {
+  kind: 'newFile' | 'newFolder' | 'rename';
+  parentPath: string;
+  target: TreeNode | null;
+  value: string;
+  depth: number;
 }
 
 export interface FolderSidebarProps {
@@ -54,7 +63,8 @@ function colorsForTheme(theme: 'light' | 'dark' | 'hc') {
       border: 'ButtonText',
       icon: 'ButtonText',
       menu: 'Canvas',
-      menuShadow: '0 0 0 1px ButtonText'
+      menuShadow: '0 0 0 1px ButtonText',
+      input: 'Canvas'
     };
   }
   if (theme === 'dark') {
@@ -67,7 +77,8 @@ function colorsForTheme(theme: 'light' | 'dark' | 'hc') {
       border: 'rgba(255,255,255,0.12)',
       icon: '#BBBBBB',
       menu: 'rgba(32,32,32,0.98)',
-      menuShadow: '0 8px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12)'
+      menuShadow: '0 8px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12)',
+      input: 'rgba(255,255,255,0.06)'
     };
   }
   // light
@@ -80,7 +91,8 @@ function colorsForTheme(theme: 'light' | 'dark' | 'hc') {
     border: 'rgba(0,0,0,0.10)',
     icon: '#555555',
     menu: 'rgba(255,255,255,0.98)',
-    menuShadow: '0 8px 24px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.10)'
+    menuShadow: '0 8px 24px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.10)',
+    input: 'rgba(0,0,0,0.04)'
   };
 }
 
@@ -108,9 +120,14 @@ interface TreeItemProps {
   depth: number;
   theme: 'light' | 'dark' | 'hc';
   colors: ReturnType<typeof colorsForTheme>;
+  t: ReturnType<typeof useT>['t'];
+  nameAction: NameActionState | null;
   onToggle: (path: string) => void;
   onOpenFile: (path: string) => void;
-  onContextMenu: (event: React.MouseEvent, target: TreeNode | null, parentPath: string) => void;
+  onContextMenu: (event: React.MouseEvent, target: TreeNode | null, parentPath: string, depth: number) => void;
+  onNameChange: (value: string) => void;
+  onNameCancel: () => void;
+  onNameSubmit: () => void;
 }
 
 const TreeItem = memo(function TreeItem({
@@ -118,9 +135,14 @@ const TreeItem = memo(function TreeItem({
   depth,
   theme,
   colors,
+  t,
+  nameAction,
   onToggle,
   onOpenFile,
-  onContextMenu
+  onContextMenu,
+  onNameChange,
+  onNameCancel,
+  onNameSubmit
 }: TreeItemProps): JSX.Element {
   const [hovered, setHovered] = useState(false);
   const indent = 8 + depth * 16;
@@ -135,57 +157,85 @@ const TreeItem = memo(function TreeItem({
 
   const isHC = theme === 'hc';
   const itemParentPath = parentPathOf(node.path);
+  const isRenaming = nameAction?.kind === 'rename' && nameAction.target?.path === node.path;
 
   return (
     <>
-      <div
-        role="treeitem"
-        aria-expanded={node.isDir ? node.expanded : undefined}
-        onClick={handleClick}
-        onContextMenu={(event) => onContextMenu(event, node, itemParentPath)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          paddingLeft: indent,
-          paddingRight: 8,
-          height: 22,
-          cursor: 'default',
-          userSelect: 'none',
-          color: hovered && isHC ? colors.hoverText : colors.text,
-          background: hovered ? colors.hover : 'transparent',
-          fontSize: 12,
-          fontFamily: 'Segoe UI, system-ui, sans-serif',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          boxSizing: 'border-box',
-          outline: isHC && hovered ? '1px solid ButtonText' : 'none'
-        }}
-      >
-        {node.isDir ? (
-          <span aria-hidden style={{ ...ICON_STYLE, fontSize: 10, width: 12, color: colors.icon }}>
-            {node.expanded ? <ChevronDownRegular /> : <ChevronRightRegular />}
-          </span>
-        ) : (
-          <span style={{ display: 'inline-block', width: 12, flexShrink: 0 }} />
-        )}
-        <span aria-hidden style={{ ...ICON_STYLE, color: colors.icon }}>
-          {node.isDir ? <FolderRegular /> : <DocumentRegular />}
-        </span>
-        <span
+      {isRenaming ? (
+        <InlineNameInput
+          colors={colors}
+          depth={depth}
+          isDir={node.isDir}
+          value={nameAction.value}
+          onChange={onNameChange}
+          onCancel={onNameCancel}
+          onSubmit={onNameSubmit}
+        />
+      ) : (
+        <div
+          role="treeitem"
+          aria-expanded={node.isDir ? node.expanded : undefined}
+          onClick={handleClick}
+          onContextMenu={(event) => onContextMenu(event, node, itemParentPath, depth)}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           style={{
-            flex: '1 1 auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            paddingLeft: indent,
+            paddingRight: 8,
+            height: 22,
+            cursor: 'default',
+            userSelect: 'none',
+            color: hovered && isHC ? colors.hoverText : colors.text,
+            background: hovered ? colors.hover : 'transparent',
+            fontSize: 12,
+            fontFamily: 'Segoe UI, system-ui, sans-serif',
+            whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            minWidth: 0
+            boxSizing: 'border-box',
+            outline: isHC && hovered ? '1px solid ButtonText' : 'none'
           }}
         >
-          {node.name}
-        </span>
-      </div>
+          {node.isDir ? (
+            <span aria-hidden style={{ ...ICON_STYLE, fontSize: 10, width: 12, color: colors.icon }}>
+              {node.expanded ? <ChevronDownRegular /> : <ChevronRightRegular />}
+            </span>
+          ) : (
+            <span style={{ display: 'inline-block', width: 12, flexShrink: 0 }} />
+          )}
+          <span aria-hidden style={{ ...ICON_STYLE, color: colors.icon }}>
+            {node.isDir ? <FolderRegular /> : <DocumentRegular />}
+          </span>
+          <span
+            style={{
+              flex: '1 1 auto',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minWidth: 0
+            }}
+          >
+            {node.name}
+          </span>
+        </div>
+      )}
+      {node.isDir &&
+        node.expanded &&
+        nameAction &&
+        nameAction.kind !== 'rename' &&
+        nameAction.parentPath === node.path && (
+          <InlineNameInput
+            colors={colors}
+            depth={depth + 1}
+            isDir={nameAction.kind === 'newFolder'}
+            value={nameAction.value}
+            onChange={onNameChange}
+            onCancel={onNameCancel}
+            onSubmit={onNameSubmit}
+          />
+        )}
       {node.isDir &&
         node.expanded &&
         node.children &&
@@ -197,17 +247,23 @@ const TreeItem = memo(function TreeItem({
             depth={depth + 1}
             theme={theme}
             colors={colors}
+            t={t}
+            nameAction={nameAction}
             onToggle={onToggle}
             onOpenFile={onOpenFile}
             onContextMenu={onContextMenu}
+            onNameChange={onNameChange}
+            onNameCancel={onNameCancel}
+            onNameSubmit={onNameSubmit}
           />
         ))}
       {node.isDir &&
         node.expanded &&
         node.loaded &&
-        (!node.children || node.children.length === 0) && (
+        (!node.children || node.children.length === 0) &&
+        !(nameAction && nameAction.kind !== 'rename' && nameAction.parentPath === node.path) && (
           <div
-            onContextMenu={(event) => onContextMenu(event, null, node.path)}
+            onContextMenu={(event) => onContextMenu(event, null, node.path, depth + 1)}
             style={{
               paddingLeft: indent + 28,
               paddingRight: 8,
@@ -221,7 +277,7 @@ const TreeItem = memo(function TreeItem({
               userSelect: 'none'
             }}
           >
-            (empty)
+            {t('FolderSidebar_Empty')}
           </div>
         )}
     </>
@@ -234,7 +290,7 @@ const TreeItem = memo(function TreeItem({
 
 function folderBasename(path: string): string {
   // Works on both / and \ separators (no Node path module — PA-8)
-  const parts = path.replace(/[\\/]+$/, '').split(/[\\/]/);
+  const parts = path.replaceAll('\\', '/').replace(/[/]+$/, '').split('/');
   return parts[parts.length - 1] || path;
 }
 
@@ -249,6 +305,7 @@ export function FolderSidebar({
   const [headerHovered, setHeaderHovered] = useState(false);
   const [closeHovered, setCloseHovered] = useState(false);
   const [contextMenu, setContextMenu] = useState<FolderContextMenuState | null>(null);
+  const [nameAction, setNameAction] = useState<NameActionState | null>(null);
 
   // Root-level children (the folder's direct contents)
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
@@ -362,72 +419,106 @@ export function FolderSidebar({
   );
 
   const openContextMenu = useCallback(
-    (event: React.MouseEvent, target: TreeNode | null, parentPath: string): void => {
+    (event: React.MouseEvent, target: TreeNode | null, parentPath: string, depth: number): void => {
       event.preventDefault();
       event.stopPropagation();
-      setContextMenu({ x: event.clientX, y: event.clientY, target, parentPath });
+      setContextMenu({ x: event.clientX, y: event.clientY, target, parentPath, depth });
     },
     []
   );
 
   const runMenuAction = useCallback(
-    async (action: FolderMenuAction): Promise<void> => {
+    (action: FolderMenuAction): void => {
       if (!contextMenu) return;
-      const { target, parentPath } = contextMenu;
+      const { target, parentPath, depth } = contextMenu;
       setContextMenu(null);
-
-      if (action === 'refresh') {
-        await refreshDir(target?.isDir ? target.path : parentPath);
-        return;
-      }
 
       if (action === 'newFile' || action === 'newFolder') {
         const createParentPath = target?.isDir ? target.path : parentPath;
-        const name = window.prompt(action === 'newFile' ? 'New file name' : 'New folder name');
-        if (!name) return;
-        const res =
-          action === 'newFile'
-            ? await window.notepads.folder.createFile(createParentPath, name)
-            : await window.notepads.folder.createFolder(createParentPath, name);
-        if (!res.ok) {
-          window.alert(res.error);
-          return;
+        if (target?.isDir) {
+          setRootNodes((prev) =>
+            patchNode(prev, target.path, (node) => ({
+              ...node,
+              expanded: true
+            }))
+          );
+          if (!target.loaded) {
+            void loadDir(target.path).then((children) => {
+              setRootNodes((prev) =>
+                patchNode(prev, target.path, (node) => ({
+                  ...node,
+                  children,
+                  expanded: true,
+                  loaded: true
+                }))
+              );
+            });
+          }
         }
-        await refreshDir(createParentPath);
+        setNameAction({
+          kind: action,
+          parentPath: createParentPath,
+          target: null,
+          value: '',
+          depth: target?.isDir ? depth + 1 : depth
+        });
         return;
       }
 
       if (!target) return;
       if (action === 'rename') {
-        const name = window.prompt('Rename', target.name);
-        if (!name || name === target.name) return;
-        const res = await window.notepads.folder.rename(target.path, name);
-        if (!res.ok) {
-          window.alert(res.error);
-          return;
-        }
-        await refreshDir(parentPath);
+        setNameAction({
+          kind: 'rename',
+          parentPath,
+          target,
+          value: target.name,
+          depth
+        });
         return;
       }
 
-      if (window.confirm(`Delete ${target.name}?`)) {
-        const res = await window.notepads.folder.delete(target.path);
-        if (!res.ok) {
-          window.alert(res.error);
-          return;
-        }
-        await refreshDir(parentPath);
+      if (window.confirm(t('FolderSidebar_DeleteConfirm', target.name))) {
+        void window.notepads.folder.delete(target.path).then(async (res) => {
+          if (!res.ok) {
+            window.alert(res.error);
+            return;
+          }
+          await refreshDir(parentPath);
+        });
       }
     },
-    [contextMenu, refreshDir]
+    [contextMenu, loadDir, refreshDir, t]
   );
+
+  const submitNameAction = useCallback(async (): Promise<void> => {
+    if (!nameAction) return;
+    const name = nameAction.value.trim();
+    if (!name) return;
+
+    const res =
+      nameAction.kind === 'newFile'
+        ? await window.notepads.folder.createFile(nameAction.parentPath, name)
+        : nameAction.kind === 'newFolder'
+          ? await window.notepads.folder.createFolder(nameAction.parentPath, name)
+          : nameAction.target
+            ? await window.notepads.folder.rename(nameAction.target.path, name)
+            : { ok: false as const, error: 'No item selected' };
+
+    if (!res.ok) {
+      window.alert(res.error);
+      return;
+    }
+    const refreshPath = nameAction.kind === 'rename' ? parentPathOf(res.data) : nameAction.parentPath;
+    setNameAction(null);
+    await refreshDir(refreshPath);
+  }, [nameAction, refreshDir]);
 
   const isHC = theme === 'hc';
 
   return (
     <div
       data-testid="folder-sidebar"
-      onContextMenu={(event) => openContextMenu(event, null, folderPath)}
+      onContextMenu={(event) => openContextMenu(event, null, folderPath, 0)}
       style={{
         width: 250,
         flexShrink: 0,
@@ -477,7 +568,7 @@ export function FolderSidebar({
         <button
           type="button"
           data-testid="folder-sidebar-close"
-          aria-label="Close folder"
+          aria-label={t('FolderSidebar_Close')}
           onClick={onClose}
           onMouseEnter={() => setCloseHovered(true)}
           onMouseLeave={() => setCloseHovered(false)}
@@ -550,34 +641,67 @@ export function FolderSidebar({
               fontStyle: 'italic'
             }}
           >
-            Loading...
+            {t('FolderSidebar_Loading')}
           </div>
         ) : rootNodes.length === 0 ? (
-          <div
-            onContextMenu={(event) => openContextMenu(event, null, folderPath)}
-            style={{
-              padding: '8px 12px',
-              fontSize: 12,
-              fontFamily: 'Segoe UI, system-ui, sans-serif',
-              color: colors.icon,
-              fontStyle: 'italic'
-            }}
-          >
-            (empty folder)
-          </div>
+          <>
+            {nameAction && nameAction.kind !== 'rename' && nameAction.parentPath === folderPath && (
+              <InlineNameInput
+                colors={colors}
+                depth={nameAction.depth}
+                isDir={nameAction.kind === 'newFolder'}
+                value={nameAction.value}
+                onChange={(value) => setNameAction((prev) => (prev ? { ...prev, value } : prev))}
+                onCancel={() => setNameAction(null)}
+                onSubmit={() => void submitNameAction()}
+              />
+            )}
+            {!(nameAction && nameAction.kind !== 'rename' && nameAction.parentPath === folderPath) && (
+              <div
+                onContextMenu={(event) => openContextMenu(event, null, folderPath, 0)}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontFamily: 'Segoe UI, system-ui, sans-serif',
+                  color: colors.icon,
+                  fontStyle: 'italic'
+                }}
+              >
+                {t('FolderSidebar_EmptyFolder')}
+              </div>
+            )}
+          </>
         ) : (
-          rootNodes.map((node) => (
-            <TreeItem
-              key={node.path}
-              node={node}
-              depth={0}
-              theme={theme}
-              colors={colors}
-              onToggle={handleToggle}
-              onOpenFile={onOpenFile}
-              onContextMenu={openContextMenu}
-            />
-          ))
+          <>
+            {nameAction && nameAction.kind !== 'rename' && nameAction.parentPath === folderPath && (
+              <InlineNameInput
+                colors={colors}
+                depth={nameAction.depth}
+                isDir={nameAction.kind === 'newFolder'}
+                value={nameAction.value}
+                onChange={(value) => setNameAction((prev) => (prev ? { ...prev, value } : prev))}
+                onCancel={() => setNameAction(null)}
+                onSubmit={() => void submitNameAction()}
+              />
+            )}
+            {rootNodes.map((node) => (
+              <TreeItem
+                key={node.path}
+                node={node}
+                depth={0}
+                theme={theme}
+                colors={colors}
+                t={t}
+                nameAction={nameAction}
+                onToggle={handleToggle}
+                onOpenFile={onOpenFile}
+                onContextMenu={openContextMenu}
+                onNameChange={(value) => setNameAction((prev) => (prev ? { ...prev, value } : prev))}
+                onNameCancel={() => setNameAction(null)}
+                onNameSubmit={() => void submitNameAction()}
+              />
+            ))}
+          </>
         )}
       </div>
 
@@ -585,7 +709,8 @@ export function FolderSidebar({
         <FolderContextMenu
           state={contextMenu}
           colors={colors}
-          onAction={(action) => void runMenuAction(action)}
+          t={t}
+          onAction={runMenuAction}
         />
       )}
     </div>
@@ -595,10 +720,11 @@ export function FolderSidebar({
 interface FolderContextMenuProps {
   state: FolderContextMenuState;
   colors: ReturnType<typeof colorsForTheme>;
+  t: ReturnType<typeof useT>['t'];
   onAction: (action: FolderMenuAction) => void;
 }
 
-function FolderContextMenu({ state, colors, onAction }: FolderContextMenuProps): JSX.Element {
+function FolderContextMenu({ state, colors, t, onAction }: FolderContextMenuProps): JSX.Element {
   const canRenameOrDelete = Boolean(state.target);
   return (
     <div
@@ -619,13 +745,11 @@ function FolderContextMenu({ state, colors, onAction }: FolderContextMenuProps):
         fontFamily: 'Segoe UI, system-ui, sans-serif'
       }}
     >
-      <MenuButton label="New File" onClick={() => onAction('newFile')} colors={colors} />
-      <MenuButton label="New Folder" onClick={() => onAction('newFolder')} colors={colors} />
+      <MenuButton label={t('FolderSidebar_NewFile')} onClick={() => onAction('newFile')} colors={colors} />
+      <MenuButton label={t('FolderSidebar_NewFolder')} onClick={() => onAction('newFolder')} colors={colors} />
       <MenuSeparator colors={colors} />
-      <MenuButton label="Rename" disabled={!canRenameOrDelete} onClick={() => onAction('rename')} colors={colors} />
-      <MenuButton label="Delete" disabled={!canRenameOrDelete} onClick={() => onAction('delete')} colors={colors} />
-      <MenuSeparator colors={colors} />
-      <MenuButton label="Refresh" onClick={() => onAction('refresh')} colors={colors} />
+      <MenuButton label={t('FolderSidebar_Rename')} disabled={!canRenameOrDelete} onClick={() => onAction('rename')} colors={colors} />
+      <MenuButton label={t('FolderSidebar_Delete')} disabled={!canRenameOrDelete} onClick={() => onAction('delete')} colors={colors} />
     </div>
   );
 }
@@ -670,13 +794,87 @@ function MenuSeparator({ colors }: { colors: ReturnType<typeof colorsForTheme> }
   return <div role="separator" style={{ height: 1, margin: '4px 6px', background: colors.border }} />;
 }
 
+interface InlineNameInputProps {
+  colors: ReturnType<typeof colorsForTheme>;
+  depth: number;
+  isDir: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}
+
+function InlineNameInput({ colors, depth, isDir, value, onChange, onCancel, onSubmit }: InlineNameInputProps): JSX.Element {
+  const indent = 8 + depth * 16;
+  return (
+    <div
+      role="treeitem"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        paddingLeft: indent,
+        paddingRight: 8,
+        height: 22,
+        color: colors.text,
+        fontSize: 12,
+        fontFamily: 'Segoe UI, system-ui, sans-serif',
+        boxSizing: 'border-box'
+      }}
+      onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.stopPropagation()}
+    >
+      {isDir ? (
+        <span aria-hidden style={{ ...ICON_STYLE, fontSize: 10, width: 12, color: colors.icon }}>
+          <ChevronRightRegular />
+        </span>
+      ) : (
+        <span style={{ display: 'inline-block', width: 12, flexShrink: 0 }} />
+      )}
+      <span aria-hidden style={{ ...ICON_STYLE, color: colors.icon }}>
+        {isDir ? <FolderRegular /> : <DocumentRegular />}
+      </span>
+      <input
+        autoFocus
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') onSubmit();
+          if (event.key === 'Escape') onCancel();
+        }}
+        onBlur={() => {
+          if (value.trim()) {
+            onSubmit();
+          } else {
+            onCancel();
+          }
+        }}
+        onFocus={(event) => event.currentTarget.select()}
+        style={{
+          minWidth: 0,
+          flex: '1 1 auto',
+          height: 18,
+          boxSizing: 'border-box',
+          border: `1px solid ${colors.border}`,
+          borderRadius: 2,
+          padding: '1px 4px',
+          background: colors.input,
+          color: colors.text,
+          font: 'inherit',
+          outline: 'none'
+        }}
+      />
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 //  Helpers
 // ---------------------------------------------------------------------------
 
 function parentPathOf(path: string): string {
-  const trimmed = path.replace(/[\\/]+$/, '');
-  const index = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+  const trimmed = path.replaceAll('\\', '/').replace(/[/]+$/, '');
+  const index = trimmed.lastIndexOf('/');
   return index > 0 ? trimmed.slice(0, index) : trimmed;
 }
 
