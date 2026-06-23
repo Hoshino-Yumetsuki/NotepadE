@@ -692,6 +692,14 @@ export interface FolderApi {
   /** List the immediate children of `path`. Dirs first, then files, both
    *  alphabetically. Hidden entries (names starting with '.') are excluded. */
   list(path: string): Promise<Result<FolderEntry[]>>;
+  /** Create an empty file under `parentPath`; returns the created absolute path. */
+  createFile(parentPath: string, name: string): Promise<Result<string>>;
+  /** Create a directory under `parentPath`; returns the created absolute path. */
+  createFolder(parentPath: string, name: string): Promise<Result<string>>;
+  /** Rename a file or folder; returns the renamed absolute path. */
+  rename(path: string, newName: string): Promise<Result<string>>;
+  /** Delete a file or folder recursively. */
+  delete(path: string): Promise<Result<void>>;
 }
 
 // ---------------------------------------------------------------------------

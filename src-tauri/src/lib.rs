@@ -22,8 +22,8 @@ mod dragout;
 mod encoding;
 mod eol;
 mod file_io;
-mod folder;
 mod file_stream;
+mod folder;
 mod hash;
 mod markdown;
 mod mru;
@@ -49,13 +49,16 @@ pub fn run() {
     // Single-instance must be the FIRST registered plugin (Tauri docs). The
     // Electron app skipped single-instance under NOTEPADS_E2E=1 so parallel
     // test apps don't redirect into each other — preserve that.
-    let is_e2e = std::env::var("NOTEPADS_E2E").map(|v| v == "1").unwrap_or(false);
+    let is_e2e = std::env::var("NOTEPADS_E2E")
+        .map(|v| v == "1")
+        .unwrap_or(false);
     // A marker-spawned child (the "New Window" path) must NOT be forwarded into
     // an existing instance — that is the whole point of an independent process.
     // Skip single-instance registration for it so it boots its own main window
     // and lives as a fully independent process.
-    let is_new_process =
-        std::env::var(argv_parse::NEW_PROCESS_ENV).map(|v| v == "1").unwrap_or(false);
+    let is_new_process = std::env::var(argv_parse::NEW_PROCESS_ENV)
+        .map(|v| v == "1")
+        .unwrap_or(false);
     if !is_e2e && !is_new_process {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             // Broker routing (task #4): redirect-vs-spawn per alwaysOpenNewWindow /
@@ -147,6 +150,10 @@ pub fn run() {
             // folder (issue #10)
             folder::folder_open_dialog,
             folder::folder_list,
+            folder::folder_create_file,
+            folder::folder_create_folder,
+            folder::folder_rename,
+            folder::folder_delete,
             // file (task #2)
             file_io::file_open,
             file_io::file_open_dialog,

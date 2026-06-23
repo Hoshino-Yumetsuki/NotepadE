@@ -219,7 +219,11 @@ const api: NotepadsApi = {
   },
   folder: {
     openDialog: () => call<string | null>('folder_open_dialog'),
-    list: (path) => call<FolderEntry[]>('folder_list', { path })
+    list: (path) => call<FolderEntry[]>('folder_list', { path }),
+    createFile: (parentPath, name) => call<string>('folder_create_file', { parentPath, name }),
+    createFolder: (parentPath, name) => call<string>('folder_create_folder', { parentPath, name }),
+    rename: (path, newName) => call<string>('folder_rename', { path, newName }),
+    delete: (path) => call<void>('folder_delete', { path })
   },
   paths: {
     /**

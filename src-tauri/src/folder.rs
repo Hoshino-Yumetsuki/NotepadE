@@ -1,5 +1,6 @@
 //! Folder support — open dialog + directory listing (Issue #10).
 
+use std::path::Path;
 use std::time::UNIX_EPOCH;
 
 use tauri_plugin_dialog::DialogExt;
@@ -13,6 +14,21 @@ fn mtime_ms(meta: &std::fs::Metadata) -> f64 {
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_secs_f64() * 1000.0)
         .unwrap_or(0.0)
+}
+
+fn validate_child_name(name: &str) -> Result<(), String> {
+    if name.trim().is_empty() {
+        return Err("Name cannot be empty".into());
+    }
+    if name.contains('/') || name.contains('\\') || name == "." || name == ".." {
+        return Err("Name cannot contain path separators".into());
+    }
+    Ok(())
+}
+
+fn child_path(parent_path: &str, name: &str) -> Result<std::path::PathBuf, String> {
+    validate_child_name(name)?;
+    Ok(Path::new(parent_path).join(name))
 }
 
 /// Native folder-picker dialog. Returns `Ok(Some(path))` when the user picks a
@@ -72,13 +88,75 @@ pub fn folder_list(path: String) -> NpResult<Vec<FolderEntry>> {
         .collect();
 
     // Sort: dirs first, then files; each group alphabetically case-insensitive.
-    items.sort_by(|a, b| {
-        match (a.is_dir, b.is_dir) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
+    items.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
     });
 
     NpResult::Ok(items)
+}
+
+#[tauri::command]
+pub fn folder_create_file(parent_path: String, name: String) -> NpResult<String> {
+    let path = match child_path(&parent_path, &name) {
+        Ok(path) => path,
+        Err(e) => return NpResult::Err(e),
+    };
+    if path.exists() {
+        return NpResult::Err("A file or folder with that name already exists".into());
+    }
+    match std::fs::File::create_new(&path) {
+        Ok(_) => NpResult::Ok(path.to_string_lossy().into_owned()),
+        Err(e) => NpResult::Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn folder_create_folder(parent_path: String, name: String) -> NpResult<String> {
+    let path = match child_path(&parent_path, &name) {
+        Ok(path) => path,
+        Err(e) => return NpResult::Err(e),
+    };
+    match std::fs::create_dir(&path) {
+        Ok(_) => NpResult::Ok(path.to_string_lossy().into_owned()),
+        Err(e) => NpResult::Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn folder_rename(path: String, new_name: String) -> NpResult<String> {
+    if let Err(e) = validate_child_name(&new_name) {
+        return NpResult::Err(e);
+    }
+    let source = Path::new(&path);
+    let Some(parent) = source.parent() else {
+        return NpResult::Err("Cannot rename this item".into());
+    };
+    let target = parent.join(new_name);
+    if target.exists() {
+        return NpResult::Err("A file or folder with that name already exists".into());
+    }
+    match std::fs::rename(source, &target) {
+        Ok(_) => NpResult::Ok(target.to_string_lossy().into_owned()),
+        Err(e) => NpResult::Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn folder_delete(path: String) -> NpResult<()> {
+    let target = Path::new(&path);
+    let meta = match std::fs::metadata(target) {
+        Ok(meta) => meta,
+        Err(e) => return NpResult::Err(e.to_string()),
+    };
+    let result = if meta.is_dir() {
+        std::fs::remove_dir_all(target)
+    } else {
+        std::fs::remove_file(target)
+    };
+    match result {
+        Ok(_) => NpResult::Ok(()),
+        Err(e) => NpResult::Err(e.to_string()),
+    }
 }
