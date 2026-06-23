@@ -12,7 +12,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MarkdownPreview } from './MarkdownPreview';
 
 type RenderResult = { ok: true; data: string } | { ok: false; error: string };
-type RenderMock = ReturnType<typeof vi.fn<(text: string, hardBreaks: boolean) => Promise<RenderResult>>>;
+type RenderMock = ReturnType<
+  typeof vi.fn<(text: string, hardBreaks: boolean) => Promise<RenderResult>>
+>;
 
 function installBridge(impl: (text: string, hardBreaks: boolean) => string): RenderMock {
   const mock: RenderMock = vi.fn(async (text: string, hardBreaks: boolean) => ({
@@ -34,9 +36,7 @@ describe('MarkdownPreview', () => {
     installBridge((text) => `<h1>${text.split('\n')[0].replace(/^#\s*/, '')}</h1>\n<p>world</p>`);
     render(<MarkdownPreview text={'# Hello\n\nworld'} />);
     await waitFor(() => {
-      expect(
-        screen.getByTestId('markdown-preview').querySelector('h1')?.textContent
-      ).toBe('Hello');
+      expect(screen.getByTestId('markdown-preview').querySelector('h1')?.textContent).toBe('Hello');
     });
   });
 

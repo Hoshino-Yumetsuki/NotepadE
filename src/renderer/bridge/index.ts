@@ -223,7 +223,10 @@ const api: NotepadsApi = {
     createFile: (parentPath, name) => call<string>('folder_create_file', { parentPath, name }),
     createFolder: (parentPath, name) => call<string>('folder_create_folder', { parentPath, name }),
     rename: (path, newName) => call<string>('folder_rename', { path, newName }),
-    delete: (path) => call<void>('folder_delete', { path })
+    delete: (path) => call<void>('folder_delete', { path }),
+    startWatch: (path) => call<void>('folder_start_watch', { path }),
+    stopWatch: (path) => call<void>('folder_stop_watch', { path }),
+    onFolderChanged: (cb) => subscribe<string>('notepads:evt:folder:changed', cb)
   },
   paths: {
     /**

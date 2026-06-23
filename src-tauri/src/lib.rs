@@ -24,6 +24,7 @@ mod eol;
 mod file_io;
 mod file_stream;
 mod folder;
+mod folder_watcher;
 mod hash;
 mod markdown;
 mod mru;
@@ -126,6 +127,9 @@ pub fn run() {
             // and this process's own cold-start argv activation.
             broker::init_broker(&app.handle().clone());
 
+            // Folder watcher state (issue #13)
+            folder_watcher::init(&app.handle().clone());
+
             // Windows/Linux: ensure the notepads:// scheme is registered with
             // the OS even on dev / non-installed runs (the NSIS installer also
             // registers it on a real install; register_all is idempotent so
@@ -154,6 +158,9 @@ pub fn run() {
             folder::folder_create_folder,
             folder::folder_rename,
             folder::folder_delete,
+            // folder watcher (issue #13)
+            folder_watcher::folder_start_watch,
+            folder_watcher::folder_stop_watch,
             // file (task #2)
             file_io::file_open,
             file_io::file_open_dialog,

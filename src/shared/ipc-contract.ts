@@ -700,6 +700,12 @@ export interface FolderApi {
   rename(path: string, newName: string): Promise<Result<string>>;
   /** Delete a file or folder recursively. */
   delete(path: string): Promise<Result<void>>;
+  /** Start watching a folder recursively for filesystem changes. */
+  startWatch(path: string): Promise<Result<void>>;
+  /** Stop watching a folder. */
+  stopWatch(path: string): Promise<Result<void>>;
+  /** Subscribe to folder-change events. Callback receives the changed parent dir path. */
+  onFolderChanged(cb: (parentPath: string) => void): Unsubscribe;
 }
 
 // ---------------------------------------------------------------------------

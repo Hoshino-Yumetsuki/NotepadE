@@ -89,6 +89,7 @@ export const SUPPLEMENT: Record<string, SupplementEntry> = {
   FolderSidebar_Rename: { 'en-US': 'Rename', 'zh-CN': '重命名' },
   FolderSidebar_Delete: { 'en-US': 'Delete', 'zh-CN': '删除' },
   FolderSidebar_DeleteConfirm: { 'en-US': 'Delete {0}?', 'zh-CN': '要删除 {0} 吗？' },
+  FolderSidebar_Refresh: { 'en-US': 'Refresh', 'zh-CN': '刷新' },
   StatusBar_Folder: { 'en-US': 'Folder', 'zh-CN': '文件夹' },
 
   // Custom caption-button tooltips (web port) — no UWP .resw origin: the UWP app

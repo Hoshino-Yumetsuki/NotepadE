@@ -1,6 +1,6 @@
 {
   "name": "notepade",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "description": "Tauri + Fluent UI v9 + React + TypeScript 1:1 rewrite of the UWP Notepads app",
   "type": "module",
