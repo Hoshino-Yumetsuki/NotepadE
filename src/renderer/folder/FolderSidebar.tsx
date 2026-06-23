@@ -23,6 +23,15 @@ interface TreeNode {
   loaded?: boolean;
 }
 
+type FolderMenuAction = 'newFile' | 'newFolder' | 'rename' | 'delete' | 'refresh';
+
+interface FolderContextMenuState {
+  x: number;
+  y: number;
+  target: TreeNode | null;
+  parentPath: string;
+}
+
 export interface FolderSidebarProps {
   folderPath: string;
   theme: 'light' | 'dark' | 'hc';
@@ -43,7 +52,9 @@ function colorsForTheme(theme: 'light' | 'dark' | 'hc') {
       header: 'Canvas',
       headerText: 'CanvasText',
       border: 'ButtonText',
-      icon: 'ButtonText'
+      icon: 'ButtonText',
+      menu: 'Canvas',
+      menuShadow: '0 0 0 1px ButtonText'
     };
   }
   if (theme === 'dark') {
@@ -54,7 +65,9 @@ function colorsForTheme(theme: 'light' | 'dark' | 'hc') {
       header: 'transparent',
       headerText: '#BBBBBB',
       border: 'rgba(255,255,255,0.12)',
-      icon: '#BBBBBB'
+      icon: '#BBBBBB',
+      menu: 'rgba(32,32,32,0.98)',
+      menuShadow: '0 8px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12)'
     };
   }
   // light
@@ -65,7 +78,9 @@ function colorsForTheme(theme: 'light' | 'dark' | 'hc') {
     header: 'transparent',
     headerText: '#555555',
     border: 'rgba(0,0,0,0.10)',
-    icon: '#555555'
+    icon: '#555555',
+    menu: 'rgba(255,255,255,0.98)',
+    menuShadow: '0 8px 24px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.10)'
   };
 }
 
@@ -82,6 +97,8 @@ const ICON_STYLE: React.CSSProperties = {
   flexShrink: 0
 };
 
+const POLL_INTERVAL_MS = 1500;
+
 // ---------------------------------------------------------------------------
 //  Tree node item
 // ---------------------------------------------------------------------------
@@ -93,6 +110,7 @@ interface TreeItemProps {
   colors: ReturnType<typeof colorsForTheme>;
   onToggle: (path: string) => void;
   onOpenFile: (path: string) => void;
+  onContextMenu: (event: React.MouseEvent, target: TreeNode | null, parentPath: string) => void;
 }
 
 const TreeItem = memo(function TreeItem({
@@ -101,7 +119,8 @@ const TreeItem = memo(function TreeItem({
   theme,
   colors,
   onToggle,
-  onOpenFile
+  onOpenFile,
+  onContextMenu
 }: TreeItemProps): JSX.Element {
   const [hovered, setHovered] = useState(false);
   const indent = 8 + depth * 16;
@@ -115,6 +134,7 @@ const TreeItem = memo(function TreeItem({
   };
 
   const isHC = theme === 'hc';
+  const itemParentPath = parentPathOf(node.path);
 
   return (
     <>
@@ -122,6 +142,7 @@ const TreeItem = memo(function TreeItem({
         role="treeitem"
         aria-expanded={node.isDir ? node.expanded : undefined}
         onClick={handleClick}
+        onContextMenu={(event) => onContextMenu(event, node, itemParentPath)}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -144,7 +165,6 @@ const TreeItem = memo(function TreeItem({
           outline: isHC && hovered ? '1px solid ButtonText' : 'none'
         }}
       >
-        {/* Chevron for dirs, spacing for files */}
         {node.isDir ? (
           <span aria-hidden style={{ ...ICON_STYLE, fontSize: 10, width: 12, color: colors.icon }}>
             {node.expanded ? <ChevronDownRegular /> : <ChevronRightRegular />}
@@ -152,11 +172,9 @@ const TreeItem = memo(function TreeItem({
         ) : (
           <span style={{ display: 'inline-block', width: 12, flexShrink: 0 }} />
         )}
-        {/* Folder / file icon */}
         <span aria-hidden style={{ ...ICON_STYLE, color: colors.icon }}>
           {node.isDir ? <FolderRegular /> : <DocumentRegular />}
         </span>
-        {/* Name */}
         <span
           style={{
             flex: '1 1 auto',
@@ -168,7 +186,6 @@ const TreeItem = memo(function TreeItem({
           {node.name}
         </span>
       </div>
-      {/* Render children if expanded */}
       {node.isDir &&
         node.expanded &&
         node.children &&
@@ -182,14 +199,15 @@ const TreeItem = memo(function TreeItem({
             colors={colors}
             onToggle={onToggle}
             onOpenFile={onOpenFile}
+            onContextMenu={onContextMenu}
           />
         ))}
-      {/* Empty dir indicator */}
       {node.isDir &&
         node.expanded &&
         node.loaded &&
         (!node.children || node.children.length === 0) && (
           <div
+            onContextMenu={(event) => onContextMenu(event, null, node.path)}
             style={{
               paddingLeft: indent + 28,
               paddingRight: 8,
@@ -230,6 +248,7 @@ export function FolderSidebar({
   const colors = colorsForTheme(theme);
   const [headerHovered, setHeaderHovered] = useState(false);
   const [closeHovered, setCloseHovered] = useState(false);
+  const [contextMenu, setContextMenu] = useState<FolderContextMenuState | null>(null);
 
   // Root-level children (the folder's direct contents)
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
@@ -254,6 +273,25 @@ export function FolderSidebar({
     }
   }, []);
 
+  const refreshDir = useCallback(
+    async (path: string): Promise<void> => {
+      const children = await loadDir(path);
+      if (path === folderPath) {
+        setRootNodes((prev) => mergeNodes(children, prev));
+        setRootLoaded(true);
+        return;
+      }
+      setRootNodes((prev) =>
+        patchNode(prev, path, (node) => ({
+          ...node,
+          children: mergeNodes(children, node.children ?? []),
+          loaded: true
+        }))
+      );
+    },
+    [folderPath, loadDir]
+  );
+
   // Load root on mount / folderPath change
   useEffect(() => {
     setRootLoaded(false);
@@ -270,6 +308,25 @@ export function FolderSidebar({
     };
   }, [folderPath, loadDir]);
 
+  // Poll the visible tree so file-system changes made outside the app sync in.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void refreshVisibleDirs(folderPath, rootNodes, refreshDir);
+    }, POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [folderPath, refreshDir, rootNodes]);
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const close = (): void => setContextMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('keydown', close);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('keydown', close);
+    };
+  }, [contextMenu]);
+
   // Toggle a directory: expand -> load children; collapse -> keep children cached
   const handleToggle = useCallback(
     (targetPath: string): void => {
@@ -280,7 +337,13 @@ export function FolderSidebar({
             if (nowExpanded && !n.loaded) {
               // Kick off async load; update state when done
               void loadDir(targetPath).then((children) => {
-                setRootNodes((prev) => patchNode(prev, targetPath, { children, loaded: true }));
+                setRootNodes((prev) =>
+                  patchNode(prev, targetPath, (node) => ({
+                    ...node,
+                    children,
+                    loaded: true
+                  }))
+                );
               });
               return { ...n, expanded: true };
             }
@@ -298,11 +361,73 @@ export function FolderSidebar({
     [loadDir]
   );
 
+  const openContextMenu = useCallback(
+    (event: React.MouseEvent, target: TreeNode | null, parentPath: string): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      setContextMenu({ x: event.clientX, y: event.clientY, target, parentPath });
+    },
+    []
+  );
+
+  const runMenuAction = useCallback(
+    async (action: FolderMenuAction): Promise<void> => {
+      if (!contextMenu) return;
+      const { target, parentPath } = contextMenu;
+      setContextMenu(null);
+
+      if (action === 'refresh') {
+        await refreshDir(target?.isDir ? target.path : parentPath);
+        return;
+      }
+
+      if (action === 'newFile' || action === 'newFolder') {
+        const createParentPath = target?.isDir ? target.path : parentPath;
+        const name = window.prompt(action === 'newFile' ? 'New file name' : 'New folder name');
+        if (!name) return;
+        const res =
+          action === 'newFile'
+            ? await window.notepads.folder.createFile(createParentPath, name)
+            : await window.notepads.folder.createFolder(createParentPath, name);
+        if (!res.ok) {
+          window.alert(res.error);
+          return;
+        }
+        await refreshDir(createParentPath);
+        return;
+      }
+
+      if (!target) return;
+      if (action === 'rename') {
+        const name = window.prompt('Rename', target.name);
+        if (!name || name === target.name) return;
+        const res = await window.notepads.folder.rename(target.path, name);
+        if (!res.ok) {
+          window.alert(res.error);
+          return;
+        }
+        await refreshDir(parentPath);
+        return;
+      }
+
+      if (window.confirm(`Delete ${target.name}?`)) {
+        const res = await window.notepads.folder.delete(target.path);
+        if (!res.ok) {
+          window.alert(res.error);
+          return;
+        }
+        await refreshDir(parentPath);
+      }
+    },
+    [contextMenu, refreshDir]
+  );
+
   const isHC = theme === 'hc';
 
   return (
     <div
       data-testid="folder-sidebar"
+      onContextMenu={(event) => openContextMenu(event, null, folderPath)}
       style={{
         width: 250,
         flexShrink: 0,
@@ -315,10 +440,6 @@ export function FolderSidebar({
         position: 'relative'
       }}
     >
-      {/* Header bar — height + bottom border align with the TabStrip's
-          strip→editor seam on the right (32px tab body + 1px top border = 33px
-          total). border-box keeps the 1px bottom border INSIDE the height so the
-          divider line falls on exactly the same y-pixel as the editor's top edge. */}
       <div
         style={{
           display: 'flex',
@@ -353,7 +474,6 @@ export function FolderSidebar({
         >
           {t('FolderSidebar_Title')}
         </span>
-        {/* Close button */}
         <button
           type="button"
           data-testid="folder-sidebar-close"
@@ -382,7 +502,6 @@ export function FolderSidebar({
         </button>
       </div>
 
-      {/* Folder name sub-header */}
       <div
         style={{
           paddingLeft: 8,
@@ -411,7 +530,6 @@ export function FolderSidebar({
         </span>
       </div>
 
-      {/* Tree */}
       <div
         role="tree"
         style={{
@@ -436,6 +554,7 @@ export function FolderSidebar({
           </div>
         ) : rootNodes.length === 0 ? (
           <div
+            onContextMenu={(event) => openContextMenu(event, null, folderPath)}
             style={{
               padding: '8px 12px',
               fontSize: 12,
@@ -456,22 +575,152 @@ export function FolderSidebar({
               colors={colors}
               onToggle={handleToggle}
               onOpenFile={onOpenFile}
+              onContextMenu={openContextMenu}
             />
           ))
         )}
       </div>
+
+      {contextMenu && (
+        <FolderContextMenu
+          state={contextMenu}
+          colors={colors}
+          onAction={(action) => void runMenuAction(action)}
+        />
+      )}
     </div>
   );
+}
+
+interface FolderContextMenuProps {
+  state: FolderContextMenuState;
+  colors: ReturnType<typeof colorsForTheme>;
+  onAction: (action: FolderMenuAction) => void;
+}
+
+function FolderContextMenu({ state, colors, onAction }: FolderContextMenuProps): JSX.Element {
+  const canRenameOrDelete = Boolean(state.target);
+  return (
+    <div
+      role="menu"
+      onClick={(event) => event.stopPropagation()}
+      style={{
+        position: 'fixed',
+        left: state.x,
+        top: state.y,
+        zIndex: 1000,
+        minWidth: 150,
+        padding: 4,
+        borderRadius: 6,
+        background: colors.menu,
+        boxShadow: colors.menuShadow,
+        color: colors.text,
+        fontSize: 12,
+        fontFamily: 'Segoe UI, system-ui, sans-serif'
+      }}
+    >
+      <MenuButton label="New File" onClick={() => onAction('newFile')} colors={colors} />
+      <MenuButton label="New Folder" onClick={() => onAction('newFolder')} colors={colors} />
+      <MenuSeparator colors={colors} />
+      <MenuButton label="Rename" disabled={!canRenameOrDelete} onClick={() => onAction('rename')} colors={colors} />
+      <MenuButton label="Delete" disabled={!canRenameOrDelete} onClick={() => onAction('delete')} colors={colors} />
+      <MenuSeparator colors={colors} />
+      <MenuButton label="Refresh" onClick={() => onAction('refresh')} colors={colors} />
+    </div>
+  );
+}
+
+interface MenuButtonProps {
+  label: string;
+  disabled?: boolean;
+  colors: ReturnType<typeof colorsForTheme>;
+  onClick: () => void;
+}
+
+function MenuButton({ label, disabled = false, colors, onClick }: MenuButtonProps): JSX.Element {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'block',
+        width: '100%',
+        border: 'none',
+        borderRadius: 4,
+        padding: '6px 10px',
+        textAlign: 'left',
+        color: disabled ? colors.icon : colors.text,
+        background: hovered && !disabled ? colors.hover : 'transparent',
+        opacity: disabled ? 0.55 : 1,
+        cursor: 'default',
+        font: 'inherit'
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MenuSeparator({ colors }: { colors: ReturnType<typeof colorsForTheme> }): JSX.Element {
+  return <div role="separator" style={{ height: 1, margin: '4px 6px', background: colors.border }} />;
 }
 
 // ---------------------------------------------------------------------------
 //  Helpers
 // ---------------------------------------------------------------------------
 
+function parentPathOf(path: string): string {
+  const trimmed = path.replace(/[\\/]+$/, '');
+  const index = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+  return index > 0 ? trimmed.slice(0, index) : trimmed;
+}
+
+async function refreshVisibleDirs(
+  folderPath: string,
+  nodes: TreeNode[],
+  refreshDir: (path: string) => Promise<void>
+): Promise<void> {
+  await refreshDir(folderPath);
+  const expandedDirs = collectExpandedDirs(nodes);
+  for (const path of expandedDirs) {
+    await refreshDir(path);
+  }
+}
+
+function collectExpandedDirs(nodes: TreeNode[]): string[] {
+  const paths: string[] = [];
+  for (const node of nodes) {
+    if (node.isDir && node.expanded) {
+      paths.push(node.path);
+      paths.push(...collectExpandedDirs(node.children ?? []));
+    }
+  }
+  return paths;
+}
+
+function mergeNodes(next: TreeNode[], prev: TreeNode[]): TreeNode[] {
+  const previousByPath = new Map(prev.map((node) => [node.path, node]));
+  return next.map((node) => {
+    const previous = previousByPath.get(node.path);
+    if (!previous) return node;
+    return {
+      ...node,
+      expanded: previous.expanded,
+      loaded: previous.loaded,
+      children: previous.children
+    };
+  });
+}
+
 /** Immutably patch a node at `targetPath` anywhere in the tree. */
-function patchNode(nodes: TreeNode[], targetPath: string, patch: Partial<TreeNode>): TreeNode[] {
+function patchNode(nodes: TreeNode[], targetPath: string, patch: (node: TreeNode) => TreeNode): TreeNode[] {
   return nodes.map((n) => {
-    if (n.path === targetPath) return { ...n, ...patch };
+    if (n.path === targetPath) return patch(n);
     if (n.children) {
       const next = patchNode(n.children, targetPath, patch);
       if (next !== n.children) return { ...n, children: next };
