@@ -27,7 +27,11 @@ pub struct DiffModel {
 }
 
 fn imaginary_row() -> DiffRow {
-    DiffRow { kind: "imaginary", text: String::new(), pieces: None }
+    DiffRow {
+        kind: "imaginary",
+        text: String::new(),
+        pieces: None,
+    }
 }
 
 fn char_pieces(old_line: &str, new_line: &str) -> (Vec<DiffPiece>, Vec<DiffPiece>) {
@@ -38,14 +42,26 @@ fn char_pieces(old_line: &str, new_line: &str) -> (Vec<DiffPiece>, Vec<DiffPiece
         let text = change.value().to_string();
         match change.tag() {
             ChangeTag::Equal => {
-                left.push(DiffPiece { text: text.clone(), kind: "unchanged" });
-                right.push(DiffPiece { text, kind: "unchanged" });
+                left.push(DiffPiece {
+                    text: text.clone(),
+                    kind: "unchanged",
+                });
+                right.push(DiffPiece {
+                    text,
+                    kind: "unchanged",
+                });
             }
             ChangeTag::Delete => {
-                left.push(DiffPiece { text, kind: "deleted" });
+                left.push(DiffPiece {
+                    text,
+                    kind: "deleted",
+                });
             }
             ChangeTag::Insert => {
-                right.push(DiffPiece { text, kind: "inserted" });
+                right.push(DiffPiece {
+                    text,
+                    kind: "inserted",
+                });
             }
         }
     }
@@ -61,16 +77,32 @@ fn emit_replace_block(
     let paired = removed.len().min(added.len());
     for i in 0..paired {
         let (lp, rp) = char_pieces(removed[i], added[i]);
-        left.push(DiffRow { kind: "modified", text: removed[i].to_string(), pieces: Some(lp) });
-        right.push(DiffRow { kind: "modified", text: added[i].to_string(), pieces: Some(rp) });
+        left.push(DiffRow {
+            kind: "modified",
+            text: removed[i].to_string(),
+            pieces: Some(lp),
+        });
+        right.push(DiffRow {
+            kind: "modified",
+            text: added[i].to_string(),
+            pieces: Some(rp),
+        });
     }
     for i in paired..removed.len() {
-        left.push(DiffRow { kind: "deleted", text: removed[i].to_string(), pieces: None });
+        left.push(DiffRow {
+            kind: "deleted",
+            text: removed[i].to_string(),
+            pieces: None,
+        });
         right.push(imaginary_row());
     }
     for i in paired..added.len() {
         left.push(imaginary_row());
-        right.push(DiffRow { kind: "inserted", text: added[i].to_string(), pieces: None });
+        right.push(DiffRow {
+            kind: "inserted",
+            text: added[i].to_string(),
+            pieces: None,
+        });
     }
 }
 
@@ -86,8 +118,16 @@ fn build_diff_model(original: &str, modified: &str) -> DiffModel {
         match change.tag() {
             ChangeTag::Equal => {
                 let text = change.value().trim_end_matches('\n').to_string();
-                left.push(DiffRow { kind: "unchanged", text: text.clone(), pieces: None });
-                right.push(DiffRow { kind: "unchanged", text, pieces: None });
+                left.push(DiffRow {
+                    kind: "unchanged",
+                    text: text.clone(),
+                    pieces: None,
+                });
+                right.push(DiffRow {
+                    kind: "unchanged",
+                    text,
+                    pieces: None,
+                });
                 i += 1;
             }
             ChangeTag::Delete => {
@@ -105,7 +145,11 @@ fn build_diff_model(original: &str, modified: &str) -> DiffModel {
                 }
                 if added.is_empty() {
                     for line in &removed {
-                        left.push(DiffRow { kind: "deleted", text: line.to_string(), pieces: None });
+                        left.push(DiffRow {
+                            kind: "deleted",
+                            text: line.to_string(),
+                            pieces: None,
+                        });
                         right.push(imaginary_row());
                     }
                 } else {
@@ -115,7 +159,11 @@ fn build_diff_model(original: &str, modified: &str) -> DiffModel {
             ChangeTag::Insert => {
                 let text = change.value().trim_end_matches('\n').to_string();
                 left.push(imaginary_row());
-                right.push(DiffRow { kind: "inserted", text, pieces: None });
+                right.push(DiffRow {
+                    kind: "inserted",
+                    text,
+                    pieces: None,
+                });
                 i += 1;
             }
         }

@@ -29,8 +29,7 @@ pub async fn settings_reset_all(app: tauri::AppHandle) -> NpResult<Settings> {
     // 2) Full-defaults patch through the normal settings path.
     //    Use serde_json::Value so all keys are present (deep_merge only
     //    considers keys in the patch).
-    let defaults = serde_json::to_value(Settings::default())
-        .unwrap_or(serde_json::json!({}));
+    let defaults = serde_json::to_value(Settings::default()).unwrap_or(serde_json::json!({}));
 
     crate::settings::settings_set(app, defaults).await
 }
@@ -47,18 +46,36 @@ mod tests {
 
         // Every key from the Settings struct should be present
         let expected_keys = &[
-            "editorFontFamily", "editorFontSize",
-            "textWrapping", "displayLineHighlighter",
-            "displayLineNumbers", "tabIndents", "strictLineBreaks",
-            "searchEngine", "customSearchUrl", "themeMode", "tintOpacity",
-            "useWindowsAccentColor", "customAccentColor", "showStatusBar",
-            "smartCopy", "alwaysOpenNewWindow",
-            "exitWhenLastTabClosed", "appLanguage", "openWithContextMenu",
-            "wallpaperFileName", "wallpaperEffect", "autoCheckUpdates",
+            "editorFontFamily",
+            "editorFontSize",
+            "textWrapping",
+            "displayLineHighlighter",
+            "displayLineNumbers",
+            "tabIndents",
+            "strictLineBreaks",
+            "searchEngine",
+            "customSearchUrl",
+            "themeMode",
+            "tintOpacity",
+            "useWindowsAccentColor",
+            "customAccentColor",
+            "showStatusBar",
+            "smartCopy",
+            "alwaysOpenNewWindow",
+            "exitWhenLastTabClosed",
+            "appLanguage",
+            "openWithContextMenu",
+            "wallpaperFileName",
+            "wallpaperEffect",
+            "autoCheckUpdates",
         ];
         for key in expected_keys {
             assert!(obj.contains_key(*key), "Missing key: {key}");
         }
-        assert_eq!(obj.len(), expected_keys.len(), "Unexpected extra keys in defaults");
+        assert_eq!(
+            obj.len(),
+            expected_keys.len(),
+            "Unexpected extra keys in defaults"
+        );
     }
 }

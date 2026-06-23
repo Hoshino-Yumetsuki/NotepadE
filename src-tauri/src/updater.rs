@@ -68,14 +68,20 @@ fn find_platform_asset(assets: &[GhAsset]) -> (String, String) {
             return (a.browser_download_url.clone(), a.name.clone());
         }
         // Fallback: any .exe
-        if let Some(a) = assets.iter().find(|a| a.name.to_lowercase().ends_with(".exe")) {
+        if let Some(a) = assets
+            .iter()
+            .find(|a| a.name.to_lowercase().ends_with(".exe"))
+        {
             return (a.browser_download_url.clone(), a.name.clone());
         }
     }
 
     #[cfg(target_os = "macos")]
     {
-        if let Some(a) = assets.iter().find(|a| a.name.to_lowercase().ends_with(".dmg")) {
+        if let Some(a) = assets
+            .iter()
+            .find(|a| a.name.to_lowercase().ends_with(".dmg"))
+        {
             return (a.browser_download_url.clone(), a.name.clone());
         }
     }

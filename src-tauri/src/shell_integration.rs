@@ -21,10 +21,7 @@ pub struct WebSearchArgs {
 }
 
 #[tauri::command]
-pub async fn shell_open_containing_folder(
-    _app: tauri::AppHandle,
-    path: String,
-) -> NpResult<()> {
+pub async fn shell_open_containing_folder(_app: tauri::AppHandle, path: String) -> NpResult<()> {
     if path.is_empty() {
         return NpResult::Err("No file path".into());
     }
@@ -37,7 +34,10 @@ pub async fn shell_open_containing_folder(
             .status();
         match status {
             Ok(s) if s.success() => NpResult::Ok(()),
-            Ok(s) => NpResult::Err(format!("explorer exited with code: {}", s.code().unwrap_or(-1))),
+            Ok(s) => NpResult::Err(format!(
+                "explorer exited with code: {}",
+                s.code().unwrap_or(-1)
+            )),
             Err(e) => NpResult::Err(format!("Failed to open containing folder: {e}")),
         }
     }
@@ -60,22 +60,20 @@ pub async fn shell_open_containing_folder(
         let parent = std::path::Path::new(&path)
             .parent()
             .unwrap_or(std::path::Path::new("."));
-        let status = std::process::Command::new("xdg-open")
-            .arg(parent)
-            .status();
+        let status = std::process::Command::new("xdg-open").arg(parent).status();
         match status {
             Ok(s) if s.success() => NpResult::Ok(()),
-            Ok(s) => NpResult::Err(format!("xdg-open exited with code: {}", s.code().unwrap_or(-1))),
+            Ok(s) => NpResult::Err(format!(
+                "xdg-open exited with code: {}",
+                s.code().unwrap_or(-1)
+            )),
             Err(e) => NpResult::Err(format!("Failed to open containing folder: {e}")),
         }
     }
 }
 
 #[tauri::command]
-pub async fn shell_copy_path(
-    app: tauri::AppHandle,
-    path: String,
-) -> NpResult<()> {
+pub async fn shell_copy_path(app: tauri::AppHandle, path: String) -> NpResult<()> {
     if path.is_empty() {
         return NpResult::Err("No file path".into());
     }
@@ -87,11 +85,9 @@ pub async fn shell_copy_path(
 }
 
 #[tauri::command]
-pub async fn shell_web_search(
-    app: tauri::AppHandle,
-    args: WebSearchArgs,
-) -> NpResult<()> {
-    let url = search_url::build_search_url(&args.query, &args.search_engine, &args.custom_search_url);
+pub async fn shell_web_search(app: tauri::AppHandle, args: WebSearchArgs) -> NpResult<()> {
+    let url =
+        search_url::build_search_url(&args.query, &args.search_engine, &args.custom_search_url);
     match url {
         Some(url) => {
             // Use tauri-plugin-opener to open the URL in the default browser.
@@ -113,10 +109,7 @@ pub async fn shell_print(_window: tauri::WebviewWindow) -> NpResult<()> {
 }
 
 #[tauri::command]
-pub async fn shell_share(
-    app: tauri::AppHandle,
-    args: ShareArgs,
-) -> NpResult<()> {
+pub async fn shell_share(app: tauri::AppHandle, args: ShareArgs) -> NpResult<()> {
     let title = args.title.as_str();
     let text = args.text.as_str();
     let payload = if !title.is_empty() {

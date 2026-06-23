@@ -224,9 +224,7 @@ fn read_wallpaper_state(app: &tauri::AppHandle) -> Result<WallpaperState, String
 /// Activate a new wallpaper: persist in settings, then delete previous file.
 fn activate(app: &tauri::AppHandle, file_name: &str) -> Result<WallpaperState, String> {
     let previous = {
-        let _guard = WALLPAPER_MUTEX
-            .lock()
-            .unwrap_or_else(|p| p.into_inner());
+        let _guard = WALLPAPER_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
         let prev = current_file_name(app);
 
         let mut settings = crate::settings::settings_get_internal(app)?;
@@ -395,9 +393,7 @@ pub async fn wallpaper_clear(app: tauri::AppHandle) -> NpResult<()> {
 /// Internal clear for settings_reset.rs.
 pub fn clear_wallpaper_internal(app: &tauri::AppHandle) -> Result<(), String> {
     let previous = {
-        let _guard = WALLPAPER_MUTEX
-            .lock()
-            .unwrap_or_else(|p| p.into_inner());
+        let _guard = WALLPAPER_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
         let prev = current_file_name(app);
 
         let mut settings = crate::settings::settings_get_internal(app)?;
@@ -474,9 +470,7 @@ mod tests {
     #[test]
     fn test_is_safe_wallpaper_file_name_rejects_bad_names() {
         assert!(!is_safe_wallpaper_file_name("../Settings.json"));
-        assert!(!is_safe_wallpaper_file_name(
-            "wallpaper-1/..\\x.png"
-        ));
+        assert!(!is_safe_wallpaper_file_name("wallpaper-1/..\\x.png"));
         assert!(!is_safe_wallpaper_file_name("wallpaper-1.svg"));
         assert!(!is_safe_wallpaper_file_name("wallpaper-1.exe"));
         assert!(!is_safe_wallpaper_file_name("other-1.png"));

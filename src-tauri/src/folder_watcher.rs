@@ -6,7 +6,7 @@
 //! modifications are intentionally excluded — they don't affect the tree.
 
 use notify::event::ModifyKind;
-use notify::{recommended_watcher, EventKind, RecursiveMode, RecommendedWatcher, Watcher};
+use notify::{recommended_watcher, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;

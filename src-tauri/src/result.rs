@@ -96,6 +96,9 @@ mod tests {
             file_path: Option<String>,
         }
         let json = serde_json::to_value(NpResult::Ok(Demo { file_path: None })).unwrap();
-        assert_eq!(json, serde_json::json!({ "ok": true, "data": { "filePath": null } }));
+        assert_eq!(
+            json,
+            serde_json::json!({ "ok": true, "data": { "filePath": null } })
+        );
     }
 }

@@ -9,26 +9,15 @@
 /// UWP). 'custom' has no built-in template — it resolves to the user's
 /// customSearchUrl.
 const SEARCH_ENGINE_TEMPLATES: &[(&str, &str)] = &[
-    (
-        "bing",
-        "https://www.bing.com/search?q={0}&form=NPCTXT",
-    ),
-    (
-        "google",
-        "https://www.google.com/search?q={0}&oq={0}",
-    ),
-    (
-        "duckDuckGo",
-        "https://duckduckgo.com/?q={0}&ia=web",
-    ),
+    ("bing", "https://www.bing.com/search?q={0}&form=NPCTXT"),
+    ("google", "https://www.google.com/search?q={0}&oq={0}"),
+    ("duckDuckGo", "https://duckduckgo.com/?q={0}&ia=web"),
 ];
 
 /// True when `value` is an absolute http/https URL (UWP TryCreate + scheme guard).
 fn is_absolute_http_url(value: &str) -> bool {
     match url::Url::parse(value) {
-        Ok(parsed) => {
-            parsed.scheme() == "http" || parsed.scheme() == "https"
-        }
+        Ok(parsed) => parsed.scheme() == "http" || parsed.scheme() == "https",
         Err(_) => false,
     }
 }
@@ -36,10 +25,7 @@ fn is_absolute_http_url(value: &str) -> bool {
 /// Replace every run of whitespace with a single '+', dropping empties — the
 /// Rust equivalent of .NET `string.Join("+", searchString.Split(null))`.
 fn plus_join_whitespace(query: &str) -> String {
-    query
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join("+")
+    query.split_whitespace().collect::<Vec<_>>().join("+")
 }
 
 /// Resolve the URL template for the configured engine (custom → user's URL).
@@ -112,10 +98,7 @@ mod tests {
             template_for_engine("custom", "https://x.test/?s={0}"),
             Some("https://x.test/?s={0}".into())
         );
-        assert_eq!(
-            template_for_engine("custom", ""),
-            None
-        );
+        assert_eq!(template_for_engine("custom", ""), None);
     }
 
     #[test]
@@ -182,10 +165,7 @@ mod tests {
 
     #[test]
     fn build_search_url_custom_non_http_result() {
-        assert_eq!(
-            build_search_url("cats", "custom", "notaurl-{0}"),
-            None
-        );
+        assert_eq!(build_search_url("cats", "custom", "notaurl-{0}"), None);
     }
 
     #[test]

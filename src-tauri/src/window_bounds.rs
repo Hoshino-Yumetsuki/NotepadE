@@ -38,7 +38,9 @@ const MIN_HEIGHT: f64 = 320.0;
 const BOUNDS_FILE_NAME: &str = "WindowBounds.json";
 
 fn is_e2e() -> bool {
-    std::env::var("NOTEPADS_E2E").map(|v| v == "1").unwrap_or(false)
+    std::env::var("NOTEPADS_E2E")
+        .map(|v| v == "1")
+        .unwrap_or(false)
 }
 
 /// App data root: NOTEPADS_E2E_USERDATA override first, else app_data_dir
@@ -100,7 +102,10 @@ fn finite(v: Option<f64>) -> Option<f64> {
 /// display work areas. Returns None (→ caller keeps the centered default)
 /// when there is no usable saved record. Otherwise clamps the size to >= the
 /// minimums and ensures the window's top-left sits inside SOME work area.
-pub fn resolve_bounds(saved: Option<&SavedBounds>, work_areas: &[WorkArea]) -> Option<ResolvedBounds> {
+pub fn resolve_bounds(
+    saved: Option<&SavedBounds>,
+    work_areas: &[WorkArea],
+) -> Option<ResolvedBounds> {
     let saved = saved?;
     let x = finite(saved.x)?.floor();
     let y = finite(saved.y)?.floor();
@@ -113,10 +118,20 @@ pub fn resolve_bounds(saved: Option<&SavedBounds>, work_areas: &[WorkArea]) -> O
         .iter()
         .any(|wa| x >= wa.x && x < wa.x + wa.width && y >= wa.y && y < wa.y + wa.height);
     if on_screen || work_areas.is_empty() {
-        return Some(ResolvedBounds { position: Some((x, y)), width, height, is_maximized });
+        return Some(ResolvedBounds {
+            position: Some((x, y)),
+            width,
+            height,
+            is_maximized,
+        });
     }
     // Off-screen: drop the stale position, keep the size (caller centers it).
-    Some(ResolvedBounds { position: None, width, height, is_maximized })
+    Some(ResolvedBounds {
+        position: None,
+        width,
+        height,
+        is_maximized,
+    })
 }
 
 /// Serialize bounds to the on-disk JSON form (2-space pretty, Electron parity).
@@ -189,7 +204,10 @@ pub fn restore_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
         return;
     };
     // Saved values are physical pixels (outer_position/outer_size are physical).
-    let _ = window.set_size(tauri::PhysicalSize::new(resolved.width as u32, resolved.height as u32));
+    let _ = window.set_size(tauri::PhysicalSize::new(
+        resolved.width as u32,
+        resolved.height as u32,
+    ));
     match resolved.position {
         Some((x, y)) => {
             let _ = window.set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
@@ -211,7 +229,12 @@ pub fn restore_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
 fn current_bounds(window: &tauri::WebviewWindow) -> Option<(f64, f64, f64, f64)> {
     let pos = window.outer_position().ok()?;
     let size = window.outer_size().ok()?;
-    Some((pos.x as f64, pos.y as f64, size.width as f64, size.height as f64))
+    Some((
+        pos.x as f64,
+        pos.y as f64,
+        size.width as f64,
+        size.height as f64,
+    ))
 }
 
 /// Persist a snapshot. Best-effort; never surfaces failures.
@@ -219,7 +242,9 @@ fn persist(app: &tauri::AppHandle, bounds: (f64, f64, f64, f64), is_maximized: b
     if is_e2e() {
         return;
     }
-    let Some(path) = bounds_file_path(app) else { return };
+    let Some(path) = bounds_file_path(app) else {
+        return;
+    };
     let record = PersistedBounds {
         x: bounds.0,
         y: bounds.1,
@@ -348,7 +373,12 @@ pub fn track_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
 mod tests {
     use super::*;
 
-    const PRIMARY: WorkArea = WorkArea { x: 0.0, y: 0.0, width: 1920.0, height: 1040.0 };
+    const PRIMARY: WorkArea = WorkArea {
+        x: 0.0,
+        y: 0.0,
+        width: 1920.0,
+        height: 1040.0,
+    };
 
     fn saved(x: f64, y: f64, width: f64, height: f64, is_maximized: bool) -> SavedBounds {
         SavedBounds {
@@ -363,7 +393,10 @@ mod tests {
     #[test]
     fn returns_none_for_missing_or_empty_record() {
         assert_eq!(resolve_bounds(None, &[PRIMARY]), None);
-        assert_eq!(resolve_bounds(Some(&SavedBounds::default()), &[PRIMARY]), None);
+        assert_eq!(
+            resolve_bounds(Some(&SavedBounds::default()), &[PRIMARY]),
+            None
+        );
     }
 
     #[test]
@@ -402,8 +435,8 @@ mod tests {
     #[test]
     fn drops_stale_off_screen_position_but_keeps_size() {
         // Saved on a now-disconnected monitor at x=3000; only the primary remains.
-        let r = resolve_bounds(Some(&saved(3000.0, 200.0, 900.0, 700.0, false)), &[PRIMARY])
-            .unwrap();
+        let r =
+            resolve_bounds(Some(&saved(3000.0, 200.0, 900.0, 700.0, false)), &[PRIMARY]).unwrap();
         assert_eq!(r.position, None);
         assert_eq!(r.width, 900.0);
         assert_eq!(r.height, 700.0);
@@ -411,7 +444,12 @@ mod tests {
 
     #[test]
     fn accepts_a_position_on_a_secondary_display_work_area() {
-        let secondary = WorkArea { x: 1920.0, y: 0.0, width: 1920.0, height: 1040.0 };
+        let secondary = WorkArea {
+            x: 1920.0,
+            y: 0.0,
+            width: 1920.0,
+            height: 1040.0,
+        };
         let r = resolve_bounds(
             Some(&saved(2000.0, 100.0, 900.0, 700.0, false)),
             &[PRIMARY, secondary],
@@ -428,7 +466,13 @@ mod tests {
 
     #[test]
     fn serialize_round_trips_through_json() {
-        let b = PersistedBounds { x: 1.0, y: 2.0, width: 800.0, height: 600.0, is_maximized: true };
+        let b = PersistedBounds {
+            x: 1.0,
+            y: 2.0,
+            width: 800.0,
+            height: 600.0,
+            is_maximized: true,
+        };
         let parsed: PersistedBounds = serde_json::from_str(&serialize_bounds(&b)).unwrap();
         assert_eq!(parsed, b);
         // camelCase key parity with the Electron file.

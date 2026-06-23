@@ -46,7 +46,10 @@ fn confirmed_close() -> &'static Mutex<HashSet<String>> {
 static APP_QUITTING: AtomicBool = AtomicBool::new(false);
 
 fn is_close_confirmed(label: &str) -> bool {
-    confirmed_close().lock().map(|s| s.contains(label)).unwrap_or(false)
+    confirmed_close()
+        .lock()
+        .map(|s| s.contains(label))
+        .unwrap_or(false)
 }
 
 // ---------------------------------------------------------------------------
@@ -258,7 +261,9 @@ pub async fn window_toggle_maximize(window: tauri::WebviewWindow) -> NpResult<Ma
     if let Err(e) = res {
         return NpResult::Err(e.to_string());
     }
-    NpResult::Ok(MaximizedResult { is_maximized: window.is_maximized().unwrap_or(false) })
+    NpResult::Ok(MaximizedResult {
+        is_maximized: window.is_maximized().unwrap_or(false),
+    })
 }
 
 #[tauri::command]
@@ -271,7 +276,9 @@ pub async fn window_close(window: tauri::WebviewWindow) -> NpResult<()> {
 /// Current maximized flag — seeds the renderer's restore glyph on mount.
 #[tauri::command]
 pub async fn window_is_maximized(window: tauri::WebviewWindow) -> NpResult<MaximizedResult> {
-    NpResult::Ok(MaximizedResult { is_maximized: window.is_maximized().unwrap_or(false) })
+    NpResult::Ok(MaximizedResult {
+        is_maximized: window.is_maximized().unwrap_or(false),
+    })
 }
 
 /// Quit the whole application (UWP ExitApp). The renderer's quit path already

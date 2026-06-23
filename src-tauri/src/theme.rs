@@ -24,8 +24,8 @@ fn normalize_accent(raw: &str) -> String {
 /// on any failure.
 #[cfg(target_os = "windows")]
 fn read_accent_color_windows() -> String {
-    use windows::UI::ViewManagement::UISettings;
     use windows::UI::ViewManagement::UIColorType;
+    use windows::UI::ViewManagement::UISettings;
 
     let settings = match UISettings::new() {
         Ok(s) => s,
@@ -56,9 +56,7 @@ fn read_os_dark_mode_windows() -> bool {
     use winreg::RegKey;
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let key = hkcu.open_subkey(
-        r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-    );
+    let key = hkcu.open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
     match key {
         Ok(k) => {
             let light: u32 = k.get_value("AppsUseLightTheme").unwrap_or(1);

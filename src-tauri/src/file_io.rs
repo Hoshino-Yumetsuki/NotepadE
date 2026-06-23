@@ -51,7 +51,7 @@ fn is_transient(e: &io::Error) -> bool {
         e.kind(),
         io::ErrorKind::PermissionDenied      // EPERM / EACCES
             | io::ErrorKind::ResourceBusy    // EBUSY
-            | io::ErrorKind::WouldBlock      // EAGAIN
+            | io::ErrorKind::WouldBlock // EAGAIN
     ) || matches!(e.raw_os_error(), Some(32) | Some(33)) // win32 sharing violations
 }
 
@@ -320,8 +320,14 @@ pub async fn file_save_as(
 #[tauri::command]
 pub async fn file_revalidate_path(path: String) -> NpResult<RevalidateResult> {
     match std::fs::metadata(&path) {
-        Ok(meta) => NpResult::Ok(RevalidateResult { exists: true, date_modified_ms: mtime_ms(&meta) }),
-        Err(_) => NpResult::Ok(RevalidateResult { exists: false, date_modified_ms: 0.0 }),
+        Ok(meta) => NpResult::Ok(RevalidateResult {
+            exists: true,
+            date_modified_ms: mtime_ms(&meta),
+        }),
+        Err(_) => NpResult::Ok(RevalidateResult {
+            exists: false,
+            date_modified_ms: 0.0,
+        }),
     }
 }
 
@@ -446,7 +452,8 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("np-fio-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("roundtrip.txt");
-        let original = crate::encoding::encode_text("caf\u{e9}\r\nfin", "Western (windows-1252)").unwrap();
+        let original =
+            crate::encoding::encode_text("caf\u{e9}\r\nfin", "Western (windows-1252)").unwrap();
         std::fs::write(&p, &original).unwrap();
         let path = p.to_string_lossy().into_owned();
 

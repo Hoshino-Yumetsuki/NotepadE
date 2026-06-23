@@ -31,21 +31,80 @@ fn cleaner() -> &'static ammonia::Builder<'static> {
 fn build_ammonia_cleaner() -> ammonia::Builder<'static> {
     let tags: HashSet<&'static str> = [
         // structural
-        "a", "abbr", "b", "blockquote", "br", "caption", "code", "col", "colgroup",
-        "dd", "del", "details", "div", "dl", "dt", "em", "figcaption", "figure",
-        "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "input", "ins", "kbd",
-        "label", "li", "mark", "ol", "p", "pre", "q", "s", "samp", "section", "small",
-        "span", "strong", "sub", "summary", "sup", "table", "tbody", "td", "tfoot",
-        "th", "thead", "tr", "u", "ul", "var", "wbr",
+        "a",
+        "abbr",
+        "b",
+        "blockquote",
+        "br",
+        "caption",
+        "code",
+        "col",
+        "colgroup",
+        "dd",
+        "del",
+        "details",
+        "div",
+        "dl",
+        "dt",
+        "em",
+        "figcaption",
+        "figure",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "i",
+        "img",
+        "input",
+        "ins",
+        "kbd",
+        "label",
+        "li",
+        "mark",
+        "ol",
+        "p",
+        "pre",
+        "q",
+        "s",
+        "samp",
+        "section",
+        "small",
+        "span",
+        "strong",
+        "sub",
+        "summary",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "tr",
+        "u",
+        "ul",
+        "var",
+        "wbr",
     ]
     .into_iter()
     .collect();
 
     let generic_attributes: HashSet<&'static str> = [
-        "class", "id", "title", "role", "tabindex",
-        "aria-hidden", "aria-label",
-        "data-line", "data-footnote-ref", "data-footnote-id",
-        "data-footnote-backref", "data-sourcepos",
+        "class",
+        "id",
+        "title",
+        "role",
+        "tabindex",
+        "aria-hidden",
+        "aria-label",
+        "data-line",
+        "data-footnote-ref",
+        "data-footnote-id",
+        "data-footnote-backref",
+        "data-sourcepos",
     ]
     .into_iter()
     .collect();
@@ -53,16 +112,25 @@ fn build_ammonia_cleaner() -> ammonia::Builder<'static> {
     let mut tag_attributes: HashMap<&'static str, HashSet<&'static str>> = HashMap::new();
     tag_attributes.insert("a", ["href"].into_iter().collect());
     tag_attributes.insert("img", ["src", "alt"].into_iter().collect());
-    tag_attributes.insert("input", ["type", "checked", "disabled"].into_iter().collect());
+    tag_attributes.insert(
+        "input",
+        ["type", "checked", "disabled"].into_iter().collect(),
+    );
     tag_attributes.insert("label", ["for"].into_iter().collect());
     tag_attributes.insert("ol", ["start", "type"].into_iter().collect());
     tag_attributes.insert("td", ["align", "colspan", "rowspan"].into_iter().collect());
-    tag_attributes.insert("th", ["align", "colspan", "rowspan", "scope"].into_iter().collect());
+    tag_attributes.insert(
+        "th",
+        ["align", "colspan", "rowspan", "scope"]
+            .into_iter()
+            .collect(),
+    );
     tag_attributes.insert("details", ["open"].into_iter().collect());
     // `pre` from comrak's github_pre_lang emits `<pre lang="…">` — allow lang.
     tag_attributes.insert("pre", ["lang"].into_iter().collect());
 
-    let url_schemes: HashSet<&'static str> = ["http", "https", "mailto", "data"].into_iter().collect();
+    let url_schemes: HashSet<&'static str> =
+        ["http", "https", "mailto", "data"].into_iter().collect();
 
     let mut b = ammonia::Builder::default();
     b.tags(tags)
@@ -86,9 +154,7 @@ fn build_ammonia_cleaner() -> ammonia::Builder<'static> {
                 if v.starts_with('#') {
                     return Some(Cow::Borrowed(value));
                 }
-                if v.starts_with("http://")
-                    || v.starts_with("https://")
-                    || v.starts_with("mailto:")
+                if v.starts_with("http://") || v.starts_with("https://") || v.starts_with("mailto:")
                 {
                     return Some(Cow::Borrowed(value));
                 }
@@ -229,7 +295,10 @@ mod tests {
     #[test]
     fn fenced_code_emits_pre_lang() {
         let out = render("```rust\nfn x() {}\n```\n");
-        assert!(out.contains(r#"<pre lang="rust""#), "missing pre lang: {out}");
+        assert!(
+            out.contains(r#"<pre lang="rust""#),
+            "missing pre lang: {out}"
+        );
         assert!(out.contains("<code"), "missing <code>: {out}");
     }
 
@@ -244,7 +313,10 @@ mod tests {
     #[test]
     fn gfm_tasklist_checkbox_input() {
         let out = render("- [x] done\n- [ ] todo\n");
-        assert!(out.contains(r#"<input type="checkbox""#), "missing checkbox input: {out}");
+        assert!(
+            out.contains(r#"<input type="checkbox""#),
+            "missing checkbox input: {out}"
+        );
         assert!(out.contains("checked"), "missing checked: {out}");
     }
 
@@ -253,13 +325,19 @@ mod tests {
         let md = "ref[^a]\n\n[^a]: note\n";
         let out = render(md);
         assert!(out.contains("<sup"), "missing <sup> ref: {out}");
-        assert!(out.contains("<section"), "missing <section> footnotes: {out}");
+        assert!(
+            out.contains("<section"),
+            "missing <section> footnotes: {out}"
+        );
     }
 
     #[test]
     fn autolink_renders() {
         let out = render("see https://example.com here\n");
-        assert!(out.contains(r#"href="https://example.com""#), "missing autolink: {out}");
+        assert!(
+            out.contains(r#"href="https://example.com""#),
+            "missing autolink: {out}"
+        );
     }
 
     #[test]
@@ -313,25 +391,37 @@ mod tests {
     fn image_src_http_dropped() {
         let out = render(r#"<img src="http://x/y.png" alt="x">"#);
         // ammonia drops <img src=…> entirely when our filter returns None.
-        assert!(!out.contains("http://x/y.png"), "leaked http img src: {out}");
+        assert!(
+            !out.contains("http://x/y.png"),
+            "leaked http img src: {out}"
+        );
     }
 
     #[test]
     fn image_src_https_kept() {
         let out = render(r#"<img src="https://x/y.png" alt="x">"#);
-        assert!(out.contains("https://x/y.png"), "https img src dropped: {out}");
+        assert!(
+            out.contains("https://x/y.png"),
+            "https img src dropped: {out}"
+        );
     }
 
     #[test]
     fn image_src_data_image_kept() {
         let out = render(r#"<img src="data:image/png;base64,AAAA" alt="x">"#);
-        assert!(out.contains("data:image/png;base64"), "data:image dropped: {out}");
+        assert!(
+            out.contains("data:image/png;base64"),
+            "data:image dropped: {out}"
+        );
     }
 
     #[test]
     fn external_link_gets_target_blank_and_rel() {
         let out = render("[x](https://a.example)\n");
-        assert!(out.contains(r#"target="_blank""#), "missing target=_blank: {out}");
+        assert!(
+            out.contains(r#"target="_blank""#),
+            "missing target=_blank: {out}"
+        );
         assert!(
             out.contains("noopener") && out.contains("noreferrer"),
             "missing rel noopener noreferrer: {out}"
@@ -341,7 +431,10 @@ mod tests {
     #[test]
     fn img_gets_lazy_and_no_referrer() {
         let out = render("![alt](https://x/y.png)\n");
-        assert!(out.contains(r#"loading="lazy""#), "missing loading=lazy: {out}");
+        assert!(
+            out.contains(r#"loading="lazy""#),
+            "missing loading=lazy: {out}"
+        );
         assert!(
             out.contains(r#"referrerpolicy="no-referrer""#),
             "missing referrerpolicy: {out}"
@@ -361,7 +454,10 @@ mod tests {
     #[test]
     fn fragment_link_kept() {
         let out = render("[fn](#fn1)\n");
-        assert!(out.contains(r##"href="#fn1""##), "fragment href dropped: {out}");
+        assert!(
+            out.contains(r##"href="#fn1""##),
+            "fragment href dropped: {out}"
+        );
     }
 
     #[test]

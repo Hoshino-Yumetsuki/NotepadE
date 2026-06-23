@@ -54,7 +54,10 @@ fn registry() -> &'static Mutex<HashMap<String, PendingTransfer>> {
 static TOKEN_SEQ: AtomicU64 = AtomicU64::new(0);
 
 fn now_ms() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
 }
 
 /// Lowercase base-36 rendering (JS `Number.toString(36)` parity).
@@ -141,10 +144,17 @@ pub async fn drag_out_begin(
     // Re-stamp: the renderer-supplied id is never trusted. Labels are strings
     // in Tauri; the numeric contract field is stamped 0 and the authoritative
     // identity is the stored label.
-    let envelope = DragEnvelope { source_window_id: 0.0, ..envelope };
+    let envelope = DragEnvelope {
+        source_window_id: 0.0,
+        ..envelope
+    };
     reg.insert(
         token.clone(),
-        PendingTransfer { envelope, source_label, created_at_ms: now },
+        PendingTransfer {
+            envelope,
+            source_label,
+            created_at_ms: now,
+        },
     );
     NpResult::Ok(DragToken { token })
 }
@@ -171,7 +181,11 @@ pub async fn drag_out_complete(
     let adopt = AdoptPayload {
         editor_id: envelope.editor_id.clone(),
         file,
-        pending_text: if envelope.is_modified { envelope.pending_text.clone() } else { None },
+        pending_text: if envelope.is_modified {
+            envelope.pending_text.clone()
+        } else {
+            None
+        },
         is_modified: envelope.is_modified,
         drop_index,
         view_mode: envelope.view_mode,
@@ -182,11 +196,16 @@ pub async fn drag_out_complete(
         return NpResult::Err(e.to_string());
     }
 
-    if let Some(source) = window.app_handle().get_webview_window(&pending.source_label) {
+    if let Some(source) = window
+        .app_handle()
+        .get_webview_window(&pending.source_label)
+    {
         let _ = source.emit_to(
             source.label(),
             EVT_RELEASE,
-            &ReleasePayload { editor_id: envelope.editor_id.clone() },
+            &ReleasePayload {
+                editor_id: envelope.editor_id.clone(),
+            },
         );
     }
 
@@ -214,7 +233,10 @@ mod tests {
             is_modified,
             file_name_placeholder: "Untitled.txt".into(),
             date_modified_ms: 777.0,
-            view_mode: ViewMode { preview: false, diff: false },
+            view_mode: ViewMode {
+                preview: false,
+                diff: false,
+            },
         }
     }
 
@@ -234,7 +256,9 @@ mod tests {
         assert_eq!(s2, s1 + 1);
         // rand: 1..=8 lowercase base-36 chars.
         assert!(!parts[3].is_empty() && parts[3].len() <= 8);
-        assert!(parts[3].chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()));
+        assert!(parts[3]
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()));
     }
 
     #[test]
@@ -287,7 +311,10 @@ mod tests {
     fn adopted_file_for_missing_path_keeps_path_and_reports_mtime_zero() {
         let env = envelope(Some("Z:/definitely/not/here/nope.txt"), false);
         let file = build_adopted_file(&env);
-        assert_eq!(file.file_path.as_deref(), Some("Z:/definitely/not/here/nope.txt"));
+        assert_eq!(
+            file.file_path.as_deref(),
+            Some("Z:/definitely/not/here/nope.txt")
+        );
         assert_eq!(file.date_modified_ms, 0.0);
     }
 
@@ -298,7 +325,10 @@ mod tests {
         std::fs::write(&path, "x").unwrap();
         let env = envelope(Some(path.to_string_lossy().as_ref()), false);
         let file = build_adopted_file(&env);
-        assert!(file.date_modified_ms > 0.0, "live file must report a real mtime");
+        assert!(
+            file.date_modified_ms > 0.0,
+            "live file must report a real mtime"
+        );
         assert_ne!(file.date_modified_ms, 777.0);
         let _ = std::fs::remove_file(&path);
     }
@@ -307,10 +337,18 @@ mod tests {
     fn pending_text_carried_only_when_modified() {
         // Mirrors the AdoptPayload shaping in drag_out_complete.
         let clean = envelope(None, false);
-        let carried = if clean.is_modified { clean.pending_text.clone() } else { None };
+        let carried = if clean.is_modified {
+            clean.pending_text.clone()
+        } else {
+            None
+        };
         assert_eq!(carried, None);
         let dirty = envelope(None, true);
-        let carried = if dirty.is_modified { dirty.pending_text.clone() } else { None };
+        let carried = if dirty.is_modified {
+            dirty.pending_text.clone()
+        } else {
+            None
+        };
         assert_eq!(carried.as_deref(), Some("dirty"));
     }
 }

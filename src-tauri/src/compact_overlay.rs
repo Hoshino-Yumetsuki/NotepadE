@@ -62,7 +62,10 @@ pub enum WindowAction {
     Maximize,
     SetAlwaysOnTop(bool),
     /// Logical (DIP) size — the compact 500×360.
-    SetSize { width: f64, height: f64 },
+    SetSize {
+        width: f64,
+        height: f64,
+    },
     SetBounds(WindowRect),
 }
 
@@ -92,7 +95,10 @@ pub fn plan_compact_enter(current: &WindowFlags) -> CompactEnterPlan {
         actions.push(WindowAction::Unmaximize);
     }
     actions.push(WindowAction::SetAlwaysOnTop(true));
-    actions.push(WindowAction::SetSize { width: COMPACT_WIDTH, height: COMPACT_HEIGHT });
+    actions.push(WindowAction::SetSize {
+        width: COMPACT_WIDTH,
+        height: COMPACT_HEIGHT,
+    });
     CompactEnterPlan { snapshot, actions }
 }
 
@@ -195,10 +201,20 @@ pub fn forget_window(label: &str) {
 mod tests {
     use super::*;
 
-    const RECT: WindowRect = WindowRect { x: 100, y: 80, width: 1100, height: 720 };
+    const RECT: WindowRect = WindowRect {
+        x: 100,
+        y: 80,
+        width: 1100,
+        height: 720,
+    };
 
     fn flags(always_on_top: bool, maximized: bool, full_screen: bool) -> WindowFlags {
-        WindowFlags { bounds: RECT, always_on_top, maximized, full_screen }
+        WindowFlags {
+            bounds: RECT,
+            always_on_top,
+            maximized,
+            full_screen,
+        }
     }
 
     // -- planCompactEnter ----------------------------------------------------
@@ -224,7 +240,10 @@ mod tests {
             plan.actions,
             vec![
                 WindowAction::SetAlwaysOnTop(true),
-                WindowAction::SetSize { width: COMPACT_WIDTH, height: COMPACT_HEIGHT }
+                WindowAction::SetSize {
+                    width: COMPACT_WIDTH,
+                    height: COMPACT_HEIGHT
+                }
             ]
         );
     }
@@ -238,7 +257,10 @@ mod tests {
                 WindowAction::SetFullScreen(false),
                 WindowAction::Unmaximize,
                 WindowAction::SetAlwaysOnTop(true),
-                WindowAction::SetSize { width: COMPACT_WIDTH, height: COMPACT_HEIGHT }
+                WindowAction::SetSize {
+                    width: COMPACT_WIDTH,
+                    height: COMPACT_HEIGHT
+                }
             ]
         );
     }
@@ -274,13 +296,19 @@ mod tests {
     fn leave_restores_aot_then_bounds_for_plain_window() {
         assert_eq!(
             plan_compact_leave(&base_snapshot()),
-            vec![WindowAction::SetAlwaysOnTop(false), WindowAction::SetBounds(RECT)]
+            vec![
+                WindowAction::SetAlwaysOnTop(false),
+                WindowAction::SetBounds(RECT)
+            ]
         );
     }
 
     #[test]
     fn leave_re_maximizes_after_restoring_bounds() {
-        let out = plan_compact_leave(&CompactSnapshot { was_maximized: true, ..base_snapshot() });
+        let out = plan_compact_leave(&CompactSnapshot {
+            was_maximized: true,
+            ..base_snapshot()
+        });
         assert_eq!(
             out,
             vec![
@@ -376,7 +404,8 @@ mod tests {
                     }
                     WindowAction::SetBounds(b) => {
                         self.bounds = b;
-                        self.calls.push(format!("setBounds:{}x{}", b.width, b.height));
+                        self.calls
+                            .push(format!("setBounds:{}x{}", b.width, b.height));
                     }
                 }
             }
@@ -475,7 +504,7 @@ mod tests {
         let res = toggle_compact(&mut win, &mut state, true); // already compact
         assert!(res);
         assert!(win.calls.is_empty()); // no actions — guard short-circuits
-        // The ORIGINAL snapshot must survive, so a later leave still restores maximize.
+                                       // The ORIGINAL snapshot must survive, so a later leave still restores maximize.
         win.calls.clear();
         toggle_compact(&mut win, &mut state, false);
         assert!(win.calls.contains(&"maximize".to_string()));

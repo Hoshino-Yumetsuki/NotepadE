@@ -115,8 +115,10 @@ pub async fn file_open_streamed(
         mru::add_recent(&root, &path);
     }
 
-    let owned_chunks: Vec<String> =
-        split_chunks(&prepared.normalized, CHUNK_SIZE).into_iter().map(|s| s.to_string()).collect();
+    let owned_chunks: Vec<String> = split_chunks(&prepared.normalized, CHUNK_SIZE)
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect();
     let chunk_count = owned_chunks.len() as u32;
 
     let header = StreamedFileHeader {
@@ -141,7 +143,11 @@ pub async fn file_open_streamed(
             let is_last = i as u32 == chunk_count - 1;
             let _ = window_clone.emit(
                 "notepads:evt:file:chunk",
-                FileChunk { index: i as u32, text, is_last },
+                FileChunk {
+                    index: i as u32,
+                    text,
+                    is_last,
+                },
             );
             tokio::task::yield_now().await;
         }

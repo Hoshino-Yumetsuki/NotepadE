@@ -19,21 +19,17 @@
 pub fn set_context_menu_enabled(enabled: bool) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
+        use std::env;
         use winreg::enums::*;
         use winreg::RegKey;
-        use std::env;
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let classes = hkcu
-            .open_subkey_with_flags(
-                r"Software\Classes\*\shell",
-                KEY_READ | KEY_WRITE,
-            )
+            .open_subkey_with_flags(r"Software\Classes\*\shell", KEY_READ | KEY_WRITE)
             .map_err(|e| format!("Failed to open shell registry key: {e}"))?;
 
         if enabled {
-            let exe = env::current_exe()
-                .map_err(|e| format!("Failed to get exe path: {e}"))?;
+            let exe = env::current_exe().map_err(|e| format!("Failed to get exe path: {e}"))?;
             let exe_str = exe.to_string_lossy();
 
             // Add the NotepadE key
@@ -56,9 +52,7 @@ pub fn set_context_menu_enabled(enabled: bool) -> Result<(), String> {
                 .map_err(|e| format!("Failed to set command default: {e}"))?;
         } else {
             // Remove the entire NotepadE key (best-effort; ignore if absent)
-            classes
-                .delete_subkey_all("NotepadE")
-                .ok(); // ignore errors — key might not exist
+            classes.delete_subkey_all("NotepadE").ok(); // ignore errors — key might not exist
         }
     }
     // No-op on non-Windows platforms.

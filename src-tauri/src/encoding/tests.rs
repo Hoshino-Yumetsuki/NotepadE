@@ -7,8 +7,8 @@
 //! label) byte-exactly and auto-detection only where the corpus required it.
 
 use super::*;
-use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
 use crate::contract::EolId;
+use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
 
 // ---------------------------------------------------------------------------
 //  Corpus sample texts (encodingCorpus.ts verbatim)
@@ -17,7 +17,12 @@ use crate::contract::EolId;
 const ASCII_LINES: [&str; 4] = ["line one", "line two", "the quick brown fox", "END"];
 const WESTERN_LINES: [&str; 4] = ["café résumé", "naïve coöperate", "Zürich Köln", "fin"];
 const GB_LINES: [&str; 4] = ["简体中文测试", "编码往返", "你好世界", "结束"];
-const SJIS_LINES: [&str; 4] = ["日本語テスト", "エンコーディング", "こんにちは世界", "終わり"];
+const SJIS_LINES: [&str; 4] = [
+    "日本語テスト",
+    "エンコーディング",
+    "こんにちは世界",
+    "終わり",
+];
 const BIG5_LINES: [&str; 4] = ["繁體中文測試", "編碼往返", "你好世界", "結束"];
 const UNICODE_LINES: [&str; 4] = [
     "Hello, Notepads.",
@@ -56,7 +61,11 @@ fn assert_byte_identical(label: &str, text: &str, expect_auto_detect: bool) -> b
     let auto = decode_bytes(&bytes);
     let hit = auto.encoding_id == label && auto.decoded_text == text;
     if expect_auto_detect {
-        assert!(hit, "auto-detect miss for {label}: got {}", auto.encoding_id);
+        assert!(
+            hit,
+            "auto-detect miss for {label}: got {}",
+            auto.encoding_id
+        );
     }
     hit
 }
@@ -67,8 +76,14 @@ fn assert_byte_identical(label: &str, text: &str, expect_auto_detect: bool) -> b
 
 #[test]
 fn bom_sniff_order_and_lengths() {
-    assert_eq!(detect_bom(&[0x2b, 0x2f, 0x76, 0x38]).unwrap().encoding_id, "UTF-7");
-    assert_eq!(detect_bom(&[0xef, 0xbb, 0xbf, b'a']).unwrap().encoding_id, "UTF-8-BOM");
+    assert_eq!(
+        detect_bom(&[0x2b, 0x2f, 0x76, 0x38]).unwrap().encoding_id,
+        "UTF-7"
+    );
+    assert_eq!(
+        detect_bom(&[0xef, 0xbb, 0xbf, b'a']).unwrap().encoding_id,
+        "UTF-8-BOM"
+    );
     // UTF-32 LE BOM starts FF FE 00 00 — must NOT be read as UTF-16 LE BOM.
     assert_eq!(
         detect_bom(&[0xff, 0xfe, 0x00, 0x00]).unwrap().encoding_id,
@@ -78,8 +93,14 @@ fn bom_sniff_order_and_lengths() {
         detect_bom(&[0x00, 0x00, 0xfe, 0xff]).unwrap().encoding_id,
         "UTF-32 BE BOM"
     );
-    assert_eq!(detect_bom(&[0xff, 0xfe, b'a', 0x00]).unwrap().encoding_id, "UTF-16 LE BOM");
-    assert_eq!(detect_bom(&[0xfe, 0xff, 0x00, b'a']).unwrap().encoding_id, "UTF-16 BE BOM");
+    assert_eq!(
+        detect_bom(&[0xff, 0xfe, b'a', 0x00]).unwrap().encoding_id,
+        "UTF-16 LE BOM"
+    );
+    assert_eq!(
+        detect_bom(&[0xfe, 0xff, 0x00, b'a']).unwrap().encoding_id,
+        "UTF-16 BE BOM"
+    );
     assert!(detect_bom(b"plain").is_none());
 }
 
@@ -105,9 +126,27 @@ fn corpus_utf8_ascii_and_unicode_all_eols() {
         assert_byte_identical("UTF-8", &join_eol(&ASCII_LINES, eol), true);
         assert_byte_identical("UTF-8", &join_eol(&UNICODE_LINES, eol), true);
         assert_byte_identical("UTF-8", "a", true);
-        assert_byte_identical("UTF-8", &join_eol(&["", "leading blank line", "", "trailing blank line", ""], eol), true);
-        assert_byte_identical("UTF-8", &join_eol(&["emoji run 🚀🎉🧪✅", "symbols ©®™§¶", "math ∑∏∫√≈≠"], eol), true);
-        assert_byte_identical("UTF-8", &join_eol(&["tabs\tand\tspaces   here", "punctuation: …—–«»“”", "done"], eol), true);
+        assert_byte_identical(
+            "UTF-8",
+            &join_eol(
+                &["", "leading blank line", "", "trailing blank line", ""],
+                eol,
+            ),
+            true,
+        );
+        assert_byte_identical(
+            "UTF-8",
+            &join_eol(&["emoji run 🚀🎉🧪✅", "symbols ©®™§¶", "math ∑∏∫√≈≠"], eol),
+            true,
+        );
+        assert_byte_identical(
+            "UTF-8",
+            &join_eol(
+                &["tabs\tand\tspaces   here", "punctuation: …—–«»“”", "done"],
+                eol,
+            ),
+            true,
+        );
     }
 }
 
@@ -217,7 +256,11 @@ fn corpus_gb18030_shift_jis_big5() {
             let bytes = encode_text(&text, label).unwrap();
             let d = decode_bytes_with(&bytes, label);
             assert_eq!(d.decoded_text, text, "{label}");
-            assert_eq!(encode_text(&d.decoded_text, label).unwrap(), bytes, "{label}");
+            assert_eq!(
+                encode_text(&d.decoded_text, label).unwrap(),
+                bytes,
+                "{label}"
+            );
         }
     }
 }
@@ -230,7 +273,11 @@ fn cjk_auto_detection_hits_table_labels() {
     let text = join_eol(&SJIS_LINES, EolId::Crlf).repeat(20);
     let bytes = encode_text(&text, "Japanese (shift_jis)").unwrap();
     let d = decode_bytes(&bytes);
-    assert_eq!(d.decoded_text, text, "auto-detected {} must decode losslessly", d.encoding_id);
+    assert_eq!(
+        d.decoded_text, text,
+        "auto-detected {} must decode losslessly",
+        d.encoding_id
+    );
 }
 
 #[test]
@@ -245,7 +292,11 @@ fn corpus_ansi_single_byte_pages() {
             let bytes = encode_text(&text, label).unwrap();
             let d = decode_bytes_with(&bytes, label);
             assert_eq!(d.decoded_text, text, "{label}");
-            assert_eq!(encode_text(&d.decoded_text, label).unwrap(), bytes, "{label}");
+            assert_eq!(
+                encode_text(&d.decoded_text, label).unwrap(),
+                bytes,
+                "{label}"
+            );
         }
     }
 }
@@ -299,7 +350,8 @@ fn all_40_ansi_labels_round_trip_representable_text() {
     };
     for entry in super::ANSI_CODECS.iter() {
         let text = sample_for(entry.label);
-        let bytes = encode_text(text, entry.label).unwrap_or_else(|e| panic!("{}: {e}", entry.label));
+        let bytes =
+            encode_text(text, entry.label).unwrap_or_else(|e| panic!("{}: {e}", entry.label));
         let d = decode_bytes_with(&bytes, entry.label);
         assert_eq!(d.decoded_text, text, "{} decode", entry.label);
         assert_eq!(
@@ -323,9 +375,17 @@ fn corpus_mixed_eol_crlf_first_detect_and_idempotent_resave() {
     assert_eq!(detect_eol(&d.decoded_text), EolId::Crlf); // CRLF present -> CRLF wins
 
     // First save normalizes; second save must be byte-stable (idempotent).
-    let first = encode_text(&apply_eol(&normalize_to_lf(&d.decoded_text), EolId::Crlf), "UTF-8").unwrap();
+    let first = encode_text(
+        &apply_eol(&normalize_to_lf(&d.decoded_text), EolId::Crlf),
+        "UTF-8",
+    )
+    .unwrap();
     let reopened = decode_bytes(&first);
-    let second = encode_text(&apply_eol(&normalize_to_lf(&reopened.decoded_text), EolId::Crlf), "UTF-8").unwrap();
+    let second = encode_text(
+        &apply_eol(&normalize_to_lf(&reopened.decoded_text), EolId::Crlf),
+        "UTF-8",
+    )
+    .unwrap();
     assert_eq!(first, second);
 }
 
@@ -468,12 +528,18 @@ fn true_iso_8859_1_high_half_is_latin1_not_cp1252() {
 fn iso_2022_jp_and_kr_round_trip() {
     let jp = "日本語abc";
     let b = encode_text(jp, "Japanese (iso-2022-jp)").unwrap();
-    assert_eq!(decode_bytes_with(&b, "Japanese (iso-2022-jp)").decoded_text, jp);
+    assert_eq!(
+        decode_bytes_with(&b, "Japanese (iso-2022-jp)").decoded_text,
+        jp
+    );
 
     let kr = "안녕 abc 하세요";
     let b = encode_text(kr, "Korean (iso-2022-kr)").unwrap();
     assert!(b.starts_with(b"\x1b$)C"));
-    assert_eq!(decode_bytes_with(&b, "Korean (iso-2022-kr)").decoded_text, kr);
+    assert_eq!(
+        decode_bytes_with(&b, "Korean (iso-2022-kr)").decoded_text,
+        kr
+    );
 }
 
 #[test]

@@ -15,8 +15,8 @@ use std::path::PathBuf;
 use tauri::Emitter;
 use tauri::Manager;
 
-use crate::contract::Settings;
 use crate::context_menu;
+use crate::contract::Settings;
 use crate::result::NpResult;
 
 const SETTINGS_FILE_NAME: &str = "Settings.json";
@@ -128,8 +128,7 @@ fn read_settings_from_disk(app: &tauri::AppHandle) -> Settings {
     };
 
     // Start with defaults serialized as JSON, then deep-merge the parsed file over it.
-    let mut base = serde_json::to_value(Settings::default())
-        .unwrap_or(serde_json::json!({}));
+    let mut base = serde_json::to_value(Settings::default()).unwrap_or(serde_json::json!({}));
     if parsed.is_object() {
         deep_merge(&mut base, &parsed);
     }
@@ -146,9 +145,7 @@ fn read_settings_from_disk(app: &tauri::AppHandle) -> Settings {
 /// a crash mid-write can never leave a truncated Settings.json.
 fn write_atomic(target_path: &std::path::Path, contents: &str) -> Result<(), String> {
     let pid = std::process::id();
-    let tmp_path = target_path.with_file_name(format!(
-        "Settings.json.{pid}.tmp"
-    ));
+    let tmp_path = target_path.with_file_name(format!("Settings.json.{pid}.tmp"));
 
     // Ensure parent directory exists
     if let Some(parent) = tmp_path.parent() {
@@ -194,10 +191,7 @@ pub async fn settings_get(app: tauri::AppHandle) -> NpResult<Settings> {
 /// then broadcast the merged settings to every window. The returned value is
 /// the authoritative merged-and-clamped Settings.
 #[tauri::command]
-pub async fn settings_set(
-    app: tauri::AppHandle,
-    patch: serde_json::Value,
-) -> NpResult<Settings> {
+pub async fn settings_set(app: tauri::AppHandle, patch: serde_json::Value) -> NpResult<Settings> {
     NpResult::from_result(settings_set_impl(&app, patch))
 }
 
@@ -211,8 +205,8 @@ fn settings_set_impl(app: &tauri::AppHandle, patch: serde_json::Value) -> Result
     deep_merge(&mut base, &patch);
 
     // Deserialize back to Settings (unknown keys are dropped, types checked)
-    let merged: Settings = serde_json::from_value(base)
-        .map_err(|e| format!("Invalid settings patch: {e}"))?;
+    let merged: Settings =
+        serde_json::from_value(base).map_err(|e| format!("Invalid settings patch: {e}"))?;
 
     // Clamp
     let clamped = clamp_settings(merged);

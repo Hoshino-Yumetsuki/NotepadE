@@ -126,7 +126,10 @@ pub fn parse_argv_with_env(argv: &[String], cwd: &str, env: &ArgvEnv) -> ParsedA
         }
         paths.push(resolve_cwd_relative(token, cwd));
     }
-    ParsedArgv { paths, protocol_url }
+    ParsedArgv {
+        paths,
+        protocol_url,
+    }
 }
 
 /// Parse an activation argv against its originating cwd, using the live
@@ -145,7 +148,8 @@ pub fn is_new_instance_protocol(protocol_url: Option<&str>) -> bool {
     let Some(rest) = url.strip_prefix(&prefix) else {
         return false;
     };
-    rest.trim_end_matches('/').eq_ignore_ascii_case(NEW_INSTANCE_VERB)
+    rest.trim_end_matches('/')
+        .eq_ignore_ascii_case(NEW_INSTANCE_VERB)
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +171,10 @@ mod tests {
     }
 
     fn env() -> ArgvEnv {
-        ArgvEnv { exec_path: abs("opt/electron/electron"), app_path: abs("app/notepads") }
+        ArgvEnv {
+            exec_path: abs("opt/electron/electron"),
+            app_path: abs("app/notepads"),
+        }
     }
 
     fn parse(argv: &[&str], cwd: &str) -> ParsedArgv {
@@ -191,13 +198,19 @@ mod tests {
     #[test]
     fn resolve_resolves_bare_relative_token_against_supplied_cwd() {
         let cwd = abs("work/dir");
-        assert_eq!(resolve_cwd_relative("notes.txt", &cwd), resolved(&cwd, "notes.txt"));
+        assert_eq!(
+            resolve_cwd_relative("notes.txt", &cwd),
+            resolved(&cwd, "notes.txt")
+        );
     }
 
     #[test]
     fn resolve_resolves_nested_relative_token_against_cwd() {
         let cwd = abs("work");
-        assert_eq!(resolve_cwd_relative("sub/notes.txt", &cwd), resolved(&cwd, "sub/notes.txt"));
+        assert_eq!(
+            resolve_cwd_relative("sub/notes.txt", &cwd),
+            resolved(&cwd, "sub/notes.txt")
+        );
     }
 
     #[test]
@@ -205,7 +218,10 @@ mod tests {
         let cwd = abs("captured/cwd");
         let out = resolve_cwd_relative("rel.txt", &cwd);
         assert_eq!(out, resolved(&cwd, "rel.txt"));
-        let process_cwd = std::env::current_dir().unwrap().to_string_lossy().into_owned();
+        let process_cwd = std::env::current_dir()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
         assert_ne!(out, resolved(&process_cwd, "rel.txt"));
     }
 
@@ -234,14 +250,22 @@ mod tests {
 
     #[test]
     fn new_instance_is_case_insensitive() {
-        assert!(is_new_instance_protocol(Some(&format!("{PROTOCOL_SCHEME}://NewInstance"))));
-        assert!(is_new_instance_protocol(Some(&format!("{PROTOCOL_SCHEME}://NEWINSTANCE"))));
+        assert!(is_new_instance_protocol(Some(&format!(
+            "{PROTOCOL_SCHEME}://NewInstance"
+        ))));
+        assert!(is_new_instance_protocol(Some(&format!(
+            "{PROTOCOL_SCHEME}://NEWINSTANCE"
+        ))));
     }
 
     #[test]
     fn new_instance_false_for_other_verbs() {
-        assert!(!is_new_instance_protocol(Some(&format!("{PROTOCOL_SCHEME}://open?path=x"))));
-        assert!(!is_new_instance_protocol(Some(&format!("{PROTOCOL_SCHEME}://"))));
+        assert!(!is_new_instance_protocol(Some(&format!(
+            "{PROTOCOL_SCHEME}://open?path=x"
+        ))));
+        assert!(!is_new_instance_protocol(Some(&format!(
+            "{PROTOCOL_SCHEME}://"
+        ))));
     }
 
     // -- parseArgv -----------------------------------------------------------
@@ -250,7 +274,13 @@ mod tests {
     fn captures_a_single_absolute_file_path() {
         let a = abs("docs/readme.txt");
         let out = parse(&[&env().exec_path, &a], &abs("cwd"));
-        assert_eq!(out, ParsedArgv { paths: vec![a], protocol_url: None });
+        assert_eq!(
+            out,
+            ParsedArgv {
+                paths: vec![a],
+                protocol_url: None
+            }
+        );
     }
 
     #[test]
@@ -271,7 +301,10 @@ mod tests {
     #[test]
     fn skips_switches_with_leading_dash() {
         let keep = abs("keep.txt");
-        let out = parse(&[&env().exec_path, "--enable-foo", "-bar", &keep], &abs("cwd"));
+        let out = parse(
+            &[&env().exec_path, "--enable-foo", "-bar", &keep],
+            &abs("cwd"),
+        );
         assert_eq!(out.paths, vec![keep]);
     }
 
@@ -279,7 +312,10 @@ mod tests {
     fn skips_bundled_main_entry_and_app_path_and_dot() {
         let real = abs("real.txt");
         let entry = abs("app/notepads/out/main/index.js");
-        let out = parse(&[&env().exec_path, &entry, &env().app_path, ".", &real], &abs("cwd"));
+        let out = parse(
+            &[&env().exec_path, &entry, &env().app_path, ".", &real],
+            &abs("cwd"),
+        );
         assert_eq!(out.paths, vec![real]);
     }
 
@@ -287,7 +323,13 @@ mod tests {
     fn captures_protocol_url_not_as_path() {
         let url = format!("{PROTOCOL_SCHEME}://{NEW_INSTANCE_VERB}");
         let out = parse(&[&env().exec_path, &url], &abs("cwd"));
-        assert_eq!(out, ParsedArgv { paths: vec![], protocol_url: Some(url) });
+        assert_eq!(
+            out,
+            ParsedArgv {
+                paths: vec![],
+                protocol_url: Some(url)
+            }
+        );
     }
 
     #[test]
@@ -302,7 +344,13 @@ mod tests {
     #[test]
     fn bare_launch_yields_empty() {
         let out = parse(&[&env().exec_path], &abs("cwd"));
-        assert_eq!(out, ParsedArgv { paths: vec![], protocol_url: None });
+        assert_eq!(
+            out,
+            ParsedArgv {
+                paths: vec![],
+                protocol_url: None
+            }
+        );
     }
 
     #[test]
@@ -323,7 +371,10 @@ mod tests {
         // the executable and skip it.
         let canonical = r"\\?\C:\Program Files\NotepadE\NotepadE.exe";
         let argv_exe = r"C:\Program Files\NotepadE\NotepadE.exe";
-        let env = ArgvEnv { exec_path: canonical.to_string(), app_path: String::new() };
+        let env = ArgvEnv {
+            exec_path: canonical.to_string(),
+            app_path: String::new(),
+        };
         let keep = abs("notes.txt");
         let argv: Vec<String> = vec![argv_exe.to_string(), keep.clone()];
         let out = parse_argv_with_env(&argv, &abs("cwd"), &env);
@@ -335,7 +386,10 @@ mod tests {
         // Reverse mismatch: argv carries the prefix, env does not.
         let argv_exe = r"\\?\C:\Program Files\NotepadE\NotepadE.exe";
         let env_exe = r"C:\Program Files\NotepadE\NotepadE.exe";
-        let env = ArgvEnv { exec_path: env_exe.to_string(), app_path: String::new() };
+        let env = ArgvEnv {
+            exec_path: env_exe.to_string(),
+            app_path: String::new(),
+        };
         let keep = abs("readme.md");
         let argv: Vec<String> = vec![argv_exe.to_string(), keep.clone()];
         let out = parse_argv_with_env(&argv, &abs("cwd"), &env);
@@ -347,9 +401,18 @@ mod tests {
         // A bare double-click (no file) with \\?\ exe must produce no paths.
         let canonical = r"\\?\C:\Program Files\NotepadE\NotepadE.exe";
         let argv_exe = r"C:\Program Files\NotepadE\NotepadE.exe";
-        let env = ArgvEnv { exec_path: canonical.to_string(), app_path: String::new() };
+        let env = ArgvEnv {
+            exec_path: canonical.to_string(),
+            app_path: String::new(),
+        };
         let argv: Vec<String> = vec![argv_exe.to_string()];
         let out = parse_argv_with_env(&argv, &abs("cwd"), &env);
-        assert_eq!(out, ParsedArgv { paths: vec![], protocol_url: None });
+        assert_eq!(
+            out,
+            ParsedArgv {
+                paths: vec![],
+                protocol_url: None
+            }
+        );
     }
 }

@@ -88,26 +88,22 @@ fn read_stored(root: &Path) -> Vec<StoredEntry> {
             }
             match &items[0] {
                 // New format: array of objects
-                serde_json::Value::Object(_) => {
-                    items
-                        .into_iter()
-                        .filter_map(|v| serde_json::from_value::<StoredEntry>(v).ok())
-                        .filter(|e| !e.path.is_empty())
-                        .collect()
-                }
+                serde_json::Value::Object(_) => items
+                    .into_iter()
+                    .filter_map(|v| serde_json::from_value::<StoredEntry>(v).ok())
+                    .filter(|e| !e.path.is_empty())
+                    .collect(),
                 // Legacy format: array of strings
-                _ => {
-                    items
-                        .into_iter()
-                        .filter_map(|v| match v {
-                            serde_json::Value::String(s) if !s.is_empty() => Some(StoredEntry {
-                                path: s,
-                                entry_type: "file".into(),
-                            }),
-                            _ => None,
-                        })
-                        .collect()
-                }
+                _ => items
+                    .into_iter()
+                    .filter_map(|v| match v {
+                        serde_json::Value::String(s) if !s.is_empty() => Some(StoredEntry {
+                            path: s,
+                            entry_type: "file".into(),
+                        }),
+                        _ => None,
+                    })
+                    .collect(),
             }
         }
         _ => Vec::new(),

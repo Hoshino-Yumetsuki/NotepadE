@@ -80,7 +80,10 @@ fn pending_backup_name(editor_id: &str) -> String {
 static LAST_SESSION_JSON: Mutex<Option<String>> = Mutex::new(None);
 
 fn last_json_str() -> Option<String> {
-    LAST_SESSION_JSON.lock().unwrap_or_else(|p| p.into_inner()).clone()
+    LAST_SESSION_JSON
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone()
 }
 
 fn set_last_json_str(s: Option<String>) {
@@ -124,7 +127,10 @@ fn write_backups(
     fs::create_dir_all(folder).map_err(|e| format!("Failed to create backup dir: {e}"))?;
 
     // Build a lookup of editorId → isModified
-    let modified: HashMap<&str, bool> = tabs.iter().map(|t| (t.editor_id.as_str(), t.is_modified)).collect();
+    let modified: HashMap<&str, bool> = tabs
+        .iter()
+        .map(|t| (t.editor_id.as_str(), t.is_modified))
+        .collect();
 
     for (editor_id, backup) in backups {
         if let Some(last_saved) = &backup.last_saved {
@@ -416,7 +422,10 @@ mod tests {
                 selection_start: 0.0,
                 selection_end: 0.0,
                 scroll_top: 0.0,
-                view_mode: crate::contract::ViewMode { preview: false, diff: false },
+                view_mode: crate::contract::ViewMode {
+                    preview: false,
+                    diff: false,
+                },
                 unavailable: None,
             }],
             active_editor_id: Some("ed-1".into()),
@@ -450,7 +459,10 @@ mod tests {
             selection_start: 0.0,
             selection_end: 0.0,
             scroll_top: 0.0,
-            view_mode: crate::contract::ViewMode { preview: false, diff: false },
+            view_mode: crate::contract::ViewMode {
+                preview: false,
+                diff: false,
+            },
             unavailable: None,
         };
         let result = revalidate_tab(tab);
@@ -469,7 +481,10 @@ mod tests {
             selection_start: 0.0,
             selection_end: 0.0,
             scroll_top: 0.0,
-            view_mode: crate::contract::ViewMode { preview: false, diff: false },
+            view_mode: crate::contract::ViewMode {
+                preview: false,
+                diff: false,
+            },
             unavailable: None,
         };
         let result = revalidate_tab(tab);

@@ -68,11 +68,18 @@ impl BrokerState {
 
     /// Queue an activation if `label`'s renderer is not ready yet.
     /// Returns true when the caller may deliver immediately.
-    fn deliverable_or_queue(&mut self, label: &str, event: ActivationEvent) -> Option<ActivationEvent> {
+    fn deliverable_or_queue(
+        &mut self,
+        label: &str,
+        event: ActivationEvent,
+    ) -> Option<ActivationEvent> {
         if self.ready.contains(label) {
             Some(event)
         } else {
-            self.queued.entry(label.to_string()).or_default().push(event);
+            self.queued
+                .entry(label.to_string())
+                .or_default()
+                .push(event);
             None
         }
     }
@@ -129,11 +136,11 @@ fn spawn_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
     let mut builder =
         tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::App("index.html".into()))
             .title("NotepadE")
-        .inner_size(1100.0, 720.0)
-        .min_inner_size(480.0, 320.0)
-        .visible(false)
-        .transparent(true)
-        .resizable(true);
+            .inner_size(1100.0, 720.0)
+            .min_inner_size(480.0, 320.0)
+            .visible(false)
+            .transparent(true)
+            .resizable(true);
     // macOS keeps native decorations (rounded corners + native shadow) with the
     // title bar overlaid + title hidden; setup_window then HIDES the native
     // traffic lights so the renderer's custom CaptionButtons are the only
@@ -185,7 +192,9 @@ fn spawn_process(paths: &[String]) -> Result<(), String> {
     }
     // Detach: do not hold a Child handle / wait — the OS owns its lifetime.
     // (Windows: no CREATE_NEW_CONSOLE needed for a GUI subsystem exe.)
-    cmd.spawn().map(|_child| ()).map_err(|e| format!("spawn NotepadE: {e}"))
+    cmd.spawn()
+        .map(|_child| ())
+        .map_err(|e| format!("spawn NotepadE: {e}"))
 }
 
 /// Pick the redirect target: the last-focused live window, else any live one.
@@ -197,7 +206,10 @@ fn redirect_target(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         }
     }
     let windows = app.webview_windows();
-    windows.get("main").cloned().or_else(|| windows.values().next().cloned())
+    windows
+        .get("main")
+        .cloned()
+        .or_else(|| windows.values().next().cloned())
 }
 
 /// Bring a window to the foreground for an activation: restore if minimized,
@@ -294,7 +306,11 @@ pub fn on_second_instance(app: &tauri::AppHandle, argv: Vec<String>, cwd: String
         parsed.paths,
         parsed.protocol_url
     );
-    let event = ActivationEvent { paths: parsed.paths, cwd, protocol_url: parsed.protocol_url };
+    let event = ActivationEvent {
+        paths: parsed.paths,
+        cwd,
+        protocol_url: parsed.protocol_url,
+    };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         if let Err(e) = route_activation(&app, event).await {
@@ -367,7 +383,11 @@ pub fn init_broker(app: &tauri::AppHandle) {
                 });
             }
             if !paths.is_empty() {
-                let ev = ActivationEvent { paths, cwd, protocol_url: None };
+                let ev = ActivationEvent {
+                    paths,
+                    cwd,
+                    protocol_url: None,
+                };
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     if let Err(e) = route_activation(&app, ev).await {
@@ -391,7 +411,9 @@ pub fn init_broker(app: &tauri::AppHandle) {
     // url (Windows file-association / protocol launch). Same parse, same
     // routing; the ready-queue defers delivery until the renderer is up.
     let argv: Vec<String> = std::env::args().collect();
-    let cwd = std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+    let cwd = std::env::current_dir()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
     // TEMP: pending #5 live-verification (does cold-start argv carry the path?).
     log::info!("broker[cold-start]: argv={argv:?} cwd={cwd}");
     let parsed = parse_argv(&argv, &cwd);
@@ -401,8 +423,11 @@ pub fn init_broker(app: &tauri::AppHandle) {
         parsed.protocol_url
     );
     if !parsed.paths.is_empty() || parsed.protocol_url.is_some() {
-        let event =
-            ActivationEvent { paths: parsed.paths, cwd, protocol_url: parsed.protocol_url };
+        let event = ActivationEvent {
+            paths: parsed.paths,
+            cwd,
+            protocol_url: parsed.protocol_url,
+        };
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
             if let Err(e) = route_activation(&app, event).await {
@@ -417,18 +442,25 @@ pub fn init_broker(app: &tauri::AppHandle) {
 /// through the SAME spawn-vs-redirect logic as an OS activation;
 /// `forceNewWindow` maps to the protocol `newinstance` semantics.
 #[tauri::command]
-pub async fn window_broker_request(
-    app: tauri::AppHandle,
-    args: BrokerRequestArgs,
-) -> NpResult<()> {
-    let cwd =
-        std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+pub async fn window_broker_request(app: tauri::AppHandle, args: BrokerRequestArgs) -> NpResult<()> {
+    let cwd = std::env::current_dir()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let protocol_url = if args.force_new_window.unwrap_or(false) {
         Some(format!("{PROTOCOL_SCHEME}://{NEW_INSTANCE_VERB}"))
     } else {
         None
     };
-    route_activation(&app, ActivationEvent { paths: args.paths, cwd, protocol_url }).await.into()
+    route_activation(
+        &app,
+        ActivationEvent {
+            paths: args.paths,
+            cwd,
+            protocol_url,
+        },
+    )
+    .await
+    .into()
 }
 
 // ---------------------------------------------------------------------------

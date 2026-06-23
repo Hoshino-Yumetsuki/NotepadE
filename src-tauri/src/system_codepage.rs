@@ -17,7 +17,11 @@ fn resolve_acp() -> u32 {
     // GetACP() cannot fail (returns the current ANSI code page identifier),
     // but guard the degenerate 0 anyway — fallback 1252.
     let cp = unsafe { windows::Win32::Globalization::GetACP() };
-    if cp > 0 { cp } else { 1252 }
+    if cp > 0 {
+        cp
+    } else {
+        1252
+    }
 }
 
 #[cfg(not(windows))]

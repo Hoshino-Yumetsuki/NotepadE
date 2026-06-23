@@ -74,8 +74,12 @@ enum Codec {
     /// rest is identity (algorithmic, no table).
     Latin9,
     Utf8,
-    Utf16 { be: bool },
-    Utf32 { be: bool },
+    Utf16 {
+        be: bool,
+    },
+    Utf32 {
+        be: bool,
+    },
     /// UTF-7: DECODE-ONLY via the `charset` crate (RFC 2152). No maintained
     /// crate provides RFC 2152 UTF-7 *encode*, so encoding this label errors.
     Utf7,
@@ -94,57 +98,234 @@ struct AnsiCodec {
 }
 
 static ANSI_CODECS: [AnsiCodec; 40] = [
-    AnsiCodec { code_page: 1252, label: "Western (windows-1252)", codec: Codec::Rs(encoding_rs::WINDOWS_1252) },
+    AnsiCodec {
+        code_page: 1252,
+        label: "Western (windows-1252)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1252),
+    },
     // encoding_rs (WHATWG) remaps the iso-8859-1 label to windows-1252; the
     // Electron app used iconv-lite's TRUE ISO-8859-1 (0x80-0x9F = C1) — algorithmic
     // identity mapping: byte == code_point (no table needed).
-    AnsiCodec { code_page: 28591, label: "Western (iso-8859-1)", codec: Codec::Latin1 },
-    AnsiCodec { code_page: 28593, label: "Western (iso-8859-3)", codec: Codec::Rs(encoding_rs::ISO_8859_3) },
-    AnsiCodec { code_page: 28605, label: "Western (iso-8859-15)", codec: Codec::Rs(encoding_rs::ISO_8859_15) },
-    AnsiCodec { code_page: 10000, label: "Western (macintosh)", codec: Codec::Rs(encoding_rs::MACINTOSH) },
-    AnsiCodec { code_page: 437, label: "DOS (IBM437)", codec: Codec::Oem { dec: &oem_cp::code_table::DECODING_TABLE_CP437, enc: &oem_cp::code_table::ENCODING_TABLE_CP437 } },
-    AnsiCodec { code_page: 1256, label: "Arabic (windows-1256)", codec: Codec::Rs(encoding_rs::WINDOWS_1256) },
-    AnsiCodec { code_page: 28596, label: "Arabic (iso-8859-6)", codec: Codec::Rs(encoding_rs::ISO_8859_6) },
-    AnsiCodec { code_page: 1257, label: "Baltic (windows-1257)", codec: Codec::Rs(encoding_rs::WINDOWS_1257) },
-    AnsiCodec { code_page: 28594, label: "Baltic (iso-8859-4)", codec: Codec::Rs(encoding_rs::ISO_8859_4) },
-    AnsiCodec { code_page: 1250, label: "Central European (windows-1250)", codec: Codec::Rs(encoding_rs::WINDOWS_1250) },
-    AnsiCodec { code_page: 28592, label: "Central European (iso-8859-2)", codec: Codec::Rs(encoding_rs::ISO_8859_2) },
-    AnsiCodec { code_page: 852, label: "Central European (ibm852)", codec: Codec::Oem { dec: &oem_cp::code_table::DECODING_TABLE_CP852, enc: &oem_cp::code_table::ENCODING_TABLE_CP852 } },
-    AnsiCodec { code_page: 1251, label: "Cyrillic (windows-1251)", codec: Codec::Rs(encoding_rs::WINDOWS_1251) },
-    AnsiCodec { code_page: 10007, label: "Cyrillic (x-mac-cyrillic)", codec: Codec::Rs(encoding_rs::X_MAC_CYRILLIC) },
-    AnsiCodec { code_page: 866, label: "Cyrillic (cp866)", codec: Codec::Rs(encoding_rs::IBM866) },
-    AnsiCodec { code_page: 855, label: "Cyrillic (IBM855)", codec: Codec::Oem { dec: &oem_cp::code_table::DECODING_TABLE_CP855, enc: &oem_cp::code_table::ENCODING_TABLE_CP855 } },
-    AnsiCodec { code_page: 28595, label: "Cyrillic (iso-8859-5)", codec: Codec::Rs(encoding_rs::ISO_8859_5) },
-    AnsiCodec { code_page: 20866, label: "Cyrillic (koi8-r)", codec: Codec::Rs(encoding_rs::KOI8_R) },
-    AnsiCodec { code_page: 21866, label: "Cyrillic (koi8-u)", codec: Codec::Rs(encoding_rs::KOI8_U) },
-    AnsiCodec { code_page: 28603, label: "Estonian (iso-8859-13)", codec: Codec::Rs(encoding_rs::ISO_8859_13) },
-    AnsiCodec { code_page: 1253, label: "Greek (windows-1253)", codec: Codec::Rs(encoding_rs::WINDOWS_1253) },
-    AnsiCodec { code_page: 28597, label: "Greek (iso-8859-7)", codec: Codec::Rs(encoding_rs::ISO_8859_7) },
-    AnsiCodec { code_page: 1255, label: "Hebrew (windows-1255)", codec: Codec::Rs(encoding_rs::WINDOWS_1255) },
-    AnsiCodec { code_page: 28598, label: "Hebrew (iso-8859-8)", codec: Codec::Rs(encoding_rs::ISO_8859_8) },
-    AnsiCodec { code_page: 932, label: "Japanese (shift_jis)", codec: Codec::Rs(encoding_rs::SHIFT_JIS) },
-    AnsiCodec { code_page: 51932, label: "Japanese (euc-jp)", codec: Codec::Rs(encoding_rs::EUC_JP) },
-    AnsiCodec { code_page: 50220, label: "Japanese (iso-2022-jp)", codec: Codec::Rs(encoding_rs::ISO_2022_JP) },
-    AnsiCodec { code_page: 51949, label: "Korean (euc-kr)", codec: Codec::Rs(encoding_rs::EUC_KR) },
+    AnsiCodec {
+        code_page: 28591,
+        label: "Western (iso-8859-1)",
+        codec: Codec::Latin1,
+    },
+    AnsiCodec {
+        code_page: 28593,
+        label: "Western (iso-8859-3)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_3),
+    },
+    AnsiCodec {
+        code_page: 28605,
+        label: "Western (iso-8859-15)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_15),
+    },
+    AnsiCodec {
+        code_page: 10000,
+        label: "Western (macintosh)",
+        codec: Codec::Rs(encoding_rs::MACINTOSH),
+    },
+    AnsiCodec {
+        code_page: 437,
+        label: "DOS (IBM437)",
+        codec: Codec::Oem {
+            dec: &oem_cp::code_table::DECODING_TABLE_CP437,
+            enc: &oem_cp::code_table::ENCODING_TABLE_CP437,
+        },
+    },
+    AnsiCodec {
+        code_page: 1256,
+        label: "Arabic (windows-1256)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1256),
+    },
+    AnsiCodec {
+        code_page: 28596,
+        label: "Arabic (iso-8859-6)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_6),
+    },
+    AnsiCodec {
+        code_page: 1257,
+        label: "Baltic (windows-1257)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1257),
+    },
+    AnsiCodec {
+        code_page: 28594,
+        label: "Baltic (iso-8859-4)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_4),
+    },
+    AnsiCodec {
+        code_page: 1250,
+        label: "Central European (windows-1250)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1250),
+    },
+    AnsiCodec {
+        code_page: 28592,
+        label: "Central European (iso-8859-2)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_2),
+    },
+    AnsiCodec {
+        code_page: 852,
+        label: "Central European (ibm852)",
+        codec: Codec::Oem {
+            dec: &oem_cp::code_table::DECODING_TABLE_CP852,
+            enc: &oem_cp::code_table::ENCODING_TABLE_CP852,
+        },
+    },
+    AnsiCodec {
+        code_page: 1251,
+        label: "Cyrillic (windows-1251)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1251),
+    },
+    AnsiCodec {
+        code_page: 10007,
+        label: "Cyrillic (x-mac-cyrillic)",
+        codec: Codec::Rs(encoding_rs::X_MAC_CYRILLIC),
+    },
+    AnsiCodec {
+        code_page: 866,
+        label: "Cyrillic (cp866)",
+        codec: Codec::Rs(encoding_rs::IBM866),
+    },
+    AnsiCodec {
+        code_page: 855,
+        label: "Cyrillic (IBM855)",
+        codec: Codec::Oem {
+            dec: &oem_cp::code_table::DECODING_TABLE_CP855,
+            enc: &oem_cp::code_table::ENCODING_TABLE_CP855,
+        },
+    },
+    AnsiCodec {
+        code_page: 28595,
+        label: "Cyrillic (iso-8859-5)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_5),
+    },
+    AnsiCodec {
+        code_page: 20866,
+        label: "Cyrillic (koi8-r)",
+        codec: Codec::Rs(encoding_rs::KOI8_R),
+    },
+    AnsiCodec {
+        code_page: 21866,
+        label: "Cyrillic (koi8-u)",
+        codec: Codec::Rs(encoding_rs::KOI8_U),
+    },
+    AnsiCodec {
+        code_page: 28603,
+        label: "Estonian (iso-8859-13)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_13),
+    },
+    AnsiCodec {
+        code_page: 1253,
+        label: "Greek (windows-1253)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1253),
+    },
+    AnsiCodec {
+        code_page: 28597,
+        label: "Greek (iso-8859-7)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_7),
+    },
+    AnsiCodec {
+        code_page: 1255,
+        label: "Hebrew (windows-1255)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1255),
+    },
+    AnsiCodec {
+        code_page: 28598,
+        label: "Hebrew (iso-8859-8)",
+        codec: Codec::Rs(encoding_rs::ISO_8859_8),
+    },
+    AnsiCodec {
+        code_page: 932,
+        label: "Japanese (shift_jis)",
+        codec: Codec::Rs(encoding_rs::SHIFT_JIS),
+    },
+    AnsiCodec {
+        code_page: 51932,
+        label: "Japanese (euc-jp)",
+        codec: Codec::Rs(encoding_rs::EUC_JP),
+    },
+    AnsiCodec {
+        code_page: 50220,
+        label: "Japanese (iso-2022-jp)",
+        codec: Codec::Rs(encoding_rs::ISO_2022_JP),
+    },
+    AnsiCodec {
+        code_page: 51949,
+        label: "Korean (euc-kr)",
+        codec: Codec::Rs(encoding_rs::EUC_KR),
+    },
     // WHATWG euc-kr IS the UHC superset (= cp949), so 949 shares the backend.
-    AnsiCodec { code_page: 949, label: "Korean (ks_c_5601-1987)", codec: Codec::Rs(encoding_rs::EUC_KR) },
-    AnsiCodec { code_page: 50225, label: "Korean (iso-2022-kr)", codec: Codec::Iso2022Kr },
-    AnsiCodec { code_page: 865, label: "Nordic DOS (IBM865)", codec: Codec::Oem { dec: &oem_cp::code_table::DECODING_TABLE_CP865, enc: &oem_cp::code_table::ENCODING_TABLE_CP865 } },
+    AnsiCodec {
+        code_page: 949,
+        label: "Korean (ks_c_5601-1987)",
+        codec: Codec::Rs(encoding_rs::EUC_KR),
+    },
+    AnsiCodec {
+        code_page: 50225,
+        label: "Korean (iso-2022-kr)",
+        codec: Codec::Iso2022Kr,
+    },
+    AnsiCodec {
+        code_page: 865,
+        label: "Nordic DOS (IBM865)",
+        codec: Codec::Oem {
+            dec: &oem_cp::code_table::DECODING_TABLE_CP865,
+            enc: &oem_cp::code_table::ENCODING_TABLE_CP865,
+        },
+    },
     // WHATWG gb2312 is an alias of GBK; iconv-lite's gb2312 was GBK-backed too.
-    AnsiCodec { code_page: 936, label: "Simplified Chinese (gb2312)", codec: Codec::Rs(encoding_rs::GBK) },
-    AnsiCodec { code_page: 54936, label: "Simplified Chinese (GB18030)", codec: Codec::Rs(encoding_rs::GB18030) },
-    AnsiCodec { code_page: 874, label: "Thai (windows-874)", codec: Codec::Rs(encoding_rs::WINDOWS_874) },
-    AnsiCodec { code_page: 1254, label: "Turkish (windows-1254)", codec: Codec::Rs(encoding_rs::WINDOWS_1254) },
+    AnsiCodec {
+        code_page: 936,
+        label: "Simplified Chinese (gb2312)",
+        codec: Codec::Rs(encoding_rs::GBK),
+    },
+    AnsiCodec {
+        code_page: 54936,
+        label: "Simplified Chinese (GB18030)",
+        codec: Codec::Rs(encoding_rs::GB18030),
+    },
+    AnsiCodec {
+        code_page: 874,
+        label: "Thai (windows-874)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_874),
+    },
+    AnsiCodec {
+        code_page: 1254,
+        label: "Turkish (windows-1254)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1254),
+    },
     // True ISO-8859-9: identical to Latin1 except 6 Turkish letters
     // (Ğ/İ/Ş/ğ/ı/ş at 0xD0/DD/DE/F0/FD/FE) — algorithmic, no table.
-    AnsiCodec { code_page: 28599, label: "Turkish (iso-8859-9)", codec: Codec::Latin9 },
-    AnsiCodec { code_page: 950, label: "Traditional Chinese (big5)", codec: Codec::Rs(encoding_rs::BIG5) },
-    AnsiCodec { code_page: 1258, label: "Vietnamese (windows-1258)", codec: Codec::Rs(encoding_rs::WINDOWS_1258) },
-    AnsiCodec { code_page: 850, label: "Western European DOS (ibm850)", codec: Codec::Oem { dec: &oem_cp::code_table::DECODING_TABLE_CP850, enc: &oem_cp::code_table::ENCODING_TABLE_CP850 } },
+    AnsiCodec {
+        code_page: 28599,
+        label: "Turkish (iso-8859-9)",
+        codec: Codec::Latin9,
+    },
+    AnsiCodec {
+        code_page: 950,
+        label: "Traditional Chinese (big5)",
+        codec: Codec::Rs(encoding_rs::BIG5),
+    },
+    AnsiCodec {
+        code_page: 1258,
+        label: "Vietnamese (windows-1258)",
+        codec: Codec::Rs(encoding_rs::WINDOWS_1258),
+    },
+    AnsiCodec {
+        code_page: 850,
+        label: "Western European DOS (ibm850)",
+        codec: Codec::Oem {
+            dec: &oem_cp::code_table::DECODING_TABLE_CP850,
+            enc: &oem_cp::code_table::ENCODING_TABLE_CP850,
+        },
+    },
 ];
 
 fn ansi_by_label(label: &str) -> Option<&'static AnsiCodec> {
-    ANSI_CODECS.iter().find(|c| c.label.eq_ignore_ascii_case(label))
+    ANSI_CODECS
+        .iter()
+        .find(|c| c.label.eq_ignore_ascii_case(label))
 }
 
 fn ansi_by_codepage(cp: u32) -> Option<&'static AnsiCodec> {
@@ -177,23 +358,51 @@ pub struct BomInfo {
 /// Sniff order is contract: UTF-7 → UTF-8 → UTF-32 (BEFORE UTF-16!) → UTF-16.
 pub fn detect_bom(bytes: &[u8]) -> Option<BomInfo> {
     if bytes.len() >= 3 && bytes[0] == 0x2b && bytes[1] == 0x2f && bytes[2] == 0x76 {
-        return Some(BomInfo { encoding_id: "UTF-7", bom_length: 3 });
+        return Some(BomInfo {
+            encoding_id: "UTF-7",
+            bom_length: 3,
+        });
     }
     if bytes.len() >= 3 && bytes[0] == 0xef && bytes[1] == 0xbb && bytes[2] == 0xbf {
-        return Some(BomInfo { encoding_id: "UTF-8-BOM", bom_length: 3 });
+        return Some(BomInfo {
+            encoding_id: "UTF-8-BOM",
+            bom_length: 3,
+        });
     }
     // UTF-32 must be checked before UTF-16 (shares leading FF FE / 00 00).
-    if bytes.len() >= 4 && bytes[0] == 0xff && bytes[1] == 0xfe && bytes[2] == 0x00 && bytes[3] == 0x00 {
-        return Some(BomInfo { encoding_id: "UTF-32 LE BOM", bom_length: 4 });
+    if bytes.len() >= 4
+        && bytes[0] == 0xff
+        && bytes[1] == 0xfe
+        && bytes[2] == 0x00
+        && bytes[3] == 0x00
+    {
+        return Some(BomInfo {
+            encoding_id: "UTF-32 LE BOM",
+            bom_length: 4,
+        });
     }
-    if bytes.len() >= 4 && bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0xfe && bytes[3] == 0xff {
-        return Some(BomInfo { encoding_id: "UTF-32 BE BOM", bom_length: 4 });
+    if bytes.len() >= 4
+        && bytes[0] == 0x00
+        && bytes[1] == 0x00
+        && bytes[2] == 0xfe
+        && bytes[3] == 0xff
+    {
+        return Some(BomInfo {
+            encoding_id: "UTF-32 BE BOM",
+            bom_length: 4,
+        });
     }
     if bytes.len() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
-        return Some(BomInfo { encoding_id: "UTF-16 LE BOM", bom_length: 2 });
+        return Some(BomInfo {
+            encoding_id: "UTF-16 LE BOM",
+            bom_length: 2,
+        });
     }
     if bytes.len() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
-        return Some(BomInfo { encoding_id: "UTF-16 BE BOM", bom_length: 2 });
+        return Some(BomInfo {
+            encoding_id: "UTF-16 BE BOM",
+            bom_length: 2,
+        });
     }
     None
 }
@@ -253,7 +462,13 @@ fn decode_utf16(bytes: &[u8], be: bool) -> String {
     // Trailing odd byte is dropped (Buffer.toString('utf16le') parity).
     let units: Vec<u16> = bytes
         .chunks_exact(2)
-        .map(|p| if be { u16::from_be_bytes([p[0], p[1]]) } else { u16::from_le_bytes([p[0], p[1]]) })
+        .map(|p| {
+            if be {
+                u16::from_be_bytes([p[0], p[1]])
+            } else {
+                u16::from_le_bytes([p[0], p[1]])
+            }
+        })
         .collect();
     let s: String = char::decode_utf16(units.into_iter())
         .map(|r| r.unwrap_or('\u{FFFD}'))
@@ -333,17 +548,33 @@ fn decode_iso2022kr(bytes: &[u8]) -> String {
 
 fn decode_with_codec(codec: Codec, bytes: &[u8]) -> String {
     match codec {
-        Codec::Utf8 => strip_text_bom(encoding_rs::UTF_8.decode_without_bom_handling(bytes).0.into_owned()),
+        Codec::Utf8 => strip_text_bom(
+            encoding_rs::UTF_8
+                .decode_without_bom_handling(bytes)
+                .0
+                .into_owned(),
+        ),
         Codec::Rs(enc) => enc.decode_without_bom_handling(bytes).0.into_owned(),
         Codec::Oem { dec, .. } => oem_cp::decode_string_complete_table(bytes, dec),
         Codec::Latin1 => bytes.iter().map(|&b| b as char).collect(),
-        Codec::Latin9 => bytes.iter().map(|&b| {
-            if b < 0x80 { b as char } else { match b {
-                0xD0 => '\u{011E}', 0xDD => '\u{0130}', 0xDE => '\u{015E}',
-                0xF0 => '\u{011F}', 0xFD => '\u{0131}', 0xFE => '\u{015F}',
-                _ => b as char,
-            }}
-        }).collect(),
+        Codec::Latin9 => bytes
+            .iter()
+            .map(|&b| {
+                if b < 0x80 {
+                    b as char
+                } else {
+                    match b {
+                        0xD0 => '\u{011E}',
+                        0xDD => '\u{0130}',
+                        0xDE => '\u{015E}',
+                        0xF0 => '\u{011F}',
+                        0xFD => '\u{0131}',
+                        0xFE => '\u{015F}',
+                        _ => b as char,
+                    }
+                }
+            })
+            .collect(),
         Codec::Utf16 { be } => decode_utf16(bytes, be),
         Codec::Utf32 { be } => decode_utf32(bytes, be),
         Codec::Utf7 => decode_utf7(bytes),
@@ -363,32 +594,37 @@ fn encode_rs_question_mark(enc: &'static Encoding, text: &str) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::with_capacity(text.len() + 16);
     let mut buf = [0u8; 4096];
 
-    let mut feed = |encoder: &mut encoding_rs::Encoder, out: &mut Vec<u8>, src: &str, last: bool| {
-        let mut src = src;
-        loop {
-            let (res, read, written) = encoder.encode_from_utf8_without_replacement(src, &mut buf, last);
-            out.extend_from_slice(&buf[..written]);
-            src = &src[read..];
-            match res {
-                encoding_rs::EncoderResult::InputEmpty => break,
-                encoding_rs::EncoderResult::OutputFull => continue,
-                encoding_rs::EncoderResult::Unmappable(_) => {
-                    // replace and continue ('?' always encodes, keeps state sane)
-                    let mut q = "?";
-                    loop {
-                        let (r2, rd2, w2) = encoder.encode_from_utf8_without_replacement(q, &mut buf, false);
-                        out.extend_from_slice(&buf[..w2]);
-                        q = &q[rd2..];
-                        match r2 {
-                            encoding_rs::EncoderResult::InputEmpty => break,
-                            encoding_rs::EncoderResult::OutputFull => continue,
-                            encoding_rs::EncoderResult::Unmappable(_) => unreachable!("'?' is ASCII"),
+    let mut feed =
+        |encoder: &mut encoding_rs::Encoder, out: &mut Vec<u8>, src: &str, last: bool| {
+            let mut src = src;
+            loop {
+                let (res, read, written) =
+                    encoder.encode_from_utf8_without_replacement(src, &mut buf, last);
+                out.extend_from_slice(&buf[..written]);
+                src = &src[read..];
+                match res {
+                    encoding_rs::EncoderResult::InputEmpty => break,
+                    encoding_rs::EncoderResult::OutputFull => continue,
+                    encoding_rs::EncoderResult::Unmappable(_) => {
+                        // replace and continue ('?' always encodes, keeps state sane)
+                        let mut q = "?";
+                        loop {
+                            let (r2, rd2, w2) =
+                                encoder.encode_from_utf8_without_replacement(q, &mut buf, false);
+                            out.extend_from_slice(&buf[..w2]);
+                            q = &q[rd2..];
+                            match r2 {
+                                encoding_rs::EncoderResult::InputEmpty => break,
+                                encoding_rs::EncoderResult::OutputFull => continue,
+                                encoding_rs::EncoderResult::Unmappable(_) => {
+                                    unreachable!("'?' is ASCII")
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-    };
+        };
 
     feed(&mut encoder, &mut out, text, true);
     out
@@ -512,7 +748,11 @@ pub fn decode_bytes_with(bytes: &[u8], encoding_id: &str) -> DecodeResult {
         // while KEEPING the chosen label.
         None => decode_with_codec(Codec::Utf8, body),
     };
-    DecodeResult { decoded_text, encoding_id: encoding_id.to_string(), has_bom }
+    DecodeResult {
+        decoded_text,
+        encoding_id: encoding_id.to_string(),
+        has_bom,
+    }
 }
 
 /// Decode raw file bytes, detecting encoding via the UWP confidence ladder.
@@ -529,7 +769,11 @@ pub fn decode_bytes(bytes: &[u8]) -> DecodeResult {
     }
 
     if bytes.is_empty() {
-        return DecodeResult { decoded_text: String::new(), encoding_id: "UTF-8".into(), has_bom: false };
+        return DecodeResult {
+            decoded_text: String::new(),
+            encoding_id: "UTF-8".into(),
+            has_bom: false,
+        };
     }
 
     // 2-5. detector + ladder.
@@ -625,7 +869,9 @@ fn analyze_and_guess(bytes: &[u8]) -> EncodingId {
 
     // Map the detector's verdict to the nearest ANSI table label (first table
     // entry sharing the backend — mirrors jschardetNameToCodec's alias map).
-    let mapped = ANSI_CODECS.iter().find(|c| matches!(c.codec, Codec::Rs(e) if e == guessed));
+    let mapped = ANSI_CODECS
+        .iter()
+        .find(|c| matches!(c.codec, Codec::Rs(e) if e == guessed));
     match mapped {
         Some(entry) => {
             // Trial-decode validation: replacement chars mean the verdict does
@@ -635,7 +881,7 @@ fn analyze_and_guess(bytes: &[u8]) -> EncodingId {
                 "UTF-8".into()
             } else {
                 let _ = system_ansi_label(); // ladder's system-ANSI tiebreak is
-                // subsumed: chardetng already weights the OS locale via guess().
+                                             // subsumed: chardetng already weights the OS locale via guess().
                 entry.label.to_string()
             }
         }
@@ -666,15 +912,23 @@ pub fn encode_text(text: &str, encoding_id: &str) -> Result<Vec<u8>, String> {
         // oem_cp's lossy encode is exact iconv-lite parity: unmappable (incl.
         // astral) -> '?' (verified by crate_parity_check's exhaustive scan).
         Codec::Oem { enc, .. } => oem_cp::encode_string_lossy(text, enc),
-        Codec::Latin1 => text.chars().map(|c| if (c as u32) <= 0xFF { c as u8 } else { b'?' }).collect(),
-        Codec::Latin9 => text.chars().map(|c| {
-            match c {
-                '\u{011E}' => 0xD0, '\u{0130}' => 0xDD, '\u{015E}' => 0xDE,
-                '\u{011F}' => 0xF0, '\u{0131}' => 0xFD, '\u{015F}' => 0xFE,
+        Codec::Latin1 => text
+            .chars()
+            .map(|c| if (c as u32) <= 0xFF { c as u8 } else { b'?' })
+            .collect(),
+        Codec::Latin9 => text
+            .chars()
+            .map(|c| match c {
+                '\u{011E}' => 0xD0,
+                '\u{0130}' => 0xDD,
+                '\u{015E}' => 0xDE,
+                '\u{011F}' => 0xF0,
+                '\u{0131}' => 0xFD,
+                '\u{015F}' => 0xFE,
                 c if (c as u32) <= 0xFF => c as u8,
                 _ => b'?',
-            }
-        }).collect(),
+            })
+            .collect(),
         Codec::Utf16 { be } => encode_utf16(text, be, bom),
         Codec::Utf32 { be } => encode_utf32(text, be, bom),
         Codec::Utf7 => unreachable!("UTF-7 encode rejected above"),
@@ -686,7 +940,10 @@ pub fn encode_text(text: &str, encoding_id: &str) -> Result<Vec<u8>, String> {
 pub fn list_ansi_encodings() -> Vec<AnsiEncodingEntry> {
     ANSI_CODECS
         .iter()
-        .map(|c| AnsiEncodingEntry { code_page: c.code_page, label: c.label.to_string() })
+        .map(|c| AnsiEncodingEntry {
+            code_page: c.code_page,
+            label: c.label.to_string(),
+        })
         .collect()
 }
 
