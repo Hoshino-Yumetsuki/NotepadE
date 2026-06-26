@@ -39,7 +39,9 @@ import type { FC } from 'react';
 import type * as monacoApi from 'monaco-editor/esm/vs/editor/editor.api';
 import { buildWebSearchQuery } from './commands/logic/webSearch';
 import { useT } from '../i18n';
-import { modKey } from '@shared/platform';
+import { modKey, isMac } from '@shared/platform';
+import { useAppTheme } from '../theme/useAppTheme';
+import { acrylicVars } from '../theme/tokens';
 
 const CtxGlyph = {
   cut: CutRegular as FC,
@@ -229,6 +231,7 @@ function webSearch(
 export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorContextMenuHost {
   const { isPreviewEligible, onTogglePreview, onShare, searchEngine, customSearchUrl } = props;
   const { t } = useT();
+  const { resolved } = useAppTheme();
   const [ctx, setCtx] = useState<MenuContext | null>(null);
 
   const close = (): void => setCtx(null);
@@ -285,7 +288,12 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
         <MenuTrigger disableButtonEnhancement>
           <span style={{ position: 'fixed', left: ctx.x, top: ctx.y, width: 0, height: 0 }} />
         </MenuTrigger>
-        <MenuPopover data-testid="editor-context-menu">
+        <MenuPopover
+          data-testid="editor-context-menu"
+          className={isMac ? 'np-mac-panel' : ''}
+          data-theme={resolved}
+          style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
+        >
           <MenuList>
             <MenuItem
               data-testid="ctx-cut"

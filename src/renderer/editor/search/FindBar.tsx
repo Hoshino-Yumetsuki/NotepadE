@@ -350,7 +350,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
               />
             </Tooltip>
           </MenuTrigger>
-          <MenuPopover>
+          <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolved} style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}>
             <MenuList>
               <MenuItemCheckbox
                 name="findOption"

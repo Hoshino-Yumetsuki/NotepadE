@@ -39,6 +39,8 @@ import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
 import { usePrefersReducedMotion } from '../theme/usePrefersReducedMotion';
 import { useT } from '../i18n';
 import { modKey } from '@shared/platform';
+import { isMac } from '@shared/platform';
+import { acrylicVars } from '../theme/tokens';
 
 /**
  * ============================================================================
@@ -633,8 +635,8 @@ function ScrollButton(props: {
  * the structure mirrors UWP. Marked no-drag so the click isn't eaten by the
  * window drag region.
  */
-function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands }): JSX.Element {
-  const { tokens, commands } = props;
+function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands; resolvedTheme: TabTheme }): JSX.Element {
+  const { tokens, commands, resolvedTheme } = props;
   const { t } = useT();
   const [hovered, setHovered] = useState(false);
   // Recent-files list for the Open Recent submenu. Fetched from MAIN each time the
@@ -688,7 +690,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
           <NavigationRegular />
         </button>
       </MenuTrigger>
-      <MenuPopover data-testid="main-menu-popover">
+      <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolvedTheme === 'light' ? 'light' : 'dark'} style={isMac ? { ...acrylicVars(resolvedTheme === 'light' ? 'light' : 'dark'), padding: '4px' } : undefined} data-testid="main-menu-popover">
         <MenuList
           style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
         >
@@ -725,7 +727,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands })
                   {t('MainMenu_Button_Open_Recent.Text')}
                 </MenuItem>
               </MenuTrigger>
-              <MenuPopover data-testid="open-recent-popover">
+              <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolvedTheme === 'light' ? 'light' : 'dark'} style={isMac ? { ...acrylicVars(resolvedTheme === 'light' ? 'light' : 'dark'), padding: '4px' } : undefined} data-testid="open-recent-popover">
                 <MenuList
                   style={{
                     maxHeight: 'calc(100vh - 16px)',
@@ -1655,7 +1657,7 @@ export function TabStrip(props: TabStripProps): JSX.Element {
       }
     >
       {/* Main-menu (hamburger) button — LEFT of the tab strip (UWP MainMenuButton). */}
-      {menu && <MainMenu tokens={tokens} commands={menu} />}
+      {menu && <MainMenu tokens={tokens} commands={menu} resolvedTheme={resolvedTheme} />}
 
       {showScrollButtons && (
         <ScrollButton

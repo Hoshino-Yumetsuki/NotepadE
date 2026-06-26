@@ -8,7 +8,9 @@ import {
 } from '@fluentui/react-components';
 import type { ReactElement } from 'react';
 import { useT } from '../i18n';
-import { modKey } from '@shared/platform';
+import { modKey, isMac } from '@shared/platform';
+import { useAppTheme } from '../theme/useAppTheme';
+import { acrylicVars } from '../theme/tokens';
 
 /**
  * ============================================================================
@@ -72,11 +74,12 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
   // UWP enable conditions (TabContextFlyout_Opening, lines 79-82).
   const multiTab = tabCount > 1;
   const { t } = useT();
+  const { resolved } = useAppTheme();
 
   return (
     <Menu openOnContext positioning="below">
       <MenuTrigger disableButtonEnhancement>{children}</MenuTrigger>
-      <MenuPopover>
+      <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolved} style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}>
         <MenuList data-testid="tab-menu">
           <MenuItem data-testid="tab-menu-close" secondaryContent={`${modKey}+W`} onClick={onClose}>
             {t('Tab_ContextFlyout_CloseButtonDisplayText')}

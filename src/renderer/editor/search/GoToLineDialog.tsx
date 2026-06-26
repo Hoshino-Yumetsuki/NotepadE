@@ -25,6 +25,9 @@ import {
   Input
 } from '@fluentui/react-components';
 import { useT } from '../../i18n';
+import { isMac } from '@shared/platform';
+import { acrylicVars } from '../../theme/tokens';
+import { useAppTheme } from '../../theme/useAppTheme';
 
 export interface GoToLineDialogProps {
   /** Whether the dialog is open. */
@@ -42,6 +45,7 @@ export interface GoToLineDialogProps {
 export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
   const { open, currentLine, lineCount, onSubmit, onCancel } = props;
   const { t } = useT();
+  const { resolved } = useAppTheme();
   const [value, setValue] = useState(String(currentLine));
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -74,7 +78,12 @@ export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
         if (!data.open) onCancel();
       }}
     >
-      <DialogSurface data-testid="goto-line-dialog">
+      <DialogSurface
+        data-testid="goto-line-dialog"
+        className={isMac ? 'np-mac-panel' : ''}
+        data-theme={resolved}
+        style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
+      >
         <DialogBody>
           <DialogTitle>{t('GoTo_GoToBarLabel.Text')}</DialogTitle>
           <DialogContent>

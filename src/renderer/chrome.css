@@ -335,6 +335,10 @@ body,
  * the UWP NotepadsDialog plays. Applied to the Fluent DialogSurface via
  * className; transform is safe here (dialogs are centered overlays with no
  * geometry-measurement constraint). Gated for reduced motion (instant show).
+ *
+ * NOTE: For the macOS reskin, `.np-mac .np-dialog-enter` keeps this animation
+ * but also applies the in-page acrylic (tint + blur) and the macOS container
+ * styling (border, shadow).
  */
 @keyframes np-dialog-enter {
   from {

@@ -92,26 +92,50 @@ export function useAppTheme(): AppThemeResult {
   // Initial pull of the persisted settings bag + OS theme state.
   useEffect(() => {
     let alive = true;
-    void window.notepads.settings.get().then((r) => {
-      if (alive && r.ok) setSettings(r.data);
-    });
-    void window.notepads.theme.get().then((r) => {
-      if (!alive || !r.ok) return;
-      const t: ThemeState = r.data;
-      setOsTheme(t.osTheme);
-      setOsAccent(t.accentColor);
-      setHighContrast((prev) => prev || t.highContrast);
-    });
+    if (typeof window !== 'undefined' && window.notepads) {
+      if (window.notepads.settings?.get) {
+        void window.notepads.settings.get().then((r) => {
+          if (alive && r.ok) setSettings(r.data);
+        });
+      }
+      if (window.notepads.theme?.get) {
+        void window.notepads.theme.get().then((r) => {
+          if (!alive || !r.ok) return;
+          const t: ThemeState = r.data;
+          setOsTheme(t.osTheme);
+          setOsAccent(t.accentColor);
+          setHighContrast((prev) => prev || t.highContrast);
+        });
+      }
+    }
     return () => {
       alive = false;
     };
   }, []);
 
   // Live: settings changes (this or any window / external write).
-  useEffect(() => window.notepads.settings.onChanged((s) => setSettings(s)), []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.notepads?.settings?.onChanged) {
+      const dispose = window.notepads.settings.onChanged((s) => setSettings(s));
+      return () => dispose();
+    }
+    return undefined;
+  }, []);
   // Live: OS theme + accent pushes.
-  useEffect(() => window.notepads.theme.onOsThemeChanged((t) => setOsTheme(t)), []);
-  useEffect(() => window.notepads.theme.onAccentChanged((a) => setOsAccent(a)), []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.notepads?.theme?.onOsThemeChanged) {
+      const dispose = window.notepads.theme.onOsThemeChanged((t) => setOsTheme(t));
+      return () => dispose();
+    }
+    return undefined;
+  }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.notepads?.theme?.onAccentChanged) {
+      const dispose = window.notepads.theme.onAccentChanged((a) => setOsAccent(a));
+      return () => dispose();
+    }
+    return undefined;
+  }, []);
 
   // Live: forced-colors (Windows High Contrast). The golden harness toggles this
   // via emulateMedia({ forcedColors: 'active' }); fold it into the bucket.

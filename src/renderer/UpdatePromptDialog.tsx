@@ -16,6 +16,9 @@ import {
 } from '@fluentui/react-components';
 import { useT } from './i18n/I18nProvider';
 import type { UpdateInfo } from '@shared/ipc-contract';
+import { isMac } from '@shared/platform';
+import { acrylicVars } from './theme/tokens';
+import { useAppTheme } from './theme/useAppTheme';
 
 export interface UpdatePromptDialogProps {
   open: boolean;
@@ -31,6 +34,7 @@ export function UpdatePromptDialog({
   onDismiss
 }: UpdatePromptDialogProps): JSX.Element | null {
   const { t } = useT();
+  const { resolved } = useAppTheme();
   if (!info) return null;
   return (
     <Dialog
@@ -39,7 +43,12 @@ export function UpdatePromptDialog({
         if (!data.open) onDismiss();
       }}
     >
-      <DialogSurface data-testid="update-prompt-dialog">
+      <DialogSurface
+        data-testid="update-prompt-dialog"
+        className={isMac ? 'np-mac-panel' : ''}
+        data-theme={resolved}
+        style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
+      >
         <DialogBody>
           <DialogTitle>{t('Updates_DialogTitle')}</DialogTitle>
           <DialogContent>

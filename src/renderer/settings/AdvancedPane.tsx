@@ -38,10 +38,14 @@ import {
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import { APP_LANGUAGES } from './settingsOptions';
 import { useT } from '../i18n/I18nProvider';
+import { isMac } from '@shared/platform';
+import { acrylicVars } from '../theme/tokens';
+import { useAppTheme } from '../theme/useAppTheme';
 import type { PaneProps } from './TextEditorPane';
 
 export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
   const { t } = useT();
+  const { resolved } = useAppTheme();
 
   // Reset-all confirmation state. The dialog gates the destructive action;
   // `busy` debounces double-clicks while MAIN restores + broadcasts; `error`
@@ -205,7 +209,12 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
           if (!data.open && !resetBusy) closeResetDialog();
         }}
       >
-        <DialogSurface data-testid="reset-settings-dialog">
+        <DialogSurface
+          data-testid="reset-settings-dialog"
+          className={isMac ? 'np-mac-panel' : ''}
+          data-theme={resolved}
+          style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
+        >
           <DialogBody>
             <DialogTitle>{t('AdvancedPage_ResetSettings_ConfirmTitle')}</DialogTitle>
             <DialogContent>

@@ -109,7 +109,8 @@
  * change surgical and avoid coupling that component to the theme bridge. If it is
  * reskinned later, add a `.np-mac-panel` class here mirroring `.np-findbar`.
  */
-.np-mac .np-findbar {
+.np-mac .np-findbar,
+.np-mac .np-mac-panel {
   border-radius: 10px !important;
   /* Hairline border: a subtle dark line on light surfaces, a faint light line on
      dark surfaces (set per-theme below). */
@@ -129,7 +130,8 @@
      the controls themselves). */
   padding: 6px !important;
 }
-.np-mac .np-findbar[data-theme='dark'] {
+.np-mac .np-findbar[data-theme='dark'],
+.np-mac .np-mac-panel[data-theme='dark'] {
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
@@ -137,10 +139,13 @@
    mode stays gentle; dark mode goes stronger so the panel still detaches from a
    dark editor. Keyed off the panel's own data-theme. */
 .np-mac .np-findbar,
-.np-mac .np-findbar[data-theme='light'] {
+.np-mac .np-findbar[data-theme='light'],
+.np-mac .np-mac-panel,
+.np-mac .np-mac-panel[data-theme='light'] {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
 }
-.np-mac .np-findbar[data-theme='dark'] {
+.np-mac .np-findbar[data-theme='dark'],
+.np-mac .np-mac-panel[data-theme='dark'] {
   /* Stronger diffuse cast + a faint inner top highlight for the dark mac edge. */
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.45),
@@ -150,7 +155,8 @@
 /* High-contrast: flat opaque surface, no blur, no soft shadow — mirror the
    existing .np-acrylic HC behaviour. */
 @media (forced-colors: active) {
-  .np-mac .np-findbar {
+  .np-mac .np-findbar,
+  .np-mac .np-mac-panel {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background-color: Canvas !important;
@@ -163,7 +169,8 @@
 /* Reduced-transparency: keep the rounded mac shape + shadow, but drop the blur
    so the surface stays legible for users who disable transparency. */
 @media (prefers-reduced-transparency: reduce) {
-  .np-mac .np-findbar {
+  .np-mac .np-findbar,
+  .np-mac .np-mac-panel {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

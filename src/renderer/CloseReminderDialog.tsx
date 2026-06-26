@@ -24,7 +24,8 @@ import {
   DialogTitle
 } from '@fluentui/react-components';
 import { useT } from './i18n';
-import type { AppTheme } from './theme/tokens';
+import { isMac } from '@shared/platform';
+import { acrylicVars, type AppTheme } from './theme/tokens';
 import { dialogSurfaceStyle, dialogBackdropStyle } from './theme/dialogStyles';
 
 export interface CloseReminderDialogProps {
@@ -52,8 +53,9 @@ export function CloseReminderDialog(props: CloseReminderDialogProps): JSX.Elemen
     >
       <DialogSurface
         data-testid="close-reminder-dialog"
-        className="np-dialog-enter"
-        style={dialogSurfaceStyle(theme)}
+        className={`np-dialog-enter${isMac ? ' np-mac-panel' : ''}`}
+        data-theme={theme}
+        style={{ ...dialogSurfaceStyle(theme), ...(isMac ? { ...acrylicVars(theme), padding: '4px' } : undefined) }}
         backdrop={{ style: dialogBackdropStyle(theme) }}
       >
         <DialogBody>
