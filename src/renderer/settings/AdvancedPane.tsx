@@ -31,17 +31,15 @@ import {
   DialogActions,
   DialogBody,
   DialogContent,
-  DialogSurface,
   DialogTitle,
   tokens
 } from '@fluentui/react-components';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import { APP_LANGUAGES } from './settingsOptions';
 import { useT } from '../i18n/I18nProvider';
-import { isMac } from '@shared/platform';
-import { acrylicVars } from '../theme/tokens';
 import { useAppTheme } from '../theme/useAppTheme';
-import type { PaneProps } from './TextEditorPane';
+import type { PaneProps } from './types';
+import { AppDialogSurface } from '../theme/AppDialogSurface';
 
 export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
   const { t } = useT();
@@ -209,12 +207,7 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
           if (!data.open && !resetBusy) closeResetDialog();
         }}
       >
-        <DialogSurface
-          data-testid="reset-settings-dialog"
-          className={isMac ? 'np-mac-panel' : ''}
-          data-theme={resolved}
-          style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
-        >
+        <AppDialogSurface data-testid="reset-settings-dialog" theme={resolved}>
           <DialogBody>
             <DialogTitle>{t('AdvancedPage_ResetSettings_ConfirmTitle')}</DialogTitle>
             <DialogContent>
@@ -246,7 +239,7 @@ export function AdvancedPane({ settings, update }: PaneProps): JSX.Element {
               </Button>
             </DialogActions>
           </DialogBody>
-        </DialogSurface>
+        </AppDialogSurface>
       </Dialog>
     </SettingsPane>
   );

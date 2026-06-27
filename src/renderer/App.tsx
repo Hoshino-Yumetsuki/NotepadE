@@ -1,8 +1,7 @@
 import { FluentProvider, Spinner } from '@fluentui/react-components';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import type { OpenedFile } from '@shared/ipc-contract';
+import type { OpenedFile, UpdateInfo } from '@shared/ipc-contract';
 import { isMac } from '@shared/platform';
 import { MonacoEditor, type MonacoHandle } from './editor/MonacoEditor';
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
@@ -21,7 +20,6 @@ import { installSettingsTestHook } from './settings/settingsTestHook';
 import { appRootBackground, isWallpaperActive, wallpaperLayerStyle } from './theme/wallpaper';
 import { useWallpaper } from './theme/useWallpaper';
 import { edgeShadowStyle, EDGE_SHADOW_BLUR } from './theme/shadow';
-import { tokensForTheme, TabDimensions, TabAnimation } from './tabs/tokens';
 import {
   applyAdopt,
   applyRelease,
@@ -34,15 +32,24 @@ import type { TabState } from './tabs/types';
 import { wordWrapToggleRef } from './editor/commands/wordWrapBridge';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
+import { getTabTitle } from './integrations/pathUtils';
 import { useEditorContextMenu } from './editor/EditorContextMenu';
 import { useViewModeKeyboard } from './integrations/useViewModeKeyboard';
 import { CloseReminderDialog } from './CloseReminderDialog';
 import { AppCloseReminderDialog } from './AppCloseReminderDialog';
 import { UpdatePromptDialog } from './UpdatePromptDialog';
-import type { UpdateInfo } from '@shared/ipc-contract';
 import { CaptionButtons } from './chrome/CaptionButtons';
 import { useT } from './i18n';
 import { usePrefersReducedMotion } from './theme/usePrefersReducedMotion';
+
+// Extracted layout components (absolute imports / local imports relative to renderer root are absolute internally since bundler maps root to root)
+import { TabSurfaceWash } from './tabs/TabSurfaceWash';
+import { PaneMount } from './chrome/PaneMount';
+
+// Extracted hooks
+import { useDirtyState } from './editor/useDirtyState';
+import { useFilePipeline } from './integrations/useFilePipeline';
+import { useTauriWindow } from './integrations/useTauriWindow';
 
 /**
  * Heavy secondary panes loaded LAZILY (cold-start win, visually transparent):
@@ -82,113 +89,7 @@ const FolderSidebar = lazy(() =>
  */
 /** Tab display title: file basename (PA-8-safe split, no path import) or untitled name. */
 function tabTitle(tab: TabState): string {
-  if (tab.filePath) return tab.filePath.split(/[\\/]/).pop() || tab.filePath;
-  return tab.untitledName || 'Untitled';
-}
-
-/**
- * The single continuous wash sheet behind the strip + editor (UWP SetsView:
- * selected-tab brush == content brush). One absolutely-positioned layer mounted
- * inside #app-shell that paints the editor band AND extends UP under the active
- * tab — the two are joined into an inverted-T by `clip-path`, so the selected tab
- * and the editor are ONE painted surface with no strip→editor seam (the boundary
- * is internal to a single paint instead of being the meeting line of two separate
- * translucent washes — the previous "接缝").
- *
- * It extends `TabDimensions.height` px ABOVE #app-shell's top so the notch reaches
- * up over the active tab's body (the strip above is transparent, so the notch
- * shows through under the active tab; the notch is clipped to only the active-tab
- * column, so it can never bleed under the hamburger / scroll / add chrome). When
- * there is no measurable active tab (empty strip, scrolled fully out, or mid-drag)
- * it collapses to a plain full-width band — no stray notch stranded at an old x.
- *
- * Pure presentation: pointer-events:none, aria-hidden, zIndex 0 (below the editor
- * hosts and the transparent strip). HC has no material — headerSelected resolves
- * to the Highlight system color there, which would be wrong as a full content
- * wash, so HC renders nothing (the editor stays flat Canvas like UWP HC).
- */
-function TabSurfaceWash(props: {
-  rect: { left: number; width: number } | null;
-  theme: 'light' | 'dark' | 'hc';
-}): JSX.Element | null {
-  const { rect, theme } = props;
-  // HC: flat forced-colors chrome, no translucent merge wash (matches UWP HC).
-  if (theme === 'hc') return null;
-  const wash = tokensForTheme(theme).headerSelected;
-  // Notch band height = the active tab's body height (the strip's 1px top border
-  // is above it). The wash is lifted by this much so its top edge aligns with the
-  // tab body's top, and the top `H` px of the layer is the notch region.
-  const H = TabDimensions.height;
-  // Inverted-T: the active-tab notch (top H px, only under [left, left+width])
-  // sitting on the full-width editor band (below H). With no rect, just the band.
-  const clipPath = rect
-    ? `polygon(` +
-      `${rect.left}px 0, ${rect.left + rect.width}px 0, ` + // notch top edge
-      `${rect.left + rect.width}px ${H}px, 100% ${H}px, ` + // down + across to right
-      `100% 100%, 0 100%, ` + // right→bottom→left
-      `0 ${H}px, ${rect.left}px ${H}px)` // up + across back to notch
-    : `polygon(0 ${H}px, 100% ${H}px, 100% 100%, 0 100%)`;
-  return (
-    <div
-      data-testid="tab-surface-wash"
-      aria-hidden
-      style={{
-        position: 'absolute',
-        top: -H,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: wash,
-        clipPath,
-        WebkitClipPath: clipPath,
-        pointerEvents: 'none',
-        zIndex: 0
-      }}
-    />
-  );
-}
-
-/**
- * C5 — secondary-pane mount transition. Wraps the preview/diff pane content so it
- * fades in (opacity 0→1) and slides a few px from the right (translateX, a
- * compositor-only transform) when it MOUNTS, matching the existing ~160ms motion
- * tokens (TabAnimation.enterMs / brushFadeMs). Only the appearing secondary pane
- * animates — never the editor pane itself. Fully gated by `reduced`: when the user
- * prefers reduced motion the children render at their final state with no
- * transition, so motion-sensitive users see the same instant pane the app always
- * showed. The one-tick state flip (entered) starts from the pre-animation state on
- * the first commit and transitions to the resting state on the next frame.
- */
-function PaneMount(props: { reduced: boolean; children: ReactNode }): JSX.Element {
-  const { reduced, children } = props;
-  const [entered, setEntered] = useState(reduced);
-  useEffect(() => {
-    if (reduced) {
-      setEntered(true);
-      return;
-    }
-    // rAF (not setTimeout): we only need the style to transition AFTER the initial
-    // opacity:0 paint commits; a single frame is enough and never starves here
-    // because a freshly-mounted, user-triggered pane is on a compositing window.
-    const id = requestAnimationFrame(() => setEntered(true));
-    return () => cancelAnimationFrame(id);
-  }, [reduced]);
-  // Reduced motion: render children directly, no wrapper transform/transition.
-  if (reduced) return <>{children}</>;
-  return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        opacity: entered ? 1 : 0,
-        transform: entered ? 'translateX(0)' : 'translateX(8px)',
-        transition: `opacity ${TabAnimation.enterMs}ms ease-out, transform ${TabAnimation.enterMs}ms ease-out`,
-        willChange: entered ? 'auto' : 'opacity, transform'
-      }}
-    >
-      {children}
-    </div>
-  );
+  return getTabTitle(tab);
 }
 
 export function App(): JSX.Element {
@@ -255,18 +156,9 @@ export function App(): JSX.Element {
   // Opaque labels for the ACTIVE editor (carried back to MAIN on save).
   const labelsRef = useRef<OpenLabels>({ encodingId: null, eolId: null });
 
-  // Last-saved baseline TEXT per editor (Phase 6, diff viewer). The store/tracker
-  // keep only mtime, so the diff pane's "original" column needs the text captured
-  // at each authoritative load point (open / activation-open / adopt). Untitled
-  // buffers have no entry → '' (everything shows as an insert). Pure renderer.
-  // INVARIANT: entries are stored ALREADY '\n'-shadow-normalized (every writer
-  // normalizes at set time). recomputeDirty runs on EVERY doc change; normalizing
-  // a raw CRLF baseline there instead would re-build a full copy of the string
-  // per keystroke (~190ms + ~120MB transient on a 120MB file — measured).
-  const lastSavedTextRef = useRef<Map<string, string>>(new Map());
-  // Hash-based dirty detection: avoids materializing the full doc string on every
-  // keystroke when lengths happen to match. The hash is computed in Rust (xxh3_64).
-  const baselineRef = useRef<Map<string, { hash: number; length: number }>>(new Map());
+  // Custom dirty state manager hook
+  const { lastSavedTextRef, baselineRef, recomputeDirty } = useDirtyState(store, editorHandles);
+
   // A no-value re-render pulse: while a content pane (preview/diff) is open we bump
   // this on every doc change so the pane re-reads the live shadow text (CM6 owns
   // the doc, so App otherwise doesn't re-render on keystrokes). The bump is
@@ -383,6 +275,83 @@ export function App(): JSX.Element {
     }
   });
 
+  // File loading and saving pipeline hook
+  const { openPathIntoTab, doSave, doSaveAll } = useFilePipeline({
+    store,
+    editorHandles,
+    lastSavedTextRef,
+    baselineRef,
+    recomputeDirty
+  });
+
+  // Open dialog (Ctrl+O + menu, UWP MainMenuButton_OpenButton): MAIN owns the
+  // native picker (PA-8); we open each chosen path via the shared primitive. A
+  // cancelled picker resolves ok with [] — treated as a no-op.
+  const doOpen = useCallback((): void => {
+    void window.notepads.file.openDialog().then((res) => {
+      if (!res.ok) return;
+      for (const path of res.data) openPathIntoTab(path);
+    });
+  }, [openPathIntoTab]);
+
+  // Open Folder dialog (Issue #10): shows a native folder picker via MAIN,
+  // sets the sidebar root path. Cancelled picker resolves ok with null/undefined.
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const doOpenFolder = useCallback((): void => {
+    void window.notepads.folder.openDialog().then((res) => {
+      if (res.ok && res.data) {
+        setOpenFolder(res.data);
+        setSidebarVisible(true);
+        void window.notepads.recent.addFolder(res.data);
+      }
+    });
+  }, []);
+
+  // New Window (Ctrl+Shift+N + menu, UWP MenuCreateNewWindowButton): ask the
+  // broker to spawn a fresh empty window. MAIN owns window lifecycle (PA-8).
+  const doNewWindow = useCallback((): void => {
+    void window.notepads.window.brokerRequest({ paths: [], forceNewWindow: true });
+  }, []);
+
+  // Open / New Window accelerators (match the existing Ctrl+S effect style):
+  // Ctrl+O opens the native picker, Ctrl+Shift+N spawns a new window. Bare
+  // chords only — Ctrl+Shift+N must not collide with Ctrl+N new-tab (which
+  // requires !shift in useTabKeyboard).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        (e.key === 'o' || e.key === 'O')
+      ) {
+        e.preventDefault();
+        doOpen();
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        !e.altKey &&
+        (e.key === 'n' || e.key === 'N')
+      ) {
+        e.preventDefault();
+        doNewWindow();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doOpen, doNewWindow]);
+
+  // App-level close reminder dialog state
+  const [appClosePending, setAppClosePending] = useState(false);
+
+  // Set up Tauri Window listeners (Activation, Drag-drop, Window close)
+  useTauriWindow({
+    store,
+    openPathIntoTab,
+    setAppClosePending
+  });
+
   // e.g. en 'Untitled.txt' / zh '新建文本文档.txt' / ja '無題.txt'). The store
   // appends a number ('{base} {N}'); we strip the trailing extension so the tab
   // reads e.g. "新建文本文档 1", not "新建文本文档.txt 1". Re-applied whenever the
@@ -460,7 +429,7 @@ export function App(): JSX.Element {
       // OpenedFile mtime so a later disk change is detectable (Lane C, Gate-4).
       if (file.filePath) recordLastSaved(id, file.filePath, file.dateModifiedMs);
     },
-    [store]
+    [store, lastSavedTextRef, baselineRef, labelsRef]
   );
 
   // Editor test hook reads the ACTIVE editor's handle + labels (existing Gate-1).
@@ -474,7 +443,6 @@ export function App(): JSX.Element {
     return uninstall;
   }, [onFileOpened, store]);
 
-  // Editor-surface seam (Phase 3 Gate-3 harness): exposes the ACTIVE tab's live
   // Editor-surface seam (Phase 3 Gate-3 harness): exposes the ACTIVE tab's live
   // Monaco editor to the keyboard-conformance + undo-granularity e2e. PA-8-clean —
   // it reads the IStandaloneCodeEditor + public Monaco APIs, no IPC/fs. Installed
@@ -543,263 +511,12 @@ export function App(): JSX.Element {
       offAdopt();
       offRelease();
     };
-  }, [store]);
+  }, [store, lastSavedTextRef, baselineRef]);
 
   // Transfer test seam (Gate-6 harness, lane-h): drives the genuine begin/
   // complete/void-drop path since Playwright can't synthesize a real HTML5
   // cross-process drag. PA-8-clean (only window.notepads + store).
   useEffect(() => installTransferTestHook(store, transferSource.current), [store]);
-
-  // Open an absolute path into a tab (the shared open primitive). If the path is
-  // ALREADY open in this window, focus that tab instead of opening a duplicate
-  // (UWP focuses the existing set) — two editors on one path would let the second
-  // save silently clobber the first (edit-loss). Otherwise read via MAIN
-  // (file.open), seed a fresh tab with the authoritative labels, and seed the
-  // diff/dirty baseline BEFORE setDoc so the doc-change listener treats the loaded
-  // text as the clean baseline (Issue 3) rather than '' (which would mark it
-  // dirty). Used by activation-open, the Open dialog (Ctrl+O), the Open Recent
-  // submenu, and drag-drop — every path that opens a file on disk.
-  const openPathIntoTab = useCallback(
-    (path: string): void => {
-      const winNT = navigator.userAgent.includes('Windows');
-      const norm = (p: string): string => (winNT ? p.toLowerCase() : p);
-      const target = norm(path);
-      const existing = store.tabs.find(
-        (tab) => tab.filePath !== null && norm(tab.filePath) === target
-      );
-      if (existing) {
-        store.activate(existing.editorId);
-        return;
-      }
-
-      const s = store.tabs;
-      const seedTab =
-        s.length === 1 && s[0].filePath === null && !s[0].isModified && !s[0].isLoading
-          ? s[0]
-          : null;
-      let id: string;
-      if (seedTab) {
-        id = seedTab.editorId;
-        store.setFilePath(id, path);
-        store.setLoading(id, true);
-        store.activate(id);
-      } else {
-        id = store.newTab({ filePath: path, isLoading: true, activate: true });
-      }
-
-      const STREAM_THRESHOLD = 1_048_576; // 1MB
-
-      void window.notepads.file.getSize(path).then((sizeRes) => {
-        if (!store.get(id)) return;
-        const fileSize = sizeRes.ok ? sizeRes.data : 0;
-
-        if (fileSize < STREAM_THRESHOLD) {
-          // Direct load path (small files)
-          void window.notepads.file.open(path).then((res) => {
-            if (!store.get(id)) return;
-            if (!res.ok) {
-              if (seedTab) {
-                store.setFilePath(id, null);
-                store.setLoading(id, false);
-              } else {
-                store.close(id);
-                if (store.count() === 0) store.newTab();
-              }
-              return;
-            }
-            const normalized = res.data.decodedText;
-            const seedOpened = (): void => {
-              if (!store.get(id)) return;
-              const handle = editorHandles.current.get(id);
-              if (handle) handle.setDoc(normalized);
-              else setTimeout(seedOpened, 0);
-            };
-            lastSavedTextRef.current.set(id, normalized);
-            baselineRef.current.set(id, {
-              hash: res.data.baselineHash,
-              length: res.data.baselineLength
-            });
-            store.setLabels(id, res.data.encodingId, res.data.eolId);
-            store.setFilePath(id, res.data.filePath);
-            if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
-            store.setLoading(id, false);
-            seedOpened();
-          });
-        } else {
-          // Streaming load path (large files)
-          void (async () => {
-            // Subscribe to chunk events BEFORE requesting streamed open
-            const unlisten = await window.notepads.file.onChunk((chunk) => {
-              if (!store.get(id)) {
-                unlisten();
-                return;
-              }
-              const handle = editorHandles.current.get(id);
-              if (!handle) return;
-              const editor = handle.getEditor();
-              const model = editor?.getModel();
-              if (!model) return;
-              // Append the chunk at end-of-doc with NO undo step: model.applyEdits
-              // does not push to the undo stack (unlike executeEdits /
-              // pushEditOperations), so a streamed load can never be partially
-              // un-done. Range = the empty range at the very end of the model.
-              const end = model.getFullModelRange().getEndPosition();
-              model.applyEdits([
-                {
-                  range: {
-                    startLineNumber: end.lineNumber,
-                    startColumn: end.column,
-                    endLineNumber: end.lineNumber,
-                    endColumn: end.column
-                  },
-                  text: chunk.text
-                }
-              ]);
-              if (chunk.isLast) {
-                unlisten();
-                // Snapshot the fully-loaded text as the saved baseline for diff
-                lastSavedTextRef.current.set(id, handle.getShadowText());
-                // Enable editing now that the full document is loaded
-                store.setStreaming(id, false);
-                // Re-check dirty now that the doc is complete (streaming suppressed earlier checks)
-                recomputeDirty(id);
-              }
-            });
-
-            const res = await window.notepads.file.openStreamed(path);
-            if (!store.get(id)) {
-              unlisten();
-              return;
-            }
-            if (!res.ok) {
-              unlisten();
-              if (seedTab) {
-                store.setFilePath(id, null);
-                store.setLoading(id, false);
-              } else {
-                store.close(id);
-                if (store.count() === 0) store.newTab();
-              }
-              return;
-            }
-            const header = res.data;
-            baselineRef.current.set(id, {
-              hash: header.baselineHash,
-              length: header.baselineLength
-            });
-            lastSavedTextRef.current.set(id, ''); // placeholder; re-read from disk for diff
-            store.setLabels(id, header.encodingId, header.eolId);
-            store.setFilePath(id, header.filePath);
-            if (header.filePath) recordLastSaved(id, header.filePath, header.dateModifiedMs);
-            // Show editor immediately (empty doc), mark as streaming (readOnly)
-            store.setLoading(id, false);
-            store.setStreaming(id, true);
-          })();
-        }
-      });
-    },
-    // recomputeDirty (used in the streaming branch above) is a stable
-    // useCallback([store]) declared later in the body; including it would be a
-    // use-before-declaration and it never changes identity for a fixed store, so
-    // [store] is the correct, complete dependency set.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store]
-  );
-
-  // Open dialog (Ctrl+O + menu, UWP MainMenuButton_OpenButton): MAIN owns the
-  // native picker (PA-8); we open each chosen path via the shared primitive. A
-  // cancelled picker resolves ok with [] — treated as a no-op.
-  const doOpen = useCallback((): void => {
-    void window.notepads.file.openDialog().then((res) => {
-      if (!res.ok) return;
-      for (const path of res.data) openPathIntoTab(path);
-    });
-  }, [openPathIntoTab]);
-
-  // Open Folder dialog (Issue #10): shows a native folder picker via MAIN,
-  // sets the sidebar root path. Cancelled picker resolves ok with null/undefined.
-  const [openFolder, setOpenFolder] = useState<string | null>(null);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const doOpenFolder = useCallback((): void => {
-    void window.notepads.folder.openDialog().then((res) => {
-      if (res.ok && res.data) {
-        setOpenFolder(res.data);
-        setSidebarVisible(true);
-        void window.notepads.recent.addFolder(res.data);
-      }
-    });
-  }, []);
-
-  // New Window (Ctrl+Shift+N + menu, UWP MenuCreateNewWindowButton): ask the
-  // broker to spawn a fresh empty window. MAIN owns window lifecycle (PA-8).
-  const doNewWindow = useCallback((): void => {
-    void window.notepads.window.brokerRequest({ paths: [], forceNewWindow: true });
-  }, []);
-
-  // Open / New Window accelerators (match the existing Ctrl+S effect style):
-  // Ctrl+O opens the native picker, Ctrl+Shift+N spawns a new window. Bare
-  // chords only — Ctrl+Shift+N must not collide with Ctrl+N new-tab (which
-  // requires !shift in useTabKeyboard).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        !e.shiftKey &&
-        !e.altKey &&
-        (e.key === 'o' || e.key === 'O')
-      ) {
-        e.preventDefault();
-        doOpen();
-      } else if (
-        (e.ctrlKey || e.metaKey) &&
-        e.shiftKey &&
-        !e.altKey &&
-        (e.key === 'n' || e.key === 'N')
-      ) {
-        e.preventDefault();
-        doNewWindow();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [doOpen, doNewWindow]);
-
-  // App-window activation (Workstream 6.A): a broker redirect/spawn delivers the
-  // file paths to open into THIS window. Open each via the shared primitive.
-  useEffect(() => {
-    const off = window.notepads.app.onActivation((event) => {
-      for (const path of event.paths) openPathIntoTab(path);
-    });
-    return off;
-  }, [openPathIntoTab]);
-
-  // Drag-drop open (Tauri native onDragDropEvent). Tauri provides absolute
-  // paths directly via native drag-drop — the web-level drop listener is
-  // replaced because Electron's webUtils.getPathForFile has no Tauri equivalent.
-  // The native event only fires for OS file drops; it does NOT intercept the
-  // dnd-kit intra-strip reorder (pointer-driven) or the cross-window tab-
-  // transfer token drag (which carries 'application/x-notepads-token').
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    // Guard: only activate inside a Tauri webview. jsdom/vitest never enters here.
-    if (!('__TAURI_INTERNALS__' in window)) return;
-    void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-      void getCurrentWindow()
-        .onDragDropEvent((event) => {
-          if (event.payload.type === 'drop') {
-            for (const path of event.payload.paths) {
-              openPathIntoTab(path);
-            }
-          }
-        })
-        .then((fn) => {
-          unlisten = fn;
-        });
-    });
-    return () => {
-      unlisten?.();
-    };
-  }, [openPathIntoTab]);
 
   // Actually remove a tab and drop its external-modification baseline (Lane C,
   // Gate-4): the per-editor mtime ledger must not leak across a closed editorId.
@@ -819,7 +536,7 @@ export function App(): JSX.Element {
         else store.newTab();
       }
     },
-    [store, settings.exitWhenLastTabClosed]
+    [store, settings.exitWhenLastTabClosed, lastSavedTextRef, baselineRef]
   );
 
   // Sweep per-editor side maps for tabs that left the store via paths that do
@@ -839,7 +556,7 @@ export function App(): JSX.Element {
         forgetEditor(id);
       }
     }
-  }, [tabs]);
+  }, [tabs, lastSavedTextRef, baselineRef]);
 
   // Close-reminder dialog state (Issue 4, UWP SetCloseSaveReminderDialog). Non-null
   // while a MODIFIED tab is awaiting the user's Save / Don't Save / Cancel choice.
@@ -882,122 +599,6 @@ export function App(): JSX.Element {
   );
   const onVoidDrop = useCallback((id: string) => handleVoidDrop(store, id), [store]);
 
-  // Recompute a tab's dirty flag (Issue 3): compare the live '\n'-shadow text to
-  // that tab's last-saved baseline. The baseline map stores entries ALREADY
-  // shadow-normalized (see lastSavedTextRef), so no normalize pass runs here —
-  // this fires on EVERY doc change, and re-normalizing a 120MB baseline per
-  // keystroke costs ~190ms + a full-size transient copy (measured). Untitled
-  // buffers have no baseline entry → '' (any typed character makes them dirty).
-  // Drives the tab dot + status-bar "Modified" via store.setModified.
-  const recomputeDirty = useCallback(
-    (editorId: string): void => {
-      const handle = editorHandles.current.get(editorId);
-      if (!handle) return;
-      const model = handle.getEditor()?.getModel();
-      if (!model) return;
-      // Length in the LF shadow buffer WITHOUT materializing the whole string
-      // (Monaco computes it from the buffer's internal metrics). Matches the
-      // baseline length, which Rust computed over the same '\n'-normalized text.
-      const shadowLength = model.getValueLength(1 /* EndOfLinePreference.LF */);
-      const bl = baselineRef.current.get(editorId);
-      // Untitled buffers have no baseline → any content makes them dirty.
-      if (!bl) {
-        store.setModified(editorId, shadowLength > 0);
-        return;
-      }
-      // Length fast-path: most edits change length.
-      if (shadowLength !== bl.length) {
-        store.setModified(editorId, true);
-        return;
-      }
-      // Same length (e.g. overtype / replace-selection with equal length): a
-      // content change that ties the baseline length is almost always a real
-      // edit. Reflect dirty OPTIMISTICALLY and immediately so the tab dot +
-      // status bar respond at once, THEN reconcile against the baseline hash —
-      // on a multi-MB file getShadowText() materializes the whole string and the
-      // hash round-trips through IPC (seconds), which previously left the dirty
-      // state lagging behind the edit. The hash only ever CLEARS it back (when
-      // the user restored the exact saved text).
-      store.setModified(editorId, true);
-      const text = handle.getShadowText();
-      void window.notepads.hash.compute(text).then((res) => {
-        if (!res.ok) return;
-        store.setModified(editorId, res.data !== bl.hash);
-      });
-    },
-    [store]
-  );
-
-  // Save pipeline (Issue 3, UWP NotepadsMainPage.IO.cs:159-217). doSave writes the
-  // active (or given) tab: untitled / no filePath / saveAs → native Save-As picker
-  // (file.saveAs); else write the existing path (file.save). A plain Ctrl+S on an
-  // unmodified, already-on-disk doc is a no-op. On success: re-baseline the shadow
-  // text, set filePath + clear isModified (named tab title follows filePath).
-  const doSave = useCallback(
-    async (editorId: string, opts?: { saveAs?: boolean }): Promise<boolean> => {
-      const tab = store.get(editorId);
-      const handle = editorHandles.current.get(editorId);
-      if (!tab || !handle) return false;
-      const saveAs = opts?.saveAs ?? false;
-      const shadowText = handle.getShadowText();
-      const hasPath = !!tab.filePath;
-      // No-op: a clean, already-saved file with a plain Ctrl+S writes nothing.
-      if (!saveAs && hasPath && !tab.isModified) return true;
-
-      const res =
-        saveAs || !hasPath
-          ? await window.notepads.file.saveAs({
-              shadowText,
-              encodingId: tab.encodingId,
-              eolId: tab.eolId,
-              suggestedName: tabTitle(tab),
-              // Save As on a file-backed tab starts in the file's CURRENT folder
-              // (UWP FileSavePicker seeded SuggestedSaveFile). PA-8: no path
-              // module in the renderer — slice the directory off the absolute
-              // path INCLUSIVE of the last separator (so a drive-root file
-              // yields "C:\", which path.join treats as absolute, not the
-              // drive-relative "C:"); MAIN joins the name back on. Untitled
-              // buffers pass undefined and MAIN anchors to Documents.
-              defaultDir: ((): string | undefined => {
-                if (!tab.filePath) return undefined;
-                const sep = tab.filePath.search(/[\\/][^\\/]*$/);
-                return sep >= 0 ? tab.filePath.slice(0, sep + 1) : undefined;
-              })()
-            })
-          : await window.notepads.file.save({
-              filePath: tab.filePath as string,
-              shadowText,
-              encodingId: tab.encodingId,
-              eolId: tab.eolId
-            });
-      // Cancelled picker or write error: leave the tab dirty, surface nothing.
-      if (!res.ok) return false;
-
-      // Re-baseline to the JUST-saved shadow text so the doc is clean again, and
-      // adopt the authoritative path + labels MAIN echoes back.
-      lastSavedTextRef.current.set(editorId, shadowText);
-      baselineRef.current.set(editorId, {
-        hash: res.data.baselineHash,
-        length: res.data.baselineLength
-      });
-      store.setFilePath(editorId, res.data.filePath);
-      store.setLabels(editorId, res.data.encodingId, res.data.eolId);
-      recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
-      store.setModified(editorId, false);
-      return true;
-    },
-    [store]
-  );
-
-  // Save All (UWP: loop modified editors). Untitled modified buffers each open a
-  // Save-As picker in turn. Sequential so the native dialogs don't stack; a
-  // cancelled picker (doSave → false) aborts the remaining saves.
-  const doSaveAll = useCallback(async (): Promise<void> => {
-    for (const t of store.tabs) {
-      if (t.isModified && !(await doSave(t.editorId))) break;
-    }
-  }, [store, doSave]);
-
   // Close-reminder dialog outcomes (Issue 4, UWP SetCloseSaveReminderDialog).
   // Save → write, then close only if the write succeeded (a cancelled Save-As
   // picker aborts the close, keeping the tab). Don't Save → discard + close.
@@ -1018,26 +619,6 @@ export function App(): JSX.Element {
     performClose(target.editorId);
   }, [pendingClose, performClose]);
   const onReminderCancel = useCallback((): void => setPendingClose(null), []);
-
-  // App-level close reminder (UWP MainPage_CloseRequested → AppCloseSaveReminderDialog).
-  // MAIN intercepts the native window close (X / Alt+F4 / OS) and pushes
-  // onCloseRequested; we run the unsaved-changes flow, then call window.confirmClose()
-  // to let the real close proceed. `appClosePending` shows the dialog while the user
-  // decides. NOTE: UWP skips this prompt when session-snapshot is ON (it persists the
-  // session instead). Renderer session persistence is not yet wired, so we ALWAYS
-  // prompt on dirty tabs — prompting can never lose data; silently closing could.
-  const [appClosePending, setAppClosePending] = useState(false);
-
-  useEffect(() => {
-    return window.notepads.window.onCloseRequested(() => {
-      const anyDirty = store.tabs.some((t) => t.isModified);
-      if (!anyDirty) {
-        void window.notepads.window.confirmClose();
-        return;
-      }
-      setAppClosePending(true);
-    });
-  }, [store]);
 
   // Save All & Exit: save every modified tab in turn (a cancelled Save-As picker or
   // a write error aborts), then close the window only if everything is now clean.

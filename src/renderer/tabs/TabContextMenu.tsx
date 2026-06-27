@@ -1,16 +1,8 @@
-import {
-  Menu,
-  MenuTrigger,
-  MenuPopover,
-  MenuList,
-  MenuItem,
-  MenuDivider
-} from '@fluentui/react-components';
+import { Menu, MenuTrigger, MenuList, MenuItem, MenuDivider } from '@fluentui/react-components';
 import type { ReactElement } from 'react';
 import { useT } from '../i18n';
-import { modKey, isMac } from '@shared/platform';
-import { useAppTheme } from '../theme/useAppTheme';
-import { acrylicVars } from '../theme/tokens';
+import { modKey } from '@shared/platform';
+import { ThemedMenuPopover } from '../theme/ThemedMenuPopover';
 
 /**
  * ============================================================================
@@ -74,12 +66,11 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
   // UWP enable conditions (TabContextFlyout_Opening, lines 79-82).
   const multiTab = tabCount > 1;
   const { t } = useT();
-  const { resolved } = useAppTheme();
 
   return (
     <Menu openOnContext positioning="below">
       <MenuTrigger disableButtonEnhancement>{children}</MenuTrigger>
-      <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolved} style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}>
+      <ThemedMenuPopover>
         <MenuList data-testid="tab-menu">
           <MenuItem data-testid="tab-menu-close" secondaryContent={`${modKey}+W`} onClick={onClose}>
             {t('Tab_ContextFlyout_CloseButtonDisplayText')}
@@ -125,7 +116,7 @@ export function TabContextMenu(props: TabContextMenuProps): JSX.Element {
             {t('Tab_ContextFlyout_RenameButtonDisplayText')}
           </MenuItem>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }

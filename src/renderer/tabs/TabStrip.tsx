@@ -1,13 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { NavigationRegular, FolderRegular, DocumentRegular } from '@fluentui/react-icons';
-import {
-  Menu,
-  MenuTrigger,
-  MenuPopover,
-  MenuList,
-  MenuItem,
-  MenuDivider
-} from '@fluentui/react-components';
+import { Menu, MenuTrigger, MenuList, MenuItem, MenuDivider } from '@fluentui/react-components';
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +16,7 @@ import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dn
 import { CSS } from '@dnd-kit/utilities';
 import type { TabState } from './types';
 import type { TabsStore } from './useTabsStore';
+import { getTabTitle } from '../integrations/pathUtils';
 import type { RecentEntry } from '@shared/ipc-contract';
 import { TabContextMenu } from './TabContextMenu';
 import {
@@ -39,8 +33,7 @@ import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
 import { usePrefersReducedMotion } from '../theme/usePrefersReducedMotion';
 import { useT } from '../i18n';
 import { modKey } from '@shared/platform';
-import { isMac } from '@shared/platform';
-import { acrylicVars } from '../theme/tokens';
+import { ThemedMenuPopover } from '../theme/ThemedMenuPopover';
 
 /**
  * ============================================================================
@@ -126,10 +119,7 @@ export interface TabStripProps {
 
 /** The label a tab shows: basename of filePath, else its untitled name. */
 function tabTitle(tab: TabState): string {
-  if (tab.filePath === null) return tab.untitledName || 'Untitled';
-  // Renderer has no Node basename helper (PA-8); split on both separators here.
-  const parts = tab.filePath.split(/[\\/]/);
-  return parts[parts.length - 1] || tab.filePath;
+  return getTabTitle(tab);
 }
 
 /**
@@ -635,7 +625,11 @@ function ScrollButton(props: {
  * the structure mirrors UWP. Marked no-drag so the click isn't eaten by the
  * window drag region.
  */
-function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands; resolvedTheme: TabTheme }): JSX.Element {
+function MainMenu(props: {
+  tokens: TabThemeTokens;
+  commands: MainMenuCommands;
+  resolvedTheme: TabTheme;
+}): JSX.Element {
   const { tokens, commands, resolvedTheme } = props;
   const { t } = useT();
   const [hovered, setHovered] = useState(false);
@@ -690,7 +684,10 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands; r
           <NavigationRegular />
         </button>
       </MenuTrigger>
-      <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolvedTheme === 'light' ? 'light' : 'dark'} style={isMac ? { ...acrylicVars(resolvedTheme === 'light' ? 'light' : 'dark'), padding: '4px' } : undefined} data-testid="main-menu-popover">
+      <ThemedMenuPopover
+        theme={resolvedTheme === 'light' ? 'light' : 'dark'}
+        data-testid="main-menu-popover"
+      >
         <MenuList
           style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
         >
@@ -727,7 +724,10 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands; r
                   {t('MainMenu_Button_Open_Recent.Text')}
                 </MenuItem>
               </MenuTrigger>
-              <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolvedTheme === 'light' ? 'light' : 'dark'} style={isMac ? { ...acrylicVars(resolvedTheme === 'light' ? 'light' : 'dark'), padding: '4px' } : undefined} data-testid="open-recent-popover">
+              <ThemedMenuPopover
+                theme={resolvedTheme === 'light' ? 'light' : 'dark'}
+                data-testid="open-recent-popover"
+              >
                 <MenuList
                   style={{
                     maxHeight: 'calc(100vh - 16px)',
@@ -775,7 +775,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands; r
                     {t('MainMenu_Button_Open_Recent_ClearRecentlyOpenedSubItem_Text')}
                   </MenuItem>
                 </MenuList>
-              </MenuPopover>
+              </ThemedMenuPopover>
             </Menu>
           )}
           <MenuDivider />
@@ -836,7 +836,7 @@ function MainMenu(props: { tokens: TabThemeTokens; commands: MainMenuCommands; r
             {t('MainMenu_Button_Settings.Text')}
           </MenuItem>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }

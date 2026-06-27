@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { useT } from '../i18n';
+import { getFolderBasename } from '../integrations/pathUtils';
 import type { FolderEntry } from '@shared/ipc-contract';
 import {
   FolderRegular,
@@ -293,12 +294,6 @@ const TreeItem = memo(function TreeItem({
 // ---------------------------------------------------------------------------
 //  FolderSidebar
 // ---------------------------------------------------------------------------
-
-function folderBasename(path: string): string {
-  // Works on both / and \ separators (no Node path module — PA-8)
-  const parts = path.replaceAll('\\', '/').replace(/[/]+$/, '').split('/');
-  return parts[parts.length - 1] || path;
-}
 
 export function FolderSidebar({
   folderPath,
@@ -636,7 +631,7 @@ export function FolderSidebar({
             letterSpacing: '0.03em'
           }}
         >
-          {folderBasename(folderPath).toUpperCase()}
+          {getFolderBasename(folderPath).toUpperCase()}
         </span>
       </div>
 

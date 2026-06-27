@@ -15,14 +15,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
-import {
-  Menu,
-  MenuItem,
-  MenuList,
-  MenuPopover,
-  MenuTrigger,
-  MenuDivider
-} from '@fluentui/react-components';
+import { Menu, MenuItem, MenuList, MenuTrigger, MenuDivider } from '@fluentui/react-components';
 import {
   CutRegular,
   CopyRegular,
@@ -39,9 +32,8 @@ import type { FC } from 'react';
 import type * as monacoApi from 'monaco-editor/esm/vs/editor/editor.api';
 import { buildWebSearchQuery } from './commands/logic/webSearch';
 import { useT } from '../i18n';
-import { modKey, isMac } from '@shared/platform';
-import { useAppTheme } from '../theme/useAppTheme';
-import { acrylicVars } from '../theme/tokens';
+import { modKey } from '@shared/platform';
+import { ThemedMenuPopover } from '../theme/ThemedMenuPopover';
 
 const CtxGlyph = {
   cut: CutRegular as FC,
@@ -231,7 +223,6 @@ function webSearch(
 export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorContextMenuHost {
   const { isPreviewEligible, onTogglePreview, onShare, searchEngine, customSearchUrl } = props;
   const { t } = useT();
-  const { resolved } = useAppTheme();
   const [ctx, setCtx] = useState<MenuContext | null>(null);
 
   const close = (): void => setCtx(null);
@@ -288,12 +279,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
         <MenuTrigger disableButtonEnhancement>
           <span style={{ position: 'fixed', left: ctx.x, top: ctx.y, width: 0, height: 0 }} />
         </MenuTrigger>
-        <MenuPopover
-          data-testid="editor-context-menu"
-          className={isMac ? 'np-mac-panel' : ''}
-          data-theme={resolved}
-          style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
-        >
+        <ThemedMenuPopover data-testid="editor-context-menu">
           <MenuList>
             <MenuItem
               data-testid="ctx-cut"
@@ -399,7 +385,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
                 : t('TextEditor_ContextFlyout_ShareButtonDisplayText')}
             </MenuItem>
           </MenuList>
-        </MenuPopover>
+        </ThemedMenuPopover>
       </Menu>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps

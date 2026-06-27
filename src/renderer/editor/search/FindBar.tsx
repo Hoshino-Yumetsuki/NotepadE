@@ -5,7 +5,6 @@ import {
   Input,
   Menu,
   MenuTrigger,
-  MenuPopover,
   MenuList,
   MenuItemCheckbox,
   Tooltip,
@@ -23,6 +22,7 @@ import { useT } from '../../i18n';
 import { useAppTheme } from '../../theme/useAppTheme';
 import { acrylicVars } from '../../theme/tokens';
 import { isMac } from '@shared/platform';
+import { ThemedMenuPopover } from '../../theme/ThemedMenuPopover';
 
 /**
  * Find/Replace bar (RENDERER, Lane B) — 1:1 with the UWP FindAndReplaceControl.
@@ -350,7 +350,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
               />
             </Tooltip>
           </MenuTrigger>
-          <MenuPopover className={isMac ? 'np-mac-panel' : ''} data-theme={resolved} style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}>
+          <ThemedMenuPopover>
             <MenuList>
               <MenuItemCheckbox
                 name="findOption"
@@ -376,7 +376,7 @@ export function FindBar(props: FindBarProps): JSX.Element {
                 {t('FindAndReplace_SearchOptionToggleButton_UseRegex.Text')}
               </MenuItemCheckbox>
             </MenuList>
-          </MenuPopover>
+          </ThemedMenuPopover>
         </Menu>
       </div>
 

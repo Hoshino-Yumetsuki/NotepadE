@@ -18,7 +18,6 @@ import {
   Radio,
   type SpinButtonOnChangeData
 } from '@fluentui/react-components';
-import type { Settings } from '@shared/ipc-contract';
 import type { TabIndents, SearchEngineId } from '@shared/ipc-contract';
 import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import {
@@ -29,11 +28,7 @@ import {
   FONT_SIZE_MAX
 } from './settingsOptions';
 import { useT } from '../i18n/I18nProvider';
-
-export interface PaneProps {
-  settings: Settings;
-  update(patch: Partial<Settings>): void;
-}
+import type { PaneProps } from './types';
 
 /** Ported .resw key for each tab-indent option (UWP TabKeySettings radio set). */
 const TAB_INDENT_KEYS: Record<number, string> = {

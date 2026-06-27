@@ -28,7 +28,7 @@ import {
   ABOUT_DISCLAIMER
 } from './aboutInfo';
 import { useT } from '../i18n/I18nProvider';
-import type { PaneProps } from './TextEditorPane';
+import type { PaneProps } from './types';
 import type { UpdateInfo } from '@shared/ipc-contract';
 
 type CheckState =

@@ -19,15 +19,13 @@ import {
   DialogActions,
   DialogBody,
   DialogContent,
-  DialogSurface,
   DialogTitle,
   Field,
   Input
 } from '@fluentui/react-components';
 import { useT } from '../../i18n';
-import { isMac } from '@shared/platform';
-import { acrylicVars } from '../../theme/tokens';
 import { useAppTheme } from '../../theme/useAppTheme';
+import { AppDialogSurface } from '../../theme/AppDialogSurface';
 
 export interface GoToLineDialogProps {
   /** Whether the dialog is open. */
@@ -78,12 +76,7 @@ export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
         if (!data.open) onCancel();
       }}
     >
-      <DialogSurface
-        data-testid="goto-line-dialog"
-        className={isMac ? 'np-mac-panel' : ''}
-        data-theme={resolved}
-        style={isMac ? { ...acrylicVars(resolved), padding: '4px' } : undefined}
-      >
+      <AppDialogSurface data-testid="goto-line-dialog" theme={resolved}>
         <DialogBody>
           <DialogTitle>{t('GoTo_GoToBarLabel.Text')}</DialogTitle>
           <DialogContent>
@@ -115,7 +108,7 @@ export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
             </Button>
           </DialogActions>
         </DialogBody>
-      </DialogSurface>
+      </AppDialogSurface>
     </Dialog>
   );
 }

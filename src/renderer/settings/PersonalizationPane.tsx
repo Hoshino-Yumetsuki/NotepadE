@@ -38,7 +38,7 @@ import { SettingsPane, SettingGroup, SettingRow } from './SettingsPrimitives';
 import { TINT_MIN, TINT_MAX, TINT_STEP } from './settingsOptions';
 import { isValidHex } from '../theme/brandRamp';
 import { useT } from '../i18n/I18nProvider';
-import type { PaneProps } from './TextEditorPane';
+import type { PaneProps } from './types';
 
 /** Theme-mode options; labels are localized at render via the ported .resw keys. */
 const THEME_MODES: readonly { id: ThemeMode; labelKey: string }[] = [

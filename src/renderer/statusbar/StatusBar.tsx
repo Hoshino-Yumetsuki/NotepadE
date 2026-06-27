@@ -1,7 +1,6 @@
 import {
   Menu,
   MenuTrigger,
-  MenuPopover,
   MenuList,
   MenuItem,
   MenuDivider,
@@ -19,6 +18,8 @@ import {
 } from './tokens';
 import { useReveal, revealGradient, tokensForReveal, REVEAL_VAR_OPACITY } from '../theme/reveal';
 import { useT } from '../i18n';
+import { ThemedMenuPopover } from '../theme/ThemedMenuPopover';
+import { getFolderBasename } from '../integrations/pathUtils';
 import {
   formatLineColumn,
   eolDisplayText,
@@ -320,7 +321,7 @@ function ModificationStateColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <MenuList data-testid="status-mod-state-menu">
           <MenuItem
             data-testid="status-mod-state-reload"
@@ -330,7 +331,7 @@ function ModificationStateColumn(props: {
             {t('TextEditor_FileModifiedOutsideIndicator_MenuFlyoutItem_ReloadFileFromDisk.Text')}
           </MenuItem>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -374,7 +375,7 @@ function PathColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <MenuList data-testid="status-path-menu">
           <MenuItem
             data-testid="status-path-reload"
@@ -409,7 +410,7 @@ function PathColumn(props: {
             {t('Tab_ContextFlyout_RenameButtonDisplayText')}
           </MenuItem>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -447,7 +448,7 @@ function ModificationColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <MenuList data-testid="status-modification-menu">
           <MenuItem
             data-testid="status-modification-preview"
@@ -464,7 +465,7 @@ function ModificationColumn(props: {
             {t('TextEditor_ModificationIndicator_MenuFlyoutItem_RevertAllChanges.Text')}
           </MenuItem>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -500,7 +501,7 @@ function ViewModeColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <MenuList data-testid="status-viewmode-menu">
           <MenuItem
             data-testid="status-viewmode-source"
@@ -521,7 +522,7 @@ function ViewModeColumn(props: {
             {t('StatusBar_ViewMode_Diff')}
           </MenuItem>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -591,7 +592,7 @@ function ZoomColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <div
           data-testid="status-zoom-flyout"
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}
@@ -641,7 +642,7 @@ function ZoomColumn(props: {
             {ZOOM_DEFAULT}%
           </button>
         </div>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -683,7 +684,7 @@ function EolColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <MenuList
           data-testid="status-eol-menu"
           style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
@@ -698,7 +699,7 @@ function EolColumn(props: {
             </MenuItem>
           ))}
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -739,7 +740,7 @@ function EncodingColumn(props: {
             {t('TextEditor_EncodingIndicator_FlyoutItem_MoreEncodings')}
           </MenuItem>
         </MenuTrigger>
-        <MenuPopover>
+        <ThemedMenuPopover>
           <MenuList
             data-testid={`status-encoding-${keyPrefix}-more-list`}
             // The ANSI table is long (dozens of code pages); cap the list height and
@@ -758,7 +759,7 @@ function EncodingColumn(props: {
               </MenuItem>
             ))}
           </MenuList>
-        </MenuPopover>
+        </ThemedMenuPopover>
       </Menu>
     </MenuList>
   );
@@ -777,7 +778,7 @@ function EncodingColumn(props: {
           </Cell>
         </div>
       </MenuTrigger>
-      <MenuPopover>
+      <ThemedMenuPopover>
         <MenuList
           data-testid="status-encoding-menu"
           style={{ maxHeight: 'calc(100vh - 16px)', overflowY: 'auto', overflowX: 'hidden' }}
@@ -788,7 +789,7 @@ function EncodingColumn(props: {
                 {t('TextEditor_EncodingIndicator_FlyoutItem_ReopenWithEncoding')}
               </MenuItem>
             </MenuTrigger>
-            <MenuPopover>{encodingSubmenu(onReopenWithEncoding, 'reopen')}</MenuPopover>
+            <ThemedMenuPopover>{encodingSubmenu(onReopenWithEncoding, 'reopen')}</ThemedMenuPopover>
           </Menu>
           <Menu positioning="above-end">
             <MenuTrigger disableButtonEnhancement>
@@ -796,10 +797,10 @@ function EncodingColumn(props: {
                 {t('TextEditor_EncodingIndicator_FlyoutItem_SaveWithEncoding')}
               </MenuItem>
             </MenuTrigger>
-            <MenuPopover>{encodingSubmenu(onSaveWithEncoding, 'save')}</MenuPopover>
+            <ThemedMenuPopover>{encodingSubmenu(onSaveWithEncoding, 'save')}</ThemedMenuPopover>
           </Menu>
         </MenuList>
-      </MenuPopover>
+      </ThemedMenuPopover>
     </Menu>
   );
 }
@@ -807,11 +808,6 @@ function EncodingColumn(props: {
 // ---------------------------------------------------------------------------
 //  Folder indicator — shows the open folder basename; click to toggle sidebar
 // ---------------------------------------------------------------------------
-
-function folderBasename(path: string): string {
-  const parts = path.replace(/[\\/]+$/, '').split(/[\\/]/);
-  return parts[parts.length - 1] || path;
-}
 
 function FolderColumn(props: {
   tokens: StatusThemeTokens;
@@ -834,7 +830,7 @@ function FolderColumn(props: {
         data-testid="status-folder-text"
         style={{ marginLeft: 4, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}
       >
-        {folderBasename(folderPath)}
+        {getFolderBasename(folderPath)}
       </span>
     </Cell>
   );

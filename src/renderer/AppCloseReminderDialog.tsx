@@ -23,13 +23,11 @@ import {
   DialogActions,
   DialogBody,
   DialogContent,
-  DialogSurface,
   DialogTitle
 } from '@fluentui/react-components';
 import { useT } from './i18n';
-import { isMac } from '@shared/platform';
-import { acrylicVars, type AppTheme } from './theme/tokens';
-import { dialogSurfaceStyle, dialogBackdropStyle } from './theme/dialogStyles';
+import type { AppTheme } from './theme/tokens';
+import { AppDialogSurface } from './theme/AppDialogSurface';
 
 export interface AppCloseReminderDialogProps {
   /** Whether the dialog is shown (a window close is pending on unsaved tabs). */
@@ -53,13 +51,7 @@ export function AppCloseReminderDialog(props: AppCloseReminderDialogProps): JSX.
         if (!data.open) onCancel();
       }}
     >
-      <DialogSurface
-        data-testid="app-close-reminder-dialog"
-        className={`np-dialog-enter${isMac ? ' np-mac-panel' : ''}`}
-        data-theme={theme}
-        style={{ ...dialogSurfaceStyle(theme), ...(isMac ? { ...acrylicVars(theme), padding: '4px' } : undefined) }}
-        backdrop={{ style: dialogBackdropStyle(theme) }}
-      >
+      <AppDialogSurface data-testid="app-close-reminder-dialog" theme={theme}>
         <DialogBody>
           <DialogTitle>{t('AppCloseSaveReminderDialog_Title')}</DialogTitle>
           <DialogContent>{t('AppCloseSaveReminderDialog_Content')}</DialogContent>
@@ -79,7 +71,7 @@ export function AppCloseReminderDialog(props: AppCloseReminderDialogProps): JSX.
             </Button>
           </DialogActions>
         </DialogBody>
-      </DialogSurface>
+      </AppDialogSurface>
     </Dialog>
   );
 }
