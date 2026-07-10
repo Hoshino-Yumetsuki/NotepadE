@@ -98,14 +98,14 @@ const THEME_NAMES: Record<'light' | 'dark' | 'hc', string> = {
 
 /**
  * Selection background as an `#RRGGBBAA` Monaco color token built from the accent
- * (mirrors the CM6 selectionColors alpha split: heavier on dark, lighter on
- * light; HC keeps the opaque accent — forced-colors repaints selection anyway).
+ * using the same alpha in light and dark modes (HC keeps the opaque accent —
+ * forced-colors repaints selection anyway).
  * Monaco expects a hex string in theme `colors`, so we emit `#RRGGBBAA`.
  */
 function selectionColor(themeMode: 'light' | 'dark' | 'hc', accentColor: string): string {
   const rgb = parseHexColor(accentColor);
   if (!rgb || themeMode === 'hc') return accentColor;
-  const alpha = themeMode === 'dark' ? 0.55 : 0.28;
+  const alpha = 0.28;
   const aa = Math.round(alpha * 255)
     .toString(16)
     .padStart(2, '0');
