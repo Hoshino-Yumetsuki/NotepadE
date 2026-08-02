@@ -103,45 +103,50 @@ export function useFilePipeline({
         } else {
           // Streaming load path (large files)
           void (async () => {
-            // Subscribe to chunk events BEFORE requesting streamed open
-            const unlisten = await window.notepads.file.onChunk((chunk) => {
+            // Subscribe to chunk events BEFORE requesting streamed open. Keep the
+            // document out of Monaco until EOF: mutating a growing multi-MB model
+            // per chunk forces repeated tokenization/layout passes and can kill the
+            // WebView2 renderer. The tab remains streaming/read-only meanwhile.
+            const chunks: string[] = [];
+            const streamId = `${id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            let finalText: string | null = null;
+            let headerReady = false;
+            const finish = (): void => {
+              if (!headerReady || finalText === null || !store.get(id)) return;
+              const handle = editorHandles.current.get(id);
+              if (!handle) {
+                setTimeout(finish, 0);
+                return;
+              }
+              const text = finalText;
+              handle.setDoc(text);
+              chunks.length = 0;
+              finalText = null;
+              unlisten();
+              // Snapshot the fully-loaded text as the saved baseline for diff
+              lastSavedTextRef.current.set(id, text);
+              // Enable editing now that the full document is loaded
+              store.setStreaming(id, false);
+              // Re-check dirty now that the doc is complete (streaming suppressed earlier checks)
+              recomputeDirty(id);
+            };
+            const acceptChunk = (chunk: import('@shared/ipc-contract').FileChunk): void => {
+              chunks[chunk.index] = chunk.text;
+              if (chunk.isLast) {
+                finalText = chunks.join('');
+                finish();
+              }
+            };
+            let unlisten = (): void => {};
+            unlisten = await window.notepads.file.onChunk((chunk) => {
               if (!store.get(id)) {
                 unlisten();
                 return;
               }
-              const handle = editorHandles.current.get(id);
-              if (!handle) return;
-              const editor = handle.getEditor();
-              const model = editor?.getModel();
-              if (!model) return;
-              // Append the chunk at end-of-doc with NO undo step: model.applyEdits
-              // does not push to the undo stack (unlike executeEdits /
-              // pushEditOperations), so a streamed load can never be partially
-              // un-done. Range = the empty range at the very end of the model.
-              const end = model.getFullModelRange().getEndPosition();
-              model.applyEdits([
-                {
-                  range: {
-                    startLineNumber: end.lineNumber,
-                    startColumn: end.column,
-                    endLineNumber: end.lineNumber,
-                    endColumn: end.column
-                  },
-                  text: chunk.text
-                }
-              ]);
-              if (chunk.isLast) {
-                unlisten();
-                // Snapshot the fully-loaded text as the saved baseline for diff
-                lastSavedTextRef.current.set(id, handle.getShadowText());
-                // Enable editing now that the full document is loaded
-                store.setStreaming(id, false);
-                // Re-check dirty now that the doc is complete (streaming suppressed earlier checks)
-                recomputeDirty(id);
-              }
+              if (chunk.streamId === streamId) acceptChunk(chunk);
             });
 
-            const res = await window.notepads.file.openStreamed(path);
+            const res = await window.notepads.file.openStreamed(path, streamId);
             if (!store.get(id)) {
               unlisten();
               return;
@@ -158,6 +163,10 @@ export function useFilePipeline({
               return;
             }
             const header = res.data;
+            if (header.streamId !== streamId) {
+              unlisten();
+              return;
+            }
             baselineRef.current.set(id, {
               hash: header.baselineHash,
               length: header.baselineLength
@@ -169,6 +178,8 @@ export function useFilePipeline({
             // Show editor immediately (empty doc), mark as streaming (readOnly)
             store.setLoading(id, false);
             store.setStreaming(id, true);
+            headerReady = true;
+            finish();
           })();
         }
       });

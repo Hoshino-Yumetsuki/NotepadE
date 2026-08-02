@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::Emitter;
 
 use crate::contract::{EncodingId, EolId};
@@ -9,10 +10,16 @@ use crate::mru;
 use crate::result::NpResult;
 
 const CHUNK_SIZE: usize = 512 * 1024; // 512KB per chunk
+static STREAM_SEQ: AtomicU64 = AtomicU64::new(0);
+
+fn next_stream_id() -> String {
+    STREAM_SEQ.fetch_add(1, Ordering::Relaxed).to_string()
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamedFileHeader {
+    pub stream_id: String,
     pub encoding_id: EncodingId,
     pub eol_id: EolId,
     pub date_modified_ms: f64,
@@ -27,6 +34,7 @@ pub struct StreamedFileHeader {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileChunk {
+    pub stream_id: String,
     pub index: u32,
     pub text: String,
     pub is_last: bool,
@@ -62,6 +70,19 @@ fn split_chunks(text: &str, chunk_size: usize) -> Vec<&str> {
     chunks
 }
 
+/// Split a string into owned chunks at valid UTF-8 char boundaries.
+/// Empty input still returns one terminal chunk so every stream completes.
+fn owned_chunks(text: &str, chunk_size: usize) -> Vec<String> {
+    let mut chunks: Vec<String> = split_chunks(text, chunk_size)
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    if chunks.is_empty() {
+        chunks.push(String::new());
+    }
+    chunks
+}
+
 /// Get file size without reading it (used by renderer to decide streaming vs direct).
 #[tauri::command]
 pub async fn file_get_size(path: String) -> NpResult<u64> {
@@ -78,6 +99,7 @@ pub async fn file_open_streamed(
     app: tauri::AppHandle,
     window: tauri::WebviewWindow,
     path: String,
+    stream_id: Option<String>,
 ) -> NpResult<StreamedFileHeader> {
     // The whole read + encoding-detect/decode + LF-normalize is CPU/IO-bound and
     // must NOT run on the Tauri async runtime thread (it would stall every other
@@ -115,13 +137,12 @@ pub async fn file_open_streamed(
         mru::add_recent(&root, &path);
     }
 
-    let owned_chunks: Vec<String> = split_chunks(&prepared.normalized, CHUNK_SIZE)
-        .into_iter()
-        .map(|s| s.to_string())
-        .collect();
+    let owned_chunks = owned_chunks(&prepared.normalized, CHUNK_SIZE);
     let chunk_count = owned_chunks.len() as u32;
+    let stream_id = stream_id.unwrap_or_else(next_stream_id);
 
     let header = StreamedFileHeader {
+        stream_id: stream_id.clone(),
         encoding_id: prepared.encoding_id,
         eol_id: prepared.eol_id,
         date_modified_ms: prepared.mtime_ms,
@@ -144,6 +165,7 @@ pub async fn file_open_streamed(
             let _ = window_clone.emit(
                 "notepads:evt:file:chunk",
                 FileChunk {
+                    stream_id: stream_id.clone(),
                     index: i as u32,
                     text,
                     is_last,
@@ -201,8 +223,12 @@ mod tests {
     }
 
     #[test]
-    fn split_chunks_empty() {
-        let chunks = split_chunks("", 512);
-        assert!(chunks.is_empty());
+    fn owned_chunks_empty_has_terminal_chunk() {
+        assert_eq!(owned_chunks("", 512), vec![""]);
+    }
+
+    #[test]
+    fn stream_ids_are_distinct() {
+        assert_ne!(next_stream_id(), next_stream_id());
     }
 }

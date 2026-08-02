@@ -109,15 +109,19 @@ pub fn resolve_bounds(
     let saved = saved?;
     let x = finite(saved.x)?.floor();
     let y = finite(saved.y)?.floor();
-    let width = finite(saved.width)?.floor().max(MIN_WIDTH);
-    let height = finite(saved.height)?.floor().max(MIN_HEIGHT);
+    let mut width = finite(saved.width)?.floor().max(MIN_WIDTH);
+    let mut height = finite(saved.height)?.floor().max(MIN_HEIGHT);
     let is_maximized = saved.is_maximized == Some(true);
 
     // On-screen test: the top-left corner must lie within some display's work area.
-    let on_screen = work_areas
+    let work_area = work_areas
         .iter()
-        .any(|wa| x >= wa.x && x < wa.x + wa.width && y >= wa.y && y < wa.y + wa.height);
-    if on_screen || work_areas.is_empty() {
+        .find(|wa| x >= wa.x && x < wa.x + wa.width && y >= wa.y && y < wa.y + wa.height);
+    if let Some(wa) = work_area.or_else(|| work_areas.first()) {
+        width = width.min(wa.width.max(MIN_WIDTH));
+        height = height.min(wa.height.max(MIN_HEIGHT));
+    }
+    if work_area.is_some() || work_areas.is_empty() {
         return Some(ResolvedBounds {
             position: Some((x, y)),
             width,
@@ -125,7 +129,7 @@ pub fn resolve_bounds(
             is_maximized,
         });
     }
-    // Off-screen: drop the stale position, keep the size (caller centers it).
+    // Off-screen: drop the stale position, keep the clamped size (caller centers it).
     Some(ResolvedBounds {
         position: None,
         width,
@@ -203,7 +207,7 @@ pub fn restore_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
     else {
         return;
     };
-    // Saved values are physical pixels (outer_position/outer_size are physical).
+    // Saved values are physical pixels (outer_position/inner_size are physical).
     let _ = window.set_size(tauri::PhysicalSize::new(
         resolved.width as u32,
         resolved.height as u32,
@@ -228,7 +232,10 @@ pub fn restore_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
 /// signal "use the tracked normal rect".
 fn current_bounds(window: &tauri::WebviewWindow) -> Option<(f64, f64, f64, f64)> {
     let pos = window.outer_position().ok()?;
-    let size = window.outer_size().ok()?;
+    // `set_size(PhysicalSize)` restores the client area. Persisting `outer_size()`
+    // feeds the invisible resize border back as content size on the next launch,
+    // growing the window by a few pixels every restore.
+    let size = window.inner_size().ok()?;
     Some((
         pos.x as f64,
         pos.y as f64,
@@ -414,13 +421,13 @@ mod tests {
     #[test]
     fn passes_through_on_screen_record_flooring_and_clamping_to_minimums() {
         // width 200 is below MIN_WIDTH 480.
-        let r = resolve_bounds(Some(&saved(100.7, 50.2, 200.0, 1000.9, false)), &[PRIMARY]);
+        let r = resolve_bounds(Some(&saved(100.7, 50.2, 200.0, 2000.9, false)), &[PRIMARY]);
         assert_eq!(
             r,
             Some(ResolvedBounds {
                 position: Some((100.0, 50.0)),
                 width: 480.0,
-                height: 1000.0,
+                height: 1040.0,
                 is_maximized: false
             })
         );
@@ -440,6 +447,25 @@ mod tests {
         assert_eq!(r.position, None);
         assert_eq!(r.width, 900.0);
         assert_eq!(r.height, 700.0);
+    }
+
+    #[test]
+    fn clamps_saved_size_to_the_current_work_area() {
+        let r = resolve_bounds(Some(&saved(10.0, 10.0, 5000.0, 3000.0, false)), &[PRIMARY]);
+        assert_eq!(r.unwrap().width, PRIMARY.width);
+        assert_eq!(r.unwrap().height, PRIMARY.height);
+    }
+
+    #[test]
+    fn clamps_off_screen_size_to_the_current_work_area_before_centering() {
+        let r = resolve_bounds(
+            Some(&saved(3000.0, 200.0, 5000.0, 3000.0, false)),
+            &[PRIMARY],
+        )
+        .unwrap();
+        assert_eq!(r.position, None);
+        assert_eq!(r.width, PRIMARY.width);
+        assert_eq!(r.height, PRIMARY.height);
     }
 
     #[test]
