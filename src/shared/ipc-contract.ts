@@ -119,14 +119,16 @@ export interface FileApi {
   revalidatePath(path: string): Promise<Result<{ exists: boolean; dateModifiedMs: number }>>;
   /** Get file size in bytes (used to decide streaming vs direct load). */
   getSize(path: string): Promise<Result<number>>;
-  /** Open a large file via streaming: returns header, then emits chunk events. */
-  openStreamed(path: string): Promise<Result<StreamedFileHeader>>;
+  /** Open a large file via streaming; optional ID correlates emitted chunks. */
+  openStreamed(path: string, streamId?: string): Promise<Result<StreamedFileHeader>>;
   /** Subscribe to file chunk events (streaming load). Returns unsubscribe function. */
   onChunk(cb: (chunk: FileChunk) => void): Promise<Unsubscribe>;
 }
 
 /** Header returned by file.openStreamed before chunk events begin. */
 export interface StreamedFileHeader {
+  /** Opaque identity used to correlate chunk events to this open request. */
+  streamId: string;
   encodingId: EncodingId;
   eolId: EolId;
   dateModifiedMs: number;
@@ -140,6 +142,8 @@ export interface StreamedFileHeader {
 
 /** A single chunk emitted via the `notepads:evt:file:chunk` event. */
 export interface FileChunk {
+  /** Correlates this chunk with the `openStreamed` request that created it. */
+  streamId: string;
   index: number;
   text: string;
   isLast: boolean;

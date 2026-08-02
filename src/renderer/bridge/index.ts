@@ -200,8 +200,11 @@ const api: NotepadsApi = {
         path
       }),
     getSize: (path) => call<number>('file_get_size', { path }),
-    openStreamed: (path) =>
-      call<import('@shared/ipc-contract').StreamedFileHeader>('file_open_streamed', { path }),
+    openStreamed: (path, streamId) =>
+      call<import('@shared/ipc-contract').StreamedFileHeader>('file_open_streamed', {
+        path,
+        streamId
+      }),
     onChunk: async (cb) => {
       const unlisten = await listen<import('@shared/ipc-contract').FileChunk>(
         'notepads:evt:file:chunk',

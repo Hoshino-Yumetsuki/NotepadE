@@ -149,8 +149,8 @@ function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): 
       'editor.selectionHighlightBorder': '#00000000',
       'editor.wordHighlightBackground': '#00000000',
       'editor.wordHighlightStrongBackground': '#00000000',
-      'editor.selectionBackground': themeMode === 'light' ? selection : '#0078d447',
-      'editor.inactiveSelectionBackground': themeMode === 'light' ? selection : '#0078d42e'
+      'editor.selectionBackground': selection,
+      'editor.inactiveSelectionBackground': selection
     }
   });
   monaco.editor.defineTheme(THEME_NAMES.dark, {
@@ -171,8 +171,8 @@ function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): 
       'editor.selectionHighlightBorder': '#00000000',
       'editor.wordHighlightBackground': '#00000000',
       'editor.wordHighlightStrongBackground': '#00000000',
-      'editor.selectionBackground': themeMode === 'dark' ? selection : '#0078d48c',
-      'editor.inactiveSelectionBackground': themeMode === 'dark' ? selection : '#0078d461'
+      'editor.selectionBackground': selection,
+      'editor.inactiveSelectionBackground': selection
     }
   });
   monaco.editor.defineTheme(THEME_NAMES.hc, {
