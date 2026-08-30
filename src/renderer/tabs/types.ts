@@ -34,6 +34,13 @@ export interface ViewMode {
   diff: boolean;
 }
 
+/** Metadata for a large file loaded into Monaco's streamed Piece Tree model. */
+export interface LargeFileState {
+  size: number;
+  encodingId: EncodingId;
+  eolId: EolId;
+}
+
 /**
  * One tab == one editor. `filePath` is null for an untitled buffer; the strip
  * then shows the UWP `FileNamePlaceholder` (e.g. "Untitled 1").
@@ -49,19 +56,9 @@ export interface TabState {
   eolId: EolId;
   /** Dirty flag — drives the F127 accent dot in the tab header. */
   isModified: boolean;
-  /**
-   * True while the tab's file is being read/decoded in MAIN (open in flight).
-   * The editor host shows a spinner instead of mounting the editor, so a large
-   * file's tab appears IMMEDIATELY (title = basename) instead of the window
-   * sitting on the previous/new-file UI until the whole pipeline finishes.
-   * Transient UI state — never snapshotted (a restored tab is never loading).
-   */
+  /** True while the file header is being resolved. */
   isLoading: boolean;
-  /**
-   * True while a large file is being streamed in chunks. The editor is mounted
-   * but readOnly until all chunks arrive. Transient UI state.
-   */
-  isStreaming: boolean;
+
   /** Alternate render mode (markdown preview / diff). */
   viewMode: ViewMode;
   /** Caret / selection offsets in the '\n' shadow buffer. */
@@ -73,6 +70,8 @@ export interface TabState {
    * "Untitled 1"). Ignored when filePath is set — the basename is shown then.
    */
   untitledName: string;
+  /** Present for files loaded through the streamed Piece Tree path. */
+  largeFile?: LargeFileState;
 }
 
 /** Snapshot of the whole tab set the strip renders. */

@@ -36,7 +36,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "diff": "^9.0.0",
-    "monaco-editor": "^0.55.1",
+    "monaco-editor": "0.55.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

@@ -3923,7 +3923,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"monaco-editor@npm:^0.55.1":
+"monaco-editor@npm:0.55.1":
   version: 0.55.1
   resolution: "monaco-editor@npm:0.55.1"
   dependencies:
@@ -4009,7 +4009,7 @@ __metadata:
     diff: "npm:^9.0.0"
     jimp: "npm:^1.6.1"
     jsdom: "npm:^29.1.1"
-    monaco-editor: "npm:^0.55.1"
+    monaco-editor: "npm:0.55.1"
     oxfmt: "npm:^0.59.0"
     oxlint: "npm:^1.74.0"
     oxlint-tsgolint: "npm:^0.24.0"

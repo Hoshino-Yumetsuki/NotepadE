@@ -171,7 +171,11 @@ pub fn run() {
             // file streaming (large files)
             file_stream::file_get_size,
             file_stream::file_open_streamed,
-            // recent (task #2)
+            file_stream::file_read_chunk,
+            file_stream::file_save_large_start,
+            file_stream::file_save_large_chunk,
+            file_stream::file_save_large_finish,
+            file_stream::file_discard_large,
             mru::recent_list,
             mru::recent_clear,
             mru::recent_add_folder,

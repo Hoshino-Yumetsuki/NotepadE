@@ -67,6 +67,8 @@ export interface NewTabArgs {
   editorId?: string;
   /** Override the untitled display name (else "Untitled {N}"). */
   untitledName?: string;
+  /** Streamed Piece Tree metadata for a large file. */
+  largeFile?: TabState['largeFile'];
   /** Insert at this index; defaults to the end. */
   index?: number;
   /** Activate the new tab after insert (default true). */
@@ -93,11 +95,11 @@ function makeTab(args: NewTabArgs): TabState {
     eolId: args.eolId ?? DEFAULT_EOL_ID,
     isModified: args.isModified ?? false,
     isLoading: args.isLoading ?? false,
-    isStreaming: false,
     viewMode: { ...DEFAULT_VIEW_MODE },
     caret: { ...ZERO_CARET },
     scroll: { ...ZERO_SCROLL },
-    untitledName: untitledName ?? ''
+    untitledName: untitledName ?? '',
+    ...(args.largeFile ? { largeFile: args.largeFile } : {})
   };
 }
 
@@ -321,10 +323,8 @@ export class TabsStore {
     this.patch(editorId, { isLoading });
   }
 
-  /** Flip the streaming flag (large file chunks in flight). */
-  setStreaming(editorId: string, isStreaming: boolean): void {
-    if (this.get(editorId)?.isStreaming === isStreaming) return;
-    this.patch(editorId, { isStreaming });
+  setLargeFile(editorId: string, largeFile: TabState['largeFile']): void {
+    this.patch(editorId, { largeFile });
   }
 
   /** Rename: set a new absolute filePath (clears untitled display). */

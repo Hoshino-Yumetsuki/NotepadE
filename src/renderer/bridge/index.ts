@@ -29,6 +29,11 @@ import type {
   ActivationEvent,
   AnsiEncodingEntry,
   OpenedFile,
+  StreamedFileHeader,
+  LargeFileChunk,
+  LargeFileSaveChunkArgs,
+  LargeFileSaveFinishArgs,
+  LargeFileSaveSession,
   SaveResult,
   RecentEntry,
   ThemeState,
@@ -200,20 +205,15 @@ const api: NotepadsApi = {
         path
       }),
     getSize: (path) => call<number>('file_get_size', { path }),
-    openStreamed: (path, streamId) =>
-      call<import('@shared/ipc-contract').StreamedFileHeader>('file_open_streamed', {
-        path,
-        streamId
-      }),
-    onChunk: async (cb) => {
-      const unlisten = await listen<import('@shared/ipc-contract').FileChunk>(
-        'notepads:evt:file:chunk',
-        (evt) => {
-          cb(evt.payload);
-        }
-      );
-      return unlisten;
-    }
+    openStreamed: (path, streamId) => call<StreamedFileHeader>('file_open_streamed', { path, streamId }),
+    readChunk: (path, offset, encodingId) =>
+      call<LargeFileChunk>('file_read_chunk', { path, offset, encodingId }),
+    saveLargeStart: () => call<LargeFileSaveSession>('file_save_large_start', {}),
+    saveLargeChunk: (args: LargeFileSaveChunkArgs) =>
+      call<void>('file_save_large_chunk', { ...args }),
+    saveLargeFinish: (args: LargeFileSaveFinishArgs) =>
+      call<SaveResult>('file_save_large_finish', { ...args }),
+    discardLarge: (sessionId) => call<void>('file_discard_large', { sessionId })
   },
   recent: {
     list: () => call<RecentEntry[]>(channelToCommand(C.RecentList)),

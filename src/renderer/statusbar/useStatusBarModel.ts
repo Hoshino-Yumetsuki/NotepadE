@@ -177,18 +177,21 @@ export function useStatusBarModel(args: {
 
   const onReopenWithEncoding = useCallback(
     (id: EncodingId) => {
-      if (filePath) void window.notepads.encoding.decodeWith(filePath, id);
+      if (filePath && !tab?.largeFile) void window.notepads.encoding.decodeWith(filePath, id);
     },
-    [filePath]
+    [filePath, tab?.largeFile]
   );
 
   const reloadAndRebaseline = useCallback(async (id: string, path: string) => {
+    // A large tab uses a streamed Piece Tree model; avoid a whole-file reload
+    // through the small-file IPC path.
+    if (store.get(id)?.largeFile) return;
     const r = await window.notepads.file.reloadFromDisk(path);
     if (r.ok) {
       recordLastSaved(id, path, r.data.dateModifiedMs);
       setFileModificationState('none');
     }
-  }, []);
+  }, [store]);
 
   // Slider/buttons → editor: write the zoom registry + updateOptions, update
   // local state optimistically so the flyout tracks the drag immediately.

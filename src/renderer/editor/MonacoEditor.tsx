@@ -36,12 +36,10 @@ export interface MonacoHandle {
   setDoc(text: string): void;
   /** Current document as a '\n'-normalized shadow-buffer string (for save). */
   getShadowText(): string;
+  getSnapshot?: () => monaco.editor.ITextSnapshot | null;
   /** Focus the editor surface. */
   focus(): void;
-  /**
-   * Attempt the `.LOG` once-per-open auto-timestamp. Stub for T1 (returns false);
-   * the real port lands in T3 with the rest of the command bundle.
-   */
+  /** Attempt the `.LOG` once-per-open auto-timestamp. */
   tryInsertLogEntry(): boolean;
   /** The live Monaco editor, or null before mount / after unmount. */
   getEditor(): monaco.editor.IStandaloneCodeEditor | null;
@@ -50,6 +48,8 @@ export interface MonacoHandle {
 export interface MonacoEditorProps {
   /** Initial document (will be '\n'-normalized). Defaults to empty. */
   initialDoc?: string;
+  /** Internal Monaco PieceTree factory built from streamed chunks. */
+  initialTextBufferFactory?: unknown;
   /** Whether to render the gutter line numbers. */
   lineNumbers?: boolean;
   /** Host-provided editor-behavior settings (opaque for T1; consumed in T3). */
@@ -210,6 +210,7 @@ function gutterWash(_themeMode: 'light' | 'dark' | 'hc'): string | null {
 export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function MonacoEditor(
   {
     initialDoc = '',
+    initialTextBufferFactory,
     lineNumbers: showLineNumbers = false,
     // `settings` feeds the command wiring (tabAsSpaces / smartCopy / base
     // fontSize) via settingsRef; `direction` is the initial flow direction (the
@@ -292,6 +293,9 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
         // EndOfLinePreference.LF guarantees the '\n' shadow buffer verbatim.
         return model ? model.getValue(monaco.editor.EndOfLinePreference.LF) : '';
       },
+      getSnapshot(): monaco.editor.ITextSnapshot | null {
+        return modelRef.current?.createSnapshot() ?? null;
+      },
       focus(): void {
         editorRef.current?.focus();
       },
@@ -315,8 +319,9 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     if (!hostRef.current) return;
 
     defineThemes(themeMode, accentColor);
-
-    const model = monaco.editor.createModel(docRef.current ?? initialDoc, undefined);
+    const model = initialTextBufferFactory
+      ? monaco.editor.createModel(initialTextBufferFactory as string, 'plaintext')
+      : monaco.editor.createModel(docRef.current ?? initialDoc, undefined);
     model.setEOL(monaco.editor.EndOfLineSequence.LF);
     modelRef.current = model;
 
@@ -516,9 +521,12 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     });
     layoutObserver.observe(host);
 
-    // Pre-park: capture the live doc on unmount so a remount restores it.
+    // Pre-park small docs only; joining a large Piece Tree on tab teardown
+    // defeats the streamed model and can allocate another full-file string.
     return () => {
-      docRef.current = model.getValue(monaco.editor.EndOfLinePreference.LF);
+      if (!initialTextBufferFactory) {
+        docRef.current = model.getValue(monaco.editor.EndOfLinePreference.LF);
+      }
       disposeCommands();
       findKeysSub?.dispose();
       ctxMenuSub?.dispose();

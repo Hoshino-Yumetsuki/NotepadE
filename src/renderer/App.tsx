@@ -4,6 +4,7 @@ import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import type { OpenedFile, UpdateInfo } from '@shared/ipc-contract';
 import { isMac } from '@shared/platform';
 import { MonacoEditor, type MonacoHandle } from './editor/MonacoEditor';
+import { PieceTreeLargeFileEditor } from './editor/PieceTreeLargeFileEditor';
 import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
 import { resolveFontFamily } from './editor/fontFamily';
@@ -151,7 +152,7 @@ export function App(): JSX.Element {
   // Live translator — drives the localized untitled new-file base name (below).
   const { t } = useT();
 
-  // One Monaco handle per editorId. The active editor's handle backs the test hook.
+  // One editor handle per editorId. Large files use Monaco's streamed Piece Tree.
   const editorHandles = useRef<Map<string, MonacoHandle | null>>(new Map());
   // Opaque labels for the ACTIVE editor (carried back to MAIN on save).
   const labelsRef = useRef<OpenLabels>({ encodingId: null, eolId: null });
@@ -275,13 +276,11 @@ export function App(): JSX.Element {
     }
   });
 
-  // File loading and saving pipeline hook
   const { openPathIntoTab, doSave, doSaveAll } = useFilePipeline({
     store,
     editorHandles,
     lastSavedTextRef,
-    baselineRef,
-    recomputeDirty
+    baselineRef
   });
 
   // Open dialog (Ctrl+O + menu, UWP MainMenuButton_OpenButton): MAIN owns the
@@ -987,7 +986,8 @@ export function App(): JSX.Element {
             ) : null}
             {tabs.map((tab) => {
               const isActive = tab.editorId === activeEditorId;
-              const paneOn = isActive && (tab.viewMode.preview || tab.viewMode.diff);
+              const paneOn =
+                isActive && !tab.largeFile && (tab.viewMode.preview || tab.viewMode.diff);
               // Live shadow text for the pane, re-read each render. bumpDocVersion
               // pulses a re-render while a pane is open so typing reflects live.
               const shadow = paneOn
@@ -1042,6 +1042,31 @@ export function App(): JSX.Element {
                       >
                         <Spinner size="large" />
                       </div>
+                    ) : tab.largeFile && tab.filePath ? (
+                      <PieceTreeLargeFileEditor
+                        ref={(h) => {
+                          if (h) editorHandles.current.set(tab.editorId, h);
+                          else editorHandles.current.delete(tab.editorId);
+                        }}
+                        path={tab.filePath}
+                        size={tab.largeFile.size}
+                        encodingId={tab.largeFile.encodingId}
+                        onDocChanged={() => {
+                          store.setModified(tab.editorId, true);
+                          schedulePanePulse(tab.editorId);
+                        }}
+                        findCallbacks={find.keymapCallbacks}
+                        contextMenuAttach={editorContextMenu.attach}
+                        settings={editorBehaviorSettings}
+                        lineNumbers={settings.displayLineNumbers}
+                        lineHighlighter={settings.displayLineHighlighter}
+                        wordWrap={editorWordWrap}
+                        direction="ltr"
+                        fontFamily={settings.editorFontFamily}
+                        fontSize={settings.editorFontSize}
+                        accentColor={appTheme.accentHex}
+                        themeMode={appTheme.resolved}
+                      />
                     ) : (
                       <MonacoEditor
                         ref={(h) => {
@@ -1049,7 +1074,7 @@ export function App(): JSX.Element {
                           else editorHandles.current.delete(tab.editorId);
                         }}
                         onDocChanged={() => {
-                          if (!tab.isStreaming) recomputeDirty(tab.editorId);
+                          recomputeDirty(tab.editorId);
                           // Re-render the open preview/diff pane to reflect live typing
                           // (replaces the old CM6 updateListener pulse).
                           schedulePanePulse(tab.editorId);

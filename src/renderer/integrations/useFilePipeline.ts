@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { MonacoHandle } from '../editor/MonacoEditor';
+import type { LargeFileSaveChunkArgs, Result, SaveResult } from '@shared/ipc-contract';
 import { recordLastSaved } from '../statusbar/fileStatusTracker';
 import { getTabTitle } from '../integrations/pathUtils';
 
@@ -9,7 +10,42 @@ interface UseFilePipelineProps {
   editorHandles: React.MutableRefObject<Map<string, MonacoHandle | null>>;
   lastSavedTextRef: React.MutableRefObject<Map<string, string>>;
   baselineRef: React.MutableRefObject<Map<string, { hash: number; length: number }>>;
-  recomputeDirty: (editorId: string) => void;
+}
+
+async function saveSnapshot(
+  filePath: string,
+  encodingId: string,
+  eolId: 'crlf' | 'cr' | 'lf',
+  handle: MonacoHandle
+): Promise<Result<SaveResult>> {
+  const snapshot = handle.getSnapshot?.();
+  if (!snapshot) return { ok: false, error: 'Large-file snapshot is unavailable' };
+  const started = await window.notepads.file.saveLargeStart();
+  if (!started.ok) return started;
+  let first = true;
+  try {
+    for (let text = snapshot.read(); text !== null; text = snapshot.read()) {
+      const chunk: LargeFileSaveChunkArgs = {
+        sessionId: started.data.sessionId,
+        text,
+        first,
+        encodingId,
+        eolId
+      };
+      const written = await window.notepads.file.saveLargeChunk(chunk);
+      if (!written.ok) throw new Error(written.error);
+      first = false;
+    }
+    return await window.notepads.file.saveLargeFinish({
+      sessionId: started.data.sessionId,
+      filePath,
+      encodingId,
+      eolId
+    });
+  } catch (cause) {
+    await window.notepads.file.discardLarge(started.data.sessionId);
+    return { ok: false, error: cause instanceof Error ? cause.message : String(cause) };
+  }
 }
 
 export interface UseFilePipelineReturn {
@@ -22,11 +58,8 @@ export function useFilePipeline({
   store,
   editorHandles,
   lastSavedTextRef,
-  baselineRef,
-  recomputeDirty
+  baselineRef
 }: UseFilePipelineProps): UseFilePipelineReturn {
-  // Open an absolute path into a tab (the shared open primitive). If the path is
-  // ALREADY open in this window, focus that tab instead of opening a duplicate
   // (UWP focuses the existing set) — two editors on one path would let the second
   // save silently clobber the first (edit-loss). Otherwise read via MAIN
   // (file.open), seed a fresh tab with the authoritative labels, and seed the
@@ -66,8 +99,17 @@ export function useFilePipeline({
 
       void window.notepads.file.getSize(path).then((sizeRes) => {
         if (!store.get(id)) return;
-        const fileSize = sizeRes.ok ? sizeRes.data : 0;
-
+        if (!sizeRes.ok) {
+          if (seedTab) {
+            store.setFilePath(id, null);
+            store.setLoading(id, false);
+          } else {
+            store.close(id);
+            if (store.count() === 0) store.newTab();
+          }
+          return;
+        }
+        const fileSize = sizeRes.data;
         if (fileSize < STREAM_THRESHOLD) {
           // Direct load path (small files)
           void window.notepads.file.open(path).then((res) => {
@@ -101,58 +143,14 @@ export function useFilePipeline({
             seedOpened();
           });
         } else {
-          // Streaming load path (large files)
+          // Avoid Monaco's public one-string load path for multi-megabyte files.
+          // Stream chunks into Monaco's Piece Tree; never join the file into one
+          // renderer string before the model is created.
           void (async () => {
-            // Subscribe to chunk events BEFORE requesting streamed open. Keep the
-            // document out of Monaco until EOF: mutating a growing multi-MB model
-            // per chunk forces repeated tokenization/layout passes and can kill the
-            // WebView2 renderer. The tab remains streaming/read-only meanwhile.
-            const chunks: string[] = [];
             const streamId = `${id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            let finalText: string | null = null;
-            let headerReady = false;
-            const finish = (): void => {
-              if (!headerReady || finalText === null || !store.get(id)) return;
-              const handle = editorHandles.current.get(id);
-              if (!handle) {
-                setTimeout(finish, 0);
-                return;
-              }
-              const text = finalText;
-              handle.setDoc(text);
-              chunks.length = 0;
-              finalText = null;
-              unlisten();
-              // Snapshot the fully-loaded text as the saved baseline for diff
-              lastSavedTextRef.current.set(id, text);
-              // Enable editing now that the full document is loaded
-              store.setStreaming(id, false);
-              // Re-check dirty now that the doc is complete (streaming suppressed earlier checks)
-              recomputeDirty(id);
-            };
-            const acceptChunk = (chunk: import('@shared/ipc-contract').FileChunk): void => {
-              chunks[chunk.index] = chunk.text;
-              if (chunk.isLast) {
-                finalText = chunks.join('');
-                finish();
-              }
-            };
-            let unlisten = (): void => {};
-            unlisten = await window.notepads.file.onChunk((chunk) => {
-              if (!store.get(id)) {
-                unlisten();
-                return;
-              }
-              if (chunk.streamId === streamId) acceptChunk(chunk);
-            });
-
             const res = await window.notepads.file.openStreamed(path, streamId);
-            if (!store.get(id)) {
-              unlisten();
-              return;
-            }
-            if (!res.ok) {
-              unlisten();
+            if (!store.get(id)) return;
+            if (!res.ok || res.data.streamId !== streamId) {
               if (seedTab) {
                 store.setFilePath(id, null);
                 store.setLoading(id, false);
@@ -163,28 +161,25 @@ export function useFilePipeline({
               return;
             }
             const header = res.data;
-            if (header.streamId !== streamId) {
-              unlisten();
-              return;
-            }
             baselineRef.current.set(id, {
               hash: header.baselineHash,
               length: header.baselineLength
             });
-            lastSavedTextRef.current.set(id, ''); // placeholder; re-read from disk for diff
+            lastSavedTextRef.current.delete(id);
             store.setLabels(id, header.encodingId, header.eolId);
             store.setFilePath(id, header.filePath);
+            store.setLargeFile(id, {
+              size: header.totalBytes,
+              encodingId: header.encodingId,
+              eolId: header.eolId
+            });
             if (header.filePath) recordLastSaved(id, header.filePath, header.dateModifiedMs);
-            // Show editor immediately (empty doc), mark as streaming (readOnly)
             store.setLoading(id, false);
-            store.setStreaming(id, true);
-            headerReady = true;
-            finish();
           })();
         }
       });
     },
-    [store, editorHandles, lastSavedTextRef, baselineRef, recomputeDirty]
+    [store, editorHandles, lastSavedTextRef, baselineRef]
   );
 
   // Save pipeline (Issue 3, UWP NotepadsMainPage.IO.cs:159-217). doSave writes the
@@ -195,8 +190,24 @@ export function useFilePipeline({
   const doSave = useCallback(
     async (editorId: string, opts?: { saveAs?: boolean }): Promise<boolean> => {
       const tab = store.get(editorId);
+      if (!tab) return false;
       const handle = editorHandles.current.get(editorId);
-      if (!tab || !handle) return false;
+      if (!handle) return false;
+      if (tab.largeFile) {
+        if (opts?.saveAs) return false;
+        if (!tab.isModified) return true;
+        const res = await saveSnapshot(tab.filePath ?? '', tab.encodingId, tab.eolId, handle);
+        if (!res.ok) return false;
+        lastSavedTextRef.current.delete(editorId);
+        baselineRef.current.set(editorId, {
+          hash: res.data.baselineHash,
+          length: res.data.baselineLength
+        });
+        store.setLabels(editorId, res.data.encodingId, res.data.eolId);
+        recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
+        store.setModified(editorId, false);
+        return true;
+      }
       const saveAs = opts?.saveAs ?? false;
       const shadowText = handle.getShadowText();
       const hasPath = !!tab.filePath;

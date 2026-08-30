@@ -1,16 +1,89 @@
 use serde::Serialize;
+use std::fs::{self, File, OpenOptions};
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use tauri::Emitter;
 
-use crate::contract::{EncodingId, EolId};
-use crate::encoding::decode_bytes;
-use crate::eol::{detect_eol, normalize_to_lf};
-use crate::hash::hash_text;
+use crate::contract::{EncodingId, EolId, SaveResult};
+use crate::encoding::{decode_bytes, decode_bytes_with, encode_text};
+use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
 use crate::mru;
 use crate::result::NpResult;
 
-const CHUNK_SIZE: usize = 512 * 1024; // 512KB per chunk
+const CHUNK_SIZE: usize = 512 * 1024;
+const DETECTION_SAMPLE_SIZE: usize = 1024 * 1024;
 static STREAM_SEQ: AtomicU64 = AtomicU64::new(0);
+fn is_utf8_continuation(byte: u8) -> bool {
+    (byte & 0b1100_0000) == 0b1000_0000
+}
+
+fn utf8_width(byte: u8) -> usize {
+    match byte {
+        0x00..=0x7f => 1,
+        0xc2..=0xdf => 2,
+        0xe0..=0xef => 3,
+        0xf0..=0xf4 => 4,
+        _ => 0,
+    }
+}
+
+/// Keep a page boundary from splitting a decoded character or CRLF pair.
+/// Bytes after the returned length have not been consumed; the next request
+/// starts there. This avoids replacement characters and duplicate blank lines
+/// when a fixed byte window happens to end inside UTF-8/UTF-16/UTF-32 text.
+fn safe_chunk_len(bytes: &[u8], encoding_id: &str) -> usize {
+    let mut len = bytes.len();
+    if len == 0 {
+        return 0;
+    }
+
+    if encoding_id.starts_with("UTF-8") {
+        let mut start = len - 1;
+        while start > 0 && is_utf8_continuation(bytes[start]) {
+            start -= 1;
+        }
+        let width = utf8_width(bytes[start]);
+        if width > len - start {
+            len = start;
+        }
+        if len > 0 && bytes[len - 1] == b'\r' {
+            len -= 1;
+        }
+    } else if encoding_id.starts_with("UTF-16") {
+        len -= len % 2;
+        if len >= 2 {
+            let unit = if encoding_id.contains("BE") {
+                u16::from_be_bytes([bytes[len - 2], bytes[len - 1]])
+            } else {
+                u16::from_le_bytes([bytes[len - 2], bytes[len - 1]])
+            };
+            if (0xd800..=0xdbff).contains(&unit) || unit == 0x000d {
+                len -= 2;
+            }
+        }
+    } else if encoding_id.starts_with("UTF-32") {
+        len -= len % 4;
+        if len >= 4 {
+            let unit = if encoding_id.contains("BE") {
+                u32::from_be_bytes(bytes[len - 4..len].try_into().unwrap())
+            } else {
+                u32::from_le_bytes(bytes[len - 4..len].try_into().unwrap())
+            };
+            if unit == 0x000d {
+                len -= 4;
+            }
+        }
+    } else if bytes[len - 1] == b'\r' {
+        len -= 1;
+    }
+
+    // A malformed/truncated encoding must still make progress.
+    if len == 0 {
+        1.min(bytes.len())
+    } else {
+        len
+    }
+}
 
 fn next_stream_id() -> String {
     STREAM_SEQ.fetch_add(1, Ordering::Relaxed).to_string()
@@ -33,11 +106,17 @@ pub struct StreamedFileHeader {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FileChunk {
-    pub stream_id: String,
-    pub index: u32,
+pub struct LargeFileChunk {
+    pub offset: u64,
+    pub next_offset: u64,
+    pub byte_length: u64,
     pub text: String,
-    pub is_last: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LargeFileSaveSession {
+    pub session_id: String,
 }
 
 fn mtime_ms(meta: &std::fs::Metadata) -> f64 {
@@ -48,145 +127,217 @@ fn mtime_ms(meta: &std::fs::Metadata) -> f64 {
         .unwrap_or(0.0)
 }
 
-/// Split a string into chunks at valid UTF-8 char boundaries.
-fn split_chunks(text: &str, chunk_size: usize) -> Vec<&str> {
-    let mut chunks = Vec::new();
-    let mut start = 0;
-    while start < text.len() {
-        let end = (start + chunk_size).min(text.len());
-        // Find a valid char boundary at or before `end`
-        let end = if end >= text.len() {
-            text.len()
-        } else {
-            let mut e = end;
-            while !text.is_char_boundary(e) {
-                e -= 1;
-            }
-            e
-        };
-        chunks.push(&text[start..end]);
-        start = end;
-    }
-    chunks
+fn read_head(path: &str) -> Result<Vec<u8>, String> {
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    let mut bytes = Vec::with_capacity(DETECTION_SAMPLE_SIZE);
+    std::io::Read::by_ref(&mut file)
+        .take(DETECTION_SAMPLE_SIZE as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    Ok(bytes)
 }
 
-/// Split a string into owned chunks at valid UTF-8 char boundaries.
-/// Empty input still returns one terminal chunk so every stream completes.
-fn owned_chunks(text: &str, chunk_size: usize) -> Vec<String> {
-    let mut chunks: Vec<String> = split_chunks(text, chunk_size)
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
-    if chunks.is_empty() {
-        chunks.push(String::new());
-    }
-    chunks
+fn read_chunk_inner(path: &str, offset: u64, encoding_id: &str) -> Result<LargeFileChunk, String> {
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|e| e.to_string())?;
+    let mut bytes = Vec::with_capacity(CHUNK_SIZE);
+    std::io::Read::by_ref(&mut file)
+        .take(CHUNK_SIZE as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    let consumed = safe_chunk_len(&bytes, encoding_id);
+    let decoded = decode_bytes_with(&bytes[..consumed], encoding_id);
+    Ok(LargeFileChunk {
+        offset,
+        next_offset: offset + consumed as u64,
+        byte_length: consumed as u64,
+        text: normalize_to_lf(&decoded.decoded_text),
+    })
 }
 
-/// Get file size without reading it (used by renderer to decide streaming vs direct).
-#[tauri::command]
-pub async fn file_get_size(path: String) -> NpResult<u64> {
-    match std::fs::metadata(&path) {
-        Ok(meta) => NpResult::Ok(meta.len()),
-        Err(e) => NpResult::Err(e.to_string()),
+fn session_path(session_id: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(session_id);
+    let root = std::env::temp_dir();
+    if !path.starts_with(&root) {
+        return Err("Invalid large-file edit session".into());
     }
+    Ok(path)
 }
 
-/// Open a file using streamed delivery. Returns the header immediately, then emits
-/// chunks via Tauri events. The renderer listens for `notepads:evt:file:chunk` events.
+fn new_session_path() -> PathBuf {
+    std::env::temp_dir().join(format!("notepade-large-{}.tmp", next_stream_id()))
+}
+
+/// Read only a small header sample. The old implementation decoded and cloned the
+/// entire file before returning, which exhausted WebView2 on multi-GB text files.
 #[tauri::command]
 pub async fn file_open_streamed(
     app: tauri::AppHandle,
-    window: tauri::WebviewWindow,
+    _window: tauri::WebviewWindow,
     path: String,
     stream_id: Option<String>,
 ) -> NpResult<StreamedFileHeader> {
-    // The whole read + encoding-detect/decode + LF-normalize is CPU/IO-bound and
-    // must NOT run on the Tauri async runtime thread (it would stall every other
-    // command — including the renderer's own IPC — until the entire file is
-    // processed, which is the "long up-front spinner"). Hand it to a blocking
-    // worker so the runtime stays responsive; we only await its handle.
     let read_path = path.clone();
-    let prepared = tauri::async_runtime::spawn_blocking(move || -> Result<Prepared, String> {
-        let bytes = std::fs::read(&read_path).map_err(|e| e.to_string())?;
-        let meta = std::fs::metadata(&read_path).map_err(|e| e.to_string())?;
-        let decoded = decode_bytes(&bytes);
-        let eol_id = detect_eol(&decoded.decoded_text);
-        let normalized = normalize_to_lf(&decoded.decoded_text);
-        let bl_hash = hash_text(&normalized);
-        let bl_length = crate::hash::utf16_len(&normalized);
-        Ok(Prepared {
-            encoding_id: decoded.encoding_id,
-            has_bom: decoded.has_bom,
-            eol_id,
-            normalized,
-            bl_hash,
-            bl_length,
-            mtime_ms: mtime_ms(&meta),
-        })
+    let prepared = tauri::async_runtime::spawn_blocking(move || {
+        let meta = fs::metadata(&read_path).map_err(|e| e.to_string())?;
+        let sample = read_head(&read_path)?;
+        let decoded = decode_bytes(&sample);
+        Ok::<_, String>((meta, decoded))
     })
     .await;
-
-    let prepared = match prepared {
-        Ok(Ok(p)) => p,
-        Ok(Err(e)) => return NpResult::Err(e),
-        Err(e) => return NpResult::Err(format!("file read task failed: {e}")),
+    let (meta, decoded) = match prepared {
+        Ok(Ok(value)) => value,
+        Ok(Err(error)) => return NpResult::Err(error),
+        Err(error) => return NpResult::Err(format!("file read task failed: {error}")),
     };
-
     if let Ok(root) = mru::user_data_root(&app) {
         mru::add_recent(&root, &path);
     }
-
-    let owned_chunks = owned_chunks(&prepared.normalized, CHUNK_SIZE);
-    let chunk_count = owned_chunks.len() as u32;
-    let stream_id = stream_id.unwrap_or_else(next_stream_id);
-
-    let header = StreamedFileHeader {
-        stream_id: stream_id.clone(),
-        encoding_id: prepared.encoding_id,
-        eol_id: prepared.eol_id,
-        date_modified_ms: prepared.mtime_ms,
+    let total_bytes = meta.len();
+    let chunk_count = total_bytes.div_ceil(CHUNK_SIZE as u64) as u32;
+    NpResult::Ok(StreamedFileHeader {
+        stream_id: stream_id.unwrap_or_else(next_stream_id),
+        encoding_id: decoded.encoding_id,
+        eol_id: detect_eol(&decoded.decoded_text),
+        date_modified_ms: mtime_ms(&meta),
         file_path: path,
-        has_bom: prepared.has_bom,
-        baseline_hash: prepared.bl_hash,
-        baseline_length: prepared.bl_length,
+        has_bom: decoded.has_bom,
+        baseline_hash: 0,
+        baseline_length: 0,
         chunk_count,
-        total_bytes: prepared.normalized.len() as u64,
-    };
-
-    // Emit chunks from a spawned task, yielding the async executor between each
-    // so the renderer paints progressively instead of receiving the whole burst
-    // at once. `tokio::task::yield_now` actually returns control to the runtime
-    // (std::thread::yield_now does not yield the async executor).
-    let window_clone = window.clone();
-    tauri::async_runtime::spawn(async move {
-        for (i, text) in owned_chunks.into_iter().enumerate() {
-            let is_last = i as u32 == chunk_count - 1;
-            let _ = window_clone.emit(
-                "notepads:evt:file:chunk",
-                FileChunk {
-                    stream_id: stream_id.clone(),
-                    index: i as u32,
-                    text,
-                    is_last,
-                },
-            );
-            tokio::task::yield_now().await;
-        }
-    });
-
-    NpResult::Ok(header)
+        total_bytes,
+    })
 }
 
-/// Result of the blocking read+decode+normalize step (see `file_open_streamed`).
-struct Prepared {
-    encoding_id: EncodingId,
-    has_bom: bool,
+#[tauri::command]
+pub async fn file_read_chunk(
+    path: String,
+    offset: u64,
+    encoding_id: String,
+) -> NpResult<LargeFileChunk> {
+    tauri::async_runtime::spawn_blocking(move || read_chunk_inner(&path, offset, &encoding_id))
+        .await
+        .map_or_else(
+            |error| NpResult::Err(format!("file read task failed: {error}")),
+            NpResult::from,
+        )
+}
+
+fn bom_len(encoding_id: &str) -> usize {
+    match encoding_id {
+        "UTF-8-BOM" => 3,
+        "UTF-16 LE BOM" | "UTF-16 BE BOM" => 2,
+        "UTF-32 LE BOM" | "UTF-32 BE BOM" => 4,
+        _ => 0,
+    }
+}
+
+fn encode_snapshot_chunk(
+    text: &str,
+    encoding_id: &str,
     eol_id: EolId,
-    normalized: String,
-    bl_hash: u64,
-    bl_length: u64,
-    mtime_ms: f64,
+    first: bool,
+) -> Result<Vec<u8>, String> {
+    let mut bytes = encode_text(&apply_eol(text, eol_id), encoding_id)?;
+    if !first {
+        let prefix = bom_len(encoding_id).min(bytes.len());
+        bytes.drain(..prefix);
+    }
+    Ok(bytes)
+}
+
+#[tauri::command]
+pub async fn file_save_large_start() -> NpResult<LargeFileSaveSession> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let path = new_session_path();
+        File::create(&path).map_err(|e| e.to_string())?;
+        Ok::<_, String>(LargeFileSaveSession {
+            session_id: path.to_string_lossy().into_owned(),
+        })
+    })
+    .await
+    .map_or_else(
+        |error| NpResult::Err(format!("large-file save start failed: {error}")),
+        NpResult::from,
+    )
+}
+
+#[tauri::command]
+pub async fn file_save_large_chunk(
+    session_id: String,
+    text: String,
+    first: bool,
+    encoding_id: String,
+    eol_id: EolId,
+) -> NpResult<()> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = session_path(&session_id)?;
+        let bytes = encode_snapshot_chunk(&text, &encoding_id, eol_id, first)?;
+        let mut file = OpenOptions::new()
+            .append(true)
+            .open(path)
+            .map_err(|e| e.to_string())?;
+        file.write_all(&bytes).map_err(|e| e.to_string())
+    })
+    .await
+    .map_or_else(
+        |error| NpResult::Err(format!("large-file save chunk failed: {error}")),
+        NpResult::from,
+    )
+}
+
+#[tauri::command]
+pub async fn file_save_large_finish(
+    session_id: String,
+    file_path: String,
+    encoding_id: String,
+    eol_id: EolId,
+) -> NpResult<SaveResult> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let session = session_path(&session_id)?;
+        let target_tmp = PathBuf::from(format!("{file_path}.notepade-save-tmp"));
+        fs::copy(&session, &target_tmp).map_err(|e| e.to_string())?;
+        fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+        fs::rename(&target_tmp, &file_path).map_err(|e| e.to_string())?;
+        let meta = fs::metadata(&file_path).map_err(|e| e.to_string())?;
+        fs::remove_file(session).map_err(|e| e.to_string())?;
+        Ok::<_, String>(SaveResult {
+            file_path,
+            date_modified_ms: mtime_ms(&meta),
+            encoding_id,
+            eol_id,
+            baseline_hash: 0,
+            baseline_length: 0,
+        })
+    })
+    .await
+    .map_or_else(
+        |error| NpResult::Err(format!("large-file save finish failed: {error}")),
+        NpResult::from,
+    )
+}
+
+#[tauri::command]
+pub async fn file_discard_large(session_id: String) -> NpResult<()> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = session_path(&session_id)?;
+        fs::remove_file(path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_or_else(
+        |error| NpResult::Err(format!("large-file discard task failed: {error}")),
+        NpResult::from,
+    )
+}
+
+/// Get file size without reading it (used by the renderer to select the viewer).
+#[tauri::command]
+pub async fn file_get_size(path: String) -> NpResult<u64> {
+    match fs::metadata(&path) {
+        Ok(meta) => NpResult::Ok(meta.len()),
+        Err(e) => NpResult::Err(e.to_string()),
+    }
 }
 
 #[cfg(test)]
@@ -194,41 +345,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn split_chunks_basic() {
-        let text = "abcdefghij";
-        let chunks = split_chunks(text, 3);
-        assert_eq!(chunks, vec!["abc", "def", "ghi", "j"]);
+    fn safe_chunk_len_preserves_utf8_and_crlf_boundaries() {
+        assert_eq!(safe_chunk_len(&[b'a', 0xe4], "UTF-8"), 1);
+        assert_eq!(safe_chunk_len(&[b'a', 0xe4, 0xbd, 0xa0], "UTF-8"), 4);
+        assert_eq!(safe_chunk_len(b"abc\r", "UTF-8"), 3);
     }
 
     #[test]
-    fn split_chunks_exact() {
-        let text = "abcdef";
-        let chunks = split_chunks(text, 3);
-        assert_eq!(chunks, vec!["abc", "def"]);
-    }
+    fn read_chunk_does_not_split_crlf_at_page_boundary() {
+        let path =
+            std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
+        let mut bytes = vec![b'a'; CHUNK_SIZE - 1];
+        bytes.extend_from_slice(b"\r\n");
+        fs::write(&path, &bytes).unwrap();
 
-    #[test]
-    fn split_chunks_respects_char_boundary() {
-        let text = "a\u{00e9}"; // "aé" — é is 2 bytes
-        let chunks = split_chunks(text, 2);
-        assert_eq!(chunks, vec!["a", "\u{00e9}"]);
-    }
+        let first = read_chunk_inner(path.to_str().unwrap(), 0, "UTF-8").unwrap();
+        let second = read_chunk_inner(path.to_str().unwrap(), first.next_offset, "UTF-8").unwrap();
+        fs::remove_file(path).unwrap();
 
-    #[test]
-    fn split_chunks_cjk() {
-        let text = "\u{4f60}\u{597d}\u{4e16}\u{754c}"; // "你好世界" — 3 bytes each
-        let chunks = split_chunks(text, 4);
-        assert_eq!(chunks[0], "\u{4f60}");
-        assert_eq!(chunks.len(), 4);
-    }
-
-    #[test]
-    fn owned_chunks_empty_has_terminal_chunk() {
-        assert_eq!(owned_chunks("", 512), vec![""]);
+        assert_eq!(first.byte_length, (CHUNK_SIZE - 1) as u64);
+        assert!(!first.text.ends_with('\n'));
+        assert_eq!(second.text, "\n");
+        assert_eq!(second.byte_length, 2);
     }
 
     #[test]
     fn stream_ids_are_distinct() {
         assert_ne!(next_stream_id(), next_stream_id());
+    }
+
+    #[test]
+    fn read_chunk_is_bounded_and_normalizes_eol() {
+        let path =
+            std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(b"one\r\ntwo\r\n").unwrap();
+        let chunk = read_chunk_inner(path.to_str().unwrap(), 0, "UTF-8").unwrap();
+        fs::remove_file(path).unwrap();
+        assert_eq!(chunk.text, "one\ntwo\n");
+        assert_eq!(chunk.byte_length, 10);
     }
 }

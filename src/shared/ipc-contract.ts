@@ -119,13 +119,24 @@ export interface FileApi {
   revalidatePath(path: string): Promise<Result<{ exists: boolean; dateModifiedMs: number }>>;
   /** Get file size in bytes (used to decide streaming vs direct load). */
   getSize(path: string): Promise<Result<number>>;
-  /** Open a large file via streaming; optional ID correlates emitted chunks. */
+  /** Open a large file without materializing it in the renderer. */
   openStreamed(path: string, streamId?: string): Promise<Result<StreamedFileHeader>>;
-  /** Subscribe to file chunk events (streaming load). Returns unsubscribe function. */
-  onChunk(cb: (chunk: FileChunk) => void): Promise<Unsubscribe>;
+  /** Read one bounded byte window from a large file. */
+  readChunk(
+    path: string,
+    offset: number,
+    encodingId: EncodingId
+  ): Promise<Result<LargeFileChunk>>;
+  /** Begin an incremental snapshot save into a temporary file. */
+  saveLargeStart(): Promise<Result<LargeFileSaveSession>>;
+  /** Append one already-decoded snapshot chunk to the temporary file. */
+  saveLargeChunk(args: LargeFileSaveChunkArgs): Promise<Result<void>>;
+  /** Commit the completed temporary snapshot file atomically. */
+  saveLargeFinish(args: LargeFileSaveFinishArgs): Promise<Result<SaveResult>>;
+  discardLarge(sessionId: string): Promise<Result<void>>;
 }
 
-/** Header returned by file.openStreamed before chunk events begin. */
+/** Header returned by file.openStreamed without loading the document body. */
 export interface StreamedFileHeader {
   /** Opaque identity used to correlate chunk events to this open request. */
   streamId: string;
@@ -140,13 +151,32 @@ export interface StreamedFileHeader {
   totalBytes: number;
 }
 
-/** A single chunk emitted via the `notepads:evt:file:chunk` event. */
-export interface FileChunk {
-  /** Correlates this chunk with the `openStreamed` request that created it. */
-  streamId: string;
-  index: number;
+/** One bounded decoded window from a disk-backed large file. */
+export interface LargeFileChunk {
+  offset: number;
+  nextOffset: number;
+  byteLength: number;
   text: string;
-  isLast: boolean;
+}
+
+
+export interface LargeFileSaveSession {
+  sessionId: string;
+}
+
+export interface LargeFileSaveChunkArgs {
+  sessionId: string;
+  text: string;
+  first: boolean;
+  encodingId: EncodingId;
+  eolId: EolId;
+}
+
+export interface LargeFileSaveFinishArgs {
+  sessionId: string;
+  filePath: string;
+  encodingId: EncodingId;
+  eolId: EolId;
 }
 
 // ---------------------------------------------------------------------------
