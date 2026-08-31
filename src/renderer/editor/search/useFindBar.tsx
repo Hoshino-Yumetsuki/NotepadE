@@ -16,7 +16,7 @@
  * PA-8: renderer-only; touches the IStandaloneCodeEditor + DOM, never IPC/fs.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as monacoApi from 'monaco-editor/esm/vs/editor/editor.api';
 import { FindBar, type FindDirection } from './FindBar';
 import type { SearchOptions } from './searchEngine';
@@ -76,9 +76,14 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   const [goToKey, setGoToKey] = useState<number>(0);
 
   const activeQueryRef = useRef<FindQuery | null>(null);
+  const highlightTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current);
+    };
+  }, []);
 
   const toQuery = (query: string, options: SearchOptions): FindQuery => ({ query, ...options });
-
   // --- Open / dismiss --------------------------------------------------------
 
   const openFindBar = useCallback((replace: boolean) => {
@@ -89,6 +94,10 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
 
   const dismissFindBar = useCallback((): boolean => {
     if (!open) return false;
+    if (highlightTimerRef.current !== null) {
+      window.clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = null;
+    }
     setOpen(false);
     setStatus(undefined);
     const editor = getActiveEditor();
@@ -132,10 +141,25 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
     (query: string, options: SearchOptions) => {
       const q = toQuery(query, options);
       activeQueryRef.current = query.length > 0 ? q : null;
+      if (highlightTimerRef.current !== null) {
+        window.clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = null;
+      }
       const editor = getActiveEditor();
       if (!editor) return;
-      refreshHighlights(editor, q);
-      if (query.length === 0) setStatus(undefined);
+      if (query.length === 0) {
+        refreshHighlights(editor, q);
+        setStatus(undefined);
+        return;
+      }
+      // VS Code debounces find decoration updates. Each Piece Tree scan is
+      // synchronous, so rescanning on every keystroke would monopolize the
+      // renderer during file streaming.
+      highlightTimerRef.current = window.setTimeout(() => {
+        highlightTimerRef.current = null;
+        const activeEditor = getActiveEditor();
+        if (activeEditor) refreshHighlights(activeEditor, q);
+      }, 240);
     },
     [getActiveEditor]
   );

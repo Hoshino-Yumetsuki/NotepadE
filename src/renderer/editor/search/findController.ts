@@ -89,8 +89,52 @@ function spanToRange(model: monaco.editor.ITextModel, span: MatchSpan): monaco.I
 //  Helpers
 // ---------------------------------------------------------------------------
 
+type LargeAwareModel = monaco.editor.ITextModel & {
+  _isTooLargeForTokenization?: boolean;
+};
+
+const MAX_HIGHLIGHT_MATCHES = 1_000;
+const MAX_REPLACE_MATCHES = 1_073_741_824;
+
+function isProgressiveLargeModel(model: monaco.editor.ITextModel): boolean {
+  return (model as LargeAwareModel)._isTooLargeForTokenization === true;
+}
+
 function getDocText(editor: monaco.editor.IStandaloneCodeEditor): string {
   return editor.getModel()?.getValue(1 /* LF */) ?? '';
+}
+
+function nativeSearchOptions(
+  _editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery
+): string | null {
+  // Monaco's default word-separator set matches the editor's 0.56.0 option.
+  return q.wholeWord ? '`~!@#$%^&*()-=+[{]}\\|;:\'",.<>/?' : null;
+}
+
+function nativeMatchToSpan(model: monaco.editor.ITextModel, match: monaco.editor.FindMatch): MatchSpan {
+  return {
+    from: model.getOffsetAt({ lineNumber: match.range.startLineNumber, column: match.range.startColumn }),
+    to: model.getOffsetAt({ lineNumber: match.range.endLineNumber, column: match.range.endColumn })
+  };
+}
+
+function nativeFindMatches(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery,
+  limit = MAX_HIGHLIGHT_MATCHES
+): monaco.editor.FindMatch[] {
+  const model = editor.getModel();
+  if (!model || q.query.length === 0) return [];
+  return model.findMatches(
+    q.query,
+    true,
+    q.useRegex,
+    q.matchCase,
+    nativeSearchOptions(editor, q),
+    false,
+    limit
+  );
 }
 
 function getSelectionOffsets(editor: monaco.editor.IStandaloneCodeEditor): {
@@ -112,6 +156,37 @@ function selectAndReveal(editor: monaco.editor.IStandaloneCodeEditor, span: Matc
   editor.setSelection(range);
   editor.revealRangeInCenter(range, 1 /* Immediate */);
 }
+
+function nativeFindOne(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  q: FindQuery,
+  previous: boolean
+): { span: MatchSpan; wrapped: boolean } | null {
+  const model = editor.getModel();
+  if (!model || q.query.length === 0) return null;
+  const { from, to } = getSelectionOffsets(editor);
+  const match = previous
+    ? model.findPreviousMatch(
+        q.query,
+        model.getPositionAt(from),
+        q.useRegex,
+        q.matchCase,
+        nativeSearchOptions(editor, q),
+        false
+      )
+    : model.findNextMatch(
+        q.query,
+        model.getPositionAt(to),
+        q.useRegex,
+        q.matchCase,
+        nativeSearchOptions(editor, q),
+        false
+      );
+  if (!match) return null;
+  const span = nativeMatchToSpan(model, match);
+  return { span, wrapped: previous ? span.from >= from : span.from < to };
+}
+
 
 // ---------------------------------------------------------------------------
 //  Collect all matches (for highlight refresh)
@@ -137,16 +212,24 @@ function collectAllMatches(text: string, q: FindQuery): MatchSpan[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Recompute and apply ALL match highlights for the current query.
- * Empty queries clear the highlights.
+ * Recompute and apply ALL match highlights.
+ * Empty queries clear highlights without reading the model. Progressive large
+ * models use Monaco's Piece Tree search so the renderer never builds a second
+ * full-document string while the stream is still appending.
  */
 export function refreshHighlights(editor: monaco.editor.IStandaloneCodeEditor, q: FindQuery): void {
   ensureHighlightStyle();
   const model = editor.getModel();
   if (!model) return;
-  const spans = collectAllMatches(getDocText(editor), q);
-  const decorations: monaco.editor.IModelDeltaDecoration[] = spans.map((s) => ({
-    range: spanToRange(model, s),
+  if (q.query.length === 0) {
+    clearHighlights(editor);
+    return;
+  }
+  const spans = isProgressiveLargeModel(model)
+    ? nativeFindMatches(editor, q).map(nativeMatchToSpan.bind(null, model))
+    : collectAllMatches(getDocText(editor), q);
+  const decorations = spans.map((span) => ({
+    range: spanToRange(model, span),
     options: { inlineClassName: MATCH_CLASS }
   }));
   const prev = decorationMap.get(editor) ?? [];
@@ -174,9 +257,15 @@ export function findNextInEditor(
   q: FindQuery
 ): FindOutcome {
   if (q.query.length === 0) return { match: null, wrapped: false };
+  const model = editor.getModel();
+  if (model && isProgressiveLargeModel(model)) {
+    const result = nativeFindOne(editor, q, false);
+    if (!result) return { match: null, wrapped: false };
+    selectAndReveal(editor, result.span);
+    return { match: result.span, wrapped: result.wrapped };
+  }
   const text = getDocText(editor);
   const { to } = getSelectionOffsets(editor);
-
   const direct = findNext(text, q.query, q, to, false);
   if (direct) {
     selectAndReveal(editor, direct);
@@ -199,9 +288,15 @@ export function findPreviousInEditor(
   q: FindQuery
 ): FindOutcome {
   if (q.query.length === 0) return { match: null, wrapped: false };
+  const model = editor.getModel();
+  if (model && isProgressiveLargeModel(model)) {
+    const result = nativeFindOne(editor, q, true);
+    if (!result) return { match: null, wrapped: false };
+    selectAndReveal(editor, result.span);
+    return { match: result.span, wrapped: result.wrapped };
+  }
   const text = getDocText(editor);
   const { from } = getSelectionOffsets(editor);
-
   const direct = findPrevious(text, q.query, q, from, false);
   if (direct) {
     selectAndReveal(editor, direct);
@@ -220,10 +315,23 @@ export function findPreviousInEditor(
 // ---------------------------------------------------------------------------
 
 function selectionIsMatch(editor: monaco.editor.IStandaloneCodeEditor, q: FindQuery): boolean {
+  const model = editor.getModel();
+  const selection = editor.getSelection();
+  if (!model || !selection || selection.isEmpty()) return false;
+  if (isProgressiveLargeModel(model)) {
+    const hit = model.findMatches(
+      q.query,
+      selection,
+      q.useRegex,
+      q.matchCase,
+      nativeSearchOptions(editor, q),
+      false,
+      1
+    )[0];
+    return hit?.range.equalsRange(selection) ?? false;
+  }
   const { from, to } = getSelectionOffsets(editor);
-  if (to <= from) return false;
-  const text = getDocText(editor);
-  const hit = findNext(text, q.query, q, from, false);
+  const hit = findNext(getDocText(editor), q.query, q, from, false);
   return hit !== null && hit.from === from && hit.to === to;
 }
 
@@ -236,7 +344,7 @@ function expandRegexReplacement(
 ): string {
   const model = editor.getModel();
   if (!model) return replacement;
-  const slice = model.getValue(1 /* LF */).slice(from, to);
+  const slice = model.getValueInRange(spanToRange(model, { from, to }), 1 /* LF */);
   const result = engineReplaceAll(slice, q.query, q, replacement);
   return result.count > 0 ? result.text : slice;
 }
@@ -295,14 +403,39 @@ export function replaceAllInEditor(
   if (q.query.length === 0) return 0;
   const model = editor.getModel();
   if (!model) return 0;
+  if (isProgressiveLargeModel(model)) {
+    const largeModel = model as LargeAwareModel & { _isTooLargeForHeapOperation?: boolean };
+    if (largeModel._isTooLargeForHeapOperation) return 0;
+    const matches = model.findMatches(
+      q.query,
+      true,
+      q.useRegex,
+      q.matchCase,
+      nativeSearchOptions(editor, q),
+      false,
+      MAX_REPLACE_MATCHES
+    );
+    if (matches.length === 0) return 0;
+    model.applyEdits(
+      matches.map((match) => ({
+        range: match.range,
+        text: q.useRegex
+          ? engineReplaceAll(
+              model.getValueInRange(match.range, 1 /* LF */),
+              q.query,
+              q,
+              replacement
+            ).text
+          : replacement
+      }))
+    );
+    return matches.length;
+  }
   const text = getDocText(editor);
   const result = engineReplaceAll(text, q.query, q, replacement);
   if (result.count === 0) return 0;
 
-  // Apply as a single full-document edit so it is one undo step.
   model.applyEdits([{ range: model.getFullModelRange(), text: result.text }]);
-
-  // Move caret to document end (UWP StartPosition = int.MaxValue).
   const endPos = model.getPositionAt(result.text.length);
   editor.setPosition(endPos);
   editor.revealPosition(endPos);

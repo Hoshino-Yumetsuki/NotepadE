@@ -299,8 +299,12 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
             _isTooLargeForHeapOperation: boolean;
             _isTooLargeForSyncing: boolean;
           };
-          largeModel._isTooLargeForHeapOperation = true;
-          largeModel._isTooLargeForSyncing = true;
+          const length = model.getValueLength(monaco.editor.EndOfLinePreference.LF);
+          // Match VS Code's policy: disable worker syncing above 50 MiB and
+          // heap-amplifying operations above 256M characters. The progressive
+          // model remains searchable/editable below those limits.
+          largeModel._isTooLargeForHeapOperation = length > 256 * 1024 * 1024;
+          largeModel._isTooLargeForSyncing = length > 50 * 1024 * 1024;
         },
         getShadowText(): string {
           const model = modelRef.current;

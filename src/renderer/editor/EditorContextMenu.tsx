@@ -248,7 +248,7 @@ export function useEditorContextMenu(props: EditorContextMenuHostProps): EditorC
           y: e.clientY,
           editor,
           hasSelection: !!(sel && !sel.isEmpty()),
-          hasText: !!(model && model.getValue().length > 0),
+          hasText: !!model && model.getValueLength() > 0,
           wordWrap: isWordWrapOn(editor),
           rtl: isRtl(editor)
         });
