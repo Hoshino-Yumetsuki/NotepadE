@@ -1,3 +1,4 @@
+#![allow(linker_messages)]
 //! NotepadE Tauri core — application entry (port of src/main/index.ts boot).
 //!
 //! FROZEN after scaffold (task #1): workers fill their OWN module files only.
@@ -171,7 +172,9 @@ pub fn run() {
             // file streaming (large files)
             file_stream::file_get_size,
             file_stream::file_open_streamed,
-            file_stream::file_read_chunk,
+            file_stream::file_stream_chunks,
+            file_stream::file_stream_ack,
+            file_stream::file_stream_cancel,
             file_stream::file_save_large_start,
             file_stream::file_save_large_chunk,
             file_stream::file_save_large_finish,

@@ -34,6 +34,12 @@ import { attachCurrentLineEdge } from './currentLineEdge';
 export interface MonacoHandle {
   /** Replace the entire document with `text`, normalized to the '\n' shadow buffer. */
   setDoc(text: string): void;
+  /** Append a decoded chunk without adding it to the undo stack or dirty state. */
+  appendText?(text: string): void;
+  /** Change read-only state after an initial streamed load completes. */
+  setReadOnly?(readOnly: boolean): void;
+  /** Enable heap/sync guards after Monaco has finished creating the live view. */
+  setLargeFileGuards?(): void;
   /** Current document as a '\n'-normalized shadow-buffer string (for save). */
   getShadowText(): string;
   getSnapshot?: () => monaco.editor.ITextSnapshot | null;
@@ -48,8 +54,6 @@ export interface MonacoHandle {
 export interface MonacoEditorProps {
   /** Initial document (will be '\n'-normalized). Defaults to empty. */
   initialDoc?: string;
-  /** Internal Monaco PieceTree factory built from streamed chunks. */
-  initialTextBufferFactory?: unknown;
   /** Whether to render the gutter line numbers. */
   lineNumbers?: boolean;
   /** Host-provided editor-behavior settings (opaque for T1; consumed in T3). */
@@ -69,19 +73,17 @@ export interface MonacoEditorProps {
   fontWeight?: number;
   /** Selection-highlight color (resolved app accent, #RRGGBB). */
   accentColor?: string;
+  /** Enable Monaco's permanent large-file guards for a progressively-filled model. */
+  largeFileOptimizations?: boolean;
+  /** Called after the editor/model mount has completed. */
+  onReady?: (handle: MonacoHandle) => void;
   /** Fired whenever the document content changes (Monaco onDidChangeModelContent). */
   onDocChanged?: () => void;
-  /**
-   * Find-bar keybinding callbacks (Ctrl+F/H/G, F3/Shift+F3, Esc). Registered on
-   * the editor at mount via `registerFindKeybindings` (T4). The host (App) owns
-   * the FindBar UI and passes these stable callbacks; the editor only binds keys.
-   */
+  /** Whether the editor starts read-only, used during large-file streaming. */
+  readOnly?: boolean;
+  /** Find-bar keybinding callbacks. */
   findCallbacks?: FindKeymapCallbacks;
-  /**
-   * Attach the right-click context menu to the editor. The host (App) owns the
-   * Fluent menu element + its state and passes `useEditorContextMenu().attach`;
-   * the editor wires the `contextmenu` DOM listener and returns a disposable.
-   */
+  /** Attach the host-owned right-click context menu. */
   contextMenuAttach?: (editor: monaco.editor.IStandaloneCodeEditor) => monaco.IDisposable;
 }
 
@@ -210,14 +212,15 @@ function gutterWash(_themeMode: 'light' | 'dark' | 'hc'): string | null {
 export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function MonacoEditor(
   {
     initialDoc = '',
-    initialTextBufferFactory,
     lineNumbers: showLineNumbers = false,
+    readOnly = false,
     // `settings` feeds the command wiring (tabAsSpaces / smartCopy / base
-    // fontSize) via settingsRef; `direction` is the initial flow direction (the
-    // Ctrl+L/R commands flip it live on the editor DOM).
+    // fontSize) via settingsRef; `direction` is the initial flow direction
+    // (the Ctrl+L/R commands flip it live on the editor DOM).
     settings,
     direction = 'ltr',
     wordWrap = false,
+    largeFileOptimizations = false,
     lineHighlighter = true,
     themeMode = 'light',
     fontFamily: fontFamilyRaw = DEFAULT_FONT_FAMILY,
@@ -227,7 +230,8 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     accentColor = DEFAULT_ACCENT,
     onDocChanged,
     findCallbacks,
-    contextMenuAttach
+    contextMenuAttach,
+    onReady
   },
   ref
 ) {
@@ -240,13 +244,14 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
   // listener stable so a changing callback identity never tears down the editor).
   const onDocChangedRef = useRef<(() => void) | undefined>(onDocChanged);
   onDocChangedRef.current = onDocChanged;
-  // Find callbacks + context-menu attach are read once at mount (registrations are
-  // editor-lifetime). Refs keep the mount-once effect from re-running if the host
-  // re-creates these closures; the underlying callbacks already read live state.
+  // Find callbacks + context-menu attach are read once at mount (registrations
+  // are editor-lifetime). Refs keep the mount-once effect stable.
   const findCallbacksRef = useRef<FindKeymapCallbacks | undefined>(findCallbacks);
   findCallbacksRef.current = findCallbacks;
   const contextMenuAttachRef = useRef(contextMenuAttach);
   contextMenuAttachRef.current = contextMenuAttach;
+  const onReadyRef = useRef<((handle: MonacoHandle) => void) | undefined>(onReady);
+  onReadyRef.current = onReady;
   // Host-authoritative document parked here ONLY while no editor exists. Once a
   // live model holds the doc this is cleared; re-captured on unmount so a remount
   // (React StrictMode double-mount, tab key change) restores it. Mirrors the CM6
@@ -256,78 +261,104 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
   // smartCopy / base fontSize). A ref keeps the mount-once command handlers
   // reading the CURRENT value without re-registering on every settings change.
   const settingsRef = useRef<Partial<EditorSettings> | undefined>(settings);
+  const suppressDocChangedRef = useRef(false);
   settingsRef.current = settings;
   // Per-tab `.LOG` once-per-open guard (mirrors UWP's `_hasAddedLogEntry`). An
   // authoritative setDoc (open / activate / adopt / reload) resets it so a freshly
   // opened `.LOG` file can re-stamp exactly once.
   const logGuardRef = useRef<{ added: boolean }>({ added: false });
+  const imperativeHandleRef = useRef<MonacoHandle | null>(null);
 
   useImperativeHandle(
     ref,
-    (): MonacoHandle => ({
-      setDoc(text: string): void {
-        // An authoritative load (open / activation / adopt / reload). With no
-        // editor yet, PARK the text for the mount effect; otherwise replace the
-        // whole model in a way that leaves the undo stack EMPTY so Ctrl+Z can
-        // never blank just-loaded content (the source's undo history does not
-        // transfer). `pushEditOperations(null, …, () => null)` applies the edit
-        // with NO before-cursor state — the same full-replace-without-history
-        // pattern Monaco's own reactive bridge uses — so it adds no user-visible
-        // undo step. setValue would also drop history but RESETS the EOL to the
-        // platform default, so we edit the full range explicitly and re-pin LF.
-        const model = modelRef.current;
-        if (!model) {
-          docRef.current = text;
-          // Reset the .LOG guard on every authoritative load so a freshly opened
-          // (or reloaded) .LOG file re-stamps once when next focused/edited.
+    (): MonacoHandle => {
+      const handle: MonacoHandle = {
+        setDoc(text: string): void {
+          const model = modelRef.current;
+          if (!model) {
+            docRef.current = text;
+            logGuardRef.current.added = false;
+            return;
+          }
+          docRef.current = null;
           logGuardRef.current.added = false;
-          return;
+          model.pushEditOperations(null, [{ range: model.getFullModelRange(), text }], () => null);
+        },
+        appendText(text: string): void {
+          const model = modelRef.current ?? editorRef.current?.getModel() ?? null;
+          if (!model || text.length === 0) return;
+          const end = model.getFullModelRange().getEndPosition();
+          suppressDocChangedRef.current = true;
+          try {
+            model.applyEdits(
+              [{ range: new monaco.Range(end.lineNumber, end.column, end.lineNumber, end.column), text }],
+              false
+            );
+          } finally {
+            suppressDocChangedRef.current = false;
+          }
+        },
+        setReadOnly(readOnly: boolean): void {
+          editorRef.current?.updateOptions({ readOnly });
+        },
+        setLargeFileGuards(): void {
+          const model = modelRef.current ?? editorRef.current?.getModel() ?? null;
+          if (!model) return;
+          const largeModel = model as unknown as {
+            _isTooLargeForHeapOperation: boolean;
+            _isTooLargeForSyncing: boolean;
+          };
+          largeModel._isTooLargeForHeapOperation = true;
+          largeModel._isTooLargeForSyncing = true;
+        },
+        getShadowText(): string {
+          const model = modelRef.current;
+          return model ? model.getValue(monaco.editor.EndOfLinePreference.LF) : '';
+        },
+        getSnapshot(): monaco.editor.ITextSnapshot | null {
+          return modelRef.current?.createSnapshot() ?? null;
+        },
+        focus(): void {
+          editorRef.current?.focus();
+        },
+        tryInsertLogEntry(): boolean {
+          const editor = editorRef.current;
+          if (!editor) return false;
+          return runLogEntry(editor, {
+            getSettings: () => settingsRef.current ?? {},
+            logGuard: logGuardRef.current
+          });
+        },
+        getEditor(): monaco.editor.IStandaloneCodeEditor | null {
+          return editorRef.current;
         }
-        docRef.current = null;
-        logGuardRef.current.added = false;
-        model.pushEditOperations(null, [{ range: model.getFullModelRange(), text }], () => null);
-        model.setEOL(monaco.editor.EndOfLineSequence.LF);
-      },
-      getShadowText(): string {
-        const model = modelRef.current;
-        // EndOfLinePreference.LF guarantees the '\n' shadow buffer verbatim.
-        return model ? model.getValue(monaco.editor.EndOfLinePreference.LF) : '';
-      },
-      getSnapshot(): monaco.editor.ITextSnapshot | null {
-        return modelRef.current?.createSnapshot() ?? null;
-      },
-      focus(): void {
-        editorRef.current?.focus();
-      },
-      tryInsertLogEntry(): boolean {
-        const editor = editorRef.current;
-        if (!editor) return false;
-        return runLogEntry(editor, {
-          getSettings: () => settingsRef.current ?? {},
-          logGuard: logGuardRef.current
-        });
-      },
-      getEditor(): monaco.editor.IStandaloneCodeEditor | null {
-        return editorRef.current;
-      }
-    }),
+      };
+      imperativeHandleRef.current = handle;
+      return handle;
+    },
     []
   );
-
-  // --- Mount once. Document updates flow through the imperative handle. ---
   useEffect(() => {
     if (!hostRef.current) return;
 
     defineThemes(themeMode, accentColor);
-    const model = initialTextBufferFactory
-      ? monaco.editor.createModel(initialTextBufferFactory as string, 'plaintext')
-      : monaco.editor.createModel(docRef.current ?? initialDoc, undefined);
+    const model = monaco.editor.createModel(docRef.current ?? initialDoc, undefined);
+    if (largeFileOptimizations) {
+      // Monaco decides tokenization permanently from the constructor's initial
+      // buffer size. Progressive loading starts empty, so set this guard before
+      // the model is attached to the editor. The heap guard is applied below,
+      // after Monaco's initialization calls that materialize the empty model.
+      const largeModel = model as unknown as {
+        _isTooLargeForTokenization: boolean;
+      };
+      largeModel._isTooLargeForTokenization = true;
+    }
     model.setEOL(monaco.editor.EndOfLineSequence.LF);
-    modelRef.current = model;
 
     const editor = monaco.editor.create(hostRef.current, {
       model,
       theme: THEME_NAMES[themeMode],
+      readOnly,
       // Layout is driven MANUALLY by the visibility-aware ResizeObserver below
       // (not Monaco's built-in automaticLayout). With one editor mounted PER TAB
       // and inactive tabs hidden via `display:none` (App renders all tabs, only
@@ -449,10 +480,8 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
 
     // Dirty-tracking seam: fire onDocChanged on any model content change.
     const contentSub = model.onDidChangeContent(() => {
-      onDocChangedRef.current?.();
+      if (!suppressDocChangedRef.current) onDocChangedRef.current?.();
     });
-
-    // --- Acrylic gutter material ---
     // The editor root paints a left-edge gradient: a translucent wash over the
     // gutter region, transparent beyond (see monaco-acrylic.css). The root is not
     // GPU-promoted, so the wash composites WITH vibrancy (acrylic shows through),
@@ -521,11 +550,18 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     });
     layoutObserver.observe(host);
 
-    // Pre-park small docs only; joining a large Piece Tree on tab teardown
-    // defeats the streamed model and can allocate another full-file string.
+    const readyHandle = imperativeHandleRef.current;
+    if (readyHandle) onReadyRef.current?.(readyHandle);
+
+    // Park the live document so a remount can restore it without re-reading disk.
     return () => {
-      if (!initialTextBufferFactory) {
+      if (!largeFileOptimizations) {
         docRef.current = model.getValue(monaco.editor.EndOfLinePreference.LF);
+      } else {
+        // A multi-GB model must never be copied into a second renderer string.
+        // The large-file stream owns its content; its handle stays live across
+        // StrictMode's effect replay.
+        docRef.current = null;
       }
       disposeCommands();
       findKeysSub?.dispose();

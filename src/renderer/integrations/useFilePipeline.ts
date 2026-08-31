@@ -171,7 +171,8 @@ export function useFilePipeline({
             store.setLargeFile(id, {
               size: header.totalBytes,
               encodingId: header.encodingId,
-              eolId: header.eolId
+              eolId: header.eolId,
+              streamId: header.streamId
             });
             if (header.filePath) recordLastSaved(id, header.filePath, header.dateModifiedMs);
             store.setLoading(id, false);

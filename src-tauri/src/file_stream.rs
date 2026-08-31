@@ -1,18 +1,92 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Condvar, LazyLock, Mutex};
 
 use crate::contract::{EncodingId, EolId, SaveResult};
 use crate::encoding::{decode_bytes, decode_bytes_with, encode_text};
 use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
 use crate::mru;
 use crate::result::NpResult;
+use tauri::ipc::Channel;
 
 const CHUNK_SIZE: usize = 512 * 1024;
 const DETECTION_SAMPLE_SIZE: usize = 1024 * 1024;
+const STREAM_WINDOW: usize = 4;
 static STREAM_SEQ: AtomicU64 = AtomicU64::new(0);
+
+struct StreamState {
+    permits: usize,
+    canceled: bool,
+}
+
+struct StreamControl {
+    state: Mutex<StreamState>,
+    wake: Condvar,
+}
+
+static STREAM_CONTROLS: LazyLock<Mutex<HashMap<String, Arc<StreamControl>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn register_stream(stream_id: &str) -> Arc<StreamControl> {
+    let control = Arc::new(StreamControl {
+        state: Mutex::new(StreamState {
+            permits: STREAM_WINDOW,
+            canceled: false,
+        }),
+        wake: Condvar::new(),
+    });
+    if let Ok(mut controls) = STREAM_CONTROLS.lock() {
+        controls.insert(stream_id.to_owned(), Arc::clone(&control));
+    }
+    control
+}
+
+fn remove_stream(stream_id: &str) {
+    if let Ok(mut controls) = STREAM_CONTROLS.lock() {
+        controls.remove(stream_id);
+    }
+}
+
+fn update_stream_state(
+    stream_id: &str,
+    update: impl FnOnce(&mut StreamState),
+) -> Result<(), String> {
+    let control = STREAM_CONTROLS
+        .lock()
+        .map_err(|_| "Stream control lock poisoned".to_owned())?
+        .get(stream_id)
+        .cloned()
+        .ok_or_else(|| "Unknown large-file stream".to_owned())?;
+    let mut state = control
+        .state
+        .lock()
+        .map_err(|_| "Stream state lock poisoned".to_owned())?;
+    update(&mut state);
+    control.wake.notify_all();
+    Ok(())
+}
+
+fn wait_for_stream_permit(control: &StreamControl) -> Result<(), String> {
+    let mut state = control
+        .state
+        .lock()
+        .map_err(|_| "Stream state lock poisoned".to_owned())?;
+    while state.permits == 0 && !state.canceled {
+        state = control
+            .wake
+            .wait(state)
+            .map_err(|_| "Stream state lock poisoned".to_owned())?;
+    }
+    if state.canceled {
+        return Err("Large-file stream canceled".into());
+    }
+    state.permits -= 1;
+    Ok(())
+}
 fn is_utf8_continuation(byte: u8) -> bool {
     (byte & 0b1100_0000) == 0b1000_0000
 }
@@ -106,10 +180,10 @@ pub struct StreamedFileHeader {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LargeFileChunk {
+pub struct StreamedFileChunk {
+    pub stream_id: String,
     pub offset: u64,
     pub next_offset: u64,
-    pub byte_length: u64,
     pub text: String,
 }
 
@@ -137,23 +211,70 @@ fn read_head(path: &str) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
-fn read_chunk_inner(path: &str, offset: u64, encoding_id: &str) -> Result<LargeFileChunk, String> {
-    let mut file = File::open(path).map_err(|e| e.to_string())?;
+fn read_chunk_from_file(
+    file: &mut File,
+    offset: u64,
+    encoding_id: &str,
+) -> Result<StreamedFileChunk, String> {
     file.seek(SeekFrom::Start(offset))
         .map_err(|e| e.to_string())?;
     let mut bytes = Vec::with_capacity(CHUNK_SIZE);
-    std::io::Read::by_ref(&mut file)
+    std::io::Read::by_ref(file)
         .take(CHUNK_SIZE as u64)
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
+    if bytes.is_empty() {
+        return Err("Unexpected end of file while streaming".into());
+    }
     let consumed = safe_chunk_len(&bytes, encoding_id);
     let decoded = decode_bytes_with(&bytes[..consumed], encoding_id);
-    Ok(LargeFileChunk {
+    Ok(StreamedFileChunk {
+        stream_id: String::new(),
         offset,
         next_offset: offset + consumed as u64,
-        byte_length: consumed as u64,
         text: normalize_to_lf(&decoded.decoded_text),
     })
+}
+
+fn stream_chunks_with<F>(
+    path: &str,
+    encoding_id: &str,
+    stream_id: String,
+    mut send: F,
+) -> Result<(), String>
+where
+    F: FnMut(StreamedFileChunk) -> Result<(), String>,
+{
+    let total_bytes = fs::metadata(path).map_err(|e| e.to_string())?.len();
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    let mut offset = 0;
+    while offset < total_bytes {
+        let mut chunk = read_chunk_from_file(&mut file, offset, encoding_id)?;
+        if chunk.next_offset <= offset || chunk.next_offset > total_bytes {
+            return Err("Invalid streamed chunk boundary".into());
+        }
+        chunk.stream_id = stream_id.clone();
+        offset = chunk.next_offset;
+        send(chunk)?;
+    }
+    Ok(())
+}
+
+fn stream_chunks_inner(
+    path: &str,
+    encoding_id: &str,
+    stream_id: String,
+    on_chunk: Channel<StreamedFileChunk>,
+) -> Result<(), String> {
+    let control = register_stream(&stream_id);
+    let result = stream_chunks_with(path, encoding_id, stream_id.clone(), |chunk| {
+        wait_for_stream_permit(&control)?;
+        on_chunk
+            .send(chunk)
+            .map_err(|error| format!("stream channel closed: {error}"))
+    });
+    remove_stream(&stream_id);
+    result
 }
 
 fn session_path(session_id: &str) -> Result<PathBuf, String> {
@@ -210,18 +331,35 @@ pub async fn file_open_streamed(
     })
 }
 
+/// Stream one opened file through a single native read and a Tauri Channel.
 #[tauri::command]
-pub async fn file_read_chunk(
+pub async fn file_stream_chunks(
     path: String,
-    offset: u64,
     encoding_id: String,
-) -> NpResult<LargeFileChunk> {
-    tauri::async_runtime::spawn_blocking(move || read_chunk_inner(&path, offset, &encoding_id))
-        .await
-        .map_or_else(
-            |error| NpResult::Err(format!("file read task failed: {error}")),
-            NpResult::from,
-        )
+    stream_id: String,
+    on_chunk: Channel<StreamedFileChunk>,
+) -> NpResult<()> {
+    tauri::async_runtime::spawn_blocking(move || {
+        stream_chunks_inner(&path, &encoding_id, stream_id, on_chunk)
+    })
+    .await
+    .map_or_else(
+        |error| NpResult::Err(format!("file stream task failed: {error}")),
+        NpResult::from,
+    )
+}
+#[tauri::command]
+pub fn file_stream_ack(stream_id: String, count: u32) -> NpResult<()> {
+    NpResult::from(update_stream_state(&stream_id, |state| {
+        state.permits = state.permits.saturating_add(count as usize);
+    }))
+}
+
+#[tauri::command]
+pub fn file_stream_cancel(stream_id: String) -> NpResult<()> {
+    NpResult::from(update_stream_state(&stream_id, |state| {
+        state.canceled = true;
+    }))
 }
 
 fn bom_len(encoding_id: &str) -> usize {
@@ -359,19 +497,52 @@ mod tests {
         bytes.extend_from_slice(b"\r\n");
         fs::write(&path, &bytes).unwrap();
 
-        let first = read_chunk_inner(path.to_str().unwrap(), 0, "UTF-8").unwrap();
-        let second = read_chunk_inner(path.to_str().unwrap(), first.next_offset, "UTF-8").unwrap();
+        let mut file = File::open(&path).unwrap();
+        let first = read_chunk_from_file(&mut file, 0, "UTF-8").unwrap();
+        let second = read_chunk_from_file(&mut file, first.next_offset, "UTF-8").unwrap();
         fs::remove_file(path).unwrap();
 
-        assert_eq!(first.byte_length, (CHUNK_SIZE - 1) as u64);
+        assert_eq!(first.next_offset, (CHUNK_SIZE - 1) as u64);
         assert!(!first.text.ends_with('\n'));
         assert_eq!(second.text, "\n");
-        assert_eq!(second.byte_length, 2);
+        assert_eq!(second.next_offset - second.offset, 2);
     }
 
     #[test]
     fn stream_ids_are_distinct() {
         assert_ne!(next_stream_id(), next_stream_id());
+    }
+    #[test]
+    fn stream_chunks_delivers_ordered_normalized_content() {
+        let path =
+            std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
+        let source = "支付宝 large-file 测试行\r\n".repeat(100_000);
+        fs::write(&path, source.as_bytes()).unwrap();
+
+        let mut chunks = Vec::new();
+        stream_chunks_with(
+            &path.to_string_lossy(),
+            "UTF-8",
+            "test-stream".into(),
+            |chunk| {
+                chunks.push(chunk);
+                Ok(())
+            },
+        )
+        .unwrap();
+        fs::remove_file(path).unwrap();
+
+        let mut expected_offset = 0;
+        let mut decoded = String::new();
+        for chunk in &chunks {
+            assert_eq!(chunk.stream_id, "test-stream");
+            assert_eq!(chunk.offset, expected_offset);
+            assert!(chunk.next_offset > chunk.offset);
+            expected_offset = chunk.next_offset;
+            decoded.push_str(&chunk.text);
+        }
+        assert_eq!(expected_offset, source.len() as u64);
+        assert_eq!(decoded, source.replace("\r\n", "\n"));
     }
 
     #[test]
@@ -380,9 +551,11 @@ mod tests {
             std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
         let mut file = fs::File::create(&path).unwrap();
         file.write_all(b"one\r\ntwo\r\n").unwrap();
-        let chunk = read_chunk_inner(path.to_str().unwrap(), 0, "UTF-8").unwrap();
+        drop(file);
+        let mut file = File::open(&path).unwrap();
+        let chunk = read_chunk_from_file(&mut file, 0, "UTF-8").unwrap();
         fs::remove_file(path).unwrap();
         assert_eq!(chunk.text, "one\ntwo\n");
-        assert_eq!(chunk.byte_length, 10);
+        assert_eq!(chunk.next_offset, 10);
     }
 }

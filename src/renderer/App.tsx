@@ -1025,12 +1025,9 @@ export function App(): JSX.Element {
                     }}
                   >
                     {tab.isLoading ? (
-                      // Open in flight (MAIN still reading/decoding): show a
-                      // centered spinner INSTEAD of mounting the editor — the tab
-                      // appears instantly with its basename while a large file
-                      // loads, and no edits can land in a half-loaded buffer. The
-                      // editor mounts when openPathIntoTab clears the flag, and
-                      // the pending setDoc retry seeds it on the next tick.
+                      // Centered spinner while MAIN resolves the initial file request.
+                      // Large-file content starts streaming as soon as its small header
+                      // lands; the editor then mounts and appends chunks in place.
                       <div
                         data-testid="editor-loading"
                         style={{
@@ -1051,6 +1048,7 @@ export function App(): JSX.Element {
                         path={tab.filePath}
                         size={tab.largeFile.size}
                         encodingId={tab.largeFile.encodingId}
+                        streamId={tab.largeFile.streamId}
                         onDocChanged={() => {
                           store.setModified(tab.editorId, true);
                           schedulePanePulse(tab.editorId);

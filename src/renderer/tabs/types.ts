@@ -39,6 +39,7 @@ export interface LargeFileState {
   size: number;
   encodingId: EncodingId;
   eolId: EolId;
+  streamId: string;
 }
 
 /**

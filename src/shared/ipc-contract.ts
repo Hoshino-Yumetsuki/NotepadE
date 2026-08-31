@@ -121,12 +121,17 @@ export interface FileApi {
   getSize(path: string): Promise<Result<number>>;
   /** Open a large file without materializing it in the renderer. */
   openStreamed(path: string, streamId?: string): Promise<Result<StreamedFileHeader>>;
-  /** Read one bounded byte window from a large file. */
-  readChunk(
+  /** Stream decoded chunks from an already-resolved large file. */
+  streamChunks(
     path: string,
-    offset: number,
-    encodingId: EncodingId
-  ): Promise<Result<LargeFileChunk>>;
+    encodingId: EncodingId,
+    streamId: string,
+    onChunk: (chunk: StreamedFileChunk) => void
+  ): Promise<Result<void>>;
+  /** Return receive permits to the native stream producer. */
+  streamAck(streamId: string, count: number): Promise<Result<void>>;
+  /** Stop a native stream when its editor is unmounted. */
+  streamCancel(streamId: string): Promise<Result<void>>;
   /** Begin an incremental snapshot save into a temporary file. */
   saveLargeStart(): Promise<Result<LargeFileSaveSession>>;
   /** Append one already-decoded snapshot chunk to the temporary file. */
@@ -151,11 +156,11 @@ export interface StreamedFileHeader {
   totalBytes: number;
 }
 
-/** One bounded decoded window from a disk-backed large file. */
-export interface LargeFileChunk {
+/** One bounded decoded chunk from a disk-backed large file. */
+export interface StreamedFileChunk {
+  streamId: string;
   offset: number;
   nextOffset: number;
-  byteLength: number;
   text: string;
 }
 

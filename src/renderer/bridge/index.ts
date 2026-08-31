@@ -15,7 +15,7 @@
  * other renderer file calls window.notepads exclusively.
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type {
@@ -30,7 +30,7 @@ import type {
   AnsiEncodingEntry,
   OpenedFile,
   StreamedFileHeader,
-  LargeFileChunk,
+  StreamedFileChunk,
   LargeFileSaveChunkArgs,
   LargeFileSaveFinishArgs,
   LargeFileSaveSession,
@@ -205,9 +205,20 @@ const api: NotepadsApi = {
         path
       }),
     getSize: (path) => call<number>('file_get_size', { path }),
-    openStreamed: (path, streamId) => call<StreamedFileHeader>('file_open_streamed', { path, streamId }),
-    readChunk: (path, offset, encodingId) =>
-      call<LargeFileChunk>('file_read_chunk', { path, offset, encodingId }),
+    openStreamed: (path, streamId) =>
+      call<StreamedFileHeader>('file_open_streamed', { path, streamId }),
+    streamChunks: (path, encodingId, streamId, onChunk) => {
+      const channel = new Channel<StreamedFileChunk>();
+      channel.onmessage = onChunk;
+      return invoke<Result<void>>('file_stream_chunks', {
+        path,
+        encodingId,
+        streamId,
+        onChunk: channel
+      });
+    },
+    streamAck: (streamId, count) => call<void>('file_stream_ack', { streamId, count }),
+    streamCancel: (streamId) => call<void>('file_stream_cancel', { streamId }),
     saveLargeStart: () => call<LargeFileSaveSession>('file_save_large_start', {}),
     saveLargeChunk: (args: LargeFileSaveChunkArgs) =>
       call<void>('file_save_large_chunk', { ...args }),
