@@ -114,32 +114,22 @@ export const REVEAL_VAR_OPACITY = '--reveal-opacity';
 //  useReveal — pointer tracking that writes the CSS vars on a host element
 // ---------------------------------------------------------------------------
 
-/** Handlers a reveal host spreads onto its root element. */
+/** Pointer handlers for a reveal host. */
 export interface RevealHandlers {
-  onPointerMove(e: React.PointerEvent<HTMLElement>): void;
-  onPointerEnter(e: React.PointerEvent<HTMLElement>): void;
-  onPointerLeave(): void;
+  onPointerMove(e: RevealEvent): void;
+  onPointerEnter(e: RevealEvent): void;
+  onPointerLeave(e: RevealEvent): void;
 }
+
+type RevealEvent = React.MouseEvent<HTMLElement> | React.PointerEvent<HTMLElement>;
 
 /**
  * Track the pointer over a host element and expose its position + a 0/1 opacity
- * as CSS custom properties on that element. Writing the vars directly on the DOM
- * node (not React state) keeps the follow at pointer-event rate with zero
- * re-renders — the same approach RevealBrushHelper uses (it feeds the composition
- * brush, not the layout tree).
- *
- * Usage:
- *   const { hostRef, handlers } = useReveal();
- *   <div ref={hostRef} {...handlers} style={{ position: 'relative' }}>
- *     <RevealLayer tokens={tokensForReveal(theme)} />
- *     ...content...
- *   </div>
+ * as CSS custom properties on that element. The event's currentTarget is carried
+ * through the rAF write, so the hook needs no render-visible host ref. This keeps
+ * pointer tracking outside render while remaining composable with dnd refs.
  */
-export function useReveal(): {
-  hostRef: React.RefObject<HTMLElement | null>;
-  handlers: RevealHandlers;
-} {
-  const hostRef = useRef<HTMLElement>(null);
+export function useReveal(): RevealHandlers {
   // Rect sampled ONCE on enter and reused for every move (the surface doesn't
   // resize mid-hover) so the pointer-rate path never calls getBoundingClientRect
   // — that read forced a synchronous layout reflow on every pixel of movement,
@@ -147,51 +137,49 @@ export function useReveal(): {
   // many moves per frame collapse to a single style mutation.
   const rectRef = useRef<{ left: number; top: number } | null>(null);
   const rafRef = useRef<number | null>(null);
-  const nextRef = useRef<{ x: number; y: number; opacity: number } | null>(null);
+  const nextRef = useRef<{
+    element: HTMLElement;
+    x: number;
+    y: number;
+    opacity: number;
+  } | null>(null);
 
   const flush = useCallback((): void => {
     rafRef.current = null;
-    const el = hostRef.current;
-    const n = nextRef.current;
-    if (!el || !n) return;
-    el.style.setProperty(REVEAL_VAR_X, `${n.x}px`);
-    el.style.setProperty(REVEAL_VAR_Y, `${n.y}px`);
-    el.style.setProperty(REVEAL_VAR_OPACITY, `${n.opacity}`);
+    const next = nextRef.current;
+    if (!next) return;
+    next.element.style.setProperty(REVEAL_VAR_X, `${next.x}px`);
+    next.element.style.setProperty(REVEAL_VAR_Y, `${next.y}px`);
+    next.element.style.setProperty(REVEAL_VAR_OPACITY, `${next.opacity}`);
   }, []);
 
   const write = useCallback(
-    (x: number, y: number, opacity: number): void => {
-      nextRef.current = { x, y, opacity };
+    (e: RevealEvent, x: number, y: number, opacity: number): void => {
+      nextRef.current = { element: e.currentTarget, x, y, opacity };
       if (rafRef.current == null) rafRef.current = requestAnimationFrame(flush);
     },
     [flush]
   );
 
   const fromEvent = useCallback(
-    (e: React.PointerEvent<HTMLElement>): void => {
+    (e: RevealEvent): void => {
       const rect = rectRef.current;
       if (!rect) return;
-      write(e.clientX - rect.left, e.clientY - rect.top, 1);
+      write(e, e.clientX - rect.left, e.clientY - rect.top, 1);
     },
     [write]
   );
 
   const onPointerEnter = useCallback(
-    (e: React.PointerEvent<HTMLElement>) => {
-      const el = hostRef.current;
-      if (el) {
-        const r = el.getBoundingClientRect();
-        rectRef.current = { left: r.left, top: r.top };
-      }
+    (e: RevealEvent): void => {
+      const r = e.currentTarget.getBoundingClientRect();
+      rectRef.current = { left: r.left, top: r.top };
       fromEvent(e);
     },
     [fromEvent]
   );
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent<HTMLElement>) => fromEvent(e),
-    [fromEvent]
-  );
-  const onPointerLeave = useCallback(() => write(0, 0, 0), [write]);
+  const onPointerMove = useCallback((e: RevealEvent): void => fromEvent(e), [fromEvent]);
+  const onPointerLeave = useCallback((e: RevealEvent): void => write(e, 0, 0, 0), [write]);
 
   useEffect(
     () => () => {
@@ -200,7 +188,7 @@ export function useReveal(): {
     []
   );
 
-  return { hostRef, handlers: { onPointerMove, onPointerEnter, onPointerLeave } };
+  return { onPointerMove, onPointerEnter, onPointerLeave };
 }
 
 // ---------------------------------------------------------------------------

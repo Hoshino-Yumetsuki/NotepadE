@@ -27,7 +27,6 @@ export function useWallpaper(wallpaperFileName: string): string | null {
   useEffect(() => {
     // Fast path: nothing persisted — skip the IPC round-trip entirely.
     if (wallpaperFileName === '') {
-      setDataUrl(null);
       return;
     }
     let alive = true;
@@ -41,5 +40,5 @@ export function useWallpaper(wallpaperFileName: string): string | null {
     };
   }, [wallpaperFileName]);
 
-  return dataUrl;
+  return wallpaperFileName === '' ? null : dataUrl;
 }

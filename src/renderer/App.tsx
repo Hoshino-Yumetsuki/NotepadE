@@ -29,7 +29,6 @@ import {
   installTransferTestHook,
   type TransferTextSource
 } from './tabs/transferWiring';
-import type { TabState } from './tabs/types';
 import { wordWrapToggleRef } from './editor/commands/wordWrapBridge';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
@@ -88,10 +87,6 @@ const FolderSidebar = lazy(() =>
  * eolId}; the renderer normalizes decodedText into a '\n' shadow buffer and
  * keeps encodingId/eolId as OPAQUE per-tab labels — never re-derived.
  */
-/** Tab display title: file basename (PA-8-safe split, no path import) or untitled name. */
-function tabTitle(tab: TabState): string {
-  return getTabTitle(tab);
-}
 
 export function App(): JSX.Element {
   // Live app theme (Phase 5, Lane C): resolves themeMode + OS theme + accent into
@@ -272,7 +267,7 @@ export function App(): JSX.Element {
         selectionOnly && sel && !sel.isEmpty()
           ? model.getValueInRange(sel, 1 /* EndOfLinePreference.LF */)
           : model.getValue(1 /* EndOfLinePreference.LF */);
-      void share({ title: tabTitle(tb), text });
+      void share({ title: getTabTitle(tb), text });
     }
   });
 
@@ -578,7 +573,7 @@ export function App(): JSX.Element {
       if (!exitOnLast && isLast && pristineUntitled) return;
 
       if (tab.isModified) {
-        setPendingClose({ editorId: id, fileName: tabTitle(tab) });
+        setPendingClose({ editorId: id, fileName: getTabTitle(tab) });
         return;
       }
       performClose(id);
@@ -725,7 +720,7 @@ export function App(): JSX.Element {
     if (id && t) {
       void print.printCurrent(
         {
-          title: tabTitle(t),
+          title: getTabTitle(t),
           text: editorHandles.current.get(id)?.getShadowText() ?? ''
         },
         settings.editorFontFamily
@@ -735,7 +730,7 @@ export function App(): JSX.Element {
   const doPrintAll = useCallback((): void => {
     void print.printAll(
       store.tabs.map((t) => ({
-        title: tabTitle(t),
+        title: getTabTitle(t),
         text: editorHandles.current.get(t.editorId)?.getShadowText() ?? ''
       })),
       settings.editorFontFamily
@@ -753,7 +748,7 @@ export function App(): JSX.Element {
     const onShare = (): void => {
       const id = store.activeEditorId;
       const t = id ? store.get(id) : undefined;
-      if (id && t) void share({ title: tabTitle(t), text: readText(id) });
+      if (id && t) void share({ title: getTabTitle(t), text: readText(id) });
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('notepads:share', onShare);

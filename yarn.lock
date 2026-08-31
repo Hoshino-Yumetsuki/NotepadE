@@ -1018,23 +1018,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fluentui/react-motion@npm:*":
-  version: 9.16.1
-  resolution: "@fluentui/react-motion@npm:9.16.1"
-  dependencies:
-    "@fluentui/react-shared-contexts": "npm:^9.26.2"
-    "@fluentui/react-utilities": "npm:^9.26.5"
-    "@swc/helpers": "npm:^0.5.1"
-  peerDependencies:
-    "@types/react": ">=16.8.0 <20.0.0"
-    "@types/react-dom": ">=16.8.0 <20.0.0"
-    react: ">=16.14.0 <20.0.0"
-    react-dom: ">=16.8.0 <20.0.0"
-  checksum: 10c0/3aba25ffaaff98d832b47f16b42b2d3c2e6ea158f3b4dfa8d145e7ad82120b4f1891bca42ad974f3d0d0e57aa39141b6cd01ebeadfda009a2158af5447037ac5
-  languageName: node
-  linkType: hard
-
-"@fluentui/react-motion@npm:^9.16.3":
+"@fluentui/react-motion@npm:9.16.3":
   version: 9.16.3
   resolution: "@fluentui/react-motion@npm:9.16.3"
   dependencies:
@@ -1777,7 +1761,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fluentui/react-utilities@npm:*, @fluentui/react-utilities@npm:^9.26.5":
+"@fluentui/react-utilities@npm:*":
   version: 9.26.5
   resolution: "@fluentui/react-utilities@npm:9.26.5"
   dependencies:

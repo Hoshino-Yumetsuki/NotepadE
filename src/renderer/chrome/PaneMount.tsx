@@ -15,13 +15,10 @@ import { TabAnimation } from '../tabs/tokens';
  */
 export function PaneMount(props: { reduced: boolean; children: ReactNode }): JSX.Element {
   const { reduced, children } = props;
-  const [entered, setEntered] = useState(reduced);
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    if (reduced) {
-      setEntered(true);
-      return;
-    }
+    if (reduced) return;
     // rAF (not setTimeout): we only need the style to transition AFTER the initial
     // opacity:0 paint commits; a single frame is enough and never starves here
     // because a freshly-mounted, user-triggered pane is on a compositing window.

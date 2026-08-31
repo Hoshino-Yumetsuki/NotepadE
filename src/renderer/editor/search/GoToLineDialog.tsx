@@ -12,7 +12,7 @@
  * PA-8: renderer-only Fluent UI; no fs/path/child_process/IPC here.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -47,14 +47,6 @@ export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
   const [value, setValue] = useState(String(currentLine));
   const [error, setError] = useState<string | undefined>(undefined);
 
-  // Re-seed the field with the current line each time the dialog opens.
-  useEffect(() => {
-    if (open) {
-      setValue(String(currentLine));
-      setError(undefined);
-    }
-  }, [open, currentLine]);
-
   const submit = (): void => {
     const trimmed = value.trim();
     if (!/^\d+$/.test(trimmed)) {
@@ -80,7 +72,7 @@ export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
         <DialogBody>
           <DialogTitle>{t('GoTo_GoToBarLabel.Text')}</DialogTitle>
           <DialogContent>
-            <Field validationState={error ? 'error' : 'none'} validationMessage={error}>
+            <Field validationState={error ? 'error' : 'none'}>
               <Input
                 data-testid="goto-line-input"
                 value={value}
@@ -97,6 +89,7 @@ export function GoToLineDialog(props: GoToLineDialogProps): JSX.Element {
                   }
                 }}
               />
+              {error ? <div role="alert">{error}</div> : null}
             </Field>
           </DialogContent>
           <DialogActions>

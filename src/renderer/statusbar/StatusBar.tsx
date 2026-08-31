@@ -181,7 +181,7 @@ function Cell(props: CellProps): JSX.Element {
   // Cursor-follow reveal highlight (Phase 7, Task #27). Interactive cells track
   // the pointer into --reveal-x/y/opacity for the radial layer below; static
   // cells (col 7 shadow icon) get no reveal. HC tint is transparent (no material).
-  const reveal = useReveal();
+  const { onPointerMove, onPointerEnter, onPointerLeave } = useReveal();
   const revealTokens = tokensForReveal(useContext(StatusRevealThemeContext));
 
   const style: CSSProperties = {
@@ -210,7 +210,6 @@ function Cell(props: CellProps): JSX.Element {
 
   return (
     <div
-      ref={isStatic ? undefined : (reveal.hostRef as React.Ref<HTMLDivElement>)}
       data-testid={testid}
       role={isStatic ? undefined : 'button'}
       aria-label={ariaLabel}
@@ -219,14 +218,13 @@ function Cell(props: CellProps): JSX.Element {
       style={style}
       onMouseEnter={(e) => {
         setHovered(true);
-        if (!isStatic)
-          reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+        if (!isStatic) onPointerEnter(e);
       }}
-      onMouseLeave={() => {
+      onMouseLeave={(e) => {
         setHovered(false);
-        if (!isStatic) reveal.handlers.onPointerLeave();
+        if (!isStatic) onPointerLeave(e);
       }}
-      onPointerMove={isStatic ? undefined : reveal.handlers.onPointerMove}
+      onPointerMove={isStatic ? undefined : onPointerMove}
       onClick={isStatic ? undefined : onClick}
       onKeyDown={
         isStatic || !onClick

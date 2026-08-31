@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { EncodingId, EolId, AnsiEncodingEntry } from '@shared/ipc-contract';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import type { MonacoHandle } from '../editor/MonacoEditor';
@@ -60,7 +60,18 @@ export function useStatusBarModel(args: {
   // optimistic per-move percentage is never clobbered mid-drag.
   const zoomDraggingRef = useRef(false);
   const [ansiEncodings, setAnsiEncodings] = useState<readonly AnsiEncodingEntry[]>([]);
-  const [fileModificationState, setFileModificationState] = useState<FileModificationState>('none');
+  const [fileModificationSnapshot, setFileModificationSnapshot] = useState<{
+    editorId: string | null;
+    filePath: string | null;
+    state: FileModificationState;
+  }>({ editorId: activeEditorId, filePath, state: 'none' });
+  // A tab switch must present the neutral state immediately, before the
+  // asynchronous disk revalidation for the new tab completes.
+  const fileModificationState =
+    fileModificationSnapshot.editorId === activeEditorId &&
+    fileModificationSnapshot.filePath === filePath
+      ? fileModificationSnapshot.state
+      : 'none';
 
   // Snapshot caret position + selection length from the active Monaco editor.
   const snapshotCaret = useCallback(
@@ -91,16 +102,21 @@ export function useStatusBarModel(args: {
     const editor = getActiveHandle()?.getEditor();
     if (!editor) return;
 
-    // Initial snapshot on mount / tab switch.
-    snapshotCaret(editor);
-    if (!zoomDraggingRef.current) setZoomPercent(getEditorZoom(editor));
-
     const cursorSub = editor.onDidChangeCursorPosition(() => snapshotCaret(editor));
     const selectionSub = editor.onDidChangeCursorSelection(() => snapshotCaret(editor));
     // Content change can affect selection length metrics; re-snapshot on change.
     const contentSub = editor.onDidChangeModelContent(() => snapshotCaret(editor));
+    // Defer initial state updates out of this effect while retaining the same
+    // mount/tab-switch snapshot and ensuring subscriptions are already active.
+    let alive = true;
+    queueMicrotask(() => {
+      if (!alive) return;
+      snapshotCaret(editor);
+      if (!zoomDraggingRef.current) setZoomPercent(getEditorZoom(editor));
+    });
 
     return () => {
+      alive = false;
       cursorSub.dispose();
       selectionSub.dispose();
       contentSub.dispose();
@@ -133,27 +149,28 @@ export function useStatusBarModel(args: {
   // --- column-0 external-modification state machine (UWP parity) -----------
   const activeIdRef = useRef<string | null>(activeEditorId);
   const activePathRef = useRef<string | null>(filePath);
-  activeIdRef.current = activeEditorId;
-  activePathRef.current = filePath;
+  useLayoutEffect(() => {
+    activeIdRef.current = activeEditorId;
+    activePathRef.current = filePath;
+  }, [activeEditorId, filePath]);
 
   const checkFileStatus = useCallback(async (): Promise<FileModificationState> => {
     const id = activeIdRef.current;
     const path = activePathRef.current;
     if (!id || path === null) {
-      setFileModificationState('none');
+      setFileModificationSnapshot({ editorId: id, filePath: path, state: 'none' });
       return 'none';
     }
     const r = await window.notepads.file.revalidatePath(path);
     const outcome = r.ok ? r.data : { exists: false, dateModifiedMs: 0 };
     const next = deriveModificationState(path, outcome, getLastSaved(id));
     if (activeIdRef.current === id && activePathRef.current === path) {
-      setFileModificationState(next);
+      setFileModificationSnapshot({ editorId: id, filePath: path, state: next });
     }
     return next;
   }, []);
 
   useEffect(() => {
-    setFileModificationState('none');
     if (!activeEditorId || filePath === null) return;
     void checkFileStatus();
     const id = window.setInterval(() => void checkFileStatus(), 3000);
@@ -189,7 +206,7 @@ export function useStatusBarModel(args: {
     const r = await window.notepads.file.reloadFromDisk(path);
     if (r.ok) {
       recordLastSaved(id, path, r.data.dateModifiedMs);
-      setFileModificationState('none');
+      setFileModificationSnapshot({ editorId: id, filePath: path, state: 'none' });
     }
   }, [store]);
 
@@ -214,6 +231,9 @@ export function useStatusBarModel(args: {
     if (editor) setZoomPercent(getEditorZoom(editor));
   }, [getActiveHandle]);
 
+  const activeEditor = getActiveHandle()?.getEditor();
+  const renderedZoomPercent = activeEditor ? getEditorZoom(activeEditor) : zoomPercent;
+
   return useMemo<StatusBarProps>(
     () => ({
       theme,
@@ -222,7 +242,7 @@ export function useStatusBarModel(args: {
       fileNamePlaceholder: placeholder,
       isModified,
       lineColumn,
-      zoomPercent,
+      zoomPercent: renderedZoomPercent,
       eolId,
       encodingId,
       ansiEncodings,
@@ -271,7 +291,11 @@ export function useStatusBarModel(args: {
         void window.notepads.file.save({ filePath, encodingId: id }).then((r) => {
           if (r.ok) {
             recordLastSaved(activeEditorId, r.data.filePath, r.data.dateModifiedMs);
-            setFileModificationState('none');
+            setFileModificationSnapshot({
+              editorId: activeEditorId,
+              filePath,
+              state: 'none'
+            });
           }
         });
       }
@@ -281,9 +305,9 @@ export function useStatusBarModel(args: {
       fileModificationState,
       filePath,
       placeholder,
+      renderedZoomPercent,
       isModified,
       lineColumn,
-      zoomPercent,
       eolId,
       encodingId,
       ansiEncodings,

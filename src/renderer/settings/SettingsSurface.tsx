@@ -121,10 +121,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   // re-blurring the full pane each frame as it travels is what stutters.
   const [settled, setSettled] = useState(false);
   useEffect(() => {
-    if (!open) {
-      setSettled(false);
-      return;
-    }
+    if (!open) return;
     // Fallback: guarantee the settled blur even if animationend never arrives
     // (reduced-motion engines skip the animation entirely). Longer than the
     // 350ms UWP open slide.
@@ -149,6 +146,7 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   const [closing, setClosing] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
+    setSettled(false);
     setPrevOpen(open);
     // true→false edge starts the close phase; reopening (possibly mid-close)
     // cancels it. React re-renders synchronously before commit, so the null

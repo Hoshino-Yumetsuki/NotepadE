@@ -188,15 +188,6 @@ function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): 
   });
 }
 
-/** Gutter material wash per theme. The line-number column shows the SAME OS
- * acrylic as the editor body (no tint) so it matches the input area's
- * transparency — a darker wash read as "a different color from the input". The
- * muted line-number color (editorLineNumber.foreground) is what distinguishes the
- * column, not a panel fill. Returns null (→ transparent) everywhere. */
-function gutterWash(_themeMode: 'light' | 'dark' | 'hc'): string | null {
-  return null;
-}
-
 /**
  * Monaco editor mount (RENDERER, Lane B) as a PLAIN TEXT editor. One
  * IStandaloneCodeEditor over one model whose EOL is pinned to LF (the shadow
@@ -486,8 +477,8 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     // gutter region, transparent beyond (see monaco-acrylic.css). The root is not
     // GPU-promoted, so the wash composites WITH vibrancy (acrylic shows through),
     // unlike a background on the promoted `.margin` (which renders solid gray). We
-    // drive the wash color (per theme) and the gutter width (contentLeft, the x
-    // where text begins) as CSS custom properties, syncing width on layout change.
+    // set the wash color and gutter width (contentLeft, the x where text begins) as CSS
+    // custom properties, syncing width on layout change.
     const rootNode = editor.getDomNode();
     // The gutter inset (CSS padding-left on .monaco-editor) that lets the
     // current-line highlight band reach the window's LEFT edge. Because
@@ -499,7 +490,7 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     // layout below subtracts GUTTER_INSET_PX so padding(12) + content(width-12)
     // == host width exactly, keeping the vertical scrollbar on-screen.
     const GUTTER_INSET_PX = 12;
-    rootNode?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
+    rootNode?.style.setProperty('--np-gutter-wash', 'transparent');
     // --np-gutter-inset is the CSS padding-left on .monaco-editor (12px). Monaco's
     // layout coordinates are relative to its own content box (i.e. after padding),
     // so the gradient stop must be offset by the same inset amount to land at the
@@ -587,10 +578,9 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     if (!editor) return;
     defineThemes(themeMode, accentColor);
     monaco.editor.setTheme(THEME_NAMES[themeMode]);
-    // Update the native gutter material wash on theme change (HC → transparent).
     editor
       .getDomNode()
-      ?.style.setProperty('--np-gutter-wash', gutterWash(themeMode) ?? 'transparent');
+      ?.style.setProperty('--np-gutter-wash', 'transparent');
   }, [themeMode, accentColor]);
 
   // Typography (family/size/weight/style). fontSize routes through the zoom

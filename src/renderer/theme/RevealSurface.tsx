@@ -87,7 +87,7 @@ export interface RevealSurfaceProps {
  */
 export function RevealSurface(props: RevealSurfaceProps): JSX.Element {
   const { theme, children, style, className, borderRadius, testid, as = 'div' } = props;
-  const { hostRef, handlers } = useReveal();
+  const { onPointerMove, onPointerEnter, onPointerLeave } = useReveal();
   const tokens = tokensForReveal(theme);
 
   const hostStyle: CSSProperties = {
@@ -100,14 +100,13 @@ export function RevealSurface(props: RevealSurfaceProps): JSX.Element {
 
   return (
     <Tag
-      ref={hostRef as React.Ref<HTMLDivElement & HTMLSpanElement>}
       className={className}
       data-testid={testid}
       data-reveal-host="true"
       style={hostStyle}
-      onPointerMove={handlers.onPointerMove}
-      onPointerEnter={handlers.onPointerEnter}
-      onPointerLeave={handlers.onPointerLeave}
+      onPointerMove={onPointerMove}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
     >
       <RevealLayer tokens={tokens} borderRadius={borderRadius} />
       <span style={{ position: 'relative', zIndex: 1, display: 'contents' }}>{children}</span>

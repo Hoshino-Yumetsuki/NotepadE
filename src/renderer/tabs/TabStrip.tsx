@@ -117,10 +117,6 @@ export interface TabStripProps {
   onActiveTabGeometry?(rect: { left: number; width: number } | null): void;
 }
 
-/** The label a tab shows: basename of filePath, else its untitled name. */
-function tabTitle(tab: TabState): string {
-  return getTabTitle(tab);
-}
 
 /**
  * App main-menu command bag (the hamburger MenuFlyout). Every entry maps to an
@@ -229,7 +225,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
   // Cursor-follow reveal highlight (Phase 7, Task #27): writes --reveal-x/y/opacity
   // on the tab header so the radial layer below tracks the pointer. Disabled in HC
   // (tokensForReveal('hc') is transparent), matching the UWP no-reveal HC material.
-  const reveal = useReveal();
+  const { onPointerMove, onPointerEnter, onPointerLeave } = useReveal();
   const revealTokens = tokensForReveal(revealTheme);
   // The radial-gradient string depends only on the theme tokens (a stable
   // module-level singleton per theme), so build it once per theme instead of
@@ -350,11 +346,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
       onRename={actions.onRename}
     >
       <div
-        ref={(node) => {
-          setNodeRef(node);
-          // Compose dnd-kit's node ref with the reveal host ref (Phase 7).
-          (reveal.hostRef as React.MutableRefObject<HTMLElement | null>).current = node;
-        }}
+        ref={setNodeRef}
         {...attributes}
         role="tab"
         aria-selected={active}
@@ -371,15 +363,15 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
         onPointerDown={onPointerDown}
         onPointerUp={() => setPressed(false)}
         onPointerCancel={() => setPressed(false)}
-        onPointerMove={reveal.handlers.onPointerMove}
+        onPointerMove={onPointerMove}
         onMouseEnter={(e) => {
           setHovered(true);
-          reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+          onPointerEnter(e);
         }}
-        onMouseLeave={() => {
+        onMouseLeave={(e) => {
           setHovered(false);
           setPressed(false);
-          reveal.handlers.onPointerLeave();
+          onPointerLeave(e);
         }}
       >
         {/* Cursor-follow reveal highlight (Phase 7) — under the content, above the
@@ -443,7 +435,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
           <input
             ref={renameRef}
             data-testid="tab-rename-input"
-            defaultValue={tabTitle(tab)}
+            defaultValue={getTabTitle(tab)}
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
@@ -468,7 +460,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
         ) : (
           <span
             data-testid="tab-title"
-            title={tab.filePath ?? tabTitle(tab)}
+            title={tab.filePath ?? getTabTitle(tab)}
             onDoubleClick={() => onBeginRename(tab.editorId)}
             style={{
               flex: '1 1 auto',
@@ -479,7 +471,7 @@ function SortableTabImpl(props: SortableTabProps): JSX.Element {
               zIndex: 1
             }}
           >
-            {tabTitle(tab)}
+            {getTabTitle(tab)}
           </span>
         )}
 
@@ -955,7 +947,7 @@ function TabOverlayCard(props: {
         </span>
       ) : null}
       <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {tabTitle(tab)}
+        {getTabTitle(tab)}
       </span>
     </div>
   );
@@ -1038,7 +1030,7 @@ function ExitingTab(props: {
         </span>
       ) : null}
       <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {tabTitle(tab)}
+        {getTabTitle(tab)}
       </span>
     </div>
   );
@@ -1057,7 +1049,7 @@ function AddTabButton(props: {
   const { tokens, revealTheme, onNewTab } = props;
   const [hovered, setHovered] = useState(false);
   const { t } = useT();
-  const reveal = useReveal();
+  const { onPointerMove, onPointerEnter, onPointerLeave } = useReveal();
   const revealTokens = tokensForReveal(revealTheme);
   // Build the radial-gradient once per theme (tokensForReveal returns a stable
   // per-theme singleton), matching the SortableTab fix — not rebuilt inline on
@@ -1065,19 +1057,18 @@ function AddTabButton(props: {
   const revealBackground = useMemo(() => revealGradient(revealTokens), [revealTokens]);
   return (
     <button
-      ref={reveal.hostRef as React.Ref<HTMLButtonElement>}
       type="button"
       data-testid="tab-add"
       aria-label={t('TabStrip_NewTabButton.AutomationProperties.Name')}
       onClick={onNewTab}
-      onPointerMove={reveal.handlers.onPointerMove}
+      onPointerMove={onPointerMove}
       onMouseEnter={(e) => {
         setHovered(true);
-        reveal.handlers.onPointerEnter(e as unknown as React.PointerEvent<HTMLElement>);
+        onPointerEnter(e);
       }}
-      onMouseLeave={() => {
+      onMouseLeave={(e) => {
         setHovered(false);
-        reveal.handlers.onPointerLeave();
+        onPointerLeave(e);
       }}
       style={{
         // Pinned to the right of the strip with reserved, non-shrinkable space:

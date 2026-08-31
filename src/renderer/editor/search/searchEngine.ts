@@ -50,7 +50,6 @@ export interface MatchSpan {
 /** Result of compiling a query — surfaces regex errors like UWP's regexError. */
 export type CompileResult = { ok: true } | { ok: false; error: string };
 
-const EMPTY_OPTIONS_GUARD = '';
 
 /** True for a Unicode letter or digit — the .NET char.IsLetterOrDigit analogue. */
 function isLetterOrDigit(ch: string): boolean {
@@ -343,7 +342,3 @@ function clamp(value: number, lo: number, hi: number): number {
   if (value > hi) return hi;
   return value;
 }
-
-// Keep an explicit no-op reference so tree-shakers retain the guard constant the
-// UI uses to detect "no options selected" without importing internals.
-void EMPTY_OPTIONS_GUARD;

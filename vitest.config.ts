@@ -25,6 +25,13 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    server: {
+      deps: {
+        // Fluent's published ESM uses extensionless internal imports; Vite resolves
+        // them when transformed, while Node's strict ESM loader rejects them.
+        inline: [/@fluentui\/react-/]
+      }
+    },
     globals: true,
     setupFiles: ['./test/setup.ts'],
     // Co-located renderer/shared specs. e2e/** is Playwright-only — exclude it so

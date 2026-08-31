@@ -65,12 +65,14 @@
   },
   "resolutions": {
     "dompurify": "3.4.14",
+    "@fluentui/react-motion": "9.16.3",
     "nanoid": "3.3.18",
     "postcss": "8.5.26"
   },
   "overrides": {
     "dompurify": "3.4.14",
     "nanoid": "3.3.18",
+    "@fluentui/react-motion": "9.16.3",
     "postcss": "8.5.26"
   },
   "packageManager": "yarn@4.17.1+sha512.ccbfabf7d7b6b32075088be9386fb9a2e00bb6887ef07fa56effabc890a56d53da1ccc4128d62db245fcbd3961b236d75335bdf7d5320ed6eafb7588b7ad4697"

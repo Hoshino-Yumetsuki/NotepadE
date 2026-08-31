@@ -73,6 +73,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   const [goToState, setGoToState] = useState<{ currentLine: number; lineCount: number } | null>(
     null
   );
+  const [goToKey, setGoToKey] = useState<number>(0);
 
   const activeQueryRef = useRef<FindQuery | null>(null);
 
@@ -106,6 +107,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
     const pos = editor.getPosition();
     const currentLine = pos?.lineNumber ?? 1;
     setGoToState({ currentLine, lineCount: model.getLineCount() });
+    setGoToKey((key) => key + 1);
   }, [getActiveEditor]);
 
   const onGoToSubmit = useCallback(
@@ -210,6 +212,7 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
           />
         ) : null}
         <GoToLineDialog
+          key={goToKey}
           open={goToState !== null}
           currentLine={goToState?.currentLine ?? 1}
           lineCount={goToState?.lineCount ?? 1}

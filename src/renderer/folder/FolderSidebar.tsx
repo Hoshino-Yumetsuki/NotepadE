@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, memo } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
 import { getFolderBasename } from '../integrations/pathUtils';
 import type { FolderEntry } from '@shared/ipc-contract';
@@ -311,6 +311,12 @@ export function FolderSidebar({
   // Root-level children (the folder's direct contents)
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const [rootLoaded, setRootLoaded] = useState(false);
+  const [previousFolderPath, setPreviousFolderPath] = useState(folderPath);
+  if (folderPath !== previousFolderPath) {
+    setRootNodes([]);
+    setRootLoaded(false);
+    setPreviousFolderPath(folderPath);
+  }
 
   // Load a directory's children via window.notepads.folder.list().
   // The backend already returns entries sorted dirs-first, alphabetically.
@@ -349,11 +355,14 @@ export function FolderSidebar({
     },
     [folderPath, loadDir]
   );
+  const refreshDirRef = useRef(refreshDir);
+  useLayoutEffect(() => {
+    refreshDirRef.current = refreshDir;
+  }, [refreshDir]);
 
-  // Load root on mount / folderPath change
+
+  // Load root on mount / folderPath change.
   useEffect(() => {
-    setRootLoaded(false);
-    setRootNodes([]);
     let cancelled = false;
     void loadDir(folderPath).then((nodes) => {
       if (!cancelled) {
@@ -367,8 +376,6 @@ export function FolderSidebar({
   }, [folderPath, loadDir]);
 
   // Start filesystem watcher; refresh affected dirs on change events.
-  const refreshDirRef = useRef(refreshDir);
-  refreshDirRef.current = refreshDir;
   useEffect(() => {
     void window.notepads.folder.startWatch(folderPath);
     const unsub = window.notepads.folder.onFolderChanged((changedParent: string) => {
