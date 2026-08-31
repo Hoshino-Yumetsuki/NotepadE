@@ -17,7 +17,7 @@
  * it at the top of its module so the assignment runs at import time.
  */
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import EditorWorker from '../../../node_modules/monaco-editor/esm/vs/editor/editor.worker.js?worker';
 
 // Assign once. A module is evaluated a single time, but guard anyway so a hot
 // reload in dev never clobbers an in-flight environment. `self.MonacoEnvironment`
