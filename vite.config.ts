@@ -25,7 +25,11 @@ export default defineConfig(({ command }) => ({
   envPrefix: ['VITE_', 'TAURI_'],
   resolve: {
     alias: {
-      '@shared': resolve(dirname, 'src/shared')
+      '@shared': resolve(dirname, 'src/shared'),
+      'monaco-editor/esm/vs/editor/editor.api': resolve(
+        dirname,
+        'node_modules/monaco-editor/esm/vs/editor/editor.api.js'
+      )
     }
   },
   build: {
