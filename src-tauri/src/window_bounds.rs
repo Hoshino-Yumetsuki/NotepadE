@@ -1,14 +1,9 @@
-//! window_bounds — port of src/main/window-bounds.ts (task #4, owner:
-//! worker-window).
-//!
-//! Persists the last window bounds + maximized flag to `WindowBounds.json` in
+//! window_bounds — persists the last window bounds + maximized flag to
 //! the app data dir and restores them on the next launch (clamped to a
 //! currently-connected monitor work area so a window saved on a disconnected
-//! monitor never opens off-screen). Atomic write (tmp + rename),
-//! NOTEPADS_E2E_USERDATA override aware. FULLY DISABLED under NOTEPADS_E2E=1
-//! (deterministic fixed-size e2e specs). Debounced persist (400ms) on
-//! move/resize; immediate on maximize/unmaximize/close; persists the NORMAL
-//! (unmaximized) bounds when maximized/fullscreen.
+//! monitor never opens off-screen). Atomic write (tmp + rename), debounced
+//! persist (400ms) on move/resize; immediate on maximize/unmaximize/close.
+//! Persists the NORMAL (unmaximized) bounds when maximized/fullscreen.
 
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -37,21 +32,9 @@ const MIN_HEIGHT: f64 = 320.0;
 
 const BOUNDS_FILE_NAME: &str = "WindowBounds.json";
 
-fn is_e2e() -> bool {
-    std::env::var("NOTEPADS_E2E")
-        .map(|v| v == "1")
-        .unwrap_or(false)
-}
-
-/// App data root: NOTEPADS_E2E_USERDATA override first, else app_data_dir
-/// (identifier com.notepade.app) — Electron userData parity.
+/// App data root.
 fn user_data_root(app: &tauri::AppHandle) -> Option<PathBuf> {
     use tauri::Manager;
-    if let Ok(over) = std::env::var("NOTEPADS_E2E_USERDATA") {
-        if !over.is_empty() {
-            return Some(PathBuf::from(over));
-        }
-    }
     app.path().app_data_dir().ok()
 }
 
@@ -196,13 +179,9 @@ fn write_atomic(target: &std::path::Path, contents: &str) -> std::io::Result<()>
 }
 
 /// Restore persisted bounds onto a window BEFORE it is shown. Returns the
-/// maximized flag to re-apply (the caller maximizes after positioning). Under
-/// e2e or with no usable record this is a no-op (the window keeps its
-/// conf-default 1100×720 centered look — visual-golden parity).
+/// maximized flag to re-apply (the caller maximizes after positioning). With no
+/// usable record this is a no-op and the window keeps its configured default.
 pub fn restore_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
-    if is_e2e() {
-        return;
-    }
     let Some(resolved) = resolve_bounds(read_saved_bounds(app).as_ref(), &current_work_areas(app))
     else {
         return;
@@ -246,9 +225,6 @@ fn current_bounds(window: &tauri::WebviewWindow) -> Option<(f64, f64, f64, f64)>
 
 /// Persist a snapshot. Best-effort; never surfaces failures.
 fn persist(app: &tauri::AppHandle, bounds: (f64, f64, f64, f64), is_maximized: bool) {
-    if is_e2e() {
-        return;
-    }
     let Some(path) = bounds_file_path(app) else {
         return;
     };
@@ -273,22 +249,16 @@ enum TrackMsg {
 const DEBOUNCE: Duration = Duration::from_millis(400);
 
 /// Attach the bounds-persist listeners to a window: debounced 400ms on
-/// move/resize, immediate on maximize/unmaximize and close-requested. When the
-/// window is maximized/fullscreen (or in compact overlay), the last-known
-/// NORMAL rect is persisted instead of the live rect (getNormalBounds parity).
-/// No-op under e2e. Call once per window AFTER restoring bounds.
+/// move/resize, immediate on maximize/unmaximize and close-requested. When
+/// the window is maximized/fullscreen, the last-known NORMAL rect is persisted
+/// instead of the live rect. Call once per window AFTER restoring bounds.
 pub fn track_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
-    if is_e2e() {
-        return;
-    }
-
     let (tx, rx) = mpsc::channel::<TrackMsg>();
 
     // Persist worker: owns the debounce timer + the last-known normal rect.
     {
         let app = app.clone();
         let window = window.clone();
-        let label = window.label().to_string();
         std::thread::spawn(move || {
             // Seed the normal rect from the current (post-restore) bounds.
             let mut normal_rect = current_bounds(&window);
@@ -297,8 +267,7 @@ pub fn track_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
             let snapshot = |normal_rect: &mut Option<(f64, f64, f64, f64)>| {
                 let maximized = window.is_maximized().unwrap_or(false);
                 let fullscreen = window.is_fullscreen().unwrap_or(false);
-                let compact = crate::compact_overlay::is_compact(&label);
-                if !(maximized || fullscreen || compact) {
+                if !(maximized || fullscreen) {
                     if let Some(b) = current_bounds(&window) {
                         *normal_rect = Some(b);
                     }

@@ -1,10 +1,9 @@
 /**
  * Find/Replace + Go-To-Line keybindings for Monaco (RENDERER, Lane B).
  *
- * Drop-in replacement for the CM6 findKeymap. Registers the same bindings via
- * Monaco's `editor.addCommand` / `editor.addAction` API instead of CM6
- * KeyBinding[]. The same FindKeymapCallbacks interface is kept unchanged so
- * useFindBar.tsx needs no modifications.
+ * Registers the UWP bindings via Monaco's `editor.addCommand` /
+ * `editor.addAction` API. The FindKeymapCallbacks interface connects the live
+ * editor to useFindBar.tsx.
  *
  * Bindings (1:1 with UWP TextEditor.xaml.cs accelerators):
  *   Ctrl+F        → open find bar (find mode)
@@ -26,7 +25,7 @@ import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import type { FindQuery } from './findController';
 import { findNextInEditor, findPreviousInEditor } from './findController';
 
-/** Host hooks the keymap calls into. Identical to the CM6 version. */
+/** Host hooks the keymap calls into. */
 export interface FindKeymapCallbacks {
   /** Open the find bar. `replace` selects find vs replace mode. */
   openFindBar(replace: boolean): void;
@@ -157,13 +156,4 @@ export function registerFindKeybindings(
       disposables.length = 0;
     }
   };
-}
-
-/**
- * @deprecated CM6 compat shim. The Monaco path uses registerFindKeybindings.
- * Kept so any import of `findKeymap` from old code compiles without errors
- * during the T3/T6 migration; it returns an empty array (no CM6 KeyBindings).
- */
-export function findKeymap(_cb: FindKeymapCallbacks): [] {
-  return [];
 }

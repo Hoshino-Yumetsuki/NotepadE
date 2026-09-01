@@ -1,17 +1,6 @@
 /**
- * Editor right-click context menu (RENDERER) — Monaco edition.
- *
- * Drop-in replacement for the CM6 version. The Fluent UI menu JSX, item
- * order, labels, icons, and props are identical to the CM6 version. The only
- * change is that the editor snapshot uses IStandaloneCodeEditor instead of
- * EditorView, and the CM6-specific operations (undo/redo, direction, wordWrap,
- * webSearch) are reimplemented against the Monaco API.
- *
- * Item order mirrors UWP TextEditorContextFlyout.cs:
- *   Cut · Copy · Paste · Undo · Redo · Select All ·
- *   Right-to-Left · Word Wrap · Search in web · Toggle Preview · Share
- *
- * PA-8: renderer-only — DOM + typed window.notepads bridge. No fs/IPC.
+ * Fluent UI context menu for the Monaco editor. Items mirror the UWP
+ * TextEditorContextFlyout and route editor operations through Monaco.
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -160,9 +149,9 @@ function setDirection(editor: monacoApi.editor.IStandaloneCodeEditor, dir: 'ltr'
   // Monaco derives text direction from the content DOM's `dir` attribute.
   const content = dom.querySelector<HTMLElement>('.monaco-editor .lines-content');
   if (content) content.setAttribute('dir', dir);
-  // updateOptions does not expose direction; patch the DOM directly (same
-  // approach the CM6 directionCompartment used via contentAttributes).
-  editor.updateOptions({}); // trigger a layout pass so Monaco re-reads geometry
+  // updateOptions does not expose direction; patch the DOM, then trigger a
+  // layout pass so Monaco re-reads geometry.
+  editor.updateOptions({});
 }
 
 function toggleDirection(editor: monacoApi.editor.IStandaloneCodeEditor): void {

@@ -1,18 +1,8 @@
 /**
- * Monaco acrylic material overrides (RENDERER, Lane B).
+ * Monaco acrylic material overrides.
  *
- * Monaco paints several layers with an OPAQUE theme background by default
- * (`.monaco-editor`, `.monaco-editor-background`, the `.margin` gutter, the
- * scrollable element). Any opaque layer blocks the OS acrylic material that Rust
- * applies to the window (window_vibrancy::apply_acrylic), so the editor surface
- * MUST be transparent for the material to show through — the same contract the
- * CodeMirror surface honored (transparent `.cm-content` + acrylic strip).
- *
- * The theme's `editor.background:#00000000` already paints transparent in most
- * places, but a few Monaco layers paint their background from CSS rather than the
- * theme color, so we force them transparent here. The gutter "material strip" (a
- * non-promoted absolutely-positioned div sampling the acrylic) is injected from
- * MonacoEditor.tsx at runtime — see that file.
+ * Monaco paints several layers with an opaque theme background by default.
+ * Keep those layers transparent so the native window material remains visible.
  */
 
 /* The editor ROOT paints the acrylic gutter "material" as a left-edge gradient:
@@ -75,29 +65,16 @@
   background: transparent !important;
 }
 
-/* Double-cursor fix. With editContext:true (default in WebView2/Chromium),
-   Monaco's editing surface is a focusable `.native-edit-context` div, and the
-   browser draws its OWN native caret there IN ADDITION to Monaco's synthetic
-   `.cursor` overlay — two bars (a thicker native one beside Monaco's thin one).
-   Suppress the browser caret on every possible editing host so only Monaco's
-   own cursor shows (the legacy textarea path is covered too, for safety). */
+/* Hide the browser caret on each Monaco editing host so only its synthetic
+   cursor remains visible. */
 .monaco-editor .native-edit-context,
 .monaco-editor .inputarea,
 .monaco-editor textarea {
   caret-color: transparent !important;
 }
 
-/* Monaco's scrollbar is a JS DOM overlay (.monaco-scrollable-element > .scrollbar
-   > .slider) that ::-webkit-scrollbar CSS cannot reach. Tint the slider to match
-   the app's chrome.css thin scrollbar.
-   NOTE: unlike the old CM6 scrollbar (which sat over the editor's own opaque
-   background), this slider floats over a TRANSPARENT surface — we force the
-   scrollable element transparent so the OS acrylic shows through (see below). A
-   faint thumb over the bright blurred desktop reads as "gone", so the resting
-   alpha is raised (~0.55, ~0.85 hover) for clear contrast over acrylic.
-   The create() options set verticalScrollbarSize/horizontalScrollbarSize:6 to slim
-   the bar to match the native thin scrollbar width, and vertical:'visible' keeps
-   it always present. */
+/* Monaco's scrollbar is a JS DOM overlay. Tint it to match the app's
+   chrome.css thin scrollbar while keeping the transparent surface visible. */
 .monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
   border-radius: 6px !important;
   background: rgba(137, 137, 137, 0.55) !important;

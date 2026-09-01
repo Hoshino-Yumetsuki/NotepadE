@@ -1,13 +1,7 @@
-/**
- * Pure indent/outdent logic — editor-agnostic, zero @codemirror imports.
- *
- * Extracted from commands/indent.ts for Monaco reuse (T2 → T3).
- * Re-exports editorSettings pure helpers (indentString, normalizeTabAsSpaces).
- */
+/** Pure indent/outdent logic used by Monaco commands. */
 
-export type { TabAsSpaces } from '../../editorSettings';
-export { indentString, normalizeTabAsSpaces } from '../../editorSettings';
 import { indentString } from '../../editorSettings';
+export { indentString };
 import type { TabAsSpaces } from '../../editorSettings';
 
 /** Number of leading spaces in a line's text. */

@@ -15,8 +15,7 @@ import type { TabsStore } from './useTabsStore';
  *   F2               rename active tab   (onRename)
  *
  * These mirror the UWP NotepadsMainPage.xaml.cs keyboard-accelerator bindings.
- * The browser/CM6 defaults for Ctrl+Tab/Ctrl+1-9 are swallowed in source; we
- * preventDefault so they don't reach CM6 or trigger browser tab cycling.
+ * Prevent default browser handling for app-wide tab shortcuts.
  *
  * Bound on the capture phase at the document so the strip works regardless of
  * focus (editor focused, tab focused, etc.), matching the app-wide accelerators.
@@ -54,7 +53,7 @@ export function useTabKeyboard(store: TabsStore, callbacks: TabKeyboardCallbacks
 
       if (!ctrl) return;
 
-      // Ctrl+Tab / Ctrl+Shift+Tab — cycle tabs (swallow CM6/browser default).
+      // Ctrl+Tab / Ctrl+Shift+Tab — cycle tabs and suppress browser handling.
       if (e.key === 'Tab') {
         e.preventDefault();
         if (e.shiftKey) store.prev();

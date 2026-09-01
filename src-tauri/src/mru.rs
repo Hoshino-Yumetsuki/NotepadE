@@ -44,14 +44,8 @@ fn default_file_type() -> String {
     "file".into()
 }
 
-/// Resolve the app data root. Honors the e2e override (`NOTEPADS_E2E_USERDATA`)
-/// BEFORE the Tauri app-data dir, exactly as settings.ts/session.ts/mru.ts did.
+/// Resolve the app data root.
 pub fn user_data_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    if let Ok(override_dir) = std::env::var("NOTEPADS_E2E_USERDATA") {
-        if !override_dir.is_empty() {
-            return Ok(PathBuf::from(override_dir));
-        }
-    }
     tauri::Manager::path(app)
         .app_data_dir()
         .map_err(|e| e.to_string())

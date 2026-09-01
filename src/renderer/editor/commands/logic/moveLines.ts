@@ -1,8 +1,4 @@
-/**
- * Pure move-lines logic — editor-agnostic, zero @codemirror imports.
- *
- * Extracted from commands/moveLines.ts for Monaco reuse (T2 → T3).
- */
+/** Pure line-moving logic used by Monaco commands. */
 
 export interface MoveLinesResult {
   /** Replacement text for the region [from, to). */

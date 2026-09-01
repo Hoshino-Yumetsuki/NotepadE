@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
- * Vite build for the renderer (React + Fluent v9 + CM6).
+ * Vite build for the renderer (React + Fluent v9 + Monaco).
  * The Tauri Rust binary serves the built renderer at runtime.
  *
  * `yarn tauri dev` runs the renderer dev server and launches the Tauri app.
@@ -36,14 +36,11 @@ export default defineConfig(({ command }) => ({
     outDir: resolve(dirname, 'out/renderer'),
     emptyOutDir: true,
     rollupOptions: {
-      input: resolve(dirname, 'src/renderer/index.html')
-      // NOTE: no manualChunks. Splitting the critical-path vendor groups
-      // (react/fluentui/codemirror/dnd) into separate chunks was measured to
-      // REGRESS cold start by ~850ms — under file:// in a single-window app
-      // there is no cross-page cache benefit, only an ESM chunk-load/parse
-      // waterfall. Code that is genuinely off the first-paint path (markdown,
-      // diff, settings panes) is already deferred via React.lazy in App.tsx,
-      // and the 28 non-default locales are dynamic chunks (i18n/locales).
+      input: resolve(dirname, 'src/renderer/index.html'),
+      // Keep the critical path in one bundle. Under file:// there is no
+      // cross-page cache benefit; extra vendor chunks add a load/parse
+      // waterfall. Markdown, diff, settings, and non-default locales are
+      // already lazy.
     }
   },
   plugins: [

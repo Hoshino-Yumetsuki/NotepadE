@@ -4,7 +4,6 @@
 //! re-applied only at save. Default = CRLF.
 
 use crate::contract::EolId;
-use crate::result::NpResult;
 
 /// Detect the EOL style from raw decoded text.
 ///   contains "\r\n" -> crlf
@@ -46,26 +45,6 @@ pub fn apply_eol(lf_text: &str, eol: EolId) -> String {
         return normalized;
     }
     normalized.replace('\n', eol_string(eol))
-}
-
-/// Parse the wire EolId label ('crlf' | 'cr' | 'lf').
-pub fn parse_eol_id(s: &str) -> Option<EolId> {
-    match s {
-        "crlf" => Some(EolId::Crlf),
-        "cr" => Some(EolId::Cr),
-        "lf" => Some(EolId::Lf),
-        _ => None,
-    }
-}
-
-/// `encoding.convertEol(text, eolId)` — convert a '\n'-normalized text to the
-/// target style (preview only; the renderer never re-derives EOL itself).
-#[tauri::command]
-pub fn encoding_convert_eol(text: String, eol_id: String) -> NpResult<String> {
-    match parse_eol_id(&eol_id) {
-        Some(eol) => NpResult::Ok(apply_eol(&text, eol)),
-        None => NpResult::Err(format!("unknown eolId: {eol_id}")),
-    }
 }
 
 #[cfg(test)]
@@ -123,17 +102,5 @@ mod tests {
     fn apply_eol_normalizes_defensively_first() {
         // Mixed input does not double-expand (\r\n -> \n first, then re-apply).
         assert_eq!(apply_eol("a\r\nb\rc\nd", EolId::Crlf), "a\r\nb\r\nc\r\nd");
-    }
-
-    #[test]
-    fn convert_eol_command_envelope() {
-        assert_eq!(
-            encoding_convert_eol("a\nb".into(), "crlf".into()),
-            NpResult::Ok("a\r\nb".to_string())
-        );
-        assert!(matches!(
-            encoding_convert_eol("a".into(), "bogus".into()),
-            NpResult::Err(_)
-        ));
     }
 }

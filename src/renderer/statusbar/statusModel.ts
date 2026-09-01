@@ -16,7 +16,7 @@ import type { EolId, AnsiEncodingEntry, EncodingId } from '@shared/ipc-contract'
 //  Line / column / selection
 // ---------------------------------------------------------------------------
 
-/** A '\n'-shadow-buffer caret/selection range (offsets), like CM6's main range. */
+/** A LF-normalized caret/selection range represented by text offsets. */
 export interface CaretRange {
   from: number;
   to: number;

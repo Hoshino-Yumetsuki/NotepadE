@@ -7,19 +7,6 @@
 use crate::contract::ThemeState;
 use crate::result::NpResult;
 
-/// Normalize an accent color to `#RRGGBB`. Takes an `RRGGBBAA` string (the
-/// Windows UISettings format) and drops any alpha, prefixing '#'. Falls back
-/// to `#0078D4` (Windows default accent) for empty/invalid values.
-#[allow(dead_code)]
-fn normalize_accent(raw: &str) -> String {
-    let hex = raw.trim_start_matches('#');
-    if hex.len() >= 6 {
-        format!("#{}", &hex[..6].to_uppercase())
-    } else {
-        "#0078D4".to_string()
-    }
-}
-
 /// Read the Windows accent color via UISettings (WinRT). Returns #0078D4
 /// on any failure.
 #[cfg(target_os = "windows")]

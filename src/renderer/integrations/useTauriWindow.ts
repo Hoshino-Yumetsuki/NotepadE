@@ -40,11 +40,8 @@ export function useTauriWindow({
   }, [openPathIntoTab]);
 
   // Drag-drop open (Tauri native onDragDropEvent). Tauri provides absolute
-  // paths directly via native drag-drop — the web-level drop listener is
-  // replaced because Electron's webUtils.getPathForFile has no Tauri equivalent.
-  // The native event only fires for OS file drops; it does NOT intercept the
-  // dnd-kit intra-strip reorder (pointer-driven) or the cross-window tab-
-  // transfer token drag (which carries 'application/x-notepads-token').
+  // paths directly. The listener does not intercept dnd-kit reorder or
+  // cross-window transfer token drags.
   useEffect(() => {
     let unlisten: (() => void) | null = null;
     // Guard: only activate inside a Tauri webview. jsdom/vitest never enters here.

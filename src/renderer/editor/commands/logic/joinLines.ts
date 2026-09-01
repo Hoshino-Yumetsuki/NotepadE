@@ -1,8 +1,4 @@
-/**
- * Pure join-lines logic — editor-agnostic, zero @codemirror imports.
- *
- * Extracted from commands/joinLines.ts for Monaco reuse (T2 → T3).
- */
+/** Pure join-lines logic used by Monaco commands. */
 
 export interface JoinResult {
   /** The replacement text for the range [from, to). */

@@ -4,18 +4,14 @@
 //! FROZEN after scaffold (task #1): workers fill their OWN module files only.
 //! If a command signature or registration here must change, message team-lead.
 //!
-//! Layout (1 module ≈ 1 Electron src/main/*.ts file):
-//!   result.rs           Result envelope  (FROZEN)
-//!   contract.rs         payload types mirroring src/shared/ipc-contract.ts (FROZEN)
-//!   file_io / encoding / eol / system_codepage / mru          — task #2 (worker-core)
-//!   settings / settings_reset / session / wallpaper / theme /
-//!   shell_integration / search_url / context_menu             — task #3 (worker-persist)
-//!   window_mgmt / compact_overlay / window_bounds / broker /
-//!   argv_parse / dragout                                      — task #4 (worker-window)
+//! Layout follows the backend responsibilities:
+//!   result / contract       — shared envelopes and payloads
+//!   file_io / encoding / eol — file content and encoding operations
+//!   settings / session / theme / shell — persisted app integrations
+//!   window_mgmt / bounds / broker / argv_parse / dragout — window lifecycle
 
 mod argv_parse;
 mod broker;
-mod compact_overlay;
 mod context_menu;
 mod contract;
 mod diff;
@@ -48,20 +44,13 @@ use tauri::Manager;
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
-    // Single-instance must be the FIRST registered plugin (Tauri docs). The
-    // Electron app skipped single-instance under NOTEPADS_E2E=1 so parallel
-    // test apps don't redirect into each other — preserve that.
-    let is_e2e = std::env::var("NOTEPADS_E2E")
-        .map(|v| v == "1")
-        .unwrap_or(false);
+    // Single-instance must be the FIRST registered plugin (Tauri docs).
     // A marker-spawned child (the "New Window" path) must NOT be forwarded into
-    // an existing instance — that is the whole point of an independent process.
-    // Skip single-instance registration for it so it boots its own main window
-    // and lives as a fully independent process.
+    // an existing instance — it boots as an independent process.
     let is_new_process = std::env::var(argv_parse::NEW_PROCESS_ENV)
         .map(|v| v == "1")
         .unwrap_or(false);
-    if !is_e2e && !is_new_process {
+    if !is_new_process {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             // Broker routing (task #4): redirect-vs-spawn per alwaysOpenNewWindow /
             // notepads://newinstance; EvtAppActivation carries the SECOND
@@ -183,9 +172,8 @@ pub fn run() {
             mru::recent_clear,
             mru::recent_add_folder,
             // encoding + eol (task #2)
-            encoding::encoding_list_ansi,
             encoding::encoding_decode_with,
-            eol::encoding_convert_eol,
+            encoding::encoding_list_ansi,
             // hash
             hash::compute_text_hash,
             // diff
@@ -215,7 +203,6 @@ pub fn run() {
             shell_integration::shell_open_containing_folder,
             shell_integration::shell_copy_path,
             shell_integration::shell_web_search,
-            shell_integration::shell_print,
             shell_integration::shell_share,
             // theme (task #3)
             theme::theme_get,

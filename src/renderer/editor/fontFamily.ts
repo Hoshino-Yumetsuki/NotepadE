@@ -10,9 +10,7 @@ export const DEFAULT_FONT_FAMILY =
   '"Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif';
 
 /**
- * Resolve the stored font-family to a full CSS value with fallbacks (mirrors the
- * CM6 component): empty → system stack; a named font gets a monospace fallback
- * chain so a CJK locale doesn't fall back to 宋体.
+ * Resolve the stored font family to a CSS value with sensible fallbacks.
  */
 export function resolveFontFamily(family: string): string {
   if (!family) return DEFAULT_FONT_FAMILY;

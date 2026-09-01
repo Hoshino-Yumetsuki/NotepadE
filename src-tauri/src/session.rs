@@ -46,11 +46,6 @@ struct SessionFileFormat<'a> {
 // ---------------------------------------------------------------------------
 
 fn app_data_dir(app: &tauri::AppHandle) -> PathBuf {
-    if let Ok(ov) = std::env::var("NOTEPADS_E2E_USERDATA") {
-        if !ov.is_empty() {
-            return PathBuf::from(ov);
-        }
-    }
     app.path()
         .app_data_dir()
         .expect("app_data_dir should exist")

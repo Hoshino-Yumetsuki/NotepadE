@@ -12,10 +12,7 @@
     "out",
     "dist",
     ".vite",
-    "coverage",
-    "playwright-report",
-    "test/fixtures",
-    "e2e"
+    "coverage"
   ],
   "options": {
     "typeAware": true,

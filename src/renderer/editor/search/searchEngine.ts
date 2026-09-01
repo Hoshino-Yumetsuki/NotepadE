@@ -2,33 +2,18 @@
  * Pure find/replace search engine (RENDERER, Lane B) — framework-free.
  *
  * Operates on a plain string (the '\n' shadow buffer) with explicit caret
- * offsets so it is directly unit-/fixture-testable WITHOUT CodeMirror or
- * Electron. The CM6 integration layer (findController.ts) translates the
- * {from,to} spans returned here into editor transactions.
+ * offsets so it is directly unit-testable without an editor or DOM.
  *
  * Behavioral parity is taken from the UWP source
  * (Controls/TextEditor/TextEditorCore.FindAndReplace.cs +
- *  Extensions/StringExtensions.cs). Key facts replicated:
+ * Extensions/StringExtensions.cs). Key facts replicated:
  *
  *  - Literal next/prev use IndexOf / LastIndexOf with Ordinal (match-case) or
  *    OrdinalIgnoreCase comparison; wrap-around when not stopping at EOF/BOF.
- *  - Whole-word boundaries use char.IsLetterOrDigit on the neighbouring chars
- *    (NOT regex \b — \b counts '_' as a word char, .NET's IsLetterOrDigit does
- *    not). Whole-word is LITERAL-only; whole-word & regex are mutually exclusive
- *    in the UI (FindAndReplaceControl: MatchWholeWordToggle.IsEnabled =
- *    !UseRegexToggle.IsChecked).
- *  - Regex uses RegexOptions.Multiline (+IgnoreCase unless match-case). The UWP
- *    buffer is normalised so the regex sees '\n' line breaks; our shadow buffer
- *    is already '\n', so no conversion is needed.
- *  - Escape sequences in the REGEX replacement string ("\\r","\\n","\\t") are
- *    expanded to CR/LF/TAB before substitution (ApplyTabAndLineEndingFix). This
- *    is applied ONLY in regex mode; literal replacement is verbatim.
- *
- * DIVERGENCE #5 (sign-off, docs/plan/11 item 5 + R5): .NET
- * RegexOptions.RightToLeft (used for regex find-previous) has NO JS RegExp
- * equivalent. It is implemented here as the forward-match-all + pick-last-match-
- * before-cursor SHIM (see findPreviousRegex). Remaining .NET-vs-JS flavor gaps
- * are documented in ./REGEX-FLAVOR-GAPS.md.
+ *  - Whole-word boundaries use char.IsLetterOrDigit on neighbouring chars.
+ *  - Regex uses multiline matching and supports a forward-match-all approach
+ *    for right-to-left previous searches.
+ *  - Regex replacement expands the UWP escape sequences for CR/LF/TAB.
  */
 
 /** User-facing search options (mirrors UWP SearchContext minus the text). */
@@ -46,10 +31,6 @@ export interface MatchSpan {
   from: number;
   to: number;
 }
-
-/** Result of compiling a query — surfaces regex errors like UWP's regexError. */
-export type CompileResult = { ok: true } | { ok: false; error: string };
-
 
 /** True for a Unicode letter or digit — the .NET char.IsLetterOrDigit analogue. */
 function isLetterOrDigit(ch: string): boolean {
@@ -73,33 +54,12 @@ function regexFlags(matchCase: boolean): string {
   return matchCase ? 'gm' : 'gmi';
 }
 
-/**
- * Validate / compile a query. For literal queries this always succeeds (the
- * query is treated verbatim). For regex queries it attempts to construct the
- * RegExp and reports the engine error message on failure.
- */
-export function compileQuery(query: string, options: SearchOptions): CompileResult {
-  if (query.length === 0) return { ok: true };
-  if (!options.useRegex) return { ok: true };
-  try {
-    // eslint-disable-next-line no-new
-    new RegExp(query, regexFlags(options.matchCase));
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
 /** Build a fresh global RegExp for a regex query (caller owns lastIndex). */
 function buildRegex(query: string, options: SearchOptions): RegExp {
   return new RegExp(query, regexFlags(options.matchCase));
 }
 
-/**
- * Collect every forward match of a regex query over `text`. This is the
- * primitive the RightToLeft shim is built on (and is also used for replace-all
- * match counting). Guards against zero-width matches looping forever.
- */
+/** Collect every forward regex match, guarding zero-width loops. */
 export function findAllRegexMatches(
   text: string,
   query: string,
@@ -149,10 +109,8 @@ export function findNext(
 }
 
 /**
- * Find the previous match before the caret. Mirrors UWP TryFindPreviousAndSelect:
- * the caret is the current selection START. Literal search uses LastIndexOf from
- * `start - 1`; regex uses the RightToLeft shim. When `wrap` is true (UWP
- * `!stopAtBof`) and nothing is found, search again from the document end.
+ * Find the previous match before the caret. Literal search uses LastIndexOf;
+ * regex search selects the rightmost forward match before the caret.
  */
 export function findPrevious(
   text: string,
@@ -284,12 +242,9 @@ export interface ReplaceAllResult {
 }
 
 /**
- * Replace every occurrence in `text`, returning the new full document and a
- * count. The CM6 layer dispatches the result as ONE transaction = ONE undo step
- * (UWP TryFindAndReplaceAll does a single SetText). Regex mode uses one global
- * RegExp.replace pass after expanding replacement escape sequences; literal mode
- * iterates IndexOf/rebuild verbatim (no escape fix, no '$' substitution) exactly
- * like the UWP literal path.
+ * Replace every occurrence in `text`, returning the new document and count.
+ * The controller applies the result as one edit; regex mode expands replacement
+ * escapes while literal mode rebuilds matches verbatim.
  */
 export function replaceAll(
   text: string,

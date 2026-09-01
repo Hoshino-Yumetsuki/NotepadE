@@ -1,11 +1,5 @@
-//! shell_integration — port of src/main/shell.ts (task #3, owner:
-//! worker-persist).
-//!
-//! To preserve: reveal-in-folder (tauri-plugin-opener), clipboard copyPath +
-//! share as "title\n\ntext" (tauri-plugin-clipboard-manager), webSearch via
-//! the settings engine (search_url.rs), print → renderer-side window.print()
-//! (shim handles it; shell_print stays for contract parity), OS recent
-//! documents, win32 Jump List "New window" task → notepads://newinstance.
+//! shell_integration — shell integrations for opening containing folders,
+//! copying paths, web search, sharing, and OS recent-document integration.
 
 use crate::contract::ShareArgs;
 use crate::result::NpResult;
@@ -99,13 +93,6 @@ pub async fn shell_web_search(app: tauri::AppHandle, args: WebSearchArgs) -> NpR
         }
         None => NpResult::Ok(()), // Silent no-op (mirrors UWP swallow)
     }
-}
-
-#[tauri::command]
-pub async fn shell_print(_window: tauri::WebviewWindow) -> NpResult<()> {
-    // Print is handled by the renderer-side bridge (window.print()).
-    // Return Ok as a no-op — the bridge shim calls window.print() directly.
-    NpResult::Ok(())
 }
 
 #[tauri::command]

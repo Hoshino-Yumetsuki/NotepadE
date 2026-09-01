@@ -1,14 +1,6 @@
 /**
- * Editor-behavior settings (RENDERER, Lane B) — pure module, zero @codemirror.
- *
- * These mirror the UWP AppSettingsService values the editor commands read at
- * runtime (TextEditorCore + TextEditor.xaml.cs). Post-Monaco-migration (T6) this
- * is a plain typed bag + pure helpers: MonacoEditor receives the values as props
- * and feeds them to the command wiring via a ref (see monacoCommands.ts), so there
- * is no CM6 Facet/compartment anymore.
- *
- * Authority note: NONE of these settings touch encoding/EOL — those stay opaque
- * MAIN-owned labels (docs/plan/04 §3.A). These are pure editor-behavior knobs.
+ * Editor-behavior settings and pure helpers shared by Monaco command wiring.
+ * Encoding and EOL labels remain opaque backend-owned values.
  */
 
 /**

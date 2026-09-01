@@ -1,19 +1,4 @@
-/**
- * Monaco integration layer for the pure find/replace engine (RENDERER, Lane B).
- *
- * Drop-in replacement for the CM6 findController. The pure engine in
- * ./searchEngine.ts is unchanged — it still operates on the '\n' shadow-buffer
- * string. This module is the thin glue that:
- *   - reads the current document + cursor out of an IStandaloneCodeEditor,
- *   - calls the engine (findNext / findPrevious / replaceAll / replace-one),
- *   - applies the resulting selection + reveals it via the Monaco API,
- *   - and maintains non-intrusive match-highlight decorations via
- *     deltaDecorations (class 'notepade-search-match', styled to match the
- *     former CM6 'cm-search-match' yellow wash).
- *
- * Public API surface is identical to the CM6 version so useFindBar + T6 wiring
- * need only update the editor-instance type, not the function signatures.
- */
+/** Find/replace controller for Monaco; translates engine spans into selections. */
 
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import {
@@ -24,9 +9,6 @@ import {
   findAllRegexMatches,
   replaceAll as engineReplaceAll
 } from './searchEngine';
-
-// Re-export SearchOptions so callers that imported it from here still work.
-export type { SearchOptions };
 
 /** A find query bundled with its options (the controller's working state). */
 export interface FindQuery extends SearchOptions {

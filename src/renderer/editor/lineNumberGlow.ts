@@ -1,25 +1,12 @@
 /**
- * Line-number reveal glow (RENDERER, Monaco port).
+ * Line-number reveal glow. The highlight follows the pointer near the boundary
+ * between the line-number column and the editor text area.
  *
- * A thin vertical highlight rendered AT the boundary between the line-number
- * column and the editor text area. It is solid in the center and fades vertically
- * at both ends, following the pointer's Y as it moves near the boundary, and
- * fades out horizontally as the pointer moves right into the content.
+ * Performance: sample the editor rect once on pointerenter, coalesce pointer
+ * updates in one requestAnimationFrame, and write only compositor-friendly CSS.
+ * HC and reduced-transparency/motion users get no glow.
  *
- * Monaco port of the original CM6 plugin (deleted in the migration). Same visual
- * contract; geometry now reads `editor.getLayoutInfo().contentLeft` for the
- * boundary x and `editor.getDomNode()` as the positioning/clipping root.
- *
- * Perf discipline (mirrors the CM6 original):
- *   - the editor rect is sampled ONCE on pointerenter and reused for every move
- *   - pointer updates are coalesced into a single requestAnimationFrame
- *   - only CSS `opacity`, `top`, `height`, `left` are written
- *   - `transition: opacity` only — no transition on layout-triggering props
- *
- * THEME: light/dark/hc aware. HC and prefers-reduced-transparency/motion users
- * get NO glow (the attach is fully inert and returns a no-op disposer).
- *
- * PA-8: pure renderer data + DOM-only pointer tracking.
+ * Renderer-only data and DOM pointer tracking.
  */
 
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';

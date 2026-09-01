@@ -1,10 +1,4 @@
-/**
- * Pure date/time formatting — editor-agnostic, zero @codemirror imports.
- *
- * Self-contained as of the Monaco migration (T6): the pure formatters live here
- * outright (no longer re-exported from the deleted CM6 `../datetime`). Ports UWP
- * TextEditorCore.DateTime.cs.
- */
+/** Pure date/time formatting used by editor commands. */
 
 /**
  * Format `date` as the OS current-culture default datetime string.

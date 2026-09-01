@@ -1,17 +1,15 @@
-//! Encoding engine tests — port of the acceptance corpus
-//! (e2e/helpers/encodingCorpus.ts) plus label-table and BOM-contract checks.
+//! Encoding engine tests — acceptance corpus plus label-table and BOM-contract
+//! checks.
 //!
-//! Corpus parity: every byte-identical family from the generator is exercised
-//! as decode(bytes)->expected text AND encode(text)->expected bytes round
-//! trips; detection-lenient families assert the reopen-with path (explicit
-//! label) byte-exactly and auto-detection only where the corpus required it.
+//! Corpus parity exercises byte-identical decode/encode round trips;
+//! detection-lenient families assert the explicit-label path byte-exactly.
 
 use super::*;
 use crate::contract::EolId;
 use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
 
 // ---------------------------------------------------------------------------
-//  Corpus sample texts (encodingCorpus.ts verbatim)
+//  Corpus sample texts
 // ---------------------------------------------------------------------------
 
 const ASCII_LINES: [&str; 4] = ["line one", "line two", "the quick brown fox", "END"];

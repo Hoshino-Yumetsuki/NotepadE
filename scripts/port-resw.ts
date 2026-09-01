@@ -27,7 +27,7 @@
  * carries a `<value>`. That drops the schema examples while keeping every real key.
  *
  * Build-time ONLY. This file lives under scripts/ (NOT a renderer root), so its
- * node:fs/node:path imports are outside the PA-8 surface, exactly like pa8-scan.ts.
+ * node:fs/node:path imports are outside the renderer PA-8 surface.
  *
  *   Usage: tsx scripts/port-resw.ts [--src <StringsDir>] [--out <localesDir>] [--check]
  *   Default src:  E:/Projects/Notepads/src/Notepads/Strings
@@ -48,7 +48,7 @@ interface Args {
 
 function parseArgs(argv: string[]): Args {
   // npm scripts run from the repo root; resolve outputs relative to cwd (ESM —
-  // no __dirname). pa8-scan.ts uses the same process.cwd() convention.
+  // no __dirname).
   const repoRoot = process.cwd();
   let src = 'E:/Projects/Notepads/src/Notepads/Strings';
   let out = join(repoRoot, 'src/renderer/i18n/locales');

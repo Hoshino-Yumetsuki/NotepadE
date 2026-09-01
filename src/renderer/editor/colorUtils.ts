@@ -1,10 +1,4 @@
-/**
- * Pure color helpers (RENDERER) — zero @codemirror imports.
- *
- * Extracted from the deleted CM6 lineNumberGlow.ts during the Monaco migration
- * (T6) so MonacoEditor's theme code can parse the accent hex without pulling any
- * CodeMirror dependency.
- */
+/** Pure color helpers shared by Monaco theme setup and renderer surfaces. */
 
 /**
  * Parse a `#RGB` or `#RRGGBB` hex string into 8-bit channels, or null when the

@@ -8,12 +8,8 @@
  * (TextAndEditor / Personalization / Advanced / About) on the left and the active
  * pane on the right.
  *
- * (Replaces the prior centered modal Dialog; the open/close contract — the `open`
- * + `onOpenChange` props the App drives via Ctrl+, / the hamburger menu and
- * the installSettingsTestHook seam — is unchanged, as are every data-testid the
- * Gate-5 e2e relies on: settings-surface / settings-nav / settings-nav-${id} /
- * settings-close.)
- *
+ * (Replaces the prior centered modal Dialog; open/close is driven by the
+ * toolbar, keyboard shortcut, and hamburger menu.)
  * All four panes read/write the SAME live settings bag (useSettings, lifted to
  * the App so the bag is shared with the live theme + status-bar wiring). Changes
  * persist immediately via settings.set and reconcile via settings.onChanged.
@@ -108,12 +104,9 @@ export function SettingsSurface(props: SettingsSurfaceProps): JSX.Element | null
   // FontSize 24, updated per ContentFrame navigation).
   const sectionTitle = SECTIONS.find((s) => s.id === section)?.labelKey ?? '';
 
-  // Slide-in is a CSS keyframe (np-settings-enter, chrome.css) whose RESTING
-  // transform is translateX(0) — on-screen. The prior approach held the pane at a
-  // React-state translateX(100%) until a double-rAF flipped it; that raced React
-  // re-renders (any reconcile while not-yet-entered rewrote the inline transform
-  // back off-screen, clobbering the e2e capture pin and dropping nav clicks). With
-  // the keyframe, React never writes transform, so the box is always on-screen.
+  // Slide-in is a CSS keyframe (np-settings-enter, chrome.css) whose resting
+  // transform is translateX(0) — on-screen. React does not rewrite it during
+  // re-renders, so navigation is not interrupted.
   //
   // `settled` is the perf gate for the heavy backdrop blur: the .np-acrylic
   // backdrop-filter(blur 30px) is suppressed (via data-acrylic-animating) while the

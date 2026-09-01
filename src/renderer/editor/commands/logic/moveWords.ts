@@ -1,8 +1,4 @@
-/**
- * Pure move-words logic — editor-agnostic, zero @codemirror imports.
- *
- * Extracted from commands/moveWords.ts for Monaco reuse (T2 → T3).
- */
+/** Pure word-moving logic used by Monaco commands. */
 
 export function isLetterOrDigit(ch: string): boolean {
   return /[\p{L}\p{N}]/u.test(ch);

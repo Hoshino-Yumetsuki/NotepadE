@@ -16,17 +16,13 @@
  *     titled or dirty tab is a no-op (UWP SetDraggedOutside).
  *
  * PA-8: every fs/window side effect goes through `window.notepads` — this file
- * never touches fs/path. The test seam below is likewise PA-8-clean: it composes
- * the SAME calls the drag UI makes, so Playwright (which cannot synthesize a
- * real HTML5 cross-process drag) drives the genuine transfer path via lane-h's
- * Gate-6 harness.
+ * never touches fs/path.
  */
 
 import type { AdoptPayload, DragEnvelope } from '@shared/ipc-contract';
 import type { TabsStore } from './useTabsStore';
-import type { NotepadsTestHook } from '../editor/test-hook';
 
-/** Per-editor text accessors the App provides (reads the live CM6 doc). */
+/** Per-editor text accessors the App provides (reads the live Monaco doc). */
 export interface TransferTextSource {
   /** The last-saved ('\n'-normalized) baseline for an editor, or '' if unknown. */
   getLastSavedText(editorId: string): string;
@@ -113,7 +109,7 @@ export function applyAdopt(
   });
   store.setViewMode(localId, viewMode);
   // Seed the visible document: the dirty pending text if modified, else the
-  // last-saved baseline. The editor seam wires the doc into the CM6 instance.
+  // last-saved baseline.
   source.seedAdoptedDoc(
     localId,
     isModified && pendingText != null ? pendingText : file.decodedText
@@ -139,51 +135,4 @@ export function handleVoidDrop(store: TabsStore, editorId: string): boolean {
   store.close(editorId);
   void window.notepads.window.brokerRequest({ paths: [], forceNewWindow: true });
   return true;
-}
-
-// ---------------------------------------------------------------------------
-//  Test seam — window.__notepadsTest.transfer (PA-8-clean, lane-h Gate-6)
-// ---------------------------------------------------------------------------
-
-/** The transfer surface exposed to the Gate-6 harness. */
-export interface TransferTestHook {
-  /** Build + begin a transfer for `editorId`; returns the drag token (or null). */
-  begin(editorId: string): Promise<string | null>;
-  /** Complete a transfer at `dropIndex` in this window. */
-  complete(token: string, dropIndex: number): Promise<boolean>;
-  /** Apply the void-drop rule for `editorId`; returns whether it acted. */
-  voidDrop(editorId: string): boolean;
-  /** Serialize the envelope a drag would carry (assert sourceWindowId stamping). */
-  envelope(editorId: string): DragEnvelope | null;
-}
-
-/**
- * Install `window.__notepadsTest.transfer`. Coexists with the editor/tabs hooks
- * (all write the same `window.__notepadsTest` object). Returns an uninstaller.
- */
-export function installTransferTestHook(store: TabsStore, source: TransferTextSource): () => void {
-  if (typeof window === 'undefined') return () => {};
-
-  const transfer: TransferTestHook = {
-    begin: (editorId) => beginTransfer(store, source, editorId),
-    complete: (token, dropIndex) => completeTransfer(token, dropIndex),
-    voidDrop: (editorId) => handleVoidDrop(store, editorId),
-    envelope: (editorId) => buildEnvelope(store, source, editorId)
-  };
-
-  const existing = window.__notepadsTest as
-    | (NotepadsTestHook & { transfer?: TransferTestHook })
-    | undefined;
-  if (existing) {
-    existing.transfer = transfer;
-  } else {
-    window.__notepadsTest = { transfer } as unknown as NotepadsTestHook;
-  }
-
-  return () => {
-    const hook = window.__notepadsTest as
-      | (NotepadsTestHook & { transfer?: TransferTestHook })
-      | undefined;
-    if (hook) delete hook.transfer;
-  };
 }

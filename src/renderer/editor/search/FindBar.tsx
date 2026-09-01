@@ -25,25 +25,13 @@ import { isMac } from '@shared/platform';
 import { ThemedMenuPopover } from '../../theme/ThemedMenuPopover';
 
 /**
- * Find/Replace bar (RENDERER, Lane B) — 1:1 with the UWP FindAndReplaceControl.
+ * Find/Replace bar (RENDERER) — 1:1 with the UWP FindAndReplaceControl.
  *
- * Owns the search query, replacement text, and option toggles. It is a CONTROLLED
- * presentational widget: it calls back to the host for every find/replace/goto
- * action and never touches CodeMirror directly (the host wires those callbacks to
- * findController.ts).
- *
- * Parity points reproduced from FindAndReplaceControl.xaml.cs:
- *   - whole-word & regex are MUTUALLY EXCLUSIVE (each disables the other while
- *     checked — OptionButtonFlyoutItem_OnClick).
- *   - in the FIND box: Enter = find-next, Shift+Enter = find-previous
- *     (FindBar_OnKeyDown); Tab moves to the replace box when visible.
- *   - in the REPLACE box: Enter = replace-one, Shift+Enter = replace-previous
- *     (ReplaceBar_OnKeyDown); Tab moves back to the find box.
- *   - the find box auto-selects its content on focus (FindBar_GotFocus).
- *   - Escape dismisses the bar (DismissButton).
- *
- * Replace-one / replace-all buttons are only enabled in replace mode with a
- * non-empty query (ShowReplaceBar + FindBar_OnTextChanged).
+ * Owns query, replacement text, and option toggles. It is a controlled
+ * presentational widget and routes every action back to the host's search
+ * controller. Whole-word and regex modes are mutually exclusive; keyboard
+ * navigation follows the UWP control's Enter, Shift+Enter, Tab, and Escape
+ * behavior.
  */
 
 export type FindDirection = 'next' | 'previous';

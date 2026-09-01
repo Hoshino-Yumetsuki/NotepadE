@@ -1,8 +1,4 @@
-/**
- * Pure web-search query builder — editor-agnostic, zero @codemirror imports.
- *
- * Extracted from commands/webSearch.ts for Monaco reuse (T2 → T3).
- */
+/** Pure web-search query builder used by Monaco commands. */
 
 const MAX_SEARCH_LEN = 2000;
 

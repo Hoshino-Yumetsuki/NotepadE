@@ -1,26 +1,11 @@
 /**
- * Editor command + keymap wiring for Monaco (RENDERER, Lane B).
+ * Editor command and keybinding wiring for Monaco.
  *
- * The Monaco counterpart of commands/keymap.ts. It registers every Phase-3 editor
- * command onto a live `IStandaloneCodeEditor`, reusing the editor-agnostic pure
- * cores in `commands/logic/*` (string/number in/out, 87 tests) and mapping their
- * offset-based results onto Monaco edits via `model.getOffsetAt` /
- * `model.getPositionAt` + `editor.executeEdits`.
+ * Pure command cores provide string/number results; this module maps those
+ * results onto Monaco edits and handles the editor's keyboard events.
+ * Custom handlers leave IME composition events untouched.
  *
- * Two registration paths, mirroring the CM6 bundle:
- *   - Keyed commands with stable bindings → `editor.addCommand(KeyMod|KeyCode, …)`.
- *   - The `event.code` / precedence-sensitive cases (Alt+Z word-wrap by physical
- *     KeyZ, Alt+P/Alt+D view-mode, and Ctrl+Z/Y/Shift+Z undo-redo which must beat
- *     Monaco's own bindings) → a single `editor.onKeyDown` handler that reads the
- *     raw `event.code` / `event.shiftKey`, exactly like CM6's `any`-handler
- *     extensions (altCommandExtension / viewModeCommandExtension / undoRedoExtension).
- *
- * IME contract (R1 — the whole reason for the migration): EVERY custom handler
- * bails on `event.isComposing` so a composition keystroke is never intercepted.
- *
- * PA-8: pure renderer code. The only host coupling is via mutable refs
- * (wordWrapToggleRef / viewModeCallbacksRef) and the contextBridge
- * `window.notepads.shell.webSearch` — never fs/path/IPC directly.
+ * Host coupling is limited to callback refs and the typed web-search bridge.
  */
 
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
@@ -41,10 +26,7 @@ import { formatCurrentCultureDateTime, formatLogTimestamp } from './commands/log
 import { buildWebSearchQuery } from './commands/logic/webSearch';
 import { wordWrapToggleRef } from './commands/wordWrapBridge';
 import { viewModeCallbacksRef } from './commands/viewModeBridge';
-import { setWebSearchObserver, emitWebSearchQuery } from './commands/webSearchObserver';
 import { stepEditorZoom } from './zoomRegistry';
-
-export { setWebSearchObserver };
 
 type Editor = monaco.editor.IStandaloneCodeEditor;
 type Model = monaco.editor.ITextModel;
@@ -277,8 +259,6 @@ function runWebSearch(editor: Editor, ctx: MonacoCommandContext): void {
   const selected = model.getValueInRange(sel, monaco.editor.EndOfLinePreference.LF);
   const query = buildWebSearchQuery(selected);
   if (query === null) return;
-  // Renderer-only test observation (no-op in production); never alters the call.
-  emitWebSearchQuery(query);
   const s = ctx.getSettings();
   void window.notepads?.shell.webSearch({
     query,
@@ -288,8 +268,7 @@ function runWebSearch(editor: Editor, ctx: MonacoCommandContext): void {
 }
 
 function setDirection(editor: Editor, dir: 'ltr' | 'rtl'): void {
-  // CM6 set the content `dir` attribute; Monaco's text area lives under the
-  // editor DOM node — set `dir` on the root so the input + rendered lines flip.
+  // Monaco's text area and rendered lines need the same direction attribute.
   editor.getDomNode()?.setAttribute('dir', dir);
 }
 
@@ -357,16 +336,13 @@ export function wireCommands(editor: Editor, ctx: MonacoCommandContext): () => v
   editor.addCommand(KM.CtrlCmd | KM.Shift | KC.KeyU, swallow);
   editor.addCommand(KM.CtrlCmd | KM.Shift | KC.KeyL, swallow);
 
-  // --- event.code / precedence-sensitive cases via raw keydown ---
-  // Mirrors CM6's altCommandExtension / viewModeCommandExtension / undoRedoExtension
-  // `any` handlers: route on physical event.code + shiftKey, guard isComposing,
-  // and preventDefault so Monaco's own handling can't also fire.
+  // Handle physical-key and precedence-sensitive shortcuts before Monaco's
+  // defaults, guarding composition events and preventing duplicate handling.
   const keydownSub = editor.onKeyDown((e: monaco.IKeyboardEvent) => {
     const ev = e.browserEvent;
     if (ev.isComposing) return;
 
-    // Undo / redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y), beating Monaco's defaults so
-    // the shift-strip ambiguity that bit CM6 can't recur and redo is explicit.
+    // Explicitly route undo and redo so modifier variants remain unambiguous.
     if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
       if (ev.code === 'KeyZ') {
         e.preventDefault();

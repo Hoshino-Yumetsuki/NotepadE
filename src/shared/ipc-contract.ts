@@ -3,28 +3,21 @@
  *  window.notepads — THE SOLE IPC CONTRACT (PA-8)
  * ============================================================================
  *
- * This file is the single shared type artifact between the three process tiers
- * (docs/plan/00-overview.md §1). It is the contract that:
- *   - the PRELOAD contextBridge implements verbatim,
- *   - the MAIN ipcMain.handle channels satisfy 1:1,
- *   - the RENDERER consumes (and NOTHING else — no raw ipcRenderer),
- *   - the PA-8 static scan and the Playwright suite assert against.
+ * This file is the single shared type artifact between the Tauri backend and
+ * the renderer. The renderer consumes this contract and nothing else for app
+ * capabilities.
  *
  * Rules baked into these types:
  *   - Every renderer-callable method is `async` and returns a discriminated
  *     union `Result<T>` = `{ ok: true; data: T } | { ok: false; error: string }`.
- *   - Push events (main -> renderer) are exposed as `onX(cb)` subscriptions that
- *     return an `Unsubscribe` function.
+ *   - Push events (backend -> renderer) are exposed as `onX(cb)` subscriptions
+ *     that return an `Unsubscribe` function.
  *   - Bytes never cross IPC into the renderer; only decoded strings + opaque
  *     encoding/EOL labels do. The renderer NEVER re-derives encoding or EOL.
  *
- * Ownership: Lane A (lane-a-main). Do not edit without coordinating via lead.
- *
- * Implementation status for Phase 1 (walking skeleton):
- *   - `file.open` / `file.save` are IMPLEMENTED.
- *   - All other namespaces are TYPE STUBS (stable signatures, no runtime yet)
- *     so Lanes B/C/D can build against a frozen surface without collisions.
+ * Ownership: shared contract for the renderer/backend bridge.
  */
+
 
 // ---------------------------------------------------------------------------
 //  Result envelope + shared primitives
@@ -217,27 +210,8 @@ export interface RecentApi {
   addFolder(path: string): Promise<Result<void>>;
 }
 
-// ---------------------------------------------------------------------------
-//  paths — drag-drop File -> absolute path  (webUtils, PRELOAD-only)
-// ---------------------------------------------------------------------------
-//
-// Under the sandbox the renderer can't read `File.path`. The drop handler hands
-// the dropped `File` to this preload helper, which resolves the absolute path via
-// electron `webUtils.getPathForFile`. PA-8: the `webUtils` import lives ONLY in
-// preload; the renderer just calls `window.notepads.paths.forFile(file)`.
 
-export interface PathsApi {
-  /**
-   * Resolve a dropped `File` to its absolute on-disk path via preload's
-   * `webUtils.getPathForFile`. Returns `''` for a File with no backing path (e.g.
-   * synthetic / in-memory File). Synchronous: webUtils.getPathForFile is sync and
-   * needs no IPC round-trip (it is NOT a `Result<T>` channel).
-   */
-  forFile(file: File): string;
-}
-
-// ---------------------------------------------------------------------------
-//  encoding — ANSI list / decode-with / convert-EOL
+// encoding — ANSI list / decode-with
 // ---------------------------------------------------------------------------
 
 export interface AnsiEncodingEntry {
@@ -250,8 +224,6 @@ export interface EncodingApi {
   listAnsi(): Promise<Result<AnsiEncodingEntry[]>>;
   /** Re-decode the file at `path` using an explicit encoding (reopen-with). */
   decodeWith(path: string, encodingId: EncodingId): Promise<Result<OpenedFile>>;
-  /** Convert EOL of a '\n'-normalized text to the target style (preview only). */
-  convertEol(text: string, eolId: EolId): Promise<Result<string>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -757,7 +729,6 @@ export interface NotepadsApi {
   file: FileApi;
   recent: RecentApi;
   folder: FolderApi;
-  paths: PathsApi;
   encoding: EncodingApi;
   hash: HashApi;
   diff: DiffApi;

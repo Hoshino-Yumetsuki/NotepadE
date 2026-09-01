@@ -66,12 +66,6 @@ export const TabDimensions = {
   /** Icon margin "0,2,6,0" → right gap before the title. */
   iconMarginRight: 6,
   iconMarginTop: 2,
-  /**
-   * @deprecated The modified dot now renders at `iconSize` (10) to reproduce the
-   * UWP Viewbox upscale of the 3×3 FontIcon; the literal 3px size made it a
-   * near-invisible speck. Retained only to avoid a breaking token change.
-   */
-  modifiedDotSize: 3,
   /** Selection indicator bar height (2) at the TOP edge — SetsView.xaml:391. */
   selectionBarHeight: 2,
   /** Top border thickness "0,1,0,0" — SetsView.xaml. */
@@ -143,16 +137,6 @@ export interface TabThemeTokens {
    * sheet (selected tab + editor) casts one coherent shadow on all sides. 0 in HC.
    */
   elevationShadowAlpha: number;
-  /**
-   * @deprecated No longer consumed. Was the peak alpha for the strip→content
-   * boundary band (the soft up-shadow flanking the active tab along the strip's
-   * bottom edge). That band is gone: the selected-tab↔editor merge is now
-   * structural — a single continuous wash layer (App TabSurfaceWash) notches up
-   * under the active tab, so the tab and the editor are one painted sheet with no
-   * boundary shadow to draw. Retained in the contract (set per theme) to avoid a
-   * churny breaking change; safe to drop in a later token cleanup.
-   */
-  elevationBandAlpha: number;
   /** Accent color for the selection bar + modified dot (OS accent / Highlight). */
   accent: string;
 }
@@ -177,8 +161,6 @@ export const LIGHT_TOKENS: TabThemeTokens = {
   // tab↔editor merge.
   elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.15), 3px 0 8px -2px rgba(0,0,0,0.15)',
   elevationShadowAlpha: 0.25,
-  // Faint boundary line (UWP BottomEdgeShadow of a 1px line).
-  elevationBandAlpha: 0.08,
   accent: '#0078D4'
 };
 
@@ -197,8 +179,6 @@ export const DARK_TOKENS: TabThemeTokens = {
   // tab↔editor merge.
   elevationShadow: '-3px 0 8px -2px rgba(0,0,0,0.30), 3px 0 8px -2px rgba(0,0,0,0.30)',
   elevationShadowAlpha: 0.3,
-  // Faint boundary line (UWP BottomEdgeShadow of a 1px line).
-  elevationBandAlpha: 0.12,
   accent: '#0078D4'
 };
 
@@ -221,7 +201,6 @@ export const HC_TOKENS: TabThemeTokens = {
   // HC: no elevation material (flat forced-colors chrome, matches UWP HC).
   elevationShadow: 'none',
   elevationShadowAlpha: 0,
-  elevationBandAlpha: 0,
   accent: 'Highlight'
 };
 

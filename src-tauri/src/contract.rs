@@ -5,8 +5,6 @@
 //! FROZEN after scaffold (task #1). Workers consume these types; shape changes
 //! go through team-lead.
 
-#![allow(dead_code)] // stubs land first; tasks #2-#5 wire the consumers
-
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
@@ -260,18 +258,6 @@ pub struct BrokerRequestArgs {
     pub paths: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force_new_window: Option<bool>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FullScreenResult {
-    pub is_full_screen: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompactOverlayResult {
-    pub is_compact_overlay: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

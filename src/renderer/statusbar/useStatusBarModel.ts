@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { EncodingId, EolId, AnsiEncodingEntry } from '@shared/ipc-contract';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import type { MonacoHandle } from '../editor/MonacoEditor';
-import type { NotepadsTestHook, StatusBarTestHook } from '../editor/test-hook';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { StatusTheme } from './tokens';
 import { type LineColumn } from './statusModel';
@@ -12,15 +11,9 @@ import { DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM } from '../editor/commands/logic/zoom'
 import { getEditorZoom, applyEditorZoom, initEditorZoom } from '../editor/zoomRegistry';
 
 /**
- * useStatusBarModel — derives StatusBarProps from the active tab + its Monaco
- * editor and binds every action to window.notepads (PA-8: no fs/path; all IO via IPC).
- *
- * Caret/selection updates subscribe via Monaco's onDidChangeCursorPosition and
- * onDidChangeModelContent so they are event-driven rather than polled.
- * Zoom percent is tracked in the shared editor/zoomRegistry (a WeakMap keyed on
- * the editor instance), since Monaco has no CM6-style StateField for per-editor
- * state. The keyboard/wheel zoom commands write to the SAME registry so the status
- * bar slider always reflects keyboard-driven zoom and vice-versa.
+ * Derives StatusBarProps from the active tab and Monaco editor, binding actions
+ * to the typed `window.notepads` bridge. Cursor and content updates are event-
+ * driven; zoom is shared through the editor registry.
  */
 
 // Re-exported so existing tests (useStatusBarModel.zoom.test.ts) and any host
@@ -123,9 +116,8 @@ export function useStatusBarModel(args: {
     };
   }, [activeEditorId, getActiveHandle, snapshotCaret]);
 
-  // Poll zoom every 250ms — zoom is still written externally by keyboard commands
-  // (T3) via applyEditorZoom, and there is no Monaco event for font-size changes.
-  // This poll is cheap (a WeakMap lookup) and matches the e2e settle cadence.
+  // Poll because Monaco exposes no event for external font-size changes; the
+  // registry lookup is constant-time and avoids a second state authority.
   useEffect(() => {
     const id = window.setInterval(() => {
       if (zoomDraggingRef.current) return;
@@ -177,20 +169,6 @@ export function useStatusBarModel(args: {
     return () => window.clearInterval(id);
   }, [activeEditorId, filePath, checkFileStatus]);
 
-  // Test seam: window.__notepadsTest.statusbar.checkFileStatus()
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const seam: StatusBarTestHook = { checkFileStatus };
-    const existing = window.__notepadsTest;
-    if (existing) {
-      existing.statusbar = seam;
-    } else {
-      window.__notepadsTest = { statusbar: seam } as unknown as NotepadsTestHook;
-    }
-    return () => {
-      if (window.__notepadsTest) window.__notepadsTest.statusbar = undefined;
-    };
-  }, [checkFileStatus]);
 
   const onReopenWithEncoding = useCallback(
     (id: EncodingId) => {

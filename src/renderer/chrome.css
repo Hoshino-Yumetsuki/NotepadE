@@ -34,9 +34,7 @@ body,
  * Thin always-visible scrollbar, app-wide. Narrow 6px thumb with a subtle
  * semi-transparent tint that darkens on hover, and a transparent track so
  * nothing reserves layout gutter. Thumb tints mirror the UWP OS default:
- * #898989 light / #8A8A8A dark. The editor's own .cm-scroller repeats these
- * via EditorView.theme so the same look applies inside CodeMirror's internal
- * scroller; this block covers every other surface (settings pane, flyouts, etc.).
+ * #898989 light / #8A8A8A dark.
  */
 * {
   scrollbar-width: thin;
@@ -59,7 +57,6 @@ body,
 :hover::-webkit-scrollbar-thumb {
   background-color: rgba(137, 137, 137, 0.6);
 }
-.cm-scroller::-webkit-scrollbar-corner,
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
@@ -85,20 +82,13 @@ body,
  * native controls (custom chrome <button>s, the color <input>, etc.) that would
  * otherwise show the bare UA ring.
  *
- * The EDITOR is excluded entirely: UWP's RichEditBox shows no focus rectangle, and
- * :focus-visible matches a contenteditable/textarea even on a MOUSE click (the user
- * is about to type) — which is exactly the "mouse click now rings too" regression.
- * Suppress both :focus and :focus-visible on the CodeMirror surface (.cm-content)
- * AND the Monaco surface (.monaco-editor + its .inputarea/textarea, which receives
- * focus when you click into the editor) so clicking or tabbing into the editor draws
- * nothing, matching UWP.
+ * The Monaco editor is excluded: UWP's RichEditBox shows no focus rectangle,
+ * and clicking or tabbing into the editor must not draw a focus ring.
  */
 :focus-visible {
   outline: 2px solid var(--colorStrokeFocus2, Highlight);
   outline-offset: -2px;
 }
-.cm-content:focus,
-.cm-content:focus-visible,
 .monaco-editor:focus,
 .monaco-editor:focus-visible,
 .monaco-editor .inputarea:focus,
@@ -189,14 +179,8 @@ body,
 }
 
 /*
- * Settings pane slide-in (UWP RootSplitView Overlay, PanePlacement=Right). The
- * slide is a CSS keyframe — NOT a React-state-driven inline transform — so the
- * element's RESTING transform is translateX(0) (on-screen). A state-held
- * translateX(100%) off-screen start (the prior approach) raced React re-renders:
- * any reconcile while the pane was still "not entered" rewrote the inline
- * transform back off-screen and clobbered the e2e capture pin, dropping nav
- * clicks. With the keyframe, React never writes transform, so the resting box is
- * always on-screen and the animation alone supplies the motion.
+ * Settings pane slide-in. React leaves the resting transform on-screen while
+ * the keyframe supplies the compositor-only motion.
  */
 @keyframes np-settings-enter {
   from {
@@ -324,12 +308,6 @@ body,
   }
 }
 
-.cm-editor.cm-focused,
-.cm-editor,
-.cm-scroller {
-  outline: none !important;
-  box-shadow: none !important;
-}
 
 /*
  * Dialog entrance (UWP ContentDialog open transition). The dialog surface scales

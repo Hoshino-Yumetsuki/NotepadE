@@ -27,9 +27,9 @@ import type { EncodingId, EolId } from '@shared/ipc-contract';
  *   - jumpTo (Ctrl+1..9)                        — 1-based, 9 == LAST tab
  *   - setModified / setFilePath / setLabels / setViewMode / setCaret / setScroll
  *
- * The store is a module-level singleton so the Playwright test seam can read a
- * synchronous snapshot (getSnapshot) without touching React. The React hook
- * (useTabsStore) subscribes via useSyncExternalStore for tear-free renders.
+ * The store is a module-level singleton so callers can read a synchronous
+ * snapshot (getSnapshot) without touching React. The React hook (useTabsStore)
+ * subscribes via useSyncExternalStore for tear-free renders.
  *
  * Close semantics (UWP NotepadsCore): closing the ACTIVE tab activates its
  * right neighbour if one exists, else the new last tab. Closing a non-active
@@ -113,7 +113,7 @@ export class TabsStore {
   private snapshot: TabsSnapshot = { tabs: [], activeEditorId: null };
   private listeners = new Set<() => void>();
 
-  // --- subscription plumbing (useSyncExternalStore + test seam) ------------
+  // --- subscription plumbing for useSyncExternalStore ----------------------
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);

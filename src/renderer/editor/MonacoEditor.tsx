@@ -24,12 +24,8 @@ import { attachCurrentLineEdge } from './currentLineEdge';
 (globalThis as unknown as { monaco?: typeof monaco }).monaco ??= monaco;
 
 /**
- * Imperative handle the host (App) uses to drive the editor without owning the
- * Monaco instance. API-compatible with the legacy CodeMirrorHandle so the host's
- * editorHandles map, save pipeline and find/status seams can drive either editor:
- *   - `setDoc` / `getShadowText` / `focus` / `tryInsertLogEntry` are identical.
- *   - `getEditor()` replaces `getView()` (returns the Monaco editor, not a CM6
- *     EditorView).
+ * Imperative editor surface owned by App for document, focus, log insertion,
+ * and command wiring.
  */
 export interface MonacoHandle {
   /** Replace the entire document with `text`, normalized to the '\n' shadow buffer. */
@@ -116,16 +112,11 @@ function selectionColor(themeMode: 'light' | 'dark' | 'hc', accentColor: string)
 }
 
 /**
- * Define the three NotepadE themes. Each is TRANSPARENT
- * (`editor.background:#00000000`, `editorGutter.background:#00000000`) so the OS
- * acrylic shows through, with a subtle current-line wash matching the CM6 values
- * (dark #ffffff0d ≈ rgba(255,255,255,0.05) / light #7f7f7f14 ≈
- * rgba(127,127,127,0.08)) and the accent-derived selection. HC inherits the
- * built-in hc-black (forced flat system colors) but still pins a transparent
- * editor background so the window chrome stays consistent.
+ * Define the three NotepadE themes. Each keeps the editor and gutter
+ * transparent so the native window material shows through, with a subtle
+ * current-line wash and accent-derived selection.
  *
- * Re-running defineTheme for an already-defined name just updates it (so calling
- * this on accent change rebuilds the selection color live).
+ * Re-running defineTheme updates the selection color when the accent changes.
  */
 function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): void {
   const selection = selectionColor(themeMode, accentColor);
@@ -138,9 +129,7 @@ function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): 
       'editorGutter.background': '#00000000',
       'editor.lineHighlightBackground': '#7f7f7f14',
       'editor.lineHighlightBorder': '#00000000',
-      // Electron/CM6 muted line numbers (0.6α rest / 0.95α active). Monaco's
-      // default light line number is teal (#237893), which read as a different
-      // color from the editor body — restore the neutral gray.
+      // Keep line numbers neutral against the transparent editor surface.
       'editorLineNumber.foreground': '#00000099',
       'editorLineNumber.activeForeground': '#000000f2',
       // Neutralize the IDE highlight tokens so nothing tints the surface even if
@@ -164,7 +153,7 @@ function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): 
       'editorGutter.background': '#00000000',
       'editor.lineHighlightBackground': '#ffffff0d',
       'editor.lineHighlightBorder': '#00000000',
-      // Electron/CM6 muted line numbers (0.6α rest / 0.95α active).
+      // Keep line numbers neutral against the transparent editor surface.
       'editorLineNumber.foreground': '#eeeeee99',
       'editorLineNumber.activeForeground': '#eeeeeef2',
       'editorBracketMatch.background': '#00000000',
@@ -189,16 +178,11 @@ function defineThemes(themeMode: 'light' | 'dark' | 'hc', accentColor: string): 
 }
 
 /**
- * Monaco editor mount (RENDERER, Lane B) as a PLAIN TEXT editor. One
- * IStandaloneCodeEditor over one model whose EOL is pinned to LF (the shadow
- * buffer). API-compatible imperative handle so the host drives it like the CM6
- * editor did.
+ * Mount a plain-text Monaco editor whose model uses LF as its internal EOL.
+ * The imperative handle lets the host drive document, focus, and command work.
  *
- * The acrylic "材质" fix is central: the themes paint a transparent editor +
- * gutter background, monaco-acrylic.css forces the remaining opaque Monaco layers
- * transparent, and a non-promoted gutter material strip (reproducing CM commit
- * 7b18f6b) is injected on `.monaco-editor` so the gutter reads as its own faintly
- * darker acrylic panel without blocking the OS material.
+ * The themes and monaco-acrylic.css keep the editor transparent while a
+ * non-promoted gutter strip provides the intended local contrast.
  */
 export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function MonacoEditor(
   {
@@ -243,10 +227,8 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
   contextMenuAttachRef.current = contextMenuAttach;
   const onReadyRef = useRef<((handle: MonacoHandle) => void) | undefined>(onReady);
   onReadyRef.current = onReady;
-  // Host-authoritative document parked here ONLY while no editor exists. Once a
-  // live model holds the doc this is cleared; re-captured on unmount so a remount
-  // (React StrictMode double-mount, tab key change) restores it. Mirrors the CM6
-  // docRef contract — Monaco's model survives detaching, so we re-park the string.
+  // Park the document only while no editor exists. Monaco's model owns it while
+  // mounted; recapture the text on unmount so a remount can restore the buffer.
   const docRef = useRef<string | null>(null);
   // Live editor-behavior settings, read by the command wiring (tabAsSpaces /
   // smartCopy / base fontSize). A ref keeps the mount-once command handlers
@@ -372,9 +354,8 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       // Plain-text editor: strip the IDE chrome.
       minimap: { enabled: false },
       lineNumbers: showLineNumbers ? 'on' : 'off',
-      // Trim the native gutter to the original tight column: a plain-text editor
-      // has no glyphs/folding/decorations, and the 5-digit default min reserves
-      // dead space. This makes Monaco's gutter read like the pre-migration column.
+      // Trim the native gutter to the tight column needed by plain text: there
+      // are no glyphs, folding controls, or decorations to reserve space.
       glyphMargin: false,
       folding: false,
       lineDecorationsWidth: 10,
@@ -398,20 +379,13 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
       // one continuous full-width band ourselves instead; keep native 'none' so
       // the two never double-composite.
       renderLineHighlight: 'none',
-      // Plain-text Notepad has no IDE affordances. These default ON in Monaco and
-      // paint over our acrylic surface: bracket matching draws a GREEN box on the
-      // current line near brackets; selection/occurrence highlight draws BLUE
-      // bordered boxes around matching text. CM6 had none of these — disable them.
+      // Plain-text Notepad has no IDE affordances. Disable Monaco's default
+      // bracket, selection, and occurrence highlights over the acrylic surface.
       matchBrackets: 'never',
       selectionHighlight: false,
       occurrencesHighlight: 'off',
-      // Newline + indentation is owned ENTIRELY by Monaco's native Enter (a single
-      // EditContext input path). 'full' preserves the current line's leading
-      // whitespace on Enter for plain text — the same effect the old custom
-      // runAutoIndent produced, but without a competing executeEdits that left the
-      // caret a line behind and a trailing blank line at EOF (keydown.preventDefault
-      // cannot cancel an EditContext text insertion, so the custom path could never
-      // win — it only double-edited).
+      // Monaco's native Enter owns newline and indentation. `full` preserves
+      // the current line's leading whitespace without a competing edit path.
       autoIndent: 'full',
       fontFamily,
       fontSize,
@@ -446,8 +420,7 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     // Seed the shared zoom registry at 100% on the host-provided base font size,
     // so keyboard/wheel zoom and the status-bar slider share one source of truth.
     initEditorZoom(editor, fontSize);
-    // The model owns the doc now; drop the parked string so a large file is
-    // retained once (in the model), not twice (mirrors the CM6 docRef contract).
+    // The model owns the document now, so release the parked duplicate string.
     docRef.current = null;
 
     // fontStyle (italic/oblique) — Monaco has no option for it; apply via CSS.

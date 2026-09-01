@@ -1,19 +1,12 @@
 /**
  * Print integration — RENDERER, Lane B (Phase 6).
  *
- * Ports the UWP Print path (Controls/Print/PrintArgs + PrintPageFormat): print the
- * CURRENT document (Ctrl+P) or ALL open documents (Ctrl+Shift+P). UWP renders a
- * dedicated print page; the web port mirrors that by laying out a print-only DOM
- * surface, then asking MAIN to drive the OS print flow via
- * `window.notepads.shell.print()` (which calls webContents.print()).
+ * Ports the UWP print path: print the current document (Ctrl+P) or all open
+ * documents (Ctrl+Shift+P). The renderer builds a print-only DOM surface and
+ * calls `window.notepads.shell.print()`, which delegates to `window.print()`.
  *
- * Because MAIN prints the focused window's webContents, the renderer must make the
- * visible-to-print DOM be exactly the document(s) to print. We do this with a
- * dedicated print host element + a print-only stylesheet that hides the live app
- * chrome under `@media print`. The host is populated right before the print call
- * and cleared after it resolves, so it never affects the on-screen UI.
- *
- * PA-8: pure renderer/DOM + the typed bridge. No fs/path/child_process, no raw IPC.
+ * The dedicated print host is hidden on screen and the print stylesheet hides
+ * the live app chrome, so only the requested documents paginate.
  */
 
 import { useCallback } from 'react';

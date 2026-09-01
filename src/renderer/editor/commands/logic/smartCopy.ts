@@ -1,17 +1,4 @@
-/**
- * Pure smart-copy trim logic — editor-agnostic, zero @codemirror imports.
- *
- * Self-contained as of the Monaco migration (T6): the pure trim computation
- * lives here outright (no longer re-exported from the deleted CM6 `../smartCopy`).
- *
- * UWP trim rule (TextEditorCore.SmartlyTrimTextSelection):
- *   - whitespace chars are ' ', '\t', and the line-break char.
- *   - if the selection is ALL whitespace → leave it untouched (copy verbatim).
- *   - leading whitespace is trimmed, but the trim START is pulled back to AFTER
- *     the LAST line break within the leading-whitespace run (so leading spaces on
- *     the first content line are kept; whole blank leading lines are dropped).
- *   - trailing whitespace (spaces/tabs/breaks) is trimmed.
- */
+/** Pure whitespace trimming used by smart-copy. */
 
 const WS = new Set([' ', '\t', '\n']);
 

@@ -236,7 +236,8 @@ fn read_chunk_from_file(
     offset: u64,
     encoding_id: &str,
 ) -> Result<StreamedFileChunk, String> {
-    file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|e| e.to_string())?;
     let mut bytes = Vec::with_capacity(CHUNK_SIZE);
     std::io::Read::by_ref(file)
         .take(CHUNK_SIZE as u64)
@@ -331,7 +332,6 @@ fn stream_chunks_inner(
         },
     })
 }
-
 
 fn session_path(session_id: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(session_id);
@@ -488,10 +488,16 @@ pub async fn file_save_large_finish(
 ) -> NpResult<SaveResult> {
     tauri::async_runtime::spawn_blocking(move || {
         let session = session_path(&session_id)?;
-        let target_tmp = PathBuf::from(format!("{file_path}.notepade-save-tmp-{}", next_stream_id()));
+        let target_tmp = PathBuf::from(format!(
+            "{file_path}.notepade-save-tmp-{}",
+            next_stream_id()
+        ));
         fs::copy(&session, &target_tmp).map_err(|e| e.to_string())?;
 
-        let backup = PathBuf::from(format!("{file_path}.notepade-save-backup-{}", next_stream_id()));
+        let backup = PathBuf::from(format!(
+            "{file_path}.notepade-save-backup-{}",
+            next_stream_id()
+        ));
         let had_target = PathBuf::from(&file_path).exists();
         if had_target {
             fs::rename(&file_path, &backup).map_err(|e| {
@@ -527,7 +533,6 @@ pub async fn file_save_large_finish(
         NpResult::from,
     )
 }
-
 
 #[tauri::command]
 pub async fn file_discard_large(session_id: String) -> NpResult<()> {
@@ -620,7 +625,8 @@ mod tests {
     }
     #[test]
     fn baseline_matches_normalized_stream_content() {
-        let path = std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
+        let path =
+            std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
         let source = "one\r\ntwo\n支付宝".repeat(20_000);
         fs::write(&path, source.as_bytes()).unwrap();
         let (hash, length) = baseline_for_file(&path.to_string_lossy(), "UTF-8").unwrap();

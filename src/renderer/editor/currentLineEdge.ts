@@ -1,31 +1,9 @@
 /**
- * Current-line highlight (RENDERER, Monaco port) — fully manual.
+ * Manual current-line highlight for Monaco.
  *
- * Monaco's native `renderLineHighlight` band is painted INSIDE `.overflow-guard`
- * (`overflow:hidden`), which starts at the content-box left — i.e. AFTER the CSS
- * `padding-left` inset on `.monaco-editor`. So the native band can never reach
- * into the padding strip: the gray stops short of the window's left edge, leaving
- * a visible gap. A small filler strip in `[0, inset)` bridges the gap but leaves a
- * seam where it meets Monaco's band (two layers compositing over acrylic at
- * slightly different boundaries) — the "缺了一块" the user reported.
- *
- * The robust fix is to draw the WHOLE current-line band ourselves as ONE piece,
- * and disable Monaco's native band (see MonacoEditor: renderLineHighlight 'none').
- * This overlay is a single full-width strip appended to the editor ROOT (which is
- * `overflow:visible` and spans the full padding box), painted behind Monaco's
- * transparent content layers (`z-index:-1` + `isolation:isolate` on the root) so
- * line numbers and text render on top. It tracks the active line's Y and spans
- * `[0, clientWidth)` — continuous from the window's left edge, across the gutter,
- * through the text, to the right edge. No seam, no missing chunk.
- *
- * THEME: light/dark aware, matching the old `editor.lineHighlightBackground`
- * token exactly. HC paints no line highlight → the attach is inert (no-op
- * disposer).
- *
- * Perf: only `top`/`height`/`width`/`opacity` are written synchronously on each
- * cursor/scroll/layout event — no rAF deferral, so the band never lags Monaco.
- *
- * PA-8: pure renderer data + DOM-only positioning.
+ * A single full-width overlay spans the gutter and text area, follows the
+ * active line, and stays behind Monaco's transparent content layers.
+ * High-contrast mode disables it; updates write only positioning and opacity.
  */
 
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
@@ -34,13 +12,7 @@ export interface CurrentLineEdgeOptions {
   themeMode: 'light' | 'dark' | 'hc';
 }
 
-/**
- * Current-line band color per theme. These match the Monaco theme tokens that
- * `renderLineHighlight` used to paint (`editor.lineHighlightBackground`): light
- * `#7f7f7f14`, dark `#ffffff0d`. The band composites over the same transparent
- * acrylic surface as the text, so the resulting shade is identical to the old
- * native band. HC paints no line highlight → 'transparent' (attach is a no-op).
- */
+/** Current-line band color per theme. */
 export function currentLineEdgeColor(themeMode: 'light' | 'dark' | 'hc'): string {
   if (themeMode === 'hc') return 'transparent';
   return themeMode === 'dark' ? '#ffffff0d' : '#7f7f7f14';

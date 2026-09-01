@@ -21,13 +21,7 @@ use crate::result::NpResult;
 
 const SETTINGS_FILE_NAME: &str = "Settings.json";
 
-/// Resolve the userData root. Honors NOTEPADS_E2E_USERDATA override.
 fn app_data_dir(app: &tauri::AppHandle) -> PathBuf {
-    if let Ok(ov) = std::env::var("NOTEPADS_E2E_USERDATA") {
-        if !ov.is_empty() {
-            return PathBuf::from(ov);
-        }
-    }
     app.path()
         .app_data_dir()
         .expect("app_data_dir should exist")

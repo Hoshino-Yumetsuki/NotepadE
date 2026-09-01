@@ -69,7 +69,7 @@ The preview scrolls in lock-step with the editor, so the rendered output always 
 
 ## Building from source:
 
-NotepadE is built with Tauri, React, Fluent UI v9, TypeScript, CodeMirror 6, and Vite. You will need Node.js 20+, [Yarn](https://yarnpkg.com/) 4, and the [Rust toolchain](https://rustup.rs/).
+NotepadE is built with Tauri, React, Fluent UI v9, TypeScript, Monaco, and Vite. You will need Node.js 20+, [Yarn](https://yarnpkg.com/) 4, and the [Rust toolchain](https://rustup.rs/).
 
 ```bash
 # Install dependencies
@@ -117,7 +117,7 @@ NotepadE is 100% open source. Feel free to review the source code or build your 
 - [Tauri](https://tauri.app/)
 - [React](https://react.dev/)
 - [Fluent UI](https://github.com/microsoft/fluentui)
-- [CodeMirror 6](https://codemirror.net/)
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/)
 - [markdown-it](https://github.com/markdown-it/markdown-it)
 - [mdit-plugins](https://github.com/mdit-plugins/mdit-plugins)
 - [DOMPurify](https://github.com/cure53/DOMPurify)

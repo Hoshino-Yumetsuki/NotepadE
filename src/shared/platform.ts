@@ -5,7 +5,6 @@
  * platform-appropriate shortcuts without ad-hoc userAgent checks.
  *
  * - isMac  → macOS (Darwin)
- * - isWindows → Windows (win32)
  * - modKey → "⌘" or "Ctrl" for display labels
  */
 
@@ -23,13 +22,6 @@ export const isMac = ((): boolean => {
   return false;
 })();
 
-export const isWindows = ((): boolean => {
-  if (UA) return UA.includes('Windows');
-  if (typeof process !== 'undefined' && process?.platform) {
-    return process.platform === 'win32';
-  }
-  return false;
-})();
 
 /** Display label for the primary modifier key. */
 export const modKey = isMac ? '⌘' : 'Ctrl';

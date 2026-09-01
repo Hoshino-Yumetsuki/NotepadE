@@ -1,18 +1,8 @@
 /**
- * ============================================================================
- *  window.notepads bridge — Tauri v2 shim (replaces Electron preload)
- * ============================================================================
+ * `window.notepads` bridge over Tauri invoke/listen.
  *
- * Implements the EXACT window.notepads contract (src/shared/ipc-contract.ts)
- * over @tauri-apps/api invoke/listen. Each method maps to its Tauri snake_case
- * Rust command; each onX subscription maps to a Tauri event listener.
- *
- * Installed onto window.notepads BEFORE React mounts (src/renderer/main.tsx),
- * GUARDED: only when '__TAURI_INTERNALS__' is in window — vitest/jsdom keeps
- * using its test mocks, and this bridge never activates there.
- *
- * PA-8: this is the ONLY renderer file that imports @tauri-apps/api. Every
- * other renderer file calls window.notepads exclusively.
+ * Installed before React mounts. It is active only inside a Tauri webview;
+ * Vitest/jsdom keeps its test mocks.
  */
 
 import { Channel, invoke } from '@tauri-apps/api/core';
@@ -50,13 +40,8 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * Convert an Electron IPC channel name (e.g. 'notepads:file:open') to its
- * Tauri snake_case command name (e.g. 'file_open').
- *
- * Algorithm:
- *   1. Strip the 'notepads:' prefix.
- *   2. Replace ':' with '_'.
- *   3. Convert camelCase to snake_case.
+ * Convert a bridge channel name (e.g. `notepads:file:open`) to its Tauri
+ * command name (e.g. `file_open`). Converts separators and camelCase.
  */
 function channelToCommand(channel: string): string {
   const stripped = channel.startsWith('notepads:') ? channel.slice('notepads:'.length) : channel;
@@ -65,21 +50,17 @@ function channelToCommand(channel: string): string {
 
 /**
  * Invoke a Tauri command and return the Result<T> envelope.
- * Rust commands return NpResult<T> = {ok,data|error} — Tauri deserialises it
- * verbatim; we just forward the typed promise.
+ * Rust commands return NpResult<T> = {ok,data|error}; Tauri deserializes it
+ * verbatim, so the typed promise can be forwarded directly.
  */
 function call<T>(cmd: string, args?: Record<string, unknown>): Promise<Result<T>> {
   return invoke<Result<T>>(cmd, args);
 }
 
 /**
- * Subscribe to a Tauri event. Returns a synchronous Unsubscribe closure
- * (contract-conformant) that calls the async unlisten once it resolves.
- *
- * The electron preload's subscribe was synchronous (ipcRenderer.on returns
- * immediately). Tauri's listen() returns a Promise<UnlistenFn>, so we eagerly
- * start listening and store the resolved unlisten fn. The returned closer is
- * safe to call before the promise resolves (it's a no-op).
+ * Subscribe to a Tauri event. Returns a synchronous Unsubscribe closure that
+ * calls the async unlisten once it resolves. The closer is safe to call before
+ * the promise resolves.
  */
 function subscribe<T>(eventName: string, cb: (payload: T) => void): Unsubscribe {
   let unlisten: UnlistenFn | null = null;
@@ -102,8 +83,7 @@ function subscribe<T>(eventName: string, cb: (payload: T) => void): Unsubscribe 
 }
 
 // ---------------------------------------------------------------------------
-//  Channel constants — exact strings from src/shared/ipc-channels.ts
-//  (duplicated here so the bridge has zero dependencies on the Electron side)
+// Tauri command and event names (kept local to this bridge).
 // ---------------------------------------------------------------------------
 
 const C = {
@@ -120,7 +100,6 @@ const C = {
   // encoding
   EncodingListAnsi: 'notepads:encoding:listAnsi',
   EncodingDecodeWith: 'notepads:encoding:decodeWith',
-  EncodingConvertEol: 'notepads:encoding:convertEol',
   // session
   SessionSnapshot: 'notepads:session:snapshot',
   SessionLoadLast: 'notepads:session:loadLast',
@@ -164,7 +143,7 @@ const C = {
   EvtSettingsChanged: 'notepads:evt:settings:changed',
   EvtAppActivation: 'notepads:evt:app:activation',
   EvtAppProtocol: 'notepads:evt:app:protocol',
-  // window push events (keep full Electron names as Tauri event names)
+  // window push events
   WindowMaximizeChanged: 'notepads:window:maximizeChanged',
   EvtWindowCloseRequested: 'notepads:evt:window:closeRequested'
 };
@@ -243,20 +222,10 @@ const api: NotepadsApi = {
     stopWatch: (path) => call<void>('folder_stop_watch', { path }),
     onFolderChanged: (cb) => subscribe<string>('notepads:evt:folder:changed', cb)
   },
-  paths: {
-    /**
-     * No webview equivalent for electron's webUtils.getPathForFile.
-     * Drop handling moves to Tauri's native onDragDropEvent which provides
-     * absolute paths directly — this method stays inert (returns '').
-     */
-    forFile: (_file: File) => ''
-  },
   encoding: {
     listAnsi: () => call<AnsiEncodingEntry[]>(channelToCommand(C.EncodingListAnsi)),
     decodeWith: (path, encodingId) =>
-      call<OpenedFile>(channelToCommand(C.EncodingDecodeWith), { path, encodingId }),
-    convertEol: (text, eolId) =>
-      call<string>(channelToCommand(C.EncodingConvertEol), { text, eolId })
+      call<OpenedFile>(channelToCommand(C.EncodingDecodeWith), { path, encodingId })
   },
   hash: {
     compute: (text) => call<number>('compute_text_hash', { text })

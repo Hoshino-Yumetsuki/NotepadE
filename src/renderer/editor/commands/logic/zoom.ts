@@ -1,10 +1,4 @@
-/**
- * Pure zoom math — editor-agnostic, zero @codemirror imports.
- *
- * Self-contained as of the Monaco migration (T6): the pure zoom percent model
- * (clamp [10,500], snap-then-step by 10) lives here outright, no longer re-exported
- * from the deleted CM6 `../zoom`. Ported 1:1 from UWP TextEditorCore.FontSize.cs.
- */
+/** Pure zoom math used by editor commands. */
 
 export const MIN_ZOOM = 10;
 export const MAX_ZOOM = 500;

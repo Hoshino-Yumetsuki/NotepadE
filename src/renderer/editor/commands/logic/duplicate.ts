@@ -1,8 +1,4 @@
-/**
- * Pure duplicate-line/selection logic — editor-agnostic, zero @codemirror imports.
- *
- * Extracted from commands/duplicate.ts for Monaco reuse (T2 → T3).
- */
+/** Pure duplicate-line and selection logic used by Monaco commands. */
 
 export interface DuplicateResult {
   /** Text to insert. */

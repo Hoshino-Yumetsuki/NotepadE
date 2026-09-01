@@ -1,34 +1,24 @@
 import { FluentProvider, Spinner } from '@fluentui/react-components';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import type { OpenedFile, UpdateInfo } from '@shared/ipc-contract';
+import type { UpdateInfo } from '@shared/ipc-contract';
 import { isMac } from '@shared/platform';
 import { MonacoEditor, type MonacoHandle } from './editor/MonacoEditor';
 import { PieceTreeLargeFileEditor } from './editor/PieceTreeLargeFileEditor';
-import { installTestHook, installEditorTestHook, type OpenLabels } from './editor/test-hook';
 import { useFindBar } from './editor/search/useFindBar';
 import { resolveFontFamily } from './editor/fontFamily';
 import { TabStrip } from './tabs/TabStrip';
 import { useTabsStore, tabsStore, setUntitledBaseName } from './tabs/useTabsStore';
 import { useTabKeyboard } from './tabs/useTabKeyboard';
-import { installTabsTestHook } from './tabs/tabsTestHook';
 import { StatusBar } from './statusbar/StatusBar';
 import { useStatusBarModel } from './statusbar/useStatusBarModel';
-import { recordLastSaved, forgetEditor } from './statusbar/fileStatusTracker';
+import { forgetEditor } from './statusbar/fileStatusTracker';
 import { useSettings } from './settings/useSettings';
 import { useAppTheme } from './theme/useAppTheme';
-import { installSettingsTestHook } from './settings/settingsTestHook';
 import { appRootBackground, isWallpaperActive, wallpaperLayerStyle } from './theme/wallpaper';
 import { useWallpaper } from './theme/useWallpaper';
 import { edgeShadowStyle, EDGE_SHADOW_BLUR } from './theme/shadow';
-import {
-  applyAdopt,
-  applyRelease,
-  beginTransfer,
-  handleVoidDrop,
-  installTransferTestHook,
-  type TransferTextSource
-} from './tabs/transferWiring';
+import { applyAdopt, applyRelease, beginTransfer, handleVoidDrop, type TransferTextSource } from './tabs/transferWiring';
 import { wordWrapToggleRef } from './editor/commands/wordWrapBridge';
 import { usePrint } from './integrations/usePrint';
 import { useShare } from './integrations/useShare';
@@ -52,14 +42,8 @@ import { useFilePipeline } from './integrations/useFilePipeline';
 import { useTauriWindow } from './integrations/useTauriWindow';
 
 /**
- * Heavy secondary panes loaded LAZILY (cold-start win, visually transparent):
- * none are visible at first paint — they mount only on a user action (Alt+P /
- * Alt+D / Ctrl+,). Splitting them out pulls the MarkdownPreview chunk, the diff
- * package (DiffViewer), and the four settings panes (SettingsSurface) out of
- * the first-paint chunk. Each is a NAMED export, so React.lazy gets a
- * synthesized default. Their mount sites are wrapped in <Suspense
- * fallback={null}> — a one-frame async on a user-triggered mount is
- * imperceptible, so there is zero visible change.
+ * Heavy secondary panes load lazily because they are hidden at first paint.
+ * User-triggered mounts are wrapped in a null Suspense fallback.
  */
 const MarkdownPreview = lazy(() =>
   import('./markdown/MarkdownPreview').then((m) => ({ default: m.MarkdownPreview }))
@@ -73,21 +57,12 @@ const FolderSidebar = lazy(() =>
 );
 
 /**
- * App shell (Phase 2). Mounts FluentProvider with the hardcoded base theme
- * (Dark #2E2E2E / Light #F0F0F0) and the SetsView TabStrip above a multi-editor
- * surface.
+ * App shell. Each tab owns a live Monaco instance; inactive editors stay
+ * mounted so document, caret, and scroll state survive tab switches.
  *
- * Multi-editor model (docs/plan/03 task #1d): each tab owns its own live CM6
- * instance. All editors stay mounted; only the active one is visible (the others
- * are display:none), so each tab preserves its document / caret / scroll across
- * switches exactly like the UWP per-tab TextEditor instances. Closing a tab
- * unmounts its editor and frees the handle.
- *
- * Authority contract (docs/plan/04 §3.A): MAIN sends {decodedText, encodingId,
- * eolId}; the renderer normalizes decodedText into a '\n' shadow buffer and
- * keeps encodingId/eolId as OPAQUE per-tab labels — never re-derived.
+ * MAIN supplies decoded text plus opaque encoding/EOL labels. The renderer
+ * keeps those labels per tab and edits an LF shadow buffer.
  */
-
 export function App(): JSX.Element {
   // Live app theme (Phase 5, Lane C): resolves themeMode + OS theme + accent into
   // a FluentProvider theme and the active 'light'|'dark'|'hc' bucket, recomputed
@@ -100,9 +75,8 @@ export function App(): JSX.Element {
   // user prefers reduced motion the pane renders with no animation at all.
   const reducedMotion = usePrefersReducedMotion();
 
-  // Custom caption buttons render on ALL platforms (unified Windows design).
-  // Electron's isFrameless gating (Windows/Mac only) is removed — Tauri enables
-  // frameless windows everywhere via decorations:false in tauri.conf.json.
+  // Custom caption buttons render on every platform. Tauri uses frameless
+  // windows everywhere via decorations:false in tauri.conf.json.
 
   // Live settings bag (MAIN-owned). Shared by the settings surface, the live
   // status-bar visibility (showStatusBar), and the theme resolution above.
@@ -149,20 +123,15 @@ export function App(): JSX.Element {
 
   // One editor handle per editorId. Large files use Monaco's streamed Piece Tree.
   const editorHandles = useRef<Map<string, MonacoHandle | null>>(new Map());
-  // Opaque labels for the ACTIVE editor (carried back to MAIN on save).
-  const labelsRef = useRef<OpenLabels>({ encodingId: null, eolId: null });
 
   // Custom dirty state manager hook
   const { lastSavedTextRef, baselineRef, recomputeDirty } = useDirtyState(store, editorHandles);
 
-  // A no-value re-render pulse: while a content pane (preview/diff) is open we bump
-  // this on every doc change so the pane re-reads the live shadow text (CM6 owns
-  // the doc, so App otherwise doesn't re-render on keystrokes). The bump is
-  // DEBOUNCED (B1) — see paneEditorExtensions below — so a burst of keystrokes
-  // collapses to ~one re-render after typing settles instead of one per keystroke
-  // (the markdown + diff recompute were the two HIGH jank hotspots). This timer
-  // holds the pending trailing pulse; it is cleared on each new change and on
-  // unmount so no stray bump fires into a torn-down tree.
+  // A no-value re-render pulse: while a content pane (preview/diff) is open we
+  // bump this on every doc change so the pane re-reads the live shadow text
+  // (Monaco owns the doc, so App otherwise doesn't re-render on keystrokes).
+  // The trailing debounce collapses bursts into one settled recompute.
+  // The timer is cleared on each new change and on unmount.
   const [, bumpDocVersion] = useState(0);
   const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -203,14 +172,9 @@ export function App(): JSX.Element {
   const find = useFindBar({ getActiveEditor, activeEditorReadyKey, isActiveEditorLoading });
 
   // Schedule the trailing-debounced preview/diff re-render pulse for `editorId`.
-  // While a pane is open App must re-render so MarkdownPreview / DiffViewer reflect
-  // live typing (Monaco owns the doc; App doesn't otherwise re-render per keystroke).
-  // TRAILING-DEBOUNCED ~150ms (B1): each doc change reschedules the single pending
-  // timer, so a run of keystrokes fires at most one bump ~150ms after typing settles
-  // — identical final output, far fewer markdown/diff recomputes. Only pulses while
-  // THAT tab has a preview/diff pane open (gating preserved from the old CM6
-  // updateListener). Driven from each MonacoEditor's onDocChanged. pulseTimerRef /
-  // bumpDocVersion are declared above.
+  // App re-renders while a pane is open so MarkdownPreview / DiffViewer reflect
+  // live typing. A burst of keystrokes produces one recompute after typing settles.
+  // Driven from each MonacoEditor's onDocChanged.
   const schedulePanePulse = useCallback((editorId: string): void => {
     const vm = tabsStore.get(editorId)?.viewMode;
     if (!vm || !(vm.preview || vm.diff)) return;
@@ -383,109 +347,16 @@ export function App(): JSX.Element {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Keep labelsRef pointed at the active tab's opaque labels.
-  useEffect(() => {
-    if (!activeEditorId) {
-      labelsRef.current = { encodingId: null, eolId: null };
-      return;
-    }
-    const tab = store.get(activeEditorId);
-    labelsRef.current = tab
-      ? { encodingId: tab.encodingId, eolId: tab.eolId }
-      : { encodingId: null, eolId: null };
-  }, [activeEditorId, tabs, store]);
-
-  const onFileOpened = useCallback(
-    (file: OpenedFile): void => {
-      const id = store.activeEditorId;
-      if (!id) return;
-      // Seed the doc as soon as the editor handle is registered. Call once
-      // synchronously (the handle is usually already present — the common open
-      // path; setDoc itself tolerates an unmounted view via docRef), and retry
-      // via setTimeout(0) ONLY while the handle is still null. NOT rAF: the
-      // Playwright primary window never composites, so rAF callbacks never fire
-      // and the seed would starve (it also starves a minimized/occluded window
-      // in production); setTimeout fires regardless of compositing.
-      // Normalize ONCE here and feed the same string to the baseline AND setDoc
-      // (on already-'\n' input setDoc's internal normalize has no matches and —
-      // in V8, which returns the receiver from a no-match String.replace — builds
-      // no second full-size copy; that's an engine behavior, not ECMAScript spec,
-      // but Electron pins V8. Matters on >100MB files).
-      const normalized = file.decodedText;
-      const seedOpened = (): void => {
-        // Liveness abort: if the tab closed before its editor handle registered,
-        // stop retrying — an orphaned loop would spin forever, retaining the
-        // full doc string (same guard as openPathIntoTab's seed loop).
-        if (!store.get(id)) return;
-        const handle = editorHandles.current.get(id);
-        if (handle) handle.setDoc(normalized);
-        else setTimeout(seedOpened, 0);
-      };
-      // Seed the diff/dirty baseline TEXT (Phase 6 + Issue 3) BEFORE setDoc: the
-      // setDoc dispatch fires the doc-change listener → recomputeDirty, which must
-      // read the just-loaded text as the baseline so an open is "clean", not dirty.
-      lastSavedTextRef.current.set(id, normalized);
-      baselineRef.current.set(id, { hash: file.baselineHash, length: file.baselineLength });
-      seedOpened();
-      store.setLabels(id, file.encodingId, file.eolId);
-      store.setFilePath(id, file.filePath);
-      labelsRef.current = { encodingId: file.encodingId, eolId: file.eolId };
-      // Seed the external-modification baseline (column 0) from the authoritative
-      // OpenedFile mtime so a later disk change is detectable (Lane C, Gate-4).
-      if (file.filePath) recordLastSaved(id, file.filePath, file.dateModifiedMs);
-    },
-    [store, lastSavedTextRef, baselineRef, labelsRef]
-  );
-
-  // Editor test hook reads the ACTIVE editor's handle + labels (existing Gate-1).
-  useEffect(() => {
-    const uninstall = installTestHook(
-      () =>
-        store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null,
-      () => labelsRef.current,
-      onFileOpened
-    );
-    return uninstall;
-  }, [onFileOpened, store]);
-
-  // Editor-surface seam (Phase 3 Gate-3 harness): exposes the ACTIVE tab's live
-  // Monaco editor to the keyboard-conformance + undo-granularity e2e. PA-8-clean —
-  // it reads the IStandaloneCodeEditor + public Monaco APIs, no IPC/fs. Installed
-  // after installTestHook so it attaches to the same window.__notepadsTest object.
-  useEffect(() => {
-    const uninstall = installEditorTestHook(() =>
-      store.activeEditorId
-        ? (editorHandles.current.get(store.activeEditorId)?.getEditor() ?? null)
-        : null
-    );
-    return uninstall;
-  }, [store]);
-
-  // Tabs test seam (Phase 2 matrix harness).
-  useEffect(() => installTabsTestHook(store), [store]);
-
-  // Cross-window transfer (Workstream 6.A). The text source reads the TRUE
-  // last-saved baseline from lastSavedTextRef (NOT the live doc — for a dirty
-  // tab baseline B ≠ doc D, and the adopted window re-derives isModified by
-  // comparing them; shipping D as the baseline would stomp the dirty flag) and
-  // the live CM6 doc as the pending text, and seeds a freshly-adopted editor's
-  // document. Stable ref so the subscriptions + seam below don't re-bind every
-  // render.
+  // Cross-window transfer source: the saved baseline and pending editor text
+  // travel with the tab; adopted tabs receive a fresh editor and undo history.
   const transferSource = useRef<TransferTextSource>({
     getLastSavedText: (id) => lastSavedTextRef.current.get(id) ?? '',
     getPendingText: (id) => editorHandles.current.get(id)?.getShadowText() ?? '',
     seedAdoptedDoc: (id, text) => {
-      // Seed once the adopted tab's editor handle exists. setTimeout(0), not rAF:
-      // rAF never fires in a non-compositing window (Playwright primary / occluded
-      // window), which would starve the seed. setDoc tolerates an unmounted view.
+      // Seed once the adopted tab's editor handle exists. setTimeout(0) also
+      // works in minimized or occluded windows where rAF may not run.
       const seed = (): void => {
-        // Liveness abort: if the adopted tab was closed before its editor
-        // handle registered, stop retrying — an orphaned loop would spin
-        // forever, retaining the full doc string (same guard as the
-        // openPathIntoTab / onFileOpened seed loops). tabsStore is the same
-        // singleton `store` wraps; read it directly so this once-created ref
-        // never closes over a hook-render value.
+        // Stop if the adopted tab was closed before its editor registered.
         if (!tabsStore.get(id)) return;
         const handle = editorHandles.current.get(id);
         if (handle) handle.setDoc(text);
@@ -495,14 +366,12 @@ export function App(): JSX.Element {
     }
   });
 
-  // Subscribe to MAIN's adopt/release pushes (this window is a transfer target
-  // and/or source). MAIN is the sole router; these only mutate the local store.
+  // Subscribe to MAIN's adopt/release pushes; MAIN is the sole router and these
+  // callbacks only mutate this window's local store and baselines.
   useEffect(() => {
     const offAdopt = window.notepads.editor.onAdopt((payload) => {
-      // applyAdopt re-keys the adopted tab under a FRESH local editorId (the
-      // source's id can collide cross-window — Task #20). Key the diff baseline
-      // by the returned local id, not payload.editorId — normalized at set time
-      // (lastSavedTextRef invariant: entries are always '\n'-shadow form).
+      // The source id can collide with a local tab, so key baselines by the
+      // freshly minted local id returned from applyAdopt.
       const localId = applyAdopt(store, transferSource.current, payload);
       lastSavedTextRef.current.set(localId, payload.file.decodedText);
       baselineRef.current.set(localId, {
@@ -518,12 +387,6 @@ export function App(): JSX.Element {
       offRelease();
     };
   }, [store, lastSavedTextRef, baselineRef]);
-
-  // Transfer test seam (Gate-6 harness, lane-h): drives the genuine begin/
-  // complete/void-drop path since Playwright can't synthesize a real HTML5
-  // cross-process drag. PA-8-clean (only window.notepads + store).
-  useEffect(() => installTransferTestHook(store, transferSource.current), [store]);
-
   // Actually remove a tab and drop its external-modification baseline (Lane C,
   // Gate-4): the per-editor mtime ledger must not leak across a closed editorId.
   // Then enforce the last-tab behavior (Issue 4, UWP NotepadsMainPage.xaml.cs:
@@ -662,7 +525,7 @@ export function App(): JSX.Element {
   });
 
   // Status-bar view model (Lane C): derives the 8-column props from the active
-  // tab + its live CM6 view and binds every action to window.notepads (PA-8).
+  // tab + its live Monaco view and binds every action to window.notepads (PA-8).
   const statusModel = useStatusBarModel({
     theme: resolvedTheme,
     store,
@@ -670,17 +533,6 @@ export function App(): JSX.Element {
     activeEditorId
   });
 
-  // Settings test seam (Phase 5 Gate-5 harness): exposes open/close + the live
-  // settings bag + the resolved theme bucket. PA-8-clean (no IPC). Re-installs
-  // when the live values change so the getters close over current state.
-  useEffect(() => {
-    return installSettingsTestHook({
-      open: () => setSettingsOpen(true),
-      close: () => setSettingsOpen(false),
-      getSettings: () => settings,
-      getResolvedTheme: () => resolvedTheme
-    });
-  }, [settings, resolvedTheme]);
 
   // Startup auto-update check: after a 5s delay (avoid contention with cold-
   // start IO), read settings and, if autoCheckUpdates is on, call update_check.
@@ -719,13 +571,9 @@ export function App(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Print + Share (Workstream 6.B/C). Ctrl+P prints the current document and
-  // Ctrl+Shift+P prints every open document (one per page); both route through the
-  // print host + MAIN webContents.print(). A dispatched 'notepads:share' event
-  // hands the active document to MAIN's share/clipboard path. PA-8 (typed bridge).
-  // Print actions (Workstream 6.B). Lifted to stable callbacks so the hamburger
-  // menu's Print / Print All items and the Ctrl+P / Ctrl+Shift+P accelerators
-  // drive the exact same path (print host → MAIN webContents.print()).
+  // Print and share. Ctrl+P prints the current document; Ctrl+Shift+P prints
+  // every open document, one per page. Printing uses the renderer's print host;
+  // sharing uses the typed bridge after the local share event is dispatched.
   const doPrintCurrent = useCallback((): void => {
     const id = store.activeEditorId;
     const t = id ? store.get(id) : undefined;
@@ -787,12 +635,10 @@ export function App(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey);
   }, [doSave, store]);
 
-  // Each entry reuses the SAME handler the keyboard accelerators already drive:
-  // New→store.newTab, Open→doOpen (Ctrl+O), New Window→doNewWindow (Ctrl+Shift+N),
-  // Find/Replace→the find bar's openFindBar, Full Screen→F11, CompactOverlay→F12,
-  // Print/Print All→the print host (Ctrl+P / Ctrl+Shift+P), Settings→the settings
-  // surface, Save/Save As/Save All→doSave/doSaveAll. onOpenRecent feeds the
-  // TabStrip Open Recent submenu (it fetches recent.list itself on flyout open).
+  // Each entry reuses the same handler the keyboard accelerators already drive:
+  // New, Open, New Window, Find/Replace, Print, Settings, and Save actions.
+  // onOpenRecent feeds the TabStrip Open Recent submenu (it fetches recent.list
+  // when the flyout opens).
   const menuCommands = useMemo(
     () => ({
       onNew: () => store.newTab(),
@@ -876,12 +722,8 @@ export function App(): JSX.Element {
   const editorWordWrap = settings.textWrapping === 'wrap';
 
   // Word wrap is a single GLOBAL preference (UWP TextWrapping is an app setting,
-  // not per-document). Bridge the in-editor toggle (Alt+Z + the right-click "Word
-  // Wrap" item) to flip the persisted `textWrapping` setting, so the change applies
-  // to EVERY open editor and survives restarts — instead of mutating just the
-  // focused editor's CM6 compartment (which left other/new tabs unwrapped, forcing
-  // a re-toggle in each file). The persisted value flows back to all editors via
-  // the `wordWrap` prop below; this only owns the write side.
+  // not per-document). Bridge the in-editor toggle to flip persisted
+  // `textWrapping`, applying it to every open editor and surviving restarts.
   const toggleWordWrapGlobal = useCallback(() => {
     updateSettings({ textWrapping: settings.textWrapping === 'wrap' ? 'noWrap' : 'wrap' });
   }, [settings.textWrapping, updateSettings]);
@@ -973,7 +815,7 @@ export function App(): JSX.Element {
             brush). One absolutely-positioned layer that fills the editor band AND
             extends UP under the active tab as a notch (clipped into an inverted-T),
             so the selected tab and the editor are literally one painted surface —
-            no seam. Sits BELOW the editor hosts (zIndex 0; the CM6 surface is
+            no seam. Sits BELOW the editor hosts (zIndex 0; the Monaco surface is
             transparent and shows it through) and below the transparent strip above
             (which shows the notch through under the active tab). Retracts to a plain
             band when no tab is measurable (empty / scrolled out / mid-drag). */}
@@ -1010,7 +852,7 @@ export function App(): JSX.Element {
                     inset: 0,
                     display: isActive ? 'block' : 'none',
                     // Above the TabSurfaceWash (zIndex 0) so the editor content paints
-                    // over the shared wash (the CM6 surface is transparent, so the wash
+                    // over the shared wash (the Monaco surface is transparent, so the wash
                     // still reads through as the editor background).
                     zIndex: 1
                   }}

@@ -1,19 +1,8 @@
 /**
- * Find-bar host hook (RENDERER, Lane B) — Monaco edition.
+ * Find-bar host hook for Monaco.
  *
- * Replaces the CM6 version. The React FindBar / GoToLineDialog widgets are
- * unchanged. The only difference from the caller's perspective:
- *   - `getActiveView: () => EditorView | null`  →
- *     `getActiveEditor: () => IStandaloneCodeEditor | null`
- *   - `editorExtensions` is gone (Monaco has no CM6 Extension array; highlights
- *     are applied via deltaDecorations directly on the editor instance).
- *   - `keymap` is gone; replaced by `registerFindKeybindings(editor, cb)` which
- *     the MonacoEditor component calls once on mount.
- *
- * Everything else (open/close state, query ref, find/replace actions, GoToLine,
- * status formatting) is identical to the CM6 version.
- *
- * PA-8: renderer-only; touches the IStandaloneCodeEditor + DOM, never IPC/fs.
+ * Keeps the widget state and routes search, replace, and GoToLine actions to
+ * the active editor. Highlights are applied through the editor instance.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

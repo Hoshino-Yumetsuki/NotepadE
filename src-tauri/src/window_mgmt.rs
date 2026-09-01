@@ -117,7 +117,6 @@ pub fn install_window_hooks(window: &tauri::WebviewWindow) {
             if let Ok(mut m) = last_maximized().lock() {
                 m.remove(&label);
             }
-            crate::compact_overlay::forget_window(&label);
             crate::broker::forget_window(&label);
         }
         _ => {}

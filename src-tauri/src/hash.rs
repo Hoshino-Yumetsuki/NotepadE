@@ -5,7 +5,7 @@ pub fn hash_text(text: &str) -> u64 {
     xxh3_64(text.as_bytes())
 }
 
-/// UTF-16 code-unit count — matches JavaScript `string.length` / CodeMirror `doc.length`.
+/// Count UTF-16 code units, matching JavaScript `string.length`.
 pub fn utf16_len(text: &str) -> u64 {
     text.encode_utf16().count() as u64
 }
