@@ -24,6 +24,7 @@ export interface TabInfo {
   encodingId: string;
   eolId: 'crlf' | 'cr' | 'lf';
   isModified: boolean;
+  isLoading: boolean;
   active: boolean;
 }
 
@@ -73,6 +74,7 @@ export function installTabsTestHook(store: TabsStore): () => void {
         encodingId: t.encodingId,
         eolId: t.eolId,
         isModified: t.isModified,
+        isLoading: t.isLoading,
         active: t.editorId === store.activeEditorId
       })),
     activeId: () => store.activeEditorId,

@@ -32,6 +32,7 @@ export interface TabInfo {
   encodingId: EncodingId;
   eolId: EolId;
   isModified: boolean;
+  isLoading: boolean;
   active: boolean;
 }
 

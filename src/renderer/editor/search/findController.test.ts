@@ -50,4 +50,29 @@ describe('large-file find loading safety', () => {
     expect(model.findMatches).toHaveBeenCalledOnce();
     expect(model.getValue).not.toHaveBeenCalled();
   });
+  it('defers non-empty search until a progressive model reaches EOF', () => {
+    const model = {
+      _isTooLargeForTokenization: true,
+      _npLargeFileReady: false,
+      getValue: vi.fn(() => {
+        throw new Error('full-document materialization');
+      }),
+      findMatches: vi.fn(),
+    };
+    const editor = {
+      getModel: () => model,
+      deltaDecorations: vi.fn((_old: string[], _next: unknown[]) => [])
+    };
+
+    refreshHighlights(editor as never, {
+      query: 'needle',
+      matchCase: false,
+      wholeWord: false,
+      useRegex: false
+    });
+
+    expect(model.findMatches).not.toHaveBeenCalled();
+    expect(model.getValue).not.toHaveBeenCalled();
+    expect(editor.deltaDecorations).toHaveBeenCalledWith([], []);
+  });
 });

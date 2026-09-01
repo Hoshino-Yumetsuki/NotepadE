@@ -19,13 +19,13 @@ const LARGE_REPEATS = 1_000_000;
 
 async function activeTab(
   app: LaunchedApp
-): Promise<{ filePath: string | null; title: string } | null> {
+): Promise<{ filePath: string | null; title: string; isLoading: boolean } | null> {
   return app.page.evaluate(() => {
     const seam = window.__notepadsTest?.tabs;
     if (!seam) return null;
     const id = seam.activeId();
     const t = seam.list().find((tab) => tab.editorId === id);
-    return t ? { filePath: t.filePath, title: t.title } : null;
+    return t ? { filePath: t.filePath, title: t.title, isLoading: t.isLoading } : null;
   });
 }
 
@@ -59,6 +59,7 @@ test.describe('open loading state — tab + spinner appear before the read finis
         .toBe(file);
       const seen = await activeTab(app);
       expect(seen?.title).toBe('huge-loading-target.txt');
+      expect(seen?.isLoading).toBe(true);
       await expect(app.page.getByTestId('editor-loading')).toBeVisible();
 
       // Then the pipeline finishes: spinner clears, editor mounts with content,
