@@ -39,6 +39,10 @@ import { useT, type Translator } from '../../i18n';
 export interface UseFindBarOptions {
   /** The active tab's live IStandaloneCodeEditor, or null when none is focused. */
   getActiveEditor: () => monacoApi.editor.IStandaloneCodeEditor | null;
+  /** Changes when the active tab becomes ready or a different tab is selected. */
+  activeEditorReadyKey?: string;
+  /** True while the active tab is still loading. */
+  isActiveEditorLoading?: boolean;
 }
 
 /** What the hook hands back to the App shell. */
@@ -62,29 +66,29 @@ function formatStatus(
 
 export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   const { getActiveEditor } = opts;
-
   const { t } = useT();
-
   const [open, setOpen] = useState<boolean>(false);
   const [showReplace, setShowReplace] = useState<boolean>(false);
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [seedKey, setSeedKey] = useState<number>(0);
-
-  const [goToState, setGoToState] = useState<{ currentLine: number; lineCount: number } | null>(
-    null
-  );
+  const [goToState, setGoToState] = useState<{ currentLine: number; lineCount: number } | null>(null);
   const [goToKey, setGoToKey] = useState<number>(0);
-
   const activeQueryRef = useRef<FindQuery | null>(null);
   const highlightTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     return () => {
       if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current);
     };
   }, []);
 
+  useEffect(() => {
+    const editor = getActiveEditor();
+    const query = activeQueryRef.current;
+    if (editor && query) refreshHighlights(editor, query);
+  }, [getActiveEditor, opts.activeEditorReadyKey]);
+
   const toQuery = (query: string, options: SearchOptions): FindQuery => ({ query, ...options });
-  // --- Open / dismiss --------------------------------------------------------
 
   const openFindBar = useCallback((replace: boolean) => {
     setShowReplace(replace);
@@ -109,15 +113,15 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
   }, [open, getActiveEditor]);
 
   const openGoToLine = useCallback(() => {
+    if (opts.isActiveEditorLoading) return;
     const editor = getActiveEditor();
     if (!editor) return;
     const model = editor.getModel();
     if (!model) return;
     const pos = editor.getPosition();
-    const currentLine = pos?.lineNumber ?? 1;
-    setGoToState({ currentLine, lineCount: model.getLineCount() });
+    setGoToState({ currentLine: pos?.lineNumber ?? 1, lineCount: model.getLineCount() });
     setGoToKey((key) => key + 1);
-  }, [getActiveEditor]);
+  }, [getActiveEditor, opts.isActiveEditorLoading]);
 
   const onGoToSubmit = useCallback(
     (line: number) => {
@@ -135,8 +139,6 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
     getActiveEditor()?.focus();
   }, [getActiveEditor]);
 
-  // --- Live query change (highlight refresh) ---------------------------------
-
   const onQueryChange = useCallback(
     (query: string, options: SearchOptions) => {
       const q = toQuery(query, options);
@@ -152,9 +154,6 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
         setStatus(undefined);
         return;
       }
-      // VS Code debounces find decoration updates. Each Piece Tree scan is
-      // synchronous, so rescanning on every keystroke would monopolize the
-      // renderer during file streaming.
       highlightTimerRef.current = window.setTimeout(() => {
         highlightTimerRef.current = null;
         const activeEditor = getActiveEditor();
@@ -164,23 +163,22 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
     [getActiveEditor]
   );
 
-  // --- Find / replace actions ------------------------------------------------
-
   const onFind = useCallback(
     (query: string, options: SearchOptions, direction: FindDirection) => {
+      if (opts.isActiveEditorLoading) return;
       const editor = getActiveEditor();
       if (!editor) return;
       const q = toQuery(query, options);
       activeQueryRef.current = q;
-      const outcome =
-        direction === 'next' ? findNextInEditor(editor, q) : findPreviousInEditor(editor, q);
+      const outcome = direction === 'next' ? findNextInEditor(editor, q) : findPreviousInEditor(editor, q);
       setStatus(formatStatus(outcome, query.length > 0, t));
     },
-    [getActiveEditor, t]
+    [getActiveEditor, opts.isActiveEditorLoading, t]
   );
 
   const onReplaceOne = useCallback(
     (query: string, options: SearchOptions, replacement: string, _direction: FindDirection) => {
+      if (opts.isActiveEditorLoading) return;
       const editor = getActiveEditor();
       if (!editor) return;
       const q = toQuery(query, options);
@@ -189,11 +187,12 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       setStatus(did ? undefined : t('FindAndReplace_NotificationMsg_NotFound'));
       refreshHighlights(editor, q);
     },
-    [getActiveEditor, t]
+    [getActiveEditor, opts.isActiveEditorLoading, t]
   );
 
   const onReplaceAll = useCallback(
     (query: string, options: SearchOptions, replacement: string) => {
+      if (opts.isActiveEditorLoading) return;
       const editor = getActiveEditor();
       if (!editor) return;
       const q = toQuery(query, options);
@@ -202,10 +201,8 @@ export function useFindBar(opts: UseFindBarOptions): FindBarHost {
       setStatus(count > 0 ? `Replaced ${count}` : t('FindAndReplace_NotificationMsg_NotFound'));
       refreshHighlights(editor, q);
     },
-    [getActiveEditor, t]
+    [getActiveEditor, opts.isActiveEditorLoading, t]
   );
-
-  // --- Keymap callbacks ------------------------------------------------------
 
   const keymapCallbacks = useMemo<FindKeymapCallbacks>(
     () => ({

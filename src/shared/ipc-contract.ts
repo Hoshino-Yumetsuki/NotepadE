@@ -66,7 +66,7 @@ export interface OpenedFile {
   hasBom: boolean;
   /** xxh3_64 hash of the LF-normalized text (for dirty detection). */
   baselineHash: number;
-  /** Byte length of the LF-normalized text. */
+  /** UTF-16 code-unit length of the LF-normalized text. */
   baselineLength: number;
 }
 
@@ -93,9 +93,8 @@ export interface SaveResult {
   dateModifiedMs: number;
   encodingId: EncodingId;
   eolId: EolId;
-  /** xxh3_64 hash of the saved LF-normalized text (for dirty detection reset). */
+  /** xxh3_64 hash and UTF-16 length of the saved LF-normalized text. */
   baselineHash: number;
-  /** Byte length of the saved LF-normalized text. */
   baselineLength: number;
 }
 
@@ -127,7 +126,7 @@ export interface FileApi {
     encodingId: EncodingId,
     streamId: string,
     onChunk: (chunk: StreamedFileChunk) => void
-  ): Promise<Result<void>>;
+  ): Promise<Result<StreamedFileBaseline>>;
   /** Return receive permits to the native stream producer. */
   streamAck(streamId: string, count: number): Promise<Result<void>>;
   /** Stop a native stream when its editor is unmounted. */
@@ -150,8 +149,6 @@ export interface StreamedFileHeader {
   dateModifiedMs: number;
   filePath: string;
   hasBom: boolean;
-  baselineHash: number;
-  baselineLength: number;
   chunkCount: number;
   totalBytes: number;
 }
@@ -162,6 +159,11 @@ export interface StreamedFileChunk {
   offset: number;
   nextOffset: number;
   text: string;
+}
+export interface StreamedFileBaseline {
+  baselineHash: number;
+  baselineLength: number;
+  eolId: EolId;
 }
 
 

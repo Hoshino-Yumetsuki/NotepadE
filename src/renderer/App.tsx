@@ -172,23 +172,35 @@ export function App(): JSX.Element {
   // would change identity every render, re-run that effect every render, and
   // setLineColumn(new object) → re-render → infinite update loop.
   const getActiveEditor = useCallback(
-    (): monaco.editor.IStandaloneCodeEditor | null =>
-      store.activeEditorId
-        ? (editorHandles.current.get(store.activeEditorId)?.getEditor() ?? null)
-        : null,
+    (): monaco.editor.IStandaloneCodeEditor | null => {
+      const id = store.activeEditorId;
+      const tab = id ? store.get(id) : undefined;
+      return id && tab && !tab.isLoading
+        ? (editorHandles.current.get(id)?.getEditor() ?? null)
+        : null;
+    },
     [store]
   );
   const getActiveHandle = useCallback(
-    () => (store.activeEditorId ? (editorHandles.current.get(store.activeEditorId) ?? null) : null),
+    () => {
+      const id = store.activeEditorId;
+      const tab = id ? store.get(id) : undefined;
+      return id && tab && !tab.isLoading ? (editorHandles.current.get(id) ?? null) : null;
+    },
     [store]
   );
 
+  const activeEditorReadyKey = (() => {
+    const id = store.activeEditorId;
+    return id ? `${id}:${store.get(id)?.isLoading ? 'loading' : 'ready'}` : '';
+  })();
+  const isActiveEditorLoading = Boolean(
+    store.activeEditorId && store.get(store.activeEditorId)?.isLoading
+  );
   // Find/replace host (Lane B, Monaco). Reads the ACTIVE editor's live
   // IStandaloneCodeEditor so Ctrl+F/H/G + F3/Shift+F3 drive the same instance the
-  // host owns. Find keybindings are registered INSIDE MonacoEditor (via the
-  // findCallbacks prop → registerFindKeybindings); highlights apply through
-  // deltaDecorations directly on the editor. No CM6 extension array.
-  const find = useFindBar({ getActiveEditor });
+  // host owns. Find keybindings are registered INSIDE MonacoEditor.
+  const find = useFindBar({ getActiveEditor, activeEditorReadyKey, isActiveEditorLoading });
 
   // Schedule the trailing-debounced preview/diff re-render pulse for `editorId`.
   // While a pane is open App must re-render so MarkdownPreview / DiffViewer reflect
@@ -1019,23 +1031,9 @@ export function App(): JSX.Element {
                       display: tab.viewMode.diff ? 'none' : 'block'
                     }}
                   >
-                    {tab.isLoading ? (
-                      // Centered spinner while MAIN resolves the initial file request.
-                      // Large-file content starts streaming as soon as its small header
-                      // lands; the editor then mounts and appends chunks in place.
-                      <div
-                        data-testid="editor-loading"
-                        style={{
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Spinner size="large" />
-                      </div>
-                    ) : tab.largeFile && tab.filePath ? (
+                    {tab.largeFile && tab.filePath ? (
                       <PieceTreeLargeFileEditor
+                        key={tab.largeFile.streamId}
                         ref={(h) => {
                           if (h) editorHandles.current.set(tab.editorId, h);
                           else editorHandles.current.delete(tab.editorId);
@@ -1044,6 +1042,15 @@ export function App(): JSX.Element {
                         size={tab.largeFile.size}
                         encodingId={tab.largeFile.encodingId}
                         streamId={tab.largeFile.streamId}
+                        onLoadComplete={(baseline) => {
+                          baselineRef.current.set(tab.editorId, {
+                            hash: baseline.baselineHash,
+                            length: baseline.baselineLength
+                          });
+                          store.setLabels(tab.editorId, tab.encodingId, baseline.eolId);
+                          store.setLoading(tab.editorId, false);
+                        }}
+                        onLoadError={() => store.setLoading(tab.editorId, false)}
                         onDocChanged={() => {
                           store.setModified(tab.editorId, true);
                           schedulePanePulse(tab.editorId);
@@ -1061,29 +1068,48 @@ export function App(): JSX.Element {
                         themeMode={appTheme.resolved}
                       />
                     ) : (
-                      <MonacoEditor
-                        ref={(h) => {
-                          if (h) editorHandles.current.set(tab.editorId, h);
-                          else editorHandles.current.delete(tab.editorId);
-                        }}
-                        onDocChanged={() => {
-                          recomputeDirty(tab.editorId);
-                          // Re-render the open preview/diff pane to reflect live typing
-                          // (replaces the old CM6 updateListener pulse).
-                          schedulePanePulse(tab.editorId);
-                        }}
-                        findCallbacks={find.keymapCallbacks}
-                        contextMenuAttach={editorContextMenu.attach}
-                        settings={editorBehaviorSettings}
-                        lineNumbers={settings.displayLineNumbers}
-                        lineHighlighter={settings.displayLineHighlighter}
-                        wordWrap={editorWordWrap}
-                        direction="ltr"
-                        fontFamily={settings.editorFontFamily}
-                        fontSize={settings.editorFontSize}
-                        accentColor={appTheme.accentHex}
-                        themeMode={appTheme.resolved}
-                      />
+                      <div style={{ height: '100%', position: 'relative' }}>
+                        <MonacoEditor
+                          ref={(h) => {
+                            if (h) editorHandles.current.set(tab.editorId, h);
+                            else editorHandles.current.delete(tab.editorId);
+                          }}
+                          initialDoc={lastSavedTextRef.current.get(tab.editorId) ?? ''}
+                          readOnly={tab.isLoading}
+                          onDocChanged={() => {
+                            recomputeDirty(tab.editorId);
+                            schedulePanePulse(tab.editorId);
+                          }}
+                          findCallbacks={find.keymapCallbacks}
+                          contextMenuAttach={editorContextMenu.attach}
+                          settings={editorBehaviorSettings}
+                          lineNumbers={settings.displayLineNumbers}
+                          lineHighlighter={settings.displayLineHighlighter}
+                          wordWrap={editorWordWrap}
+                          direction="ltr"
+                          fontFamily={settings.editorFontFamily}
+                          fontSize={settings.editorFontSize}
+                          accentColor={appTheme.accentHex}
+                          themeMode={appTheme.resolved}
+                        />
+                        {tab.isLoading ? (
+                          <div
+                            data-testid="editor-loading"
+                            aria-label="Loading file"
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'transparent',
+                              pointerEvents: 'all'
+                            }}
+                          >
+                            <Spinner size="large" />
+                          </div>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                   {paneOn && tab.viewMode.preview && (

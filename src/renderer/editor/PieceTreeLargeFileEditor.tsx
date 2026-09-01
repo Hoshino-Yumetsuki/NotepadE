@@ -1,5 +1,8 @@
+import { Spinner } from '@fluentui/react-components';
 import { useEffect, useRef, useState, forwardRef } from 'react';
+import type { Result, StreamedFileBaseline } from '@shared/ipc-contract';
 import { MonacoEditor, type MonacoEditorProps, type MonacoHandle } from './MonacoEditor';
+
 const STREAM_WINDOW = 4;
 const STREAM_START_DELAY_MS = 500;
 
@@ -9,21 +12,20 @@ interface PieceTreeLargeFileEditorProps
   size: number;
   encodingId: string;
   streamId: string;
+  onLoadComplete?: (baseline: StreamedFileBaseline) => void;
+  onLoadError?: (message: string) => void;
 }
 
 /**
- * Progressive large-file viewer.
- *
- * The editor mounts on an empty Monaco model immediately. Monaco stores that
- * model in its Piece Tree; decoded chunks then append directly to it through
- * the public edit API, so the first visible text does not wait for the full
- * file or a giant renderer string.
+ * Large-file editor backed by a progressively filled Monaco Piece Tree.
+ * The model stays hidden and read-only while the native stream runs, then
+ * becomes visible and editable only after the stream reaches EOF.
  */
 export const PieceTreeLargeFileEditor = forwardRef<
   MonacoHandle,
   PieceTreeLargeFileEditorProps
 >(function PieceTreeLargeFileEditor(
-  { path, size, encodingId, streamId, ...editorProps },
+  { path, size, encodingId, streamId, onLoadComplete, onLoadError, ...editorProps },
   ref
 ) {
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +38,6 @@ export const PieceTreeLargeFileEditor = forwardRef<
   const handleRef = useRef<MonacoHandle | null>(null);
 
   useEffect(() => {
-    if (cancelTimerRef.current !== null) {
-      window.clearTimeout(cancelTimerRef.current);
-      cancelTimerRef.current = null;
-    }
     activeRef.current = true;
     return () => {
       activeRef.current = false;
@@ -47,11 +45,12 @@ export const PieceTreeLargeFileEditor = forwardRef<
         window.clearTimeout(startTimerRef.current);
         startTimerRef.current = null;
       }
-      const cancel = cancelStreamRef.current;
-      cancelTimerRef.current = window.setTimeout(() => {
-        cancel?.();
+      cancelStreamRef.current?.();
+      cancelStreamRef.current = null;
+      if (cancelTimerRef.current !== null) {
+        window.clearTimeout(cancelTimerRef.current);
         cancelTimerRef.current = null;
-      }, 0);
+      }
     };
   }, [path, encodingId, streamId]);
 
@@ -63,42 +62,72 @@ export const PieceTreeLargeFileEditor = forwardRef<
     };
     let offset = 0;
     let received = 0;
+    let sawEndChunk = false;
+    let nativeResult: Result<StreamedFileBaseline> | null = null;
+    let finished = false;
+    const finishIfReady = (): void => {
+      if (!activeRef.current || finished || !nativeResult) return;
+      if (!nativeResult.ok) {
+        finished = true;
+        setError(nativeResult.error);
+        onLoadError?.(nativeResult.error);
+        return;
+      }
+      // Tauri Channel messages can be dispatched just after invoke resolves.
+      // Publish EOF only after both the command result and the final chunk have
+      // arrived; otherwise a complete file is reported as changed mid-load.
+      if (!sawEndChunk) return;
+      if (offset !== size) {
+        finished = true;
+        const message = 'Large file changed while loading';
+        setError(message);
+        onLoadError?.(message);
+        return;
+      }
+      finished = true;
+      const liveHandle = handleRef.current ?? handle;
+      liveHandle.setLargeFileGuards?.();
+      liveHandle.setReadOnly?.(false);
+      setComplete(true);
+      onLoadComplete?.(nativeResult.data);
+      cancelStreamRef.current = null;
+    };
     void window.notepads.file
       .streamChunks(path, encodingId, streamId, (chunk) => {
-        if (!activeRef.current || chunk.streamId !== streamId) return;
+        if (!activeRef.current || finished || chunk.streamId !== streamId) return;
         if (
           chunk.offset !== offset ||
           chunk.nextOffset <= offset ||
           chunk.nextOffset > size
         ) {
-          setError('Invalid streamed chunk boundary');
+          const message = 'Invalid streamed chunk boundary';
+          finished = true;
+          setError(message);
+          onLoadError?.(message);
           cancelStreamRef.current?.();
           return;
         }
         handleRef.current?.appendText?.(chunk.text);
         offset = chunk.nextOffset;
         received += 1;
-        if (offset === size) {
-          const liveHandle = handleRef.current ?? handle;
-          liveHandle.setLargeFileGuards?.();
-          setComplete(true);
-          cancelStreamRef.current = null;
-          liveHandle.setReadOnly?.(false);
-        }
+        sawEndChunk = chunk.nextOffset === size;
         if (received % STREAM_WINDOW === 0) {
           void window.notepads.file
             .streamAck(streamId, STREAM_WINDOW)
             .catch(() => undefined);
         }
+        finishIfReady();
       })
       .then((result) => {
-        if (!activeRef.current) return;
-        if (!result.ok) {
-          setError(result.error);
-        }
+        nativeResult = result;
+        finishIfReady();
       })
       .catch((cause: unknown) => {
-        if (activeRef.current) setError(cause instanceof Error ? cause.message : String(cause));
+        if (!activeRef.current || finished) return;
+        finished = true;
+        const message = cause instanceof Error ? cause.message : String(cause);
+        setError(message);
+        onLoadError?.(message);
       });
   };
 
@@ -108,17 +137,7 @@ export const PieceTreeLargeFileEditor = forwardRef<
       return;
     }
     handleRef.current = handle;
-    if (startedRef.current || !activeRef.current) return;
-    // useImperativeHandle publishes before MonacoEditor's mount effect creates
-    // its model. Do not drop the first chunks into that not-yet-live handle.
-    if (!handle.getEditor()) {
-      // The onReady callback below is the only start signal. The ref can be
-      // published before Monaco's model exists, so merely cache this handle.
-      return;
-    }
-    // React StrictMode replays the child mount effect. Defer the native stream
-    // long enough for the first model to be disposed and the live model to be
-    // attached before chunks can arrive.
+    if (startedRef.current || !activeRef.current || !handle.getEditor()) return;
     if (startTimerRef.current === null) {
       startTimerRef.current = window.setTimeout(() => {
         startTimerRef.current = null;
@@ -126,31 +145,47 @@ export const PieceTreeLargeFileEditor = forwardRef<
       }, STREAM_START_DELAY_MS);
     }
   };
+
   return (
     <div
       data-testid="large-file-editor"
       aria-busy={!complete && error === null}
       style={{ height: '100%', position: 'relative' }}
     >
-      {/* VS Code disables wrapping for large files; wrapping would remeasure the growing document on every width/content change. */}
-      <MonacoEditor
-        ref={(handle) => {
-          attachHandle(handle);
-          if (typeof ref === 'function') ref(handle);
-          else if (ref) ref.current = handle;
-        }}
-        {...editorProps}
-        onReady={() => {
-          window.setTimeout(() => {
-            const liveHandle = handleRef.current;
-            if (activeRef.current && liveHandle) attachHandle(liveHandle);
-          }, 0);
-        }}
-        largeFileOptimizations
-        wordWrap={false}
-        initialDoc=""
-        readOnly
-      />
+      <div style={{ height: '100%', visibility: complete ? 'visible' : 'hidden' }}>
+        <MonacoEditor
+          ref={(handle) => {
+            attachHandle(handle);
+            if (typeof ref === 'function') ref(handle);
+            else if (ref) ref.current = handle;
+          }}
+          {...editorProps}
+          onReady={() => {
+            window.setTimeout(() => {
+              const liveHandle = handleRef.current;
+              if (activeRef.current && liveHandle) attachHandle(liveHandle);
+            }, 0);
+          }}
+          largeFileOptimizations
+          wordWrap={false}
+          initialDoc=""
+          readOnly
+        />
+      </div>
+      {!complete && !error ? (
+        <div
+          data-testid="editor-loading"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <Spinner size="large" />
+        </div>
+      ) : null}
       {error ? (
         <section
           data-testid="large-file-editor-error"
@@ -159,7 +194,7 @@ export const PieceTreeLargeFileEditor = forwardRef<
             position: 'absolute',
             inset: 0,
             padding: 12,
-            background: 'var(--np-editor-error-background, transparent)',
+            background: 'var(--np-editor-error-background, transparent)'
           }}
         >
           {error}

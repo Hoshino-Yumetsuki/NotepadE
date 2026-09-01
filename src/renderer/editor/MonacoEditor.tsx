@@ -298,6 +298,7 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
           const largeModel = model as unknown as {
             _isTooLargeForHeapOperation: boolean;
             _isTooLargeForSyncing: boolean;
+            _npLargeFileReady: boolean;
           };
           const length = model.getValueLength(monaco.editor.EndOfLinePreference.LF);
           // Match VS Code's policy: disable worker syncing above 50 MiB and
@@ -305,6 +306,7 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
           // model remains searchable/editable below those limits.
           largeModel._isTooLargeForHeapOperation = length > 256 * 1024 * 1024;
           largeModel._isTooLargeForSyncing = length > 50 * 1024 * 1024;
+          largeModel._npLargeFileReady = true;
         },
         getShadowText(): string {
           const model = modelRef.current;
@@ -338,15 +340,17 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
 
     defineThemes(themeMode, accentColor);
     const model = monaco.editor.createModel(docRef.current ?? initialDoc, undefined);
+    modelRef.current = model;
     if (largeFileOptimizations) {
       // Monaco decides tokenization permanently from the constructor's initial
       // buffer size. Progressive loading starts empty, so set this guard before
-      // the model is attached to the editor. The heap guard is applied below,
-      // after Monaco's initialization calls that materialize the empty model.
+      // the model is attached to the editor and keep readiness false until EOF.
       const largeModel = model as unknown as {
         _isTooLargeForTokenization: boolean;
+        _npLargeFileReady: boolean;
       };
       largeModel._isTooLargeForTokenization = true;
+      largeModel._npLargeFileReady = false;
     }
     model.setEOL(monaco.editor.EndOfLineSequence.LF);
 
@@ -599,6 +603,9 @@ export const MonacoEditor = forwardRef<MonacoHandle, MonacoEditorProps>(function
     if (node) node.style.fontStyle = fontStyle === 'normal' ? '' : fontStyle;
   }, [fontFamily, fontSize, fontWeight, fontStyle]);
 
+  useEffect(() => {
+    editorRef.current?.updateOptions({ readOnly });
+  }, [readOnly]);
   // Line numbers.
   useEffect(() => {
     editorRef.current?.updateOptions({ lineNumbers: showLineNumbers ? 'on' : 'off' });

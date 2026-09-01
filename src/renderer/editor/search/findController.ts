@@ -91,13 +91,18 @@ function spanToRange(model: monaco.editor.ITextModel, span: MatchSpan): monaco.I
 
 type LargeAwareModel = monaco.editor.ITextModel & {
   _isTooLargeForTokenization?: boolean;
+  _npLargeFileReady?: boolean;
 };
 
 const MAX_HIGHLIGHT_MATCHES = 1_000;
-const MAX_REPLACE_MATCHES = 1_073_741_824;
+const MAX_REPLACE_MATCHES = 100_000;
 
 function isProgressiveLargeModel(model: monaco.editor.ITextModel): boolean {
   return (model as LargeAwareModel)._isTooLargeForTokenization === true;
+}
+
+function isLargeModelReady(model: monaco.editor.ITextModel): boolean {
+  return !isProgressiveLargeModel(model) || (model as LargeAwareModel)._npLargeFileReady !== false;
 }
 
 function getDocText(editor: monaco.editor.IStandaloneCodeEditor): string {
@@ -165,13 +170,14 @@ function nativeFindOne(
   const model = editor.getModel();
   if (!model || q.query.length === 0) return null;
   const { from, to } = getSelectionOffsets(editor);
-  const match = previous
+  const options = nativeSearchOptions(editor, q);
+  const direct = previous
     ? model.findPreviousMatch(
         q.query,
         model.getPositionAt(from),
         q.useRegex,
         q.matchCase,
-        nativeSearchOptions(editor, q),
+        options,
         false
       )
     : model.findNextMatch(
@@ -179,12 +185,32 @@ function nativeFindOne(
         model.getPositionAt(to),
         q.useRegex,
         q.matchCase,
-        nativeSearchOptions(editor, q),
+        options,
         false
       );
-  if (!match) return null;
-  const span = nativeMatchToSpan(model, match);
-  return { span, wrapped: previous ? span.from >= from : span.from < to };
+  if (direct) {
+    const span = nativeMatchToSpan(model, direct);
+    return { span, wrapped: previous ? span.from >= from : span.from < to };
+  }
+  const wrappedMatch = previous
+    ? model.findPreviousMatch(
+        q.query,
+        model.getPositionAt(model.getValueLength(1 /* LF */)),
+        q.useRegex,
+        q.matchCase,
+        options,
+        false
+      )
+    : model.findNextMatch(
+        q.query,
+        model.getPositionAt(0),
+        q.useRegex,
+        q.matchCase,
+        options,
+        false
+      );
+  if (!wrappedMatch) return null;
+  return { span: nativeMatchToSpan(model, wrappedMatch), wrapped: true };
 }
 
 
@@ -225,6 +251,10 @@ export function refreshHighlights(editor: monaco.editor.IStandaloneCodeEditor, q
     clearHighlights(editor);
     return;
   }
+  if (!isLargeModelReady(model)) {
+    clearHighlights(editor);
+    return;
+  }
   const spans = isProgressiveLargeModel(model)
     ? nativeFindMatches(editor, q).map(nativeMatchToSpan.bind(null, model))
     : collectAllMatches(getDocText(editor), q);
@@ -258,6 +288,7 @@ export function findNextInEditor(
 ): FindOutcome {
   if (q.query.length === 0) return { match: null, wrapped: false };
   const model = editor.getModel();
+  if (model && !isLargeModelReady(model)) return { match: null, wrapped: false };
   if (model && isProgressiveLargeModel(model)) {
     const result = nativeFindOne(editor, q, false);
     if (!result) return { match: null, wrapped: false };
@@ -289,6 +320,7 @@ export function findPreviousInEditor(
 ): FindOutcome {
   if (q.query.length === 0) return { match: null, wrapped: false };
   const model = editor.getModel();
+  if (model && !isLargeModelReady(model)) return { match: null, wrapped: false };
   if (model && isProgressiveLargeModel(model)) {
     const result = nativeFindOne(editor, q, true);
     if (!result) return { match: null, wrapped: false };
@@ -318,6 +350,7 @@ function selectionIsMatch(editor: monaco.editor.IStandaloneCodeEditor, q: FindQu
   const model = editor.getModel();
   const selection = editor.getSelection();
   if (!model || !selection || selection.isEmpty()) return false;
+  if (!isLargeModelReady(model)) return false;
   if (isProgressiveLargeModel(model)) {
     const hit = model.findMatches(
       q.query,
@@ -403,6 +436,7 @@ export function replaceAllInEditor(
   if (q.query.length === 0) return 0;
   const model = editor.getModel();
   if (!model) return 0;
+  if (!isLargeModelReady(model)) return 0;
   if (isProgressiveLargeModel(model)) {
     const largeModel = model as LargeAwareModel & { _isTooLargeForHeapOperation?: boolean };
     if (largeModel._isTooLargeForHeapOperation) return 0;
@@ -415,7 +449,7 @@ export function replaceAllInEditor(
       false,
       MAX_REPLACE_MATCHES
     );
-    if (matches.length === 0) return 0;
+    if (matches.length === 0 || matches.length >= MAX_REPLACE_MATCHES) return 0;
     model.applyEdits(
       matches.map((match) => ({
         range: match.range,
@@ -459,25 +493,4 @@ export function goToLine(editor: monaco.editor.IStandaloneCodeEditor, lineNumber
   editor.setPosition(pos);
   editor.revealLineInCenter(clamped, 1 /* Immediate */);
   return clamped;
-}
-
-// ---------------------------------------------------------------------------
-//  Legacy CM6 compat shim
-//  useFindBar / T6 may still reference the old EditorView-typed names during
-//  the migration. These thin aliases let that code compile while T6 finalises.
-// ---------------------------------------------------------------------------
-
-/** @deprecated Use findNextInEditor */
-export const findNextInView = findNextInEditor;
-/** @deprecated Use findPreviousInEditor */
-export const findPreviousInView = findPreviousInEditor;
-/** @deprecated Use replaceAllInEditor */
-export const replaceAllInView = replaceAllInEditor;
-
-/**
- * @deprecated No-op shim. Monaco has no CM6 Extension bundle.
- * useFindBar no longer passes this to editors; kept so old imports compile.
- */
-export function searchExtension(): [] {
-  return [];
 }

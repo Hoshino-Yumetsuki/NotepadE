@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { MonacoHandle } from '../editor/MonacoEditor';
 import type { LargeFileSaveChunkArgs, Result, SaveResult } from '@shared/ipc-contract';
@@ -60,6 +60,7 @@ export function useFilePipeline({
   lastSavedTextRef,
   baselineRef
 }: UseFilePipelineProps): UseFilePipelineReturn {
+  const loadGenerationRef = useRef(new Map<string, number>());
   // (UWP focuses the existing set) — two editors on one path would let the second
   // save silently clobber the first (edit-loss). Otherwise read via MAIN
   // (file.open), seed a fresh tab with the authoritative labels, and seed the
@@ -94,11 +95,12 @@ export function useFilePipeline({
       } else {
         id = store.newTab({ filePath: path, isLoading: true, activate: true });
       }
-
+      const generation = (loadGenerationRef.current.get(id) ?? 0) + 1;
+      loadGenerationRef.current.set(id, generation);
       const STREAM_THRESHOLD = 1_048_576; // 1MB
 
       void window.notepads.file.getSize(path).then((sizeRes) => {
-        if (!store.get(id)) return;
+        if (!store.get(id) || loadGenerationRef.current.get(id) !== generation) return;
         if (!sizeRes.ok) {
           if (seedTab) {
             store.setFilePath(id, null);
@@ -113,7 +115,7 @@ export function useFilePipeline({
         if (fileSize < STREAM_THRESHOLD) {
           // Direct load path (small files)
           void window.notepads.file.open(path).then((res) => {
-            if (!store.get(id)) return;
+            if (!store.get(id) || loadGenerationRef.current.get(id) !== generation) return;
             if (!res.ok) {
               if (seedTab) {
                 store.setFilePath(id, null);
@@ -126,10 +128,19 @@ export function useFilePipeline({
             }
             const normalized = res.data.decodedText;
             const seedOpened = (): void => {
-              if (!store.get(id)) return;
+              if (!store.get(id) || loadGenerationRef.current.get(id) !== generation) return;
               const handle = editorHandles.current.get(id);
-              if (handle) handle.setDoc(normalized);
-              else setTimeout(seedOpened, 0);
+              if (!handle) {
+                window.setTimeout(seedOpened, 0);
+                return;
+              }
+              // Do not inspect the model while the imperative handle is crossing
+              // a mount/ref transition. getShadowText() is intentionally empty
+              // before modelRef is assigned, and that check can skip the only
+              // handoff of the decoded payload. setDoc handles both live-model
+              // and pre-model states without copying the file again.
+              handle.setDoc(normalized);
+              store.setLoading(id, false);
             };
             lastSavedTextRef.current.set(id, normalized);
             baselineRef.current.set(id, {
@@ -139,7 +150,6 @@ export function useFilePipeline({
             store.setLabels(id, res.data.encodingId, res.data.eolId);
             store.setFilePath(id, res.data.filePath);
             if (res.data.filePath) recordLastSaved(id, res.data.filePath, res.data.dateModifiedMs);
-            store.setLoading(id, false);
             seedOpened();
           });
         } else {
@@ -149,7 +159,7 @@ export function useFilePipeline({
           void (async () => {
             const streamId = `${id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             const res = await window.notepads.file.openStreamed(path, streamId);
-            if (!store.get(id)) return;
+            if (!store.get(id) || loadGenerationRef.current.get(id) !== generation) return;
             if (!res.ok || res.data.streamId !== streamId) {
               if (seedTab) {
                 store.setFilePath(id, null);
@@ -161,10 +171,6 @@ export function useFilePipeline({
               return;
             }
             const header = res.data;
-            baselineRef.current.set(id, {
-              hash: header.baselineHash,
-              length: header.baselineLength
-            });
             lastSavedTextRef.current.delete(id);
             store.setLabels(id, header.encodingId, header.eolId);
             store.setFilePath(id, header.filePath);
@@ -175,7 +181,7 @@ export function useFilePipeline({
               streamId: header.streamId
             });
             if (header.filePath) recordLastSaved(id, header.filePath, header.dateModifiedMs);
-            store.setLoading(id, false);
+            // The large editor owns streaming and clears loading only after EOF.
           })();
         }
       });
@@ -195,10 +201,18 @@ export function useFilePipeline({
       const handle = editorHandles.current.get(editorId);
       if (!handle) return false;
       if (tab.largeFile) {
-        if (opts?.saveAs) return false;
+        if (opts?.saveAs || tab.isLoading) return false;
         if (!tab.isModified) return true;
+        const model = handle.getEditor()?.getModel();
+        const versionId = model?.getVersionId();
         const res = await saveSnapshot(tab.filePath ?? '', tab.encodingId, tab.eolId, handle);
         if (!res.ok) return false;
+        // A snapshot is immutable, but the live model may have changed while
+        // native I/O was running. Keep the tab dirty in that case instead of
+        // claiming that the newer in-memory edits were saved.
+        if (model && model.getVersionId() !== versionId) {
+          return true;
+        }
         lastSavedTextRef.current.delete(editorId);
         baselineRef.current.set(editorId, {
           hash: res.data.baselineHash,

@@ -57,7 +57,7 @@ export interface TabState {
   eolId: EolId;
   /** Dirty flag — drives the F127 accent dot in the tab header. */
   isModified: boolean;
-  /** True while the file header is being resolved. */
+  /** True while the file header or body stream is still loading. */
   isLoading: boolean;
 
   /** Alternate render mode (markdown preview / diff). */

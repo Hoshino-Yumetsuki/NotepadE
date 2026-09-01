@@ -12,6 +12,7 @@ use crate::eol::{apply_eol, detect_eol, normalize_to_lf};
 use crate::mru;
 use crate::result::NpResult;
 use tauri::ipc::Channel;
+use xxhash_rust::xxh3::Xxh3;
 
 const CHUNK_SIZE: usize = 512 * 1024;
 const DETECTION_SAMPLE_SIZE: usize = 1024 * 1024;
@@ -32,6 +33,11 @@ static STREAM_CONTROLS: LazyLock<Mutex<HashMap<String, Arc<StreamControl>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn register_stream(stream_id: &str) -> Arc<StreamControl> {
+    if let Ok(controls) = STREAM_CONTROLS.lock() {
+        if let Some(control) = controls.get(stream_id) {
+            return Arc::clone(control);
+        }
+    }
     let control = Arc::new(StreamControl {
         state: Mutex::new(StreamState {
             permits: STREAM_WINDOW,
@@ -40,6 +46,9 @@ fn register_stream(stream_id: &str) -> Arc<StreamControl> {
         wake: Condvar::new(),
     });
     if let Ok(mut controls) = STREAM_CONTROLS.lock() {
+        if let Some(existing) = controls.get(stream_id) {
+            return Arc::clone(existing);
+        }
         controls.insert(stream_id.to_owned(), Arc::clone(&control));
     }
     control
@@ -172,10 +181,15 @@ pub struct StreamedFileHeader {
     pub date_modified_ms: f64,
     pub file_path: String,
     pub has_bom: bool,
-    pub baseline_hash: u64,
-    pub baseline_length: u64,
     pub chunk_count: u32,
     pub total_bytes: u64,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StreamedFileBaseline {
+    pub baseline_hash: u64,
+    pub baseline_length: u64,
+    pub eol_id: EolId,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -185,6 +199,12 @@ pub struct StreamedFileChunk {
     pub offset: u64,
     pub next_offset: u64,
     pub text: String,
+    #[serde(skip)]
+    has_crlf: bool,
+    #[serde(skip)]
+    has_cr: bool,
+    #[serde(skip)]
+    has_lf: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -216,8 +236,7 @@ fn read_chunk_from_file(
     offset: u64,
     encoding_id: &str,
 ) -> Result<StreamedFileChunk, String> {
-    file.seek(SeekFrom::Start(offset))
-        .map_err(|e| e.to_string())?;
+    file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
     let mut bytes = Vec::with_capacity(CHUNK_SIZE);
     std::io::Read::by_ref(file)
         .take(CHUNK_SIZE as u64)
@@ -228,14 +247,17 @@ fn read_chunk_from_file(
     }
     let consumed = safe_chunk_len(&bytes, encoding_id);
     let decoded = decode_bytes_with(&bytes[..consumed], encoding_id);
+    let raw_text = decoded.decoded_text;
     Ok(StreamedFileChunk {
         stream_id: String::new(),
         offset,
         next_offset: offset + consumed as u64,
-        text: normalize_to_lf(&decoded.decoded_text),
+        text: normalize_to_lf(&raw_text),
+        has_crlf: raw_text.contains("\r\n"),
+        has_cr: raw_text.contains('\r'),
+        has_lf: raw_text.contains('\n'),
     })
 }
-
 fn stream_chunks_with<F>(
     path: &str,
     encoding_id: &str,
@@ -260,22 +282,56 @@ where
     Ok(())
 }
 
+fn baseline_for_file(path: &str, encoding_id: &str) -> Result<(u64, u64), String> {
+    let mut hasher = Xxh3::new();
+    let mut length = 0u64;
+    stream_chunks_with(path, encoding_id, "baseline".to_owned(), |chunk| {
+        hasher.update(chunk.text.as_bytes());
+        length += crate::hash::utf16_len(&chunk.text);
+        Ok(())
+    })?;
+    Ok((hasher.digest(), length))
+}
+
 fn stream_chunks_inner(
     path: &str,
     encoding_id: &str,
     stream_id: String,
     on_chunk: Channel<StreamedFileChunk>,
-) -> Result<(), String> {
+) -> Result<StreamedFileBaseline, String> {
     let control = register_stream(&stream_id);
+    let mut hasher = Xxh3::new();
+    let mut length = 0u64;
+    let mut saw_crlf = false;
+    let mut saw_cr = false;
+    let mut saw_lf = false;
     let result = stream_chunks_with(path, encoding_id, stream_id.clone(), |chunk| {
+        hasher.update(chunk.text.as_bytes());
+        length += crate::hash::utf16_len(&chunk.text);
+        saw_crlf |= chunk.has_crlf;
+        saw_cr |= chunk.has_cr;
+        saw_lf |= chunk.has_lf;
         wait_for_stream_permit(&control)?;
         on_chunk
             .send(chunk)
             .map_err(|error| format!("stream channel closed: {error}"))
     });
     remove_stream(&stream_id);
-    result
+    result.map(|_| StreamedFileBaseline {
+        baseline_hash: hasher.digest(),
+        baseline_length: length,
+        eol_id: if saw_crlf {
+            EolId::Crlf
+        } else if saw_cr {
+            EolId::Cr
+        } else if saw_lf {
+            EolId::Lf
+        } else {
+            EolId::Crlf
+        },
+    })
 }
+
 
 fn session_path(session_id: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(session_id);
@@ -324,21 +380,19 @@ pub async fn file_open_streamed(
         date_modified_ms: mtime_ms(&meta),
         file_path: path,
         has_bom: decoded.has_bom,
-        baseline_hash: 0,
-        baseline_length: 0,
         chunk_count,
         total_bytes,
     })
 }
 
-/// Stream one opened file through a single native read and a Tauri Channel.
 #[tauri::command]
 pub async fn file_stream_chunks(
     path: String,
     encoding_id: String,
     stream_id: String,
     on_chunk: Channel<StreamedFileChunk>,
-) -> NpResult<()> {
+) -> NpResult<StreamedFileBaseline> {
+    register_stream(&stream_id);
     tauri::async_runtime::spawn_blocking(move || {
         stream_chunks_inner(&path, &encoding_id, stream_id, on_chunk)
     })
@@ -434,19 +488,37 @@ pub async fn file_save_large_finish(
 ) -> NpResult<SaveResult> {
     tauri::async_runtime::spawn_blocking(move || {
         let session = session_path(&session_id)?;
-        let target_tmp = PathBuf::from(format!("{file_path}.notepade-save-tmp"));
+        let target_tmp = PathBuf::from(format!("{file_path}.notepade-save-tmp-{}", next_stream_id()));
         fs::copy(&session, &target_tmp).map_err(|e| e.to_string())?;
-        fs::remove_file(&file_path).map_err(|e| e.to_string())?;
-        fs::rename(&target_tmp, &file_path).map_err(|e| e.to_string())?;
+
+        let backup = PathBuf::from(format!("{file_path}.notepade-save-backup-{}", next_stream_id()));
+        let had_target = PathBuf::from(&file_path).exists();
+        if had_target {
+            fs::rename(&file_path, &backup).map_err(|e| {
+                let _ = fs::remove_file(&target_tmp);
+                e.to_string()
+            })?;
+        }
+        if let Err(error) = fs::rename(&target_tmp, &file_path) {
+            if had_target {
+                let _ = fs::rename(&backup, &file_path);
+            }
+            let _ = fs::remove_file(&target_tmp);
+            return Err(error.to_string());
+        }
+        if had_target {
+            let _ = fs::remove_file(&backup);
+        }
         let meta = fs::metadata(&file_path).map_err(|e| e.to_string())?;
+        let (baseline_hash, baseline_length) = baseline_for_file(&file_path, &encoding_id)?;
         fs::remove_file(session).map_err(|e| e.to_string())?;
         Ok::<_, String>(SaveResult {
             file_path,
             date_modified_ms: mtime_ms(&meta),
             encoding_id,
             eol_id,
-            baseline_hash: 0,
-            baseline_length: 0,
+            baseline_hash,
+            baseline_length,
         })
     })
     .await
@@ -455,6 +527,7 @@ pub async fn file_save_large_finish(
         NpResult::from,
     )
 }
+
 
 #[tauri::command]
 pub async fn file_discard_large(session_id: String) -> NpResult<()> {
@@ -543,6 +616,18 @@ mod tests {
         }
         assert_eq!(expected_offset, source.len() as u64);
         assert_eq!(decoded, source.replace("\r\n", "\n"));
+        assert!(chunks.iter().any(|chunk| chunk.has_crlf));
+    }
+    #[test]
+    fn baseline_matches_normalized_stream_content() {
+        let path = std::env::temp_dir().join(format!("notepade-large-file-{}.txt", next_stream_id()));
+        let source = "one\r\ntwo\n支付宝".repeat(20_000);
+        fs::write(&path, source.as_bytes()).unwrap();
+        let (hash, length) = baseline_for_file(&path.to_string_lossy(), "UTF-8").unwrap();
+        fs::remove_file(path).unwrap();
+        let normalized = source.replace("\r\n", "\n");
+        assert_eq!(hash, crate::hash::hash_text(&normalized));
+        assert_eq!(length, crate::hash::utf16_len(&normalized));
     }
 
     #[test]

@@ -31,6 +31,7 @@ import type {
   OpenedFile,
   StreamedFileHeader,
   StreamedFileChunk,
+  StreamedFileBaseline,
   LargeFileSaveChunkArgs,
   LargeFileSaveFinishArgs,
   LargeFileSaveSession,
@@ -210,7 +211,7 @@ const api: NotepadsApi = {
     streamChunks: (path, encodingId, streamId, onChunk) => {
       const channel = new Channel<StreamedFileChunk>();
       channel.onmessage = onChunk;
-      return invoke<Result<void>>('file_stream_chunks', {
+      return invoke<Result<StreamedFileBaseline>>('file_stream_chunks', {
         path,
         encodingId,
         streamId,
