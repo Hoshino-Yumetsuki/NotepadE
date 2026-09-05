@@ -45,15 +45,21 @@ export interface AppThemeResult {
 
 /**
  * Resolve the accent the ramp should use:
- *   - useWindowsAccentColor = true  → the OS accent (themeState.accentColor),
+ *   - useWindowsAccentColor = true → the OS accent (themeState.accentColor),
  *   - useWindowsAccentColor = false → customAccentColor if valid,
- *   - fall back to the OS accent, then to the Windows-blue default.
+ *   - fall back to the Windows blue when the OS reports its unavailable black
+ *     sentinel or another invalid value.
+ *
+ * UISettings can return #000000 when no usable Windows accent is available.
+ * Treating that sentinel as a real brand seed makes every Fluent primary
+ * control black; the UWP app's fallback is Windows blue (#0078D4).
  */
 function resolveAccent(settings: Settings, osAccent: string): string {
   if (!settings.useWindowsAccentColor && isValidHex(settings.customAccentColor)) {
     return settings.customAccentColor;
   }
-  if (isValidHex(osAccent)) return osAccent;
+  const normalizedOsAccent = osAccent.trim().replace(/^#/, '').toUpperCase();
+  if (isValidHex(osAccent) && normalizedOsAccent !== '000000') return osAccent;
   return DEFAULT_ACCENT;
 }
 
