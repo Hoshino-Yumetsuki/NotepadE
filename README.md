@@ -84,8 +84,10 @@ yarn lint
 yarn test
 
 # Build a distributable for the current platform
-yarn tauri build
+yarn dist -- --locked
 ```
+
+Keep `src-tauri/Cargo.lock` committed. Linux pins `rust-ini` to `0.21.1` for compatibility with `tauri-plugin-deep-link 2.6.2`; recheck this constraint when upgrading the plugin. The custom Windows NSIS template must include `Win\RestartManager.nsh` and pass the installed executable's full path to `CheckIfAppIsRunning`.
 
 ## Platform notes:
 
