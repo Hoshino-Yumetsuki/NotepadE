@@ -62,9 +62,8 @@ jobs:
         run: |
           yarn install --immutable
       - name: Build installer (tauri build)
-        run: yarn dist
+        run: yarn dist -- --locked
       - name: Upload installer artifact
-        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7.0.1
         with:
           name: installer-${{ matrix.artifact }}
