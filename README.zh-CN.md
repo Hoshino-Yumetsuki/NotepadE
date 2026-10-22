@@ -84,7 +84,7 @@ yarn lint
 yarn test
 
 # 为当前平台构建发行包
-yarn dist -- --locked
+yarn dist
 ```
 
 请将 `src-tauri/Cargo.lock` 纳入版本控制。Linux 将 `rust-ini` 固定为 `0.21.1`，以兼容 `tauri-plugin-deep-link 2.6.2`；升级插件时需重新检查此约束。自定义 Windows NSIS 模板必须包含 `Win\RestartManager.nsh`，并向 `CheckIfAppIsRunning` 传入已安装程序的完整路径。

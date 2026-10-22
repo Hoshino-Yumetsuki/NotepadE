@@ -13,7 +13,7 @@
     "dev": "tauri dev",
     "build": "vite build",
     "tauri": "tauri",
-    "dist": "tauri build",
+    "dist": "tauri build \"$@\" -- --locked",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:web",
     "lint": "oxlint",

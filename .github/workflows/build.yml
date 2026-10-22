@@ -62,7 +62,7 @@ jobs:
         run: |
           yarn install --immutable
       - name: Build installer (tauri build)
-        run: yarn dist -- --locked
+        run: yarn dist
       - name: Upload installer artifact
         uses: actions/upload-artifact@v7.0.1
         with:
