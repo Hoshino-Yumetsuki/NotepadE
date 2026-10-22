@@ -70,3 +70,6 @@ objc2-app-kit = { version = "0.3", features = [
   "NSView",
   "NSResponder"
 ] }
+[target.'cfg(target_os = "linux")'.dependencies]
+ # deep-link 2.6.2 initializes only the pre-0.21.2 ParseOption fields on Linux.
+ rust-ini = "=0.21.1"
