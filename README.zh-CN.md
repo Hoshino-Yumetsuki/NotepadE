@@ -97,6 +97,8 @@ yarn dist
 
 ## 更新日志：
 
+- 修复 Windows 下重复打开文件时窗口逐渐增大的问题：恢复尺寸前重新计算无边框窗口的非客户区，避免将隐藏标题栏高度反复计入窗口尺寸。
+
 - [NotepadE Releases](https://github.com/Hoshino-Yumetsuki/NotepadE/releases)
 
 ## 隐私声明：

@@ -97,6 +97,8 @@ Keep `src-tauri/Cargo.lock` committed. Linux pins `rust-ini` to `0.21.1` for com
 
 ## Changelog:
 
+- Fixed progressive window growth when reopening files on Windows by recalculating the frameless window's non-client area before restoring its size, so hidden caption metrics are not repeatedly added to the saved dimensions.
+
 - [NotepadE Releases](https://github.com/Hoshino-Yumetsuki/NotepadE/releases)
 
 ## Privacy statement:

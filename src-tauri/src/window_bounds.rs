@@ -186,6 +186,26 @@ pub fn restore_bounds(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
     else {
         return;
     };
+    // A hidden frameless HWND can still report the native caption as non-client
+    // area. Recalculate its frame before Tao measures the outer/client offset
+    // for set_size, otherwise that caption height is added on every restore.
+    #[cfg(target_os = "windows")]
+    if let Ok(hwnd) = window.hwnd() {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SetWindowPos, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+        };
+        unsafe {
+            let _ = SetWindowPos(
+                hwnd,
+                None,
+                0,
+                0,
+                0,
+                0,
+                SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER,
+            );
+        }
+    }
     // Saved values are physical pixels (outer_position/inner_size are physical).
     let _ = window.set_size(tauri::PhysicalSize::new(
         resolved.width as u32,
