@@ -35,6 +35,90 @@ fn meta_get(path: &str) -> Option<(EncodingId, EolId)> {
     guard.as_ref().and_then(|m| m.get(path).cloned())
 }
 
+#[cfg(windows)]
+fn rename_no_replace(source: &Path, target: &Path) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn MoveFileW(existing: *const u16, new: *const u16) -> i32;
+    }
+    let source: Vec<u16> = source.as_os_str().encode_wide().chain(Some(0)).collect();
+    let target: Vec<u16> = target.as_os_str().encode_wide().chain(Some(0)).collect();
+    if unsafe { MoveFileW(source.as_ptr(), target.as_ptr()) } == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn rename_no_replace(source: &Path, target: &Path) -> io::Result<()> {
+    use std::ffi::CString;
+    use std::ffi::c_char;
+    use std::os::unix::ffi::OsStrExt;
+    let source = CString::new(source.as_os_str().as_bytes())
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+    let target = CString::new(target.as_os_str().as_bytes())
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+    #[cfg(target_os = "linux")]
+    let result = {
+        extern "C" {
+            fn renameat2(oldfd: i32, old: *const c_char, newfd: i32, new: *const c_char, flags: u32) -> i32;
+        }
+        unsafe { renameat2(-100, source.as_ptr(), -100, target.as_ptr(), 1) }
+    };
+    #[cfg(target_os = "macos")]
+    let result = {
+        extern "C" {
+            fn renamex_np(old: *const c_char, new: *const c_char, flags: u32) -> i32;
+        }
+        unsafe { renamex_np(source.as_ptr(), target.as_ptr(), 4) }
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
+fn rename_file_inner(path: &str, new_name: &str) -> Result<String, String> {
+    if new_name.trim().is_empty()
+        || new_name == "."
+        || new_name == ".."
+        || new_name.contains('/')
+        || new_name.contains('\\')
+        || new_name.contains('\0')
+    {
+        return Err("Invalid file name".into());
+    }
+    let source = Path::new(path);
+    let parent = source.parent().ok_or("Cannot rename this item")?;
+    let target = parent.join(new_name);
+    if source == target {
+        return Ok(path.to_string());
+    }
+    rename_no_replace(source, &target).map_err(|e| e.to_string())?;
+    let new_path = target.to_string_lossy().into_owned();
+    let mut guard = FILE_META.lock().unwrap_or_else(|p| p.into_inner());
+    if let Some(cache) = guard.as_mut() {
+        if let Some(meta) = cache.remove(path) {
+            cache.insert(new_path.clone(), meta);
+        }
+    }
+    Ok(new_path)
+}
+
+#[tauri::command]
+pub fn file_rename(app: tauri::AppHandle, path: String, new_name: String) -> NpResult<String> {
+    let renamed = rename_file_inner(&path, &new_name);
+    if let Ok(new_path) = &renamed {
+        if let Ok(root) = mru::user_data_root(&app) {
+            mru::add_recent(&root, new_path);
+        }
+    }
+    renamed.into()
+}
+
 fn mtime_ms(meta: &std::fs::Metadata) -> f64 {
     meta.modified()
         .ok()
@@ -335,6 +419,30 @@ pub async fn file_revalidate_path(path: String) -> NpResult<RevalidateResult> {
 mod tests {
     use super::*;
     use std::cell::Cell;
+
+    #[test]
+    fn rename_preserves_file_and_metadata_and_rejects_collision() {
+        let dir = std::env::temp_dir().join(format!("np-rename-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("source.txt");
+        let occupied = dir.join("occupied.txt");
+        std::fs::write(&source, b"original\r\n").unwrap();
+        std::fs::write(&occupied, b"existing").unwrap();
+        let path = source.to_string_lossy().into_owned();
+        meta_set(&path, "Western (windows-1252)", EolId::Crlf);
+        assert!(rename_file_inner(&path, "occupied.txt").is_err());
+        assert!(rename_file_inner(&path, "../escape.txt").is_err());
+        assert_eq!(std::fs::read(&source).unwrap(), b"original\r\n");
+        assert_eq!(std::fs::read(&occupied).unwrap(), b"existing");
+        let renamed = rename_file_inner(&path, "renamed.txt").unwrap();
+        assert!(!source.exists());
+        assert_eq!(std::fs::read(&renamed).unwrap(), b"original\r\n");
+        assert!(meta_get(&path).is_none());
+        let saved = write_shadow_to_path(None, &renamed, Some("caf\u{e9}\n"), None, None).unwrap();
+        assert_eq!(saved.encoding_id, "Western (windows-1252)");
+        assert_eq!(std::fs::read(&renamed).unwrap(), b"caf\xe9\r\n");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     // Port of file-io.test.ts (writeFileWithRetry + dialogDefaultPath).
 

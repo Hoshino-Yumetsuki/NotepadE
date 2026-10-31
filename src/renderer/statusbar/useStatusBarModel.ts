@@ -6,7 +6,8 @@ import type { TabsStore } from '../tabs/useTabsStore';
 import type { StatusTheme } from './tokens';
 import { type LineColumn } from './statusModel';
 import type { FileModificationState, StatusBarProps } from './StatusBar';
-import { recordLastSaved, getLastSaved, deriveModificationState } from './fileStatusTracker';
+import { getLastSaved, deriveModificationState } from './fileStatusTracker';
+import type { UseFilePipelineReturn } from '../integrations/useFilePipeline';
 import { DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM } from '../editor/commands/logic/zoom';
 import { getEditorZoom, applyEditorZoom, initEditorZoom } from '../editor/zoomRegistry';
 
@@ -31,8 +32,14 @@ export function useStatusBarModel(args: {
   getActiveHandle: () => MonacoHandle | null;
   activeEditorId: string | null;
   isShadowWindow?: boolean;
+  doReload: UseFilePipelineReturn['doReload'];
+  doSave: UseFilePipelineReturn['doSave'];
+  onGoToLine: () => void;
 }): StatusBarProps {
-  const { theme, store, getActiveHandle, activeEditorId, isShadowWindow = false } = args;
+  const {
+    theme, store, getActiveHandle, activeEditorId, isShadowWindow = false,
+    doReload, doSave, onGoToLine
+  } = args;
 
   const tab = activeEditorId ? store.get(activeEditorId) : undefined;
   const filePath = tab?.filePath ?? null;
@@ -169,24 +176,19 @@ export function useStatusBarModel(args: {
     return () => window.clearInterval(id);
   }, [activeEditorId, filePath, checkFileStatus]);
 
+  const reloadAndRebaseline = useCallback(
+    async (id: string, encodingId?: EncodingId) => {
+      if (await doReload(id, encodingId)) void checkFileStatus();
+    },
+    [doReload, checkFileStatus]
+  );
 
   const onReopenWithEncoding = useCallback(
     (id: EncodingId) => {
-      if (filePath && !tab?.largeFile) void window.notepads.encoding.decodeWith(filePath, id);
+      if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId, id);
     },
-    [filePath, tab?.largeFile]
+    [activeEditorId, filePath, reloadAndRebaseline]
   );
-
-  const reloadAndRebaseline = useCallback(async (id: string, path: string) => {
-    // A large tab uses a streamed Piece Tree model; avoid a whole-file reload
-    // through the small-file IPC path.
-    if (store.get(id)?.largeFile) return;
-    const r = await window.notepads.file.reloadFromDisk(path);
-    if (r.ok) {
-      recordLastSaved(id, path, r.data.dateModifiedMs);
-      setFileModificationSnapshot({ editorId: id, filePath: path, state: 'none' });
-    }
-  }, [store]);
 
   // Slider/buttons → editor: write the zoom registry + updateOptions, update
   // local state optimistically so the flyout tracks the drag immediately.
@@ -232,7 +234,7 @@ export function useStatusBarModel(args: {
       folderPath: null,
       onToggleFolder: () => {},
       onReloadFromDisk: () => {
-        if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId, filePath);
+        if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId);
       },
       onCopyFullPath: () => {
         if (filePath) void window.notepads.shell.copyPath(filePath);
@@ -251,30 +253,24 @@ export function useStatusBarModel(args: {
         if (activeEditorId) store.setViewMode(activeEditorId, { preview: false, diff: true });
       },
       onRevertAllChanges: () => {
-        if (activeEditorId && filePath) void reloadAndRebaseline(activeEditorId, filePath);
+        if (activeEditorId) void reloadAndRebaseline(activeEditorId);
       },
-      onGoToLine: () => {
-        window.dispatchEvent(new CustomEvent('notepads:go-to-line'));
-      },
+      onGoToLine,
       onSetZoom: applyZoom,
       onResetZoom: () => applyZoom(DEFAULT_ZOOM),
       onZoomDragStart,
       onZoomDragEnd,
       onChangeEol: (eol: EolId) => {
-        if (activeEditorId) store.setLabels(activeEditorId, encodingId, eol);
+        if (activeEditorId && eol !== eolId) {
+          store.setLabels(activeEditorId, encodingId, eol);
+          store.setModified(activeEditorId, true);
+        }
       },
       onReopenWithEncoding,
       onSaveWithEncoding: (id: EncodingId) => {
-        if (!filePath || !activeEditorId) return;
-        void window.notepads.file.save({ filePath, encodingId: id }).then((r) => {
-          if (r.ok) {
-            recordLastSaved(activeEditorId, r.data.filePath, r.data.dateModifiedMs);
-            setFileModificationSnapshot({
-              editorId: activeEditorId,
-              filePath,
-              state: 'none'
-            });
-          }
+        if (!activeEditorId) return;
+        void doSave(activeEditorId, { encodingId: id }).then((saved) => {
+          if (saved) void checkFileStatus();
         });
       }
     }),
@@ -296,6 +292,9 @@ export function useStatusBarModel(args: {
       store,
       onReopenWithEncoding,
       reloadAndRebaseline,
+      doSave,
+      checkFileStatus,
+      onGoToLine,
       applyZoom,
       onZoomDragStart,
       onZoomDragEnd

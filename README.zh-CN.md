@@ -97,6 +97,8 @@ yarn dist
 
 ## 更新日志：
 
+- 修复底部状态栏的编码重开、编码保存、磁盘重载、撤销更改、行号跳转和文件重命名；切换换行符后会标记为待保存，并在保存时实际转换。编码操作同时支持流式加载的大文件。
+
 - 修复 Windows 下重复打开文件时窗口逐渐增大的问题：恢复尺寸前重新计算无边框窗口的非客户区，避免将隐藏标题栏高度反复计入窗口尺寸。
 
 - [NotepadE Releases](https://github.com/Hoshino-Yumetsuki/NotepadE/releases)

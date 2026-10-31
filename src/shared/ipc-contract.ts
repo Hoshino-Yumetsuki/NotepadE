@@ -105,6 +105,8 @@ export interface FileApi {
   save(args: SaveArgs): Promise<Result<SaveResult>>;
   /** Prompt for a path, then save. */
   saveAs(args: SaveAsArgs): Promise<Result<SaveResult>>;
+  /** Rename a file in place without replacing an existing item. */
+  rename(path: string, newName: string): Promise<Result<string>>;
   /** Re-read the file from disk (used for external-modification reload). */
   reloadFromDisk(path: string): Promise<Result<OpenedFile>>;
   /** Re-validate a stored absolute path via fs.stat (session/FAL substitute). */

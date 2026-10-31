@@ -92,6 +92,7 @@ const C = {
   FileOpenDialog: 'notepads:file:openDialog',
   FileSave: 'notepads:file:save',
   FileSaveAs: 'notepads:file:saveAs',
+  FileRename: 'notepads:file:rename',
   FileReloadFromDisk: 'notepads:file:reloadFromDisk',
   FileRevalidatePath: 'notepads:file:revalidatePath',
   // recent
@@ -179,6 +180,7 @@ const api: NotepadsApi = {
     openDialog: () => call<string[]>(channelToCommand(C.FileOpenDialog)),
     save: (args: SaveArgs) => call<SaveResult>(channelToCommand(C.FileSave), { args }),
     saveAs: (args: SaveAsArgs) => call<SaveResult>(channelToCommand(C.FileSaveAs), { args }),
+    rename: (path, newName) => call<string>(channelToCommand(C.FileRename), { path, newName }),
     reloadFromDisk: (path) => call<OpenedFile>(channelToCommand(C.FileReloadFromDisk), { path }),
     revalidatePath: (path) =>
       call<{ exists: boolean; dateModifiedMs: number }>(channelToCommand(C.FileRevalidatePath), {

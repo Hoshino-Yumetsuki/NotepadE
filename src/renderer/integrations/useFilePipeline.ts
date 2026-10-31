@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { MonacoHandle } from '../editor/MonacoEditor';
-import type { LargeFileSaveChunkArgs, Result, SaveResult } from '@shared/ipc-contract';
+import type { EncodingId, EolId, LargeFileSaveChunkArgs, Result, SaveResult } from '@shared/ipc-contract';
 import { recordLastSaved } from '../statusbar/fileStatusTracker';
 import { getTabTitle } from '../integrations/pathUtils';
 
@@ -9,7 +9,7 @@ interface UseFilePipelineProps {
   store: TabsStore;
   editorHandles: React.MutableRefObject<Map<string, MonacoHandle | null>>;
   lastSavedTextRef: React.MutableRefObject<Map<string, string>>;
-  baselineRef: React.MutableRefObject<Map<string, { hash: number; length: number }>>;
+  baselineRef: React.MutableRefObject<Map<string, { hash: number; length: number; eolId: EolId }>>;
 }
 
 async function saveSnapshot(
@@ -50,7 +50,8 @@ async function saveSnapshot(
 
 export interface UseFilePipelineReturn {
   openPathIntoTab: (path: string) => void;
-  doSave: (editorId: string, opts?: { saveAs?: boolean }) => Promise<boolean>;
+  doReload: (editorId: string, encodingId?: EncodingId) => Promise<boolean>;
+  doSave: (editorId: string, opts?: { saveAs?: boolean; encodingId?: EncodingId }) => Promise<boolean>;
   doSaveAll: () => Promise<void>;
 }
 
@@ -145,7 +146,8 @@ export function useFilePipeline({
             lastSavedTextRef.current.set(id, normalized);
             baselineRef.current.set(id, {
               hash: res.data.baselineHash,
-              length: res.data.baselineLength
+              length: res.data.baselineLength,
+              eolId: res.data.eolId
             });
             store.setLabels(id, res.data.encodingId, res.data.eolId);
             store.setFilePath(id, res.data.filePath);
@@ -189,51 +191,114 @@ export function useFilePipeline({
     [store, editorHandles, lastSavedTextRef, baselineRef]
   );
 
+  const doReload = useCallback(
+    async (editorId: string, encodingId?: EncodingId): Promise<boolean> => {
+      const tab = store.get(editorId);
+      if (!tab || tab.isLoading) return false;
+      if (!tab.filePath) {
+        const handle = editorHandles.current.get(editorId);
+        if (!handle || encodingId !== undefined) return false;
+        lastSavedTextRef.current.delete(editorId);
+        baselineRef.current.delete(editorId);
+        handle.setDoc('');
+        store.setModified(editorId, false);
+        return true;
+      }
+      const path = tab.filePath;
+      const generation = (loadGenerationRef.current.get(editorId) ?? 0) + 1;
+      loadGenerationRef.current.set(editorId, generation);
+      const isCurrent = () =>
+        store.get(editorId)?.filePath === path &&
+        loadGenerationRef.current.get(editorId) === generation;
+      store.setLoading(editorId, true);
+      let streaming = false;
+      try {
+        if (tab.largeFile) {
+          const streamId = `${editorId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const res = await window.notepads.file.openStreamed(path, streamId);
+          if (!res.ok || !isCurrent() || res.data.streamId !== streamId) return false;
+          const header = res.data;
+          const selectedEncoding = encodingId ?? header.encodingId;
+          lastSavedTextRef.current.delete(editorId);
+          baselineRef.current.delete(editorId);
+          store.setLabels(editorId, selectedEncoding, header.eolId);
+          recordLastSaved(editorId, path, header.dateModifiedMs);
+          store.setLargeFile(editorId, {
+            size: header.totalBytes,
+            encodingId: selectedEncoding,
+            eolId: header.eolId,
+            streamId
+          });
+          streaming = true;
+          return true;
+        }
+        const res = await (encodingId === undefined
+          ? window.notepads.file.reloadFromDisk(path)
+          : window.notepads.encoding.decodeWith(path, encodingId));
+        if (!res.ok || !isCurrent()) return false;
+        const handle = editorHandles.current.get(editorId);
+        if (!handle) return false;
+        const file = res.data;
+        lastSavedTextRef.current.set(editorId, file.decodedText);
+        baselineRef.current.set(editorId, {
+          hash: file.baselineHash,
+          length: file.baselineLength,
+          eolId: file.eolId
+        });
+        store.setLabels(editorId, file.encodingId, file.eolId);
+        recordLastSaved(editorId, path, file.dateModifiedMs);
+        handle.setDoc(file.decodedText);
+        store.setModified(editorId, false);
+        return true;
+      } finally {
+        if (isCurrent() && !streaming) store.setLoading(editorId, false);
+      }
+    },
+    [store, editorHandles, lastSavedTextRef, baselineRef]
+  );
+
   // Save pipeline (Issue 3, UWP NotepadsMainPage.IO.cs:159-217). doSave writes the
   // active (or given) tab: untitled / no filePath / saveAs → native Save-As picker
   // (file.saveAs); else write the existing path (file.save). A plain Ctrl+S on an
   // unmodified, already-on-disk doc is a no-op. On success: re-baseline the shadow
   // text, set filePath + clear isModified (named tab title follows filePath).
   const doSave = useCallback(
-    async (editorId: string, opts?: { saveAs?: boolean }): Promise<boolean> => {
+    async (editorId: string, opts?: { saveAs?: boolean; encodingId?: EncodingId }): Promise<boolean> => {
       const tab = store.get(editorId);
-      if (!tab) return false;
+      if (!tab || tab.isLoading) return false;
       const handle = editorHandles.current.get(editorId);
       if (!handle) return false;
+      const encodingId = opts?.encodingId ?? tab.encodingId;
+      const model = handle.getEditor()?.getModel();
+      const versionId = model?.getVersionId();
       if (tab.largeFile) {
-        if (opts?.saveAs || tab.isLoading) return false;
-        if (!tab.isModified) return true;
-        const model = handle.getEditor()?.getModel();
-        const versionId = model?.getVersionId();
-        const res = await saveSnapshot(tab.filePath ?? '', tab.encodingId, tab.eolId, handle);
-        if (!res.ok) return false;
-        // A snapshot is immutable, but the live model may have changed while
-        // native I/O was running. Keep the tab dirty in that case instead of
-        // claiming that the newer in-memory edits were saved.
-        if (model && model.getVersionId() !== versionId) {
-          return true;
-        }
+        if (opts?.saveAs) return false;
+        if (!tab.isModified && opts?.encodingId === undefined) return true;
+        const res = await saveSnapshot(tab.filePath ?? '', encodingId, tab.eolId, handle);
+        if (!res.ok || store.get(editorId)?.filePath !== tab.filePath ||
+            editorHandles.current.get(editorId) !== handle) return false;
         lastSavedTextRef.current.delete(editorId);
         baselineRef.current.set(editorId, {
           hash: res.data.baselineHash,
-          length: res.data.baselineLength
+          length: res.data.baselineLength,
+          eolId: res.data.eolId
         });
         store.setLabels(editorId, res.data.encodingId, res.data.eolId);
         recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
-        store.setModified(editorId, false);
+        store.setModified(editorId, model?.getVersionId() !== versionId);
         return true;
       }
       const saveAs = opts?.saveAs ?? false;
       const shadowText = handle.getShadowText();
       const hasPath = !!tab.filePath;
       // No-op: a clean, already-saved file with a plain Ctrl+S writes nothing.
-      if (!saveAs && hasPath && !tab.isModified) return true;
+      if (!saveAs && hasPath && !tab.isModified && opts?.encodingId === undefined) return true;
 
       const res =
         saveAs || !hasPath
           ? await window.notepads.file.saveAs({
               shadowText,
-              encodingId: tab.encodingId,
+              encodingId,
               eolId: tab.eolId,
               suggestedName: getTabTitle(tab),
               // Save As on a file-backed tab starts in the file's CURRENT folder
@@ -252,23 +317,25 @@ export function useFilePipeline({
           : await window.notepads.file.save({
               filePath: tab.filePath as string,
               shadowText,
-              encodingId: tab.encodingId,
+              encodingId,
               eolId: tab.eolId
             });
       // Cancelled picker or write error: leave the tab dirty, surface nothing.
-      if (!res.ok) return false;
+      if (!res.ok || store.get(editorId)?.filePath !== tab.filePath ||
+          editorHandles.current.get(editorId) !== handle) return false;
 
       // Re-baseline to the JUST-saved shadow text so the doc is clean again, and
       // adopt the authoritative path + labels MAIN echoes back.
       lastSavedTextRef.current.set(editorId, shadowText);
       baselineRef.current.set(editorId, {
         hash: res.data.baselineHash,
-        length: res.data.baselineLength
+        length: res.data.baselineLength,
+        eolId: res.data.eolId
       });
       store.setFilePath(editorId, res.data.filePath);
       store.setLabels(editorId, res.data.encodingId, res.data.eolId);
       recordLastSaved(editorId, res.data.filePath, res.data.dateModifiedMs);
-      store.setModified(editorId, false);
+      store.setModified(editorId, model?.getVersionId() !== versionId);
       return true;
     },
     [store, editorHandles, lastSavedTextRef, baselineRef]
@@ -283,5 +350,5 @@ export function useFilePipeline({
     }
   }, [store, doSave]);
 
-  return { openPathIntoTab, doSave, doSaveAll };
+  return { openPathIntoTab, doReload, doSave, doSaveAll };
 }

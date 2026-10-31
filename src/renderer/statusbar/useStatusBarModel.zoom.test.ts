@@ -21,6 +21,12 @@ import { DEFAULT_ZOOM, MAX_ZOOM } from '../editor/commands/logic/zoom';
  * and hook state are exercised.
  */
 
+const fileActions = {
+  doReload: vi.fn(async () => false),
+  doSave: vi.fn(async () => false),
+  onGoToLine: vi.fn()
+};
+
 beforeEach(() => {
   vi.useFakeTimers();
   (globalThis as unknown as { window: Window }).window.notepads = {
@@ -78,6 +84,7 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
 
     const { result } = renderHook(() =>
       useStatusBarModel({
+        ...fileActions,
         theme: 'light',
         store,
         getActiveHandle: () => handle,
@@ -105,6 +112,7 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
 
     const { result } = renderHook(() =>
       useStatusBarModel({
+        ...fileActions,
         theme: 'light',
         store,
         getActiveHandle: () => handle,
@@ -132,6 +140,7 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
 
     const { result } = renderHook(() =>
       useStatusBarModel({
+        ...fileActions,
         theme: 'light',
         store,
         getActiveHandle: () => handle,
@@ -154,6 +163,7 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
 
     const { result } = renderHook(() =>
       useStatusBarModel({
+        ...fileActions,
         theme: 'light',
         store,
         getActiveHandle: () => handle,
@@ -185,6 +195,7 @@ describe('useStatusBarModel zoom sync (Monaco)', () => {
     const { result, rerender } = renderHook(
       ({ activeEditorId }: { activeEditorId: string }) =>
         useStatusBarModel({
+          ...fileActions,
           theme: 'light',
           store,
           getActiveHandle: () => handles.get(activeEditorId) ?? null,

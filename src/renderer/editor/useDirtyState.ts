@@ -1,10 +1,11 @@
 import { useRef, useCallback } from 'react';
 import type { TabsStore } from '../tabs/useTabsStore';
 import type { MonacoHandle } from './MonacoEditor';
+import type { EolId } from '@shared/ipc-contract';
 
 export interface UseDirtyStateReturn {
   lastSavedTextRef: React.MutableRefObject<Map<string, string>>;
-  baselineRef: React.MutableRefObject<Map<string, { hash: number; length: number }>>;
+  baselineRef: React.MutableRefObject<Map<string, { hash: number; length: number; eolId: EolId }>>;
   recomputeDirty: (editorId: string) => void;
 }
 
@@ -28,7 +29,7 @@ export function useDirtyState(
 
   // Hash-based dirty detection: avoids materializing the full doc string on every
   // keystroke when lengths happen to match. The hash is computed in Rust (xxh3_64).
-  const baselineRef = useRef<Map<string, { hash: number; length: number }>>(new Map());
+  const baselineRef = useRef<Map<string, { hash: number; length: number; eolId: EolId }>>(new Map());
 
   // Recompute a tab's dirty flag (Issue 3): compare the live '\n'-shadow text to
   // that tab's last-saved baseline. The baseline map stores entries ALREADY
@@ -53,6 +54,10 @@ export function useDirtyState(
         store.setModified(editorId, shadowLength > 0);
         return;
       }
+      if (bl.eolId !== store.get(editorId)?.eolId) {
+        store.setModified(editorId, true);
+        return;
+      }
       // Length fast-path: most edits change length.
       if (shadowLength !== bl.length) {
         store.setModified(editorId, true);
@@ -68,9 +73,16 @@ export function useDirtyState(
       // the user restored the exact saved text).
       store.setModified(editorId, true);
       const text = handle.getShadowText();
+      const versionId = model.getVersionId();
       void window.notepads.hash.compute(text).then((res) => {
-        if (!res.ok) return;
-        store.setModified(editorId, res.data !== bl.hash);
+        if (
+          !res.ok || baselineRef.current.get(editorId) !== bl ||
+          model.isDisposed() || model.getVersionId() !== versionId
+        ) return;
+        store.setModified(
+          editorId,
+          res.data !== bl.hash || bl.eolId !== store.get(editorId)?.eolId
+        );
       });
     },
     [store, editorHandles]

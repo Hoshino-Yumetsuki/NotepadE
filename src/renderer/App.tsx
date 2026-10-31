@@ -247,7 +247,7 @@ export function App(): JSX.Element {
     }
   });
 
-  const { openPathIntoTab, doSave, doSaveAll } = useFilePipeline({
+  const { openPathIntoTab, doReload, doSave, doSaveAll } = useFilePipeline({
     store,
     editorHandles,
     lastSavedTextRef,
@@ -376,7 +376,8 @@ export function App(): JSX.Element {
       lastSavedTextRef.current.set(localId, payload.file.decodedText);
       baselineRef.current.set(localId, {
         hash: payload.file.baselineHash,
-        length: payload.file.baselineLength
+        length: payload.file.baselineLength,
+        eolId: payload.file.eolId
       });
     });
     const offRelease = window.notepads.editor.onRelease(({ editorId }) =>
@@ -530,7 +531,10 @@ export function App(): JSX.Element {
     theme: resolvedTheme,
     store,
     getActiveHandle,
-    activeEditorId
+    activeEditorId,
+    doReload,
+    doSave,
+    onGoToLine: find.keymapCallbacks.openGoToLine
   });
 
 
@@ -887,10 +891,12 @@ export function App(): JSX.Element {
                         onLoadComplete={(baseline) => {
                           baselineRef.current.set(tab.editorId, {
                             hash: baseline.baselineHash,
-                            length: baseline.baselineLength
+                            length: baseline.baselineLength,
+                            eolId: baseline.eolId
                           });
                           store.setLabels(tab.editorId, tab.encodingId, baseline.eolId);
                           store.setLoading(tab.editorId, false);
+                          store.setModified(tab.editorId, false);
                         }}
                         onLoadError={() => store.setLoading(tab.editorId, false)}
                         onDocChanged={() => {

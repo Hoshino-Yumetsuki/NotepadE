@@ -156,6 +156,7 @@ pub fn run() {
             file_io::file_open_dialog,
             file_io::file_save,
             file_io::file_save_as,
+            file_io::file_rename,
             file_io::file_reload_from_disk,
             file_io::file_revalidate_path,
             // file streaming (large files)

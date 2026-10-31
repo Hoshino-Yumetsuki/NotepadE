@@ -33,6 +33,7 @@ import { clampOverlayToList, scrollLeftToReveal } from './tabScroll';
 import { usePrefersReducedMotion } from '../theme/usePrefersReducedMotion';
 import { useT } from '../i18n';
 import { modKey } from '@shared/platform';
+import { getLastSaved, recordLastSaved } from '../statusbar/fileStatusTracker';
 import { ThemedMenuPopover } from '../theme/ThemedMenuPopover';
 
 /**
@@ -1559,15 +1560,36 @@ export function TabStrip(props: TabStripProps): JSX.Element {
     [closeTab, store]
   );
 
+  const renamingInFlight = useRef(new Set<string>());
   const commitRename = useCallback(
     (editorId: string, value: string) => {
       const trimmed = value.trim();
-      if (trimmed) {
-        const tab = store.get(editorId);
-        // Untitled buffers rename in-place; saved files defer to file IO (Phase 4).
-        if (tab && tab.filePath === null) store.setUntitledName(editorId, trimmed);
-      }
+      const tab = store.get(editorId);
       setRenamingId(null);
+      if (!trimmed || !tab || renamingInFlight.current.has(editorId)) return;
+      if (tab.filePath === null) {
+        store.setUntitledName(editorId, trimmed);
+        return;
+      }
+      if (trimmed === getTabTitle(tab)) return;
+      const oldPath = tab.filePath;
+      renamingInFlight.current.add(editorId);
+      void window.notepads.file.rename(oldPath, trimmed).then((result) => {
+        if (!result.ok) {
+          window.alert(result.error);
+          return;
+        }
+        if (store.get(editorId)?.filePath !== oldPath) return;
+        const baseline = getLastSaved(editorId);
+        if (baseline?.filePath === oldPath) {
+          recordLastSaved(editorId, result.data, baseline.lastSavedMs);
+        }
+        store.setFilePath(editorId, result.data);
+      }).catch((error: unknown) => {
+        window.alert(String(error));
+      }).finally(() => {
+        renamingInFlight.current.delete(editorId);
+      });
     },
     [store]
   );

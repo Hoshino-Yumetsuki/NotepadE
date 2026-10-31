@@ -97,6 +97,8 @@ Keep `src-tauri/Cargo.lock` committed. Linux pins `rust-ini` to `0.21.1` for com
 
 ## Changelog:
 
+- Fixed status-bar encoding reopen/save, disk reload, revert, go-to-line, and file rename actions. Line-ending changes now mark the document as modified and are applied on save. Encoding actions also support streamed large files.
+
 - Fixed progressive window growth when reopening files on Windows by recalculating the frameless window's non-client area before restoring its size, so hidden caption metrics are not repeatedly added to the saved dimensions.
 
 - [NotepadE Releases](https://github.com/Hoshino-Yumetsuki/NotepadE/releases)
